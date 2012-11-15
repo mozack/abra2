@@ -31,10 +31,6 @@ public class Assembler {
 	private int minContigLength;
 	private double minContigRatio;
 	
-	private double minEdgeRatio;
-	
-	private int minUniqueReads = 1;
-	
 	private boolean shouldTruncateOutputOnRepeat = true;
 	
 	private int maxPotentialContigs = 500;
@@ -182,10 +178,6 @@ public class Assembler {
 		this.minNodeFrequncy = minNodeFrequncy;
 	}
 	
-	public void setMinEdgeRatio(double minEdgeRatio) {
-		this.minEdgeRatio = minEdgeRatio;
-	}
-	
 	public void setMaxPotentialContigs(int maxContigs) {
 		this.maxPotentialContigs = maxContigs;
 	}
@@ -194,10 +186,6 @@ public class Assembler {
 		this.minContigRatio = minContigRatio;
 	}
 	
-	public void setMinUniqueReads(int minUniqueReads) {
-		this.minUniqueReads = minUniqueReads;
-	}
-
 	private void filterLowFrequencyNodes() {
 		List<Node> nodesToFilter = new ArrayList<Node>();
 		
@@ -490,7 +478,6 @@ public class Assembler {
 		ayc.setMinEdgeFrequency(3);
 		ayc.setMinNodeFrequncy(3);
 		ayc.setMinContigLength(100);
-		ayc.setMinEdgeRatio(.015);
 		ayc.setMaxPotentialContigs(100000);
 		ayc.setMinContigRatio(.2);
 		

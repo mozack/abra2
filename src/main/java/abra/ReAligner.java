@@ -17,7 +17,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.Set;
 
 import net.sf.picard.sam.BuildBamIndex;
 import net.sf.picard.sam.SamFormatConverter;
@@ -45,8 +44,6 @@ public class ReAligner {
 	
 	private SAMFileHeader samHeader;
 
-//	private SAMFileWriter outputReadsBam;
-
 	private long startMillis;
 
 	private List<Feature> regions;
@@ -59,30 +56,18 @@ public class ReAligner {
 
 	private String reference;
 	
-	private String referenceDir;
-	
 	private int minContigMapq;
 
 	private AssemblerSettings assemblerSettings;
 	
 	private int numThreads;
 	
-	private int allowedMismatchesFromContig = 0;
-	
 	private boolean shouldReprocessUnaligned = true;
 	
 	private List<ReAlignerRunnable> threads = new ArrayList<ReAlignerRunnable>();
 	
-//	private List<SAMRecord> unalignedReads = new ArrayList<SAMRecord>();
-	
 	private ReverseComplementor reverseComplementor = new ReverseComplementor();
 	
-	private boolean useSmallAlignerIndex = false;
-	
-	public void setUseSmallAlignerIndex(boolean smallAlignerIndex) {
-		this.useSmallAlignerIndex = smallAlignerIndex;
-	}
-
 	public void reAlign(String inputSam, String inputSam2, String outputSam, String outputSam2) throws Exception {
 
 		System.out.println("input: " + inputSam);
@@ -91,10 +76,8 @@ public class ReAligner {
 		System.out.println("output2: " + outputSam2);
 		System.out.println("regions: " + regionsGtf);
 		System.out.println("reference: " + reference);
-		System.out.println("reference: " + referenceDir);
 		System.out.println("working dir: " + tempDir);
 		System.out.println("num threads: " + numThreads);
-		System.out.println("allowed mismatches: " + allowedMismatchesFromContig);
 		System.out.println(assemblerSettings.getDescription());
 		
 		System.out.println("Java version: " + System.getProperty("java.version"));
@@ -1426,11 +1409,9 @@ public class ReAligner {
 		assem.setMinEdgeFrequency(assemblerSettings.getMinEdgeFrequency());
 		assem.setMinNodeFrequncy(assemblerSettings.getMinNodeFrequncy());
 		assem.setMinContigLength(assemblerSettings.getMinContigLength());
-		assem.setMinEdgeRatio(assemblerSettings.getMinEdgeRatio());
 		assem.setMaxPotentialContigs(assemblerSettings
 				.getMaxPotentialContigs());
 		assem.setMinContigRatio(assemblerSettings.getMinContigRatio());
-		assem.setMinUniqueReads(assemblerSettings.getMinUniqueReads());
 
 		return assem;
 	}
@@ -1442,11 +1423,9 @@ public class ReAligner {
 		assem.setMinEdgeFrequency(assemblerSettings.getMinEdgeFrequency() * 2);
 		assem.setMinNodeFrequncy(assemblerSettings.getMinNodeFrequncy() * 2);
 		assem.setMinContigLength(assemblerSettings.getMinContigLength());
-		assem.setMinEdgeRatio(assemblerSettings.getMinEdgeRatio() * 2);
 //		assem.setMaxPotentialContigs(assemblerSettings.getMaxPotentialContigs() * 30);
 		assem.setMaxPotentialContigs(MAX_POTENTIAL_UNALIGNED_CONTIGS);
 		assem.setMinContigRatio(-1.0);
-		assem.setMinUniqueReads(assemblerSettings.getMinUniqueReads());
 		assem.setTruncateOutputOnRepeat(false);
 
 		return assem;
@@ -1482,10 +1461,6 @@ public class ReAligner {
 	public void setReference(String reference) {
 		this.reference = reference;
 	}
-	
-	public void setReferenceDir(String referenceDir) {
-		this.referenceDir = referenceDir;
-	}
 
 	public void setTempDir(String temp) {
 		this.tempDir = temp;
@@ -1501,10 +1476,6 @@ public class ReAligner {
 	
 	public void setMinContigMapq(int minContigMapq) {
 		this.minContigMapq = minContigMapq;
-	}
-	
-	public void setAllowedMismatchesFromContig(int allowedMismatchesFromContig) {
-		this.allowedMismatchesFromContig = allowedMismatchesFromContig;
 	}
 	
 	public void setShouldReprocessUnaligned(boolean shouldReprocessUnaligned) {
@@ -1524,26 +1495,19 @@ public class ReAligner {
 
 			assemblerSettings.setKmerSize(options.getKmerSize());
 			assemblerSettings.setMinContigLength(options.getMinContigLength());
-			assemblerSettings
-					.setMinEdgeFrequency(options.getMinEdgeFrequency());
 			assemblerSettings.setMinNodeFrequncy(options.getMinNodeFrequency());
-			assemblerSettings.setMinEdgeRatio(options.getMinEdgeRatio());
 			assemblerSettings.setMaxPotentialContigs(options
 					.getMaxPotentialContigs());
 			assemblerSettings.setMinContigRatio(options.getMinContigRatio());
-			assemblerSettings.setMinUniqueReads(options.getMinUniqueReads());
 
 			ReAligner realigner = new ReAligner();
 			realigner.setReference(options.getReference());
-			realigner.setReferenceDir(options.getReferenceDir());
 			realigner.setRegionsGtf(options.getTargetRegionFile());
 			realigner.setTempDir(options.getWorkingDir());
 			realigner.setAssemblerSettings(assemblerSettings);
 			realigner.setNumThreads(options.getNumThreads());
 			realigner.setMinContigMapq(options.getMinContigMapq());
-			realigner.setAllowedMismatchesFromContig(options.getAllowedMismatchesFromContig());
 			realigner.setShouldReprocessUnaligned(!options.isSkipUnalignedAssembly());
-			realigner.setUseSmallAlignerIndex(options.useSmallAlignerIndex());
 
 			long s = System.currentTimeMillis();
 
@@ -1719,15 +1683,12 @@ public class ReAligner {
 		settings.setMinContigLength(100);
 		settings.setMinEdgeFrequency(2);
 		settings.setMinNodeFrequncy(3);
-		settings.setMinEdgeRatio(.05);
 		settings.setMaxPotentialContigs(30000);
 		settings.setMinContigRatio(.3);
-		settings.setMinUniqueReads(1);
 
 		realigner.setAssemblerSettings(settings);
 		
 		realigner.setMinContigMapq(1);
-		realigner.setAllowedMismatchesFromContig(2);
 		realigner.setReference(reference);
 		realigner.setRegionsGtf(regions);
 		realigner.setTempDir(tempDir);

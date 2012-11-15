@@ -39,9 +39,9 @@ public class ReAlignerOptions extends Options {
             parser.accepts(MIN_CONTIG_LENGTH, "Assembly minimum contig length").withRequiredArg().ofType(Integer.class);
             parser.accepts(MAX_POTENTIAL_CONTIGS, "Maximum number of potential contigs for a region").withRequiredArg().ofType(Integer.class);
             parser.accepts(MIN_CONTIG_RATIO, "Minimum contig length as percentage of observed region length").withRequiredArg().ofType(Double.class);
-            parser.accepts(NUM_THREADS, "Number of threads").withRequiredArg().ofType(Integer.class);
+            parser.accepts(NUM_THREADS, "Number of threads (default: 2)").withRequiredArg().ofType(Integer.class);
             parser.accepts(MIN_CONTIG_MAPQ, "Minimum contig mapping quality").withRequiredArg().ofType(Integer.class);
-            parser.accepts(SKIP_UNALIGNED_ASSEMBLY, "Skip assembly of reads that do not align to contigs.");
+            parser.accepts(SKIP_UNALIGNED_ASSEMBLY, "Skip assembly of reads that did not initially align.");
     	}
     	
     	return parser;
@@ -76,7 +76,7 @@ public class ReAlignerOptions extends Options {
 			System.out.println("Missing required working directory");
 		}
 		
-		if ((Integer) getOptions().valueOf(NUM_THREADS) < 1) {
+		if ((getOptions().hasArgument(NUM_THREADS) && (Integer) getOptions().valueOf(NUM_THREADS) < 1)) {
 			isValid = false;
 			System.out.println("Num threads must be greater than zero.");
 		}
@@ -135,7 +135,7 @@ public class ReAlignerOptions extends Options {
 	}
 	
 	public int getNumThreads() {
-		return (Integer) getOptions().valueOf(NUM_THREADS);
+		return getOptions().hasArgument(NUM_THREADS) ? (Integer) getOptions().valueOf(NUM_THREADS) : 2;
 	}
 	
 	public int getMinContigMapq() {

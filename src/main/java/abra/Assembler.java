@@ -41,7 +41,7 @@ public class Assembler {
 	
 	private Set<Node> rootNodes = new HashSet<Node>();
 	
-	private List<Contig> contigs = new ArrayList<Contig>();
+//	private List<Contig> contigs = new ArrayList<Contig>();
 	
 	private BufferedWriter writer;
 	
@@ -55,8 +55,11 @@ public class Assembler {
 	
 	private boolean isEmpty = true;
 	
+	private String prefix;
+	
 	//TODO: Do not keep contigs in memory.
 	public boolean assembleContigs(String inputSam, String output, String prefix) throws FileNotFoundException, IOException, InterruptedException {
+		this.prefix = prefix;
         SAMFileReader reader = new SAMFileReader(new File(inputSam));
         reader.setValidationStringency(ValidationStringency.SILENT);
 		
@@ -75,6 +78,7 @@ public class Assembler {
 			boolean hasAmbiguousBases = read.getReadString().contains("N");
 			Integer numBestHits = (Integer) read.getIntegerAttribute("X0");
 			boolean hasAmbiguousInitialAlignment = numBestHits != null && numBestHits > 1;
+//			boolean hasAmbiguousInitialAlignment = false;
 			
 			if (!hasAmbiguousBases && !hasAmbiguousInitialAlignment) {
 				addToGraph(read);
@@ -130,11 +134,11 @@ public class Assembler {
 //			outputContigs(prefix);
 		} catch (DepthExceededException e) {
 			System.out.println("DEPTH_EXCEEDED for : " + inputSam);
-			contigs.clear();
+//			contigs.clear();
 			shouldTruncateOutput = true;
 		} catch (TooManyPotentialContigsException e) {
 			System.out.println("TOO_MANY_CONTIGS for : " + inputSam);
-			contigs.clear();
+//			contigs.clear();
 			shouldTruncateOutput = true;
 		} finally {
 			writer.close();
@@ -235,6 +239,7 @@ public class Assembler {
 	}
 	*/
 	
+	/*
 	private void outputContigs(String prefix) throws IOException {
 		
 //		System.out.println("Writing " + contigs.size() + " contigs.");
@@ -245,6 +250,7 @@ public class Assembler {
 		
 		contigs.clear();
 	}
+	*/
 	
 	private void outputContig(Contig contig, String prefix) throws IOException {
 		contig.setDescriptor(prefix + "_" + outputCount++ + "_" + contig.getDescriptor());
@@ -275,15 +281,15 @@ public class Assembler {
 			Counts counts = new Counts();
 			buildContig(node, visitedNodes, contig, counts);
 			
-			//TODO: Check for repeat and discard contigs if encountered
-			outputContigs(prefix);
+//			//TODO: Check for repeat and discard contigs if encountered
+//			outputContigs(prefix);
 		}
 		
 		System.out.println("Potential contig count: " + potentialContigCount);
 		System.out.println("Wrote: " + outputCount + " contigs.");
 	}
 	
-	private void processContigTerminus(Node node, Counts counts, Contig contig) {
+	private void processContigTerminus(Node node, Counts counts, Contig contig) throws IOException {
 		
 		if (!counts.isTerminatedAtRepeat()) {
 			// We've reached the terminus, append the remainder of the node.
@@ -303,17 +309,18 @@ public class Assembler {
 				if (counts.isTerminatedAtRepeat()) {
 					contig.setDescriptor(contig.getDescriptor() + "_repeatNode:" + node.getSequence().getSequenceAsString());
 				}
-				
-				contigs.add(contig);
+	
+				outputContig(contig, prefix);
+//				contigs.add(contig);
 			}
 		}
 	}
 	
-	private void buildContig(Node node, Set<Node> visitedNodes, Contig contig, Counts counts) {
+	private void buildContig(Node node, Set<Node> visitedNodes, Contig contig, Counts counts) throws IOException {
 		buildContig(node, visitedNodes, contig, counts, 0);
 	}
 	
-	private void buildContig(Node node, Set<Node> visitedNodes, Contig contig, Counts counts, int depth) {
+	private void buildContig(Node node, Set<Node> visitedNodes, Contig contig, Counts counts, int depth) throws IOException {
 		
 		if (depth > 10000) {
 			throw new DepthExceededException(depth);
@@ -356,6 +363,7 @@ public class Assembler {
 	
 	// Merge contigs that overlap with < kmerSize bases
 	// This addresses "smallish" gaps in the graph
+	/*
 	private void mergeContigs() {
 		
 		if (minMergeSize > kmerSize) {
@@ -388,6 +396,7 @@ public class Assembler {
 			System.out.println("Merged: " + mergedCount + " overlapping contigs.");
 		}
 	}
+	*/
 	
 	private int getOverlapIndex(String s1, String s2) {
 		int strLenDiff = s2.length() - s1.length();
@@ -474,12 +483,15 @@ public class Assembler {
 //		ayc.setMaxPotentialContigsPerRegion(1500);
 //		ayc.setMinContigToRegionRatio(.75);
 		
-		ayc.setKmerSize(33);
+		ayc.setKmerSize(63);
 		ayc.setMinEdgeFrequency(3);
-		ayc.setMinNodeFrequncy(3);
+		ayc.setMinNodeFrequncy(2);
 		ayc.setMinContigLength(100);
 		ayc.setMaxPotentialContigs(100000);
-		ayc.setMinContigRatio(.2);
+		ayc.setMinContigRatio(-1.0);
+		ayc.setTruncateOutputOnRepeat(false);
+		
+		ayc.assembleContigs("/home/lmose/dev/ayc/long_indels/s529/unaligned.bam", "/home/lmose/dev/ayc/long_indels/s529/unaligned.fasta", "foo");
 		
 //		ayc.assembleContigs("/home/lisle/ayc/sim/sim1/chr21/chr21_37236845_37237045.bam", "/home/lisle/ayc/sim/sim1/chr21/1.fasta", "foo");
 		
@@ -488,7 +500,7 @@ public class Assembler {
 		
 //		ayc.assembleContigs("/home/lmose/dev/ayc/sim/38/assem/3.bam", "/home/lmose/dev/ayc/sim/38/assem/reads.fasta", "foo"); 
 		
-		ayc.assembleContigs("/home/lmose/dev/ayc/sim/38/bwasw.bam", "/home/lmose/dev/ayc/sim/38/bwasw_new.fasta", "foo");
+//		ayc.assembleContigs("/home/lmose/dev/ayc/sim/38/bwasw.bam", "/home/lmose/dev/ayc/sim/38/bwasw_new.fasta", "foo");
 		
 //		ayc.assemble("/home/lisle/ayc/case0/normal_7576572_7577692.fastq", "/home/lisle/ayc/case0/normal_33_05.fasta");
 //		ayc.assemble("/home/lisle/ayc/case0/tumor_7576572_7577692.fastq", "/home/lisle/ayc/case0/tumor_33_05.fasta");

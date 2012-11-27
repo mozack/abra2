@@ -16,7 +16,13 @@ import net.sf.samtools.SAMRecord;
 import net.sf.samtools.SAMFileHeader.SortOrder;
 
 public class CombineChimera3 {
-	public void combine(String input, String output) {
+	
+	// Minimum number of non clipped bases that must be between an identified indel and
+	// the beginning/end of the contig
+	private int minIndelBuffer;
+	
+	public void combine(String input, String output, int minIndelBuffer) {
+		this.minIndelBuffer = minIndelBuffer;
 		SamMultiMappingReader reader = new SamMultiMappingReader(input);
 		
 		SAMFileHeader header = reader.getFileHeader();
@@ -43,8 +49,6 @@ public class CombineChimera3 {
 					(read1.getCigarLength() >= 2) &&
 					(read2.getCigarLength() >= 2)) {
 					
-					System.out.println(read1.getReadName());
-					
 					SAMRecord combinedRead = combineChimericReads(read1, read2);
 					if (combinedRead != null) {
 						isCombined = true;
@@ -67,7 +71,7 @@ public class CombineChimera3 {
 		outputReadsBam.close();
 		reader.close();
 		
-		System.out.println("Done.");
+		System.out.println("Done combining chimeric reads.");
 	}
 	
 	private SAMRecord combineChimericReads(SAMRecord read1, SAMRecord read2) {
@@ -149,16 +153,44 @@ public class CombineChimera3 {
 			leftAlignmentStop -= trimLength;
 			int rightAlignmentStart = firstRightBlock.getReferenceStart();
 			
+			leftReadStop -= trimLength;
+			
 			int alignmentGap = rightAlignmentStart - leftAlignmentStop - 1;
+			int readGap = rightReadStart - leftReadStop - 1;
 			
 			CigarElement indelElement;
-			if (alignmentGap > 0) {
+			if ((alignmentGap > 0) && (readGap == 0)) {
 				// Deletion
 				indelElement = new CigarElement(alignmentGap, CigarOperator.DELETION);
 			} else {
 				int totalLength = this.getTotalLength(leftElements, rightElements);
-				int insertLen = read1.getReadLength() - totalLength;
+//				int insertLen = read1.getReadLength() - totalLength;
+				int insertLen = read1.getReadLength() - totalLength - alignmentGap;
+				int insertLen2 = readGap - alignmentGap;
+				
+				if (insertLen != insertLen2) {
+					// Not really an insert
+					return null;
+				}
+				
+				//TODO: Take a closer look at this
+				if (insertLen < 1) {
+					return null;
+				}
+				
+				if (readGap > 0) {
+					this.padLeftmostElement(rightElements, readGap);
+				}
+				
 				indelElement = new CigarElement(insertLen, CigarOperator.INSERTION);
+			}
+			
+			// Check to see if the indel is surrounded by non-clipped bases
+			if (minIndelBuffer > 0) {
+				if ((getNonSoftClippedLength(leftElements) < minIndelBuffer) || 
+					(getNonSoftClippedLength(rightElements) < minIndelBuffer)) {
+					return null;
+				}
 			}
 			
 			List<CigarElement> elements = new ArrayList<CigarElement>();
@@ -170,8 +202,8 @@ public class CombineChimera3 {
 			SAMRecord combinedRead = cloneRead(read1);
 			combinedRead.setAlignmentStart(leftBlocks.get(0).getReferenceStart());
 			combinedRead.setCigar(new Cigar(elements));
-//			combinedRead.setMappingQuality((read1.getMappingQuality() + read2.getMappingQuality()) / 2);
-			combinedRead.setMappingQuality(Math.min(read1.getMappingQuality(), read2.getMappingQuality()));
+			combinedRead.setMappingQuality((read1.getMappingQuality() + read2.getMappingQuality()) / 2);
+//			combinedRead.setMappingQuality(Math.min(read1.getMappingQuality(), read2.getMappingQuality()));
 
 			//TODO: Any other ancilliary info to set?
 			
@@ -200,11 +232,32 @@ public class CombineChimera3 {
 		return newLength;
 	}
 	
+	private int padLeftmostElement(List<CigarElement> elements, int padLength) {
+		CigarElement toPad = elements.get(0);
+		int newLength = toPad.getLength() + padLength;
+		CigarElement replacement = new CigarElement(newLength, toPad.getOperator());
+		elements.set(0, replacement);
+		
+		return newLength;
+	}
+	
 	private int getTotalLength(List<CigarElement> elements) {
 		int total = 0;
 		
 		for (CigarElement element : elements) {
 			if (element.getOperator() != CigarOperator.D) {
+				total += element.getLength();
+			}
+		}
+		
+		return total;
+	}
+	
+	private int getNonSoftClippedLength(List<CigarElement> elements) {
+		int total = 0;
+		
+		for (CigarElement element : elements) {
+			if ((element.getOperator() != CigarOperator.D) && (element.getOperator() != CigarOperator.S)) {
 				total += element.getLength();
 			}
 		}
@@ -220,10 +273,10 @@ public class CombineChimera3 {
 
 		@Override
 		public int compare(SAMRecord read1, SAMRecord read2) {
-			int cmp = getMappedReadStart(read2) - getMappedReadStart(read1);
+			int cmp = getMappedReadStart(read1) - getMappedReadStart(read2);
 			
 			if (cmp == 0) {
-				cmp = getMappedReadEnd(read2) - getMappedReadEnd(read1);
+				cmp = getMappedReadEnd(read1) - getMappedReadEnd(read2);
 			}
 						
 			return cmp;
@@ -236,6 +289,7 @@ public class CombineChimera3 {
 
 	private void outputRead(SAMRecord read, boolean isCombined, SAMFileWriter out) {
 		try {
+			System.out.println(read.getSAMString());
 			out.addAlignment(read);
 		} catch (NullPointerException e) {
 			System.out.println("isCombined: " + isCombined);
@@ -299,6 +353,10 @@ public class CombineChimera3 {
 		String in;
 		String out;
 		
+//		in = "/home/lmose/dev/ayc/long_indels/next2/50I.sam";
+//		out = "/home/lmose/dev/ayc/long_indels/next2/50I_c.sam";
+
+		
 		/*
 		in = "/home/lmose/dev/ayc/long_indels/next2/50I.sam";
 		out = "/home/lmose/dev/ayc/long_indels/next2/50I_c.sam";
@@ -335,11 +393,19 @@ public class CombineChimera3 {
 //		in = "/home/lmose/dev/ayc/long_indels/s204/all_contigs.sam";
 //		out = "/home/lmose/dev/ayc/long_indels/s204/all_contigs_chim.sam";
 		
-		in = "/home/lmose/dev/ayc/long_indels/s204/test.sam";
-		out = "/home/lmose/dev/ayc/long_indels/s204/test_chim.sam";
+//		in = "/home/lmose/dev/ayc/long_indels/s204/test.sam";
+//		out = "/home/lmose/dev/ayc/long_indels/s204/test_chim.sam";
 
-		
-		cc3.combine(in, out);
+//		in = "/home/lmose/dev/ayc/long_indels/s529/test2.sam";
+//		out = "/home/lmose/dev/ayc/long_indels/s529/test2_chim.sam";
+
+//		in = "/home/lmose/dev/ayc/long_indels/s529/next2/1126.sam";
+//		out = "/home/lmose/dev/ayc/long_indels/s529/next2/1126_chim.sam";
+
+		in = "/home/lmose/dev/ayc/sim/s526/8489.sam";
+		out = "/home/lmose/dev/ayc/sim/s526/8489_chim.sam";
+
+		cc3.combine(in, out, 0);
 
 	}
 }

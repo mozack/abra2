@@ -1,0 +1,54 @@
+package abra;
+
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+
+public class Reference {
+
+	private Map<String, StringBuffer> refMap = new HashMap<String, StringBuffer>();
+	
+	public Reference(String reference) throws IOException {
+		
+		BufferedReader refReader = new BufferedReader(new FileReader(reference));
+		String line = refReader.readLine();
+		
+		String key = null;
+		StringBuffer seq = null;
+		
+		while (line != null) {
+			
+			if (line.startsWith(">")) {
+				if (key != null) {
+					refMap.put(key, seq);
+				}
+				key = line.substring(1, line.length());
+				seq = new StringBuffer();
+			} else {
+				seq.append(line);
+			}
+			
+			line = refReader.readLine();
+		}
+		
+		if (key != null) {
+			refMap.put(key, seq);
+		}
+		
+		refReader.close();
+	}
+	
+	public String getSequence(String chromosome, int position, int length) {
+		StringBuffer ref = refMap.get(chromosome);
+		
+		if (ref == null) {
+			System.out.println("No ref for chromosome: " + chromosome);
+		}
+		
+		position -= 1;
+		
+		return ref.substring(position, Math.min(position + length, ref.length()));
+	}
+}

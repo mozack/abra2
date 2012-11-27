@@ -68,12 +68,16 @@ public class ReverseComplementor {
     	return new String(reverse(input.getBytes()));
     }
     
-//    public static void main(String[] args) {
-//    	ReverseComplementor rc = new ReverseComplementor();
-//    	
-//    	//String rcStr = rc.reverseComplement("AAAATTTCCG");
+    public static void main(String[] args) {
+    	ReverseComplementor rc = new ReverseComplementor();
+    	
+    	//String rcStr = rc.reverseComplement("AAAATTTCCG");
 //    	String rcStr = rc.reverse("AAAATTTCCG");
-//    	
-//    	System.out.println(rcStr);
-//    }
+    	String rcStr = rc.reverseComplement("CTTTTTTGGATTCAAATATGTCTTCTTATTGGCTTTTCAGCTAGATCTTTT");
+    	
+    	System.out.println(rcStr);
+    	
+    	String s = "ccagctatgcagagctataagtcaattaaatctgttttatttataaattac";
+    	System.out.println(s.toUpperCase());
+    }
 }

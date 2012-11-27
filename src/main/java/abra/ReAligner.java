@@ -38,7 +38,7 @@ public class ReAligner {
 	private static final int MIN_REGION_REMAINDER = 500;
 	private static final int REGION_OVERLAP = 200; 
 	private static final long RANDOM_SEED = 1;
-	private static final int MAX_POTENTIAL_UNALIGNED_CONTIGS = 3000000;
+	private static final int MAX_POTENTIAL_UNALIGNED_CONTIGS = 10000000;
 	
 	private int missingXATag = 0;
 	
@@ -99,15 +99,21 @@ public class ReAligner {
 		
 		String assemblyBam = inputSam;
 		if (inputSam2 != null) {
+			Clock clock = new Clock("Combine bams");
+			clock.start();
 			log("Combining input bams for assembly");
 			String combinedBam = tempDir + "/combined.bam";
 			concatenateBams(inputSam, inputSam2, combinedBam);
 			assemblyBam = tempDir + "/sorted_assembly.bam";
 			sortBam(combinedBam, assemblyBam, "coordinate");
 			indexBam(assemblyBam);
+			log("Combining done.");
+			clock.stopAndPrint();
 		}
 		
-		if (shouldReprocessUnaligned) {		
+		if (shouldReprocessUnaligned) {
+			Clock clock = new Clock("Process unaligned");
+			clock.start();
 			log("Assembling unaligned reads");
 			
 			String unalignedSam = tempDir + "/unaligned.bam";
@@ -131,14 +137,14 @@ public class ReAligner {
 				String unalignedCleanContigsFasta = alignAndCleanContigs(unalignedContigFasta, unalignedDir, false);
 				if (unalignedCleanContigsFasta != null) {
 					String alignedToContigSam = alignReads(unalignedDir, unalignedSam, unalignedCleanContigsFasta);
-					String alignedToContigBam = unalignedDir + "/" + "align_to_contig.bam";
-					samToBam(alignedToContigSam, alignedToContigBam);
+//					String alignedToContigBam = unalignedDir + "/" + "align_to_contig.bam";
+//					samToBam(alignedToContigSam, alignedToContigBam);
 					String sortedAlignedToContig = unalignedDir + "/" + "sorted_aligned_to_contig.bam";
 					String sortedOriginalReads = unalignedDir + "/" + "sorted_original_reads.bam";
-					sortBamsByName(alignedToContigBam, unalignedSam, sortedAlignedToContig, sortedOriginalReads);
-//					sortBamsByName(alignedToContigBam, inputSam, sortedAlignedToContig, sortedOriginalReads);
+					sortBamsByName(alignedToContigSam, unalignedSam, sortedAlignedToContig, sortedOriginalReads);
+					//sortBamsByName(alignedToContigBam, unalignedSam, sortedAlignedToContig, sortedOriginalReads);
 					log("Adjusting unaligned reads");
-					adjustReads(sortedOriginalReads, sortedAlignedToContig, unalignedRegionSam);
+					adjustReads(sortedOriginalReads, sortedAlignedToContig, unalignedRegionSam, false);
 					
 //					processContigs(unalignedDir, unalignedSam, unalignedRegionSam, unalignedCleanContigsFasta);
 					sortBam(unalignedRegionSam, sortedUnalignedRegion, "coordinate");
@@ -151,8 +157,11 @@ public class ReAligner {
 			} else {
 				shouldReprocessUnaligned = false;
 			}
+			clock.stopAndPrint();
 		}
 		
+		Clock clock = new Clock("Assembly");
+		clock.start();
 		log("Iterating over regions");
 		for (Feature region : regions) {
 //			processRegion(region, inputSam);
@@ -162,10 +171,14 @@ public class ReAligner {
 		
 		log("Waiting for all threads to complete");
 		waitForAllThreadsToComplete();
+		clock.stopAndPrint();
 		
+		clock = new Clock("Combine contigs");
+		clock.start();
 		log("Combining contigs");
 		String contigFasta = tempDir + "/" + "all_contigs.fasta";
 		combineContigs(contigFasta);
+		clock.stopAndPrint();
 		
 		String cleanContigsFasta = alignAndCleanContigs(contigFasta, tempDir, true);
 		if (cleanContigsFasta != null) {
@@ -173,12 +186,21 @@ public class ReAligner {
 			String tempDir2 = tempDir + "/temp2";
 			mkdir(tempDir1);
 			mkdir(tempDir2);
+			
+			clock = new Clock("Sam2Fastq and Align");
+			clock.start();
 			String alignedToContigSam1 = alignReads(tempDir1, inputSam, cleanContigsFasta);
 			String alignedToContigSam2 = alignReads(tempDir2, inputSam2, cleanContigsFasta);
-			String alignedToContigBam1 = tempDir1 + "/" + "align_to_contig.bam";
-			String alignedToContigBam2 = tempDir2 + "/" + "align_to_contig.bam";
-			samToBam(alignedToContigSam1, alignedToContigBam1);
-			samToBam(alignedToContigSam2, alignedToContigBam2);
+			clock.stopAndPrint();
+			
+			clock = new Clock("SamToBam");
+			clock.start();
+//			String alignedToContigBam1 = tempDir1 + "/" + "align_to_contig.bam";
+//			String alignedToContigBam2 = tempDir2 + "/" + "align_to_contig.bam";
+//			samToBam(alignedToContigSam1, alignedToContigBam1);
+//			samToBam(alignedToContigSam2, alignedToContigBam2);
+			clock.stopAndPrint();
+			
 			String sortedAlignedToContig1 = tempDir1 + "/" + "sorted_aligned_to_contig.bam";
 			String sortedOriginalReads1 = tempDir1 + "/" + "sorted_original_reads.bam";
 			String sortedAlignedToContig2 = tempDir2 + "/" + "sorted_aligned_to_contig.bam";
@@ -187,8 +209,11 @@ public class ReAligner {
 			List<String> bamsToSort = new ArrayList<String>();
 			bamsToSort.add(inputSam);
 			bamsToSort.add(inputSam2);
-			bamsToSort.add(alignedToContigBam1);
-			bamsToSort.add(alignedToContigBam2);
+//			bamsToSort.add(alignedToContigBam1);
+//			bamsToSort.add(alignedToContigBam2);
+			bamsToSort.add(alignedToContigSam1);
+			bamsToSort.add(alignedToContigSam2);
+
 			
 			List<String> sortedOutput = new ArrayList<String>();
 			sortedOutput.add(sortedOriginalReads1);
@@ -196,8 +221,14 @@ public class ReAligner {
 			sortedOutput.add(sortedAlignedToContig1);
 			sortedOutput.add(sortedAlignedToContig2);
 			
+			clock = new Clock("Sort BAMs by name");
+			clock.start();
 			sortBamsByName(bamsToSort, sortedOutput);
+			clock.stopAndPrint();
 			
+			
+			clock = new Clock("Adjust reads");
+			clock.start();
 			log("Adjust reads");
 			String adjustedOutput1 = tempDir1 + "/adjusted1.bam";
 			String adjustedOutput2 = tempDir2 + "/adjusted2.bam";
@@ -206,15 +237,22 @@ public class ReAligner {
 //					sortedOriginalReads2, sortedAlignedToContig2, outputSam2);
 			
 			adjustReads(sortedOriginalReads1, sortedAlignedToContig1, adjustedOutput1,
-					sortedOriginalReads2, sortedAlignedToContig2, adjustedOutput2);
+					sortedOriginalReads2, sortedAlignedToContig2, adjustedOutput2, true);
+			clock.stopAndPrint();
 			
+			clock = new Clock("Sort BAMs by coord");
+			clock.start();
 			String sortedAdjusted1 = tempDir1 + "/sorted_adjusted1.bam";
 			String sortedAdjusted2 = tempDir2 + "/sorted_adjusted2.bam";
 			
 			sortBamsByCoordinate(adjustedOutput1, adjustedOutput2, sortedAdjusted1, sortedAdjusted2);
+			clock.stopAndPrint();
 		
+			clock = new Clock("Update XM,NQ,mapq");
+			clock.start();
 			log("Setting mismatches, edit distance and quality");
 			updateMismatchAndEditDistance(sortedAdjusted1, sortedAdjusted2, outputSam, outputSam2);
+			clock.stopAndPrint();
 			
 //			processContigs(tempDir, inputSam, outputSam, cleanContigsFasta);
 		}
@@ -303,16 +341,16 @@ public class ReAligner {
 	}
 	
 	private void adjustReads(String sortedOriginalReads1, String sortedAlignedToContig1, String outputSam1, 
-			String sortedOriginalReads2, String sortedAlignedToContig2, String outputSam2) throws InterruptedException, IOException {
+			String sortedOriginalReads2, String sortedAlignedToContig2, String outputSam2, boolean isTightAlignment) throws InterruptedException, IOException {
 		
 		if (this.numThreads > 1) {
 			
 			System.out.println("Adjusting reads in parallel");
-			AdjustReadsRunnable runnable1 = new AdjustReadsRunnable(this, sortedOriginalReads1, sortedAlignedToContig1, outputSam1);
+			AdjustReadsRunnable runnable1 = new AdjustReadsRunnable(this, sortedOriginalReads1, sortedAlignedToContig1, outputSam1, isTightAlignment);
 			Thread thread1 = new Thread(runnable1);
 			thread1.start();
 			
-			AdjustReadsRunnable runnable2 = new AdjustReadsRunnable(this, sortedOriginalReads2, sortedAlignedToContig2, outputSam2);
+			AdjustReadsRunnable runnable2 = new AdjustReadsRunnable(this, sortedOriginalReads2, sortedAlignedToContig2, outputSam2, isTightAlignment);
 			Thread thread2 = new Thread(runnable2);
 			thread2.start();
 			
@@ -320,25 +358,60 @@ public class ReAligner {
 			thread2.join();
 		} else {
 			System.out.println("Adjusting reads sequentially");
-			adjustReads(sortedOriginalReads1, sortedAlignedToContig1, outputSam1);
-			adjustReads(sortedOriginalReads2, sortedAlignedToContig2, outputSam2);
+			adjustReads(sortedOriginalReads1, sortedAlignedToContig1, outputSam1, isTightAlignment);
+			adjustReads(sortedOriginalReads2, sortedAlignedToContig2, outputSam2, isTightAlignment);
 		}
 	}
 	
-	private String alignAndCleanContigs(String contigFasta, String tempDir, boolean shouldRemoveSoftClips) throws InterruptedException, IOException {
+	private void discardMisalignedContigs(String inputSam, String outputSam) {
+		SAMFileReader reader = new SAMFileReader(new File(inputSam));
+		reader.setValidationStringency(ValidationStringency.SILENT);
+		
+		SAMFileWriter outputReadsBam = new SAMFileWriterFactory().makeSAMOrBAMWriter(
+				samHeader, true, new File(outputSam));
+
+		for (SAMRecord contig : reader) {
+			String[] fields = contig.getReadName().split("_");
+			String regionChromosome = fields[0];
+			int regionStart = Integer.parseInt(fields[1]) - 1000;
+			int regionStop = Integer.parseInt(fields[2]) + 1000;
+			
+			if ((contig.getReferenceName().equals(regionChromosome)) &&
+				(contig.getAlignmentStart() >= regionStart) &&
+				(contig.getAlignmentEnd() <= regionStop)) {
+			
+				outputReadsBam.addAlignment(contig);
+			} else {
+				System.out.println("Discarding: " + contig);
+			}
+		}
+		
+		outputReadsBam.close();
+		reader.close();
+	}
+	
+	private String alignAndCleanContigs(String contigFasta, String tempDir, boolean isTightAlignment) throws InterruptedException, IOException {
 		log("Aligning contigs");
 		Aligner aligner = new Aligner(reference, numThreads);
 		String contigsSam = tempDir + "/" + "all_contigs.sam";
 		aligner.align(contigFasta, contigsSam);
 		
+		if (isTightAlignment) {
+			log("Discarding contigs aligned outside of region");
+			String allInRegionSam = tempDir + "/" + "all_contigs_in_region.sam";
+			discardMisalignedContigs(contigsSam, allInRegionSam);
+			contigsSam = allInRegionSam;
+		}
+		
 		log("Processing chimeric reads");
 		CombineChimera3 cc = new CombineChimera3();
 		String contigsWithChim = tempDir + "/" + "all_contigs_chim.sam";
-		cc.combine(contigsSam, contigsWithChim);
+		//TODO: Replace 33 with percent of read length
+		cc.combine(contigsSam, contigsWithChim, isTightAlignment ? 33 : 0);
 		
 		log("Cleaning contigs");
 		String cleanContigsFasta = tempDir + "/" + "clean_contigs.fasta";
-		boolean hasCleanContigs = cleanAndOutputContigs(contigsWithChim, cleanContigsFasta, shouldRemoveSoftClips);
+		boolean hasCleanContigs = cleanAndOutputContigs(contigsWithChim, cleanContigsFasta, isTightAlignment);
 		
 		return hasCleanContigs ? cleanContigsFasta : null;
 	}
@@ -348,31 +421,6 @@ public class ReAligner {
 		String alignedToContigSam = tempDir + "/" + "align_to_contig.sam";
 		alignToContigs(tempDir, inputSam, alignedToContigSam, cleanContigsFasta);
 		return alignedToContigSam;
-	}
-	
-	private void processContigs(String tempDir, String inputSam, String outputSam, String cleanContigsFasta) throws InterruptedException, IOException {
-		
-		SAMFileWriter outputReadsBam = new SAMFileWriterFactory().makeSAMOrBAMWriter(
-				samHeader, true, new File(outputSam));
-		
-		if (cleanContigsFasta != null) {
-//			log("Aligning original reads to contigs");
-			String alignedToContigSam = tempDir + "/" + "align_to_contig.sam";
-//			this.alignToContigs(inputSam, alignedToContigSam, cleanContigsFasta);
-			
-			log("Convert aligned to contig to bam, and sorting bams");
-			String alignedToContigBam = tempDir + "/" + "align_to_contig.bam";
-//			samToBam(alignedToContigSam, alignedToContigBam);
-			
-			String sortedAlignedToContig = tempDir + "/" + "sorted_aligned_to_contig.bam";
-			String sortedOriginalReads = tempDir + "/" + "sorted_original_reads.bam"; 						
-//			sortBamsByName(alignedToContigBam, inputSam, sortedAlignedToContig, sortedOriginalReads);
-			
-			log("Adjust reads");
-//			adjustReads(sortedOriginalReads, sortedAlignedToContig, outputReadsBam);
-		}
-		
-		outputReadsBam.close();
 	}
 	
 	private void indexBam(String bam) {
@@ -852,6 +900,8 @@ public class ReAligner {
 		
 	private boolean cleanAndOutputContigs(String contigsSam, String cleanContigsFasta, boolean shouldRemoveSoftClips) throws IOException {
 		
+		Reference reference = new Reference(this.reference);
+		
 		boolean hasCleanContigs = false;
 		
 		BufferedWriter writer = new BufferedWriter(new FileWriter(cleanContigsFasta, false));
@@ -861,15 +911,53 @@ public class ReAligner {
 		
 		for (SAMRecord contigRead : contigReader) {
 			//TODO: Does this guarantee no alternate alignments?
-			if (contigRead.getMappingQuality() > 1) {
+			if (contigRead.getMappingQuality() >= 1) {
 				
-				if (shouldRemoveSoftClips) {
-					removeSoftClips(contigRead);
-				}
+//				if (shouldRemoveSoftClips) {
+					SAMRecordUtils.removeSoftClips(contigRead);
+//				}
 				
 				String bases = contigRead.getReadString();
 				
-				if (bases.length() >= assemblerSettings.getMinContigLength()) {
+				//TODO: Why would cigar length be zero here?
+				if ((bases.length() >= assemblerSettings.getMinContigLength()) &&
+					(contigRead.getCigarLength() > 0)) {
+					
+					CigarElement first = contigRead.getCigar().getCigarElement(0);
+					CigarElement last = contigRead.getCigar().getCigarElement(contigRead.getCigarLength()-1);
+					
+					if ((first.getOperator() == CigarOperator.M) &&
+						(last.getOperator() == CigarOperator.M)) {
+
+						// Pull in read length bases from reference to the beginning and end of the contig.
+						String prefix = reference.getSequence(contigRead.getReferenceName(), contigRead.getAlignmentStart()-100, 100);
+						String suffix = reference.getSequence(contigRead.getReferenceName(), contigRead.getAlignmentEnd()+1, 100);
+						
+						bases = prefix.toUpperCase() + bases + suffix.toUpperCase();
+						
+						Cigar cigar = new Cigar();
+						if (contigRead.getCigarLength() == 1) {
+							CigarElement elem = new CigarElement(first.getLength(), first.getOperator());
+							cigar.add(elem);
+						} else {
+							CigarElement firstNew = new CigarElement(first.getLength() + 100, first.getOperator());
+							CigarElement lastNew = new CigarElement(last.getLength() + 100, last.getOperator());
+							
+							cigar.add(firstNew);
+							for (int i=1; i<contigRead.getCigarLength()-1; i++) {
+								cigar.add(contigRead.getCigar().getCigarElement(i));
+							}
+							
+							cigar.add(lastNew);
+						}
+						
+						contigRead.setCigar(cigar);
+						contigRead.setAlignmentStart(contigRead.getAlignmentStart()-100);
+
+					} else {
+						System.out.println("Not padding contig: " + contigRead.getReadName());
+					}
+					
 					
 					// Aligned contigs are already expressed in forward strand context
 	//				if (contigRead.getReadNegativeStrandFlag()) {
@@ -900,42 +988,6 @@ public class ReAligner {
 	// Assumes entirely soft clipped reads are filtered prior to here.
 	// Checks only the first and last Cigar element
 	// Does not adjust qualities
-	private void removeSoftClips(SAMRecord read) {
-		
-		Cigar cigar = read.getCigar();
-		
-		CigarElement firstElement = cigar.getCigarElement(0);
-		CigarElement lastElement  = cigar.getCigarElement(cigar.numCigarElements()-1);
-		
-		if ((firstElement.getOperator() == CigarOperator.S) ||
-			(lastElement.getOperator() == CigarOperator.S)) {
-		
-			Cigar newCigar = new Cigar();
-			
-			String bases = read.getReadString();
-			//String qualities = read.getBaseQualityString();
-					
-			if (firstElement.getOperator() == CigarOperator.S) {
-				bases = bases.substring(firstElement.getLength(), bases.length()-1);
-				//qualities = qualities.substring(firstElement.getLength(), qualities.length()-1);
-			} else {
-				newCigar.add(firstElement);
-			}
-			
-			for (int i=1; i<cigar.numCigarElements()-1; i++) {
-				newCigar.add(cigar.getCigarElement(i));
-			}
-			
-			if (lastElement.getOperator() == CigarOperator.S) {
-				bases = bases.substring(0, bases.length() - lastElement.getLength() - 1);
-				//qualities = qualities.substring(0, qualities.length() - lastElement.getLength() - 1);
-			}
-			
-			read.setCigar(newCigar);
-			read.setReadString(bases);
-			//read.setBaseQualityString(qualities);
-		}
-	}
 	
 	private void alignToContigs(String tempDir, String inputSam, String alignedToContigSam, String contigFasta) throws IOException, InterruptedException {
 		// Convert original bam to fastq
@@ -1022,7 +1074,7 @@ public class ReAligner {
 		return distance;
 	}
 	
-	protected void adjustReads(String originalReadsSam, String alignedToContigSam, String outputSam) throws IOException {
+	protected void adjustReads(String originalReadsSam, String alignedToContigSam, String outputSam, boolean isTightAlignment) throws IOException {
 		
 		log("Writing reads to: " + outputSam);
 		
@@ -1207,8 +1259,21 @@ public class ReAligner {
 								updatedRead.setAttribute("YQ", hitInfo.getRecord().getMappingQuality());
 															
 								// Check to see if this read has been output with the same alignment already.
+//								String readAlignmentInfo;
+								
 								String readAlignmentInfo = updatedRead.getReferenceName() + "_" + updatedRead.getAlignmentStart() + "_" +
+										updatedRead.getCigarString();
+								/*
+								if (isTightAlignment) {
+									// Check ref, pos, strand, cigar
+									readAlignmentInfo = updatedRead.getReferenceName() + "_" + updatedRead.getAlignmentStart() + "_" +
 										(updatedRead.getReadNegativeStrandFlag() ? "-" : "+") + "_" + updatedRead.getCigarString();
+								} else {
+									// For loose alignment, allow read to align to either strand (pick one only)
+									readAlignmentInfo = updatedRead.getReferenceName() + "_" + updatedRead.getAlignmentStart() + "_" +
+											updatedRead.getCigarString();
+								}
+								*/
 								
 								if (!outputReadAlignmentInfo.containsKey(readAlignmentInfo)) {
 									outputReadAlignmentInfo.put(readAlignmentInfo, updatedRead);
@@ -1228,7 +1293,8 @@ public class ReAligner {
 						}
 						
 						if (readToOutput.getAttribute("YO") != null) {
-							readToOutput.setAttribute("X0", outputReadAlignmentInfo.size());
+//							readToOutput.setAttribute("X0", outputReadAlignmentInfo.size());
+							readToOutput.setAttribute("X0", null);
 							readToOutput.setAttribute("X1", origBestHits + origSuboptimalHits);
 							
 							// Clear various tags
@@ -1420,8 +1486,10 @@ public class ReAligner {
 		Assembler assem = new Assembler();
 
 		assem.setKmerSize(assemblerSettings.getKmerSize());
-		assem.setMinEdgeFrequency(assemblerSettings.getMinEdgeFrequency() * 2);
-		assem.setMinNodeFrequncy(assemblerSettings.getMinNodeFrequncy() * 2);
+//		assem.setMinEdgeFrequency(assemblerSettings.getMinEdgeFrequency() * 2);
+//		assem.setMinNodeFrequncy(assemblerSettings.getMinNodeFrequncy() * 2);
+		assem.setMinEdgeFrequency(assemblerSettings.getMinEdgeFrequency());
+		assem.setMinNodeFrequncy(assemblerSettings.getMinNodeFrequncy());
 		assem.setMinContigLength(assemblerSettings.getMinContigLength());
 //		assem.setMaxPotentialContigs(assemblerSettings.getMaxPotentialContigs() * 30);
 		assem.setMaxPotentialContigs(MAX_POTENTIAL_UNALIGNED_CONTIGS);
@@ -1484,7 +1552,7 @@ public class ReAligner {
 
 	public static void run(String[] args) throws Exception {
 		
-		System.out.println("Starting...");
+		System.out.println("Starting 0.01 ...");
 		
 		ReAlignerOptions options = new ReAlignerOptions();
 		options.parseOptions(args);
@@ -1628,13 +1696,23 @@ public class ReAligner {
 //		String regions = "/home/lmose/dev/ayc/regions/clinseq5/9041.gtf";
 //		String tempDir = "/home/lmose/dev/ayc/sim/s411/9041_working";
 
+		/*
 		String input = "/home/lmose/dev/ayc/sim/s339/empty.bam";
 		String input2 = "/home/lmose/dev/ayc/sim/s411/sorted_small.bam";
-		String output = "/home/lmose/dev/ayc/sim/s411/empty_realigned.bam";
-		String output2 = "/home/lmose/dev/ayc/sim/s411/small_realigned.bam";
+		String output = "/home/lmose/dev/ayc/sim/s411/empty_realigned3.bam";
+		String output2 = "/home/lmose/dev/ayc/sim/s411/small_realigned3.bam";
 		String reference = "/home/lmose/reference/chr21/chr21.fa";
 		String regions = "/home/lmose/dev/ayc/regions/clinseq5/9041.gtf";
-		String tempDir = "/home/lmose/dev/ayc/sim/s411/small_working";
+		String tempDir = "/home/lmose/dev/ayc/sim/s411/small_working3";
+*/
+		
+		String input = "/home/lmose/dev/ayc/sim/s339/empty.bam";
+		String input2 = "/home/lmose/dev/ayc/sim/s526/sorted_11551.bam";
+		String output = "/home/lmose/dev/ayc/sim/s526/empty_realigned3.bam";
+		String output2 = "/home/lmose/dev/ayc/sim/s526/11551_realigned.bam";
+		String reference = "/home/lmose/reference/chr1/chr1.fa";
+		String regions = "/home/lmose/dev/ayc/sim/s526/11551.gtf";
+		String tempDir = "/home/lmose/dev/ayc/sim/s526/11551_working";
 
 		
 		/*
@@ -1684,7 +1762,7 @@ public class ReAligner {
 		settings.setMinEdgeFrequency(2);
 		settings.setMinNodeFrequncy(3);
 		settings.setMaxPotentialContigs(30000);
-		settings.setMinContigRatio(.3);
+		settings.setMinContigRatio(-1.0);
 
 		realigner.setAssemblerSettings(settings);
 		

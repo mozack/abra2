@@ -137,12 +137,12 @@ public class ReAligner {
 				String unalignedCleanContigsFasta = alignAndCleanContigs(unalignedContigFasta, unalignedDir, false);
 				if (unalignedCleanContigsFasta != null) {
 					String alignedToContigSam = alignReads(unalignedDir, unalignedSam, unalignedCleanContigsFasta);
-//					String alignedToContigBam = unalignedDir + "/" + "align_to_contig.bam";
-//					samToBam(alignedToContigSam, alignedToContigBam);
+					String alignedToContigBam = unalignedDir + "/" + "align_to_contig.bam";
+					samToBam(alignedToContigSam, alignedToContigBam);
 					String sortedAlignedToContig = unalignedDir + "/" + "sorted_aligned_to_contig.bam";
 					String sortedOriginalReads = unalignedDir + "/" + "sorted_original_reads.bam";
-					sortBamsByName(alignedToContigSam, unalignedSam, sortedAlignedToContig, sortedOriginalReads);
-					//sortBamsByName(alignedToContigBam, unalignedSam, sortedAlignedToContig, sortedOriginalReads);
+//					sortBamsByName(alignedToContigSam, unalignedSam, sortedAlignedToContig, sortedOriginalReads);
+					sortBamsByName(alignedToContigBam, unalignedSam, sortedAlignedToContig, sortedOriginalReads);
 					log("Adjusting unaligned reads");
 					adjustReads(sortedOriginalReads, sortedAlignedToContig, unalignedRegionSam, false);
 					
@@ -195,10 +195,10 @@ public class ReAligner {
 			
 			clock = new Clock("SamToBam");
 			clock.start();
-//			String alignedToContigBam1 = tempDir1 + "/" + "align_to_contig.bam";
-//			String alignedToContigBam2 = tempDir2 + "/" + "align_to_contig.bam";
-//			samToBam(alignedToContigSam1, alignedToContigBam1);
-//			samToBam(alignedToContigSam2, alignedToContigBam2);
+			String alignedToContigBam1 = tempDir1 + "/" + "align_to_contig.bam";
+			String alignedToContigBam2 = tempDir2 + "/" + "align_to_contig.bam";
+			samToBam(alignedToContigSam1, alignedToContigBam1);
+			samToBam(alignedToContigSam2, alignedToContigBam2);
 			clock.stopAndPrint();
 			
 			String sortedAlignedToContig1 = tempDir1 + "/" + "sorted_aligned_to_contig.bam";
@@ -209,10 +209,10 @@ public class ReAligner {
 			List<String> bamsToSort = new ArrayList<String>();
 			bamsToSort.add(inputSam);
 			bamsToSort.add(inputSam2);
-//			bamsToSort.add(alignedToContigBam1);
-//			bamsToSort.add(alignedToContigBam2);
-			bamsToSort.add(alignedToContigSam1);
-			bamsToSort.add(alignedToContigSam2);
+			bamsToSort.add(alignedToContigBam1);
+			bamsToSort.add(alignedToContigBam2);
+//			bamsToSort.add(alignedToContigSam1);
+//			bamsToSort.add(alignedToContigSam2);
 
 			
 			List<String> sortedOutput = new ArrayList<String>();
@@ -1261,6 +1261,7 @@ public class ReAligner {
 								// Check to see if this read has been output with the same alignment already.
 //								String readAlignmentInfo;
 								
+								//TODO: Check strand!!!
 								String readAlignmentInfo = updatedRead.getReferenceName() + "_" + updatedRead.getAlignmentStart() + "_" +
 										updatedRead.getCigarString();
 								/*
@@ -1345,6 +1346,8 @@ public class ReAligner {
 
 		// read block positions are one based
 		// ReadPosition is zero based
+		
+		int totalInsertLength = 0;
 
 		for (ReadBlock contigBlock : contigReadBlocks) {
 			if ((contigBlock.getReadStart() + contigBlock.getReferenceLength()) >= orig
@@ -1353,6 +1356,8 @@ public class ReAligner {
 						contigPosition, read.getReadLength()
 								- accumulatedLength);
 				
+				block.setReferenceStart(block.getReferenceStart() - totalInsertLength);
+				
 				// If this is an insert, we need to adjust the alignment start
 				if ((block.getType() == CigarOperator.I) && (block.getLength() != 0)) {
 					contigPosition = contigPosition - (contigBlock.getLength() - block.getLength());
@@ -1360,6 +1365,8 @@ public class ReAligner {
 //					block = contigBlock.getSubBlock(accumulatedLength,
 //								contigPosition, read.getReadLength()
 //								- accumulatedLength);
+					
+					totalInsertLength += block.getLength();
 				}
 				
 				//TODO: Drop leading and trailing delete blocks

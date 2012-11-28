@@ -19,7 +19,7 @@ public class CombineChimera3 {
 	
 	// Minimum number of non clipped bases that must be between an identified indel and
 	// the beginning/end of the contig
-	private int minIndelBuffer;
+	int minIndelBuffer;
 	
 	public void combine(String input, String output, int minIndelBuffer) {
 		this.minIndelBuffer = minIndelBuffer;
@@ -32,39 +32,10 @@ public class CombineChimera3 {
 				header, true, new File(output));
 
 		for (List<SAMRecord> readList : reader) {
+			List<SAMRecord> processedReads = processRead(readList);
 			
-			boolean isCombined = false;
-			
-			sortReadsByPosition(readList);
-			
-			pruneLikelyInserts(readList);
-			
-			if (readList.size() == 2) {
-				SAMRecord read1 = readList.get(0);
-				SAMRecord read2 = readList.get(1);
-				
-				// Look for same reference, strand and multipart Cigar
-				if ((read1.getReferenceName().equals(read2.getReferenceName())) &&
-					(read1.getReadNegativeStrandFlag() == read2.getReadNegativeStrandFlag()) &&
-					(read1.getCigarLength() >= 2) &&
-					(read2.getCigarLength() >= 2)) {
-					
-					SAMRecord combinedRead = combineChimericReads(read1, read2);
-					if (combinedRead != null) {
-						isCombined = true;
-						
-	//					outputReadsBam.addAlignment(combinedRead);
-//						System.out.println(combinedRead.getSAMString());
-						outputRead(combinedRead, isCombined, outputReadsBam);
-					}
-				}
-			}
-			
-			if (!isCombined) {
-				for (SAMRecord origRead : readList) {
-//					outputReadsBam.addAlignment(origRead);
-					outputRead(origRead, isCombined, outputReadsBam);
-				}
+			for (SAMRecord read : processedReads) {
+				outputReadsBam.addAlignment(read);
 			}
 		}
 		
@@ -72,6 +43,41 @@ public class CombineChimera3 {
 		reader.close();
 		
 		System.out.println("Done combining chimeric reads.");
+	}
+	
+	// SAMRecords in the input represent chimera for the same read
+	protected List<SAMRecord> processRead(List<SAMRecord> readList) {
+		List<SAMRecord> reads = null;
+		boolean isCombined = false;
+		
+		sortReadsByPosition(readList);
+		
+		pruneLikelyInserts(readList);
+		
+		if (readList.size() == 2) {
+			SAMRecord read1 = readList.get(0);
+			SAMRecord read2 = readList.get(1);
+			
+			// Look for same reference, strand and multipart Cigar
+			if ((read1.getReferenceName().equals(read2.getReferenceName())) &&
+				(read1.getReadNegativeStrandFlag() == read2.getReadNegativeStrandFlag()) &&
+				(read1.getCigarLength() >= 2) &&
+				(read2.getCigarLength() >= 2)) {
+				
+				SAMRecord combinedRead = combineChimericReads(read1, read2);
+				if (combinedRead != null) {
+					isCombined = true;
+					reads = new ArrayList<SAMRecord>();
+					reads.add(combinedRead);
+				}
+			}
+		}
+		
+		if (!isCombined) {
+			reads = readList;
+		}
+		
+		return reads;
 	}
 	
 	private SAMRecord combineChimericReads(SAMRecord read1, SAMRecord read2) {
@@ -178,9 +184,20 @@ public class CombineChimera3 {
 					return null;
 				}
 				
-				if (readGap > 0) {
+				// Right side may have skipped SNPs, so pad it.
+				if (alignmentGap > 0) {
+					this.padLeftmostElement(rightElements, alignmentGap);
+				}
+				
+				//TODO: Necessary for mismatches?
+				/*
+				if ((readGap > 0) && ((totalLength + insertLen) < read1.getReadLength())) {
+					if (readGap != read1.getReadLength() - totalLength - insertLen) {
+						System.out.println("WARNING: Invalid read gap padding: " + read1.getSAMString());
+					}
 					this.padLeftmostElement(rightElements, readGap);
 				}
+				*/
 				
 				indelElement = new CigarElement(insertLen, CigarOperator.INSERTION);
 			}
@@ -353,8 +370,8 @@ public class CombineChimera3 {
 		String in;
 		String out;
 		
-//		in = "/home/lmose/dev/ayc/long_indels/next2/50I.sam";
-//		out = "/home/lmose/dev/ayc/long_indels/next2/50I_c.sam";
+		in = "/home/lmose/dev/ayc/long_indels/next2/50I.sam";
+		out = "/home/lmose/dev/ayc/long_indels/next2/50I_c.sam";
 
 		
 		/*
@@ -402,8 +419,8 @@ public class CombineChimera3 {
 //		in = "/home/lmose/dev/ayc/long_indels/s529/next2/1126.sam";
 //		out = "/home/lmose/dev/ayc/long_indels/s529/next2/1126_chim.sam";
 
-		in = "/home/lmose/dev/ayc/sim/s526/8489.sam";
-		out = "/home/lmose/dev/ayc/sim/s526/8489_chim.sam";
+//		in = "/home/lmose/dev/ayc/sim/s526/8489.sam";
+//		out = "/home/lmose/dev/ayc/sim/s526/8489_chim.sam";
 
 		cc3.combine(in, out, 0);
 

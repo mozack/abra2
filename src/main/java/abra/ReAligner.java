@@ -18,6 +18,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
+import abra.Assembler.TooManyPotentialContigsException;
+
 import net.sf.picard.sam.BuildBamIndex;
 import net.sf.picard.sam.SamFormatConverter;
 import net.sf.picard.sam.SortSam;
@@ -33,12 +35,12 @@ import net.sf.samtools.SAMFileReader.ValidationStringency;
 
 public class ReAligner {
 
-	private static final int MAX_UNALIGNED_READS = 1000000;
+	private static final int DEFAULT_MAX_UNALIGNED_READS = 1000000;
 	private static final int MAX_REGION_LENGTH = 2000;
 	private static final int MIN_REGION_REMAINDER = 500;
 	private static final int REGION_OVERLAP = 200; 
 	private static final long RANDOM_SEED = 1;
-	private static final int MAX_POTENTIAL_UNALIGNED_CONTIGS = 10000000;
+	private static final int MAX_POTENTIAL_UNALIGNED_CONTIGS = 2000000;
 	
 	private int missingXATag = 0;
 	
@@ -62,6 +64,8 @@ public class ReAligner {
 	
 	private int numThreads;
 	
+	private int maxUnalignedReads = DEFAULT_MAX_UNALIGNED_READS;
+	
 	private boolean shouldReprocessUnaligned = true;
 	
 	private List<ReAlignerRunnable> threads = new ArrayList<ReAlignerRunnable>();
@@ -78,6 +82,7 @@ public class ReAligner {
 		System.out.println("reference: " + reference);
 		System.out.println("working dir: " + tempDir);
 		System.out.println("num threads: " + numThreads);
+		System.out.println("max unaligned reads: " + maxUnalignedReads);
 		System.out.println(assemblerSettings.getDescription());
 		
 		System.out.println("Java version: " + System.getProperty("java.version"));
@@ -126,8 +131,21 @@ public class ReAligner {
 			unalignedRegionSam = unalignedDir + "/unaligned_region.bam";
 			String sortedUnalignedRegion = unalignedDir + "/sorted_unaligned_region.bam";
 			
-			Assembler assem = newUnalignedAssembler();
-			boolean hasContigs = assem.assembleContigs(unalignedSam, unalignedContigFasta, "unaligned");
+			Assembler assem = newUnalignedAssembler(1);
+			boolean hasContigs = false;
+			try {
+				hasContigs = assem.assembleContigs(unalignedSam, unalignedContigFasta, "unaligned");
+			} catch (TooManyPotentialContigsException e) {
+				assem = newUnalignedAssembler(2);
+				try {
+					log("Retrying unaligned region assembly.");
+					hasContigs = assem.assembleContigs(unalignedSam, unalignedContigFasta, "unaligned");
+				} catch (TooManyPotentialContigsException e2) {
+					log("UNALIGN_FAILURE - Assembly failed for unaligned region");
+					hasContigs = false;
+				}
+			}
+			
 			// Make eligible for GC
 			assem = null;
 			
@@ -301,7 +319,7 @@ public class ReAligner {
 				read.setMappingQuality(calcMappingQuality(read));
 				
 				//TODO - Calc as fraction of read length
-				if (numMismatches > 20) {
+				if (numMismatches > 10) {
 					System.out.println("HIGH_MISMATCH: [" + read.getSAMString() + "]");
 				}
 			}
@@ -723,8 +741,8 @@ public class ReAligner {
 		
 		System.out.println("Number of unaligned reads: " + numUnalignedReads);
 		
-		if (numUnalignedReads > MAX_UNALIGNED_READS) {
-			double keepProbability = (double)  MAX_UNALIGNED_READS / (double) numUnalignedReads;
+		if (numUnalignedReads > maxUnalignedReads) {
+			double keepProbability = (double)  maxUnalignedReads / (double) numUnalignedReads;
 			String downsampledSam = unalignedBam + ".downsampled.bam";
 			downsampleSam(unalignedBam, downsampledSam, keepProbability);
 			unalignedBam = downsampledSam;
@@ -761,7 +779,10 @@ public class ReAligner {
 			
 			assem.assembleContigs(targetRegionBam, contigsFasta, region.getDescriptor());
 			
-		} catch (Exception e) {
+		} catch (TooManyPotentialContigsException e) {
+			System.out.println("Too many contigs for region: " + region.getDescriptor());
+		}
+		catch (Exception e) {
 			e.printStackTrace();
 			throw e;
 		}
@@ -1078,6 +1099,8 @@ public class ReAligner {
 		
 		log("Writing reads to: " + outputSam);
 		
+		int realignedCount = 0;
+		
 		SAMFileWriter outputReadsBam = new SAMFileWriterFactory().makeSAMOrBAMWriter(
 				samHeader, true, new File(outputSam));
 		
@@ -1257,6 +1280,9 @@ public class ReAligner {
 								
 								// Contig's mapping quality
 								updatedRead.setAttribute("YQ", hitInfo.getRecord().getMappingQuality());
+								
+								// Contig's length
+								updatedRead.setAttribute("YL", hitInfo.getRecord().getCigar().getReadLength());
 															
 								// Check to see if this read has been output with the same alignment already.
 //								String readAlignmentInfo;
@@ -1283,6 +1309,7 @@ public class ReAligner {
 						}
 					}
 					
+					boolean isReadRealigned = false;
 					for (SAMRecord readToOutput : outputReadAlignmentInfo.values()) {
 						
 						int origBestHits = this.getIntAttribute(readToOutput, "X0");
@@ -1304,10 +1331,15 @@ public class ReAligner {
 							readToOutput.setAttribute("MD", null);
 							readToOutput.setAttribute("XA", null);
 							readToOutput.setAttribute("XT", null);
+							isReadRealigned = true;
 						}
 
 						outputReadsBam.addAlignment(readToOutput);
 						isReadWritten = true;
+					}
+					
+					if (isReadRealigned) {
+						realignedCount += 1;
 					}
 				}
 				/*
@@ -1331,7 +1363,7 @@ public class ReAligner {
 		contigReader.close();
 		outputReadsBam.close();
 		
-		log("Done with: " + outputSam);
+		log("Done with: " + outputSam + ".  Number of reads realigned: " + realignedCount);
 	}
 	
 	SAMRecord updateReadAlignment(SAMRecord contigRead,
@@ -1457,17 +1489,23 @@ public class ReAligner {
 		List<Feature> regions = new ArrayList<Feature>();
 		
 		long pos = region.getStart();
+		long end = pos-1;
 		
-		while (pos < region.getEnd()) {
+		while (end < region.getEnd()) {
 			long start = pos;
-			long end = pos + MAX_REGION_LENGTH - REGION_OVERLAP;
+			end = pos + MAX_REGION_LENGTH;
+			long marker = end;
+			
+			if (end < region.getEnd()) {
+				end += REGION_OVERLAP;
+			}
 			
 			// If we're at or near the end of the region, stop at region end.
 			if (end > (region.getEnd() - MIN_REGION_REMAINDER)) {
 				end = region.getEnd();
 			}
 			
-			pos = end + 1;
+			pos = marker;
 			
 			regions.add(new Feature(region.getSeqname(), start, end));
 		}
@@ -1485,27 +1523,28 @@ public class ReAligner {
 		assem.setMaxPotentialContigs(assemblerSettings
 				.getMaxPotentialContigs());
 		assem.setMinContigRatio(assemblerSettings.getMinContigRatio());
+		assem.setMaxPathsFromRoot(-1);
 
 		return assem;
 	}
 	
-	private Assembler newUnalignedAssembler() {
+	private Assembler newUnalignedAssembler(int mnfMultiplier) {
 		Assembler assem = new Assembler();
 
 		assem.setKmerSize(assemblerSettings.getKmerSize());
 //		assem.setMinEdgeFrequency(assemblerSettings.getMinEdgeFrequency() * 2);
 //		assem.setMinNodeFrequncy(assemblerSettings.getMinNodeFrequncy() * 2);
 		assem.setMinEdgeFrequency(assemblerSettings.getMinEdgeFrequency());
-		assem.setMinNodeFrequncy(assemblerSettings.getMinNodeFrequncy());
+		assem.setMinNodeFrequncy(assemblerSettings.getMinUnalignedNodeFrequency() * mnfMultiplier);
 		assem.setMinContigLength(assemblerSettings.getMinContigLength());
 //		assem.setMaxPotentialContigs(assemblerSettings.getMaxPotentialContigs() * 30);
 		assem.setMaxPotentialContigs(MAX_POTENTIAL_UNALIGNED_CONTIGS);
 		assem.setMinContigRatio(-1.0);
 		assem.setTruncateOutputOnRepeat(false);
+		assem.setMaxPathsFromRoot(5000);
 
 		return assem;
 	}
-
 
 	private void init() {
 		File workingDir = new File(tempDir);
@@ -1556,6 +1595,10 @@ public class ReAligner {
 	public void setShouldReprocessUnaligned(boolean shouldReprocessUnaligned) {
 		this.shouldReprocessUnaligned = shouldReprocessUnaligned;
 	}
+	
+	public void setMaxUnalignedReads(int maxUnalignedReads) {
+		this.maxUnalignedReads = maxUnalignedReads;
+	}
 
 	public static void run(String[] args) throws Exception {
 		
@@ -1574,6 +1617,7 @@ public class ReAligner {
 			assemblerSettings.setMaxPotentialContigs(options
 					.getMaxPotentialContigs());
 			assemblerSettings.setMinContigRatio(options.getMinContigRatio());
+			assemblerSettings.setMinUnalignedNodeFrequency(options.getMinUnalignedNodeFrequency());
 
 			ReAligner realigner = new ReAligner();
 			realigner.setReference(options.getReference());
@@ -1583,6 +1627,7 @@ public class ReAligner {
 			realigner.setNumThreads(options.getNumThreads());
 			realigner.setMinContigMapq(options.getMinContigMapq());
 			realigner.setShouldReprocessUnaligned(!options.isSkipUnalignedAssembly());
+			realigner.setMaxUnalignedReads(options.getMaxUnalignedReads());
 
 			long s = System.currentTimeMillis();
 

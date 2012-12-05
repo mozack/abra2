@@ -5,6 +5,7 @@ public class AssemblerSettings {
 	private int kmerSize;
 	private int minEdgeFrequency;
 	private int minNodeFrequncy;
+	private int minUnalignedNodeFrequency;
 	private int minContigLength;
 	private int maxPotentialContigs;
 	private double minContigRatio;
@@ -23,6 +24,14 @@ public class AssemblerSettings {
 	
 	public void setMinEdgeFrequency(int minEdgeFrequency) {
 		this.minEdgeFrequency = minEdgeFrequency;
+	}
+	
+	public void setMinUnalignedNodeFrequency(int minUnalignedNodeFrequency) {
+		this.minUnalignedNodeFrequency = minUnalignedNodeFrequency;
+	}
+	
+	public int getMinUnalignedNodeFrequency() {
+		return minUnalignedNodeFrequency;
 	}
 	
 	public int getMinNodeFrequncy() {

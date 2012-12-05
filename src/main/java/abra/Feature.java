@@ -35,4 +35,8 @@ public class Feature {
 	public long getLength() {
 		return end-start;
 	}
+	
+	public String toString() {
+		return getDescriptor();
+	}
 }

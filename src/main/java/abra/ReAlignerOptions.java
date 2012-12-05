@@ -13,12 +13,14 @@ public class ReAlignerOptions extends Options {
 	private static final String WORKING_DIR = "working";
 	private static final String KMER_SIZE = "kmer";
 	private static final String MIN_NODE_FREQUENCY = "mnf";
+	private static final String MIN_UNALIGNED_NODE_FREQUENCY = "umnf";
 	private static final String MIN_CONTIG_LENGTH = "mcl";
 	private static final String MAX_POTENTIAL_CONTIGS = "mpc";
 	private static final String MIN_CONTIG_RATIO = "mcr";
 	private static final String MIN_CONTIG_MAPQ = "mc-mapq";
 	private static final String NUM_THREADS = "threads";
 	private static final String SKIP_UNALIGNED_ASSEMBLY = "no-unalign";
+	private static final String MAX_UNALIGNED_READS = "mur";
 	
 	private OptionParser parser;
 	private boolean isValid;
@@ -36,12 +38,14 @@ public class ReAlignerOptions extends Options {
             parser.accepts(WORKING_DIR, "Working directory for intermediate output").withRequiredArg().ofType(String.class);
             parser.accepts(KMER_SIZE, "Assembly kmer size").withRequiredArg().ofType(Integer.class);
             parser.accepts(MIN_NODE_FREQUENCY, "Assembly minimum node frequency").withRequiredArg().ofType(Integer.class);
+            parser.accepts(MIN_UNALIGNED_NODE_FREQUENCY, "Assembly minimum unaligned node frequency").withRequiredArg().ofType(Integer.class);
             parser.accepts(MIN_CONTIG_LENGTH, "Assembly minimum contig length").withRequiredArg().ofType(Integer.class);
             parser.accepts(MAX_POTENTIAL_CONTIGS, "Maximum number of potential contigs for a region").withRequiredArg().ofType(Integer.class);
             parser.accepts(MIN_CONTIG_RATIO, "Minimum contig length as percentage of observed region length").withRequiredArg().ofType(Double.class);
             parser.accepts(NUM_THREADS, "Number of threads (default: 2)").withRequiredArg().ofType(Integer.class);
             parser.accepts(MIN_CONTIG_MAPQ, "Minimum contig mapping quality").withRequiredArg().ofType(Integer.class);
             parser.accepts(SKIP_UNALIGNED_ASSEMBLY, "Skip assembly of reads that did not initially align.");
+            parser.accepts(MAX_UNALIGNED_READS, "Maximum number of unaligned reads to assemble").withRequiredArg().ofType(Integer.class);
     	}
     	
     	return parser;
@@ -122,6 +126,10 @@ public class ReAlignerOptions extends Options {
 		return (Integer) getOptions().valueOf(MIN_NODE_FREQUENCY);
 	}
 	
+	public int getMinUnalignedNodeFrequency() {
+		return (Integer) getOptions().valueOf(MIN_UNALIGNED_NODE_FREQUENCY);
+	}
+	
 	public int getMinContigLength() {
 		return (Integer) getOptions().valueOf(MIN_CONTIG_LENGTH);
 	}
@@ -144,6 +152,10 @@ public class ReAlignerOptions extends Options {
 	
 	public boolean isSkipUnalignedAssembly() {
 		return getOptions().has(SKIP_UNALIGNED_ASSEMBLY);
+	}
+	
+	public int getMaxUnalignedReads() {
+		return (Integer) getOptions().valueOf(MAX_UNALIGNED_READS);
 	}
 	
 	public boolean isValid() {

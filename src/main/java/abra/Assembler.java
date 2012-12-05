@@ -24,6 +24,8 @@ import net.sf.samtools.SAMRecord;
  */
 public class Assembler {
 		
+//	private static final int MAX_PATHS_FROM_ROOT = 10000;
+//	private static final int MAX_PATHS_FROM_ROOT = 20000;
 	private int kmerSize;
 	private int minEdgeFrequency;
 	private int minNodeFrequncy;
@@ -56,6 +58,10 @@ public class Assembler {
 	private boolean isEmpty = true;
 	
 	private String prefix;
+	
+	private int pathsFromCurrRoot;
+	
+	private int maxPathsFromRoot;
 	
 	//TODO: Do not keep contigs in memory.
 	public boolean assembleContigs(String inputSam, String output, String prefix) throws FileNotFoundException, IOException, InterruptedException {
@@ -140,6 +146,8 @@ public class Assembler {
 			System.out.println("TOO_MANY_CONTIGS for : " + inputSam);
 //			contigs.clear();
 			shouldTruncateOutput = true;
+			truncateFile(output);
+			throw e;
 		} finally {
 			writer.close();
 			reader.close();
@@ -259,6 +267,10 @@ public class Assembler {
 		writer.append("\n");
 		
 		isEmpty = false;
+		
+		if (outputCount > this.maxPotentialContigs) {
+			throw new TooManyPotentialContigsException();
+		}
 	}
 	
 	private void identifyRootNodes() {
@@ -275,11 +287,30 @@ public class Assembler {
 		potentialContigCount = rootNodes.size();
 		
 		for (Node node : rootNodes) {
-			//StringBuffer contig = new StringBuffer();
+			
 			Contig contig = new Contig();
 			Set<Node> visitedNodes = new HashSet<Node>();
 			Counts counts = new Counts();
-			buildContig(node, visitedNodes, contig, counts);
+			
+			try {
+
+				if (maxPathsFromRoot > 0) {
+					// Traverse graph in shadow mode to determine if there are too many paths.
+					pathsFromCurrRoot = 0;
+					buildContig(node, visitedNodes, contig, counts, true);
+				}
+				
+				// Now actually output the contigs
+				potentialContigCount = 0;
+				pathsFromCurrRoot = 0;
+				contig = new Contig();
+				visitedNodes = new HashSet<Node>();
+				counts = new Counts();
+				buildContig(node, visitedNodes, contig, counts, false);
+				
+			} catch (TooManyPathsFromRootException e) {
+				System.out.println("TOO_MANY_PATHS_FROM_ROOT: " + this.prefix + "_" + node.getSequence().getSequenceAsString());
+			} 
 			
 //			//TODO: Check for repeat and discard contigs if encountered
 //			outputContigs(prefix);
@@ -289,52 +320,59 @@ public class Assembler {
 		System.out.println("Wrote: " + outputCount + " contigs.");
 	}
 	
-	private void processContigTerminus(Node node, Counts counts, Contig contig) throws IOException {
+	private void processContigTerminus(Node node, Counts counts, Contig contig, boolean isShadowMode) throws IOException {
 		
-		if (!counts.isTerminatedAtRepeat()) {
-			// We've reached the terminus, append the remainder of the node.
-			contig.append(node, node.getSequence().getSequenceAsString());
-		} else {
-			hasRepeat = true;
-		}
-		
-		if (contig.getSequence().length() >= minContigLength) {
+		if (!isShadowMode) {
+			if (!counts.isTerminatedAtRepeat()) {
+				// We've reached the terminus, append the remainder of the node.
+				contig.append(node, node.getSequence().getSequenceAsString());
+			} else {
+				hasRepeat = true;
+			}
 			
-			// Check contig length against region length if mcr is specified and we have a valid region length
-			if ( (minContigRatio <= 0) || (regionLength <= 0) ||
-				 (((double) contig.getSequence().length() / (double) regionLength) >= minContigRatio) ) {
+			if (contig.getSequence().length() >= minContigLength) {
 				
-				contig.setDescriptor(counts.toString());
-				
-				if (counts.isTerminatedAtRepeat()) {
-					contig.setDescriptor(contig.getDescriptor() + "_repeatNode:" + node.getSequence().getSequenceAsString());
+				// Check contig length against region length if mcr is specified and we have a valid region length
+				if ( (minContigRatio <= 0) || (regionLength <= 0) ||
+					 (((double) contig.getSequence().length() / (double) regionLength) >= minContigRatio) ) {
+					
+					contig.setDescriptor(counts.toString());
+					
+					if (counts.isTerminatedAtRepeat()) {
+						contig.setDescriptor(contig.getDescriptor() + "_repeatNode:" + node.getSequence().getSequenceAsString());
+					}
+		
+					outputContig(contig, prefix);
+	//				contigs.add(contig);
 				}
-	
-				outputContig(contig, prefix);
-//				contigs.add(contig);
 			}
 		}
 	}
 	
-	private void buildContig(Node node, Set<Node> visitedNodes, Contig contig, Counts counts) throws IOException {
-		buildContig(node, visitedNodes, contig, counts, 0);
+	private void buildContig(Node node, Set<Node> visitedNodes, Contig contig, Counts counts, boolean isShadowMode) throws IOException {
+		buildContig(node, visitedNodes, contig, counts, 0, isShadowMode);
 	}
 	
-	private void buildContig(Node node, Set<Node> visitedNodes, Contig contig, Counts counts, int depth) throws IOException {
+	private void buildContig(Node node, Set<Node> visitedNodes, Contig contig, Counts counts, int depth, boolean isShadowMode) throws IOException {
 		
+		//TODO: Handle this more gracefully?
 		if (depth > 10000) {
 			throw new DepthExceededException(depth);
 		}
 		
-		if (potentialContigCount > maxPotentialContigs) {
-			throw new TooManyPotentialContigsException();
+		if ((maxPathsFromRoot > 0) && (pathsFromCurrRoot > maxPathsFromRoot)) {
+			throw new TooManyPathsFromRootException();
 		}
+		
+//		if (potentialContigCount > maxPotentialContigs) {
+//			throw new TooManyPotentialContigsException();
+//		}
 		
 		depth += 1;
 		
 		if (visitedNodes.contains(node)) {
 			counts.setTerminatedAtRepeat(true);
-			processContigTerminus(node, counts, contig);
+			processContigTerminus(node, counts, contig, isShadowMode);
 		} else {
 			visitedNodes.add(node);
 			
@@ -342,7 +380,7 @@ public class Assembler {
 			Collection<Node> toNodes = node.getToNodes();
 			
 			if (toNodes.isEmpty()) {
-				processContigTerminus(node, counts, contig);
+				processContigTerminus(node, counts, contig, isShadowMode);
 
 			} else {
 				// Append current character
@@ -355,11 +393,16 @@ public class Assembler {
 //					counts.incrementEdgeCounts(edge.getCount());
 					Contig contigBranch = new Contig(contig);
 					Set<Node> visitedNodesBranch = new HashSet<Node>(visitedNodes);
-					buildContig(toNode, visitedNodesBranch, contigBranch, (Counts) counts.clone(), depth);
+					buildContig(toNode, visitedNodesBranch, contigBranch, (Counts) counts.clone(), depth, isShadowMode);
+					pathsFromCurrRoot += 1;
 				}
 			}			
 		}
 	} 
+	
+	public void setMaxPathsFromRoot(int maxPathsFromRoot) {
+		this.maxPathsFromRoot = maxPathsFromRoot;
+	}
 	
 	// Merge contigs that overlap with < kmerSize bases
 	// This addresses "smallish" gaps in the graph
@@ -548,6 +591,10 @@ public class Assembler {
 		public int getDepth() {
 			return depth;
 		}
+	}
+	
+	static class TooManyPathsFromRootException extends RuntimeException {
+		
 	}
 	
 	static class TooManyPotentialContigsException extends RuntimeException {

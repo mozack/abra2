@@ -155,8 +155,10 @@ public class ReAligner {
 				String unalignedCleanContigsFasta = alignAndCleanContigs(unalignedContigFasta, unalignedDir, false);
 				if (unalignedCleanContigsFasta != null) {
 					String alignedToContigSam = alignReads(unalignedDir, unalignedSam, unalignedCleanContigsFasta);
-					String alignedToContigBam = unalignedDir + "/" + "align_to_contig.bam";
-					samToBam(alignedToContigSam, alignedToContigBam);
+					String alignedToContigBam = alignedToContigSam;
+//					String alignedToContigBam = unalignedDir + "/" + "align_to_contig.bam";
+//					samToBam(alignedToContigSam, alignedToContigBam);
+					
 					String sortedAlignedToContig = unalignedDir + "/" + "sorted_aligned_to_contig.bam";
 					String sortedOriginalReads = unalignedDir + "/" + "sorted_original_reads.bam";
 //					sortBamsByName(alignedToContigSam, unalignedSam, sortedAlignedToContig, sortedOriginalReads);
@@ -210,14 +212,16 @@ public class ReAligner {
 			String alignedToContigSam1 = alignReads(tempDir1, inputSam, cleanContigsFasta);
 			String alignedToContigSam2 = alignReads(tempDir2, inputSam2, cleanContigsFasta);
 			clock.stopAndPrint();
-			
-			clock = new Clock("SamToBam");
-			clock.start();
-			String alignedToContigBam1 = tempDir1 + "/" + "align_to_contig.bam";
-			String alignedToContigBam2 = tempDir2 + "/" + "align_to_contig.bam";
-			samToBam(alignedToContigSam1, alignedToContigBam1);
-			samToBam(alignedToContigSam2, alignedToContigBam2);
-			clock.stopAndPrint();
+
+			String alignedToContigBam1 = alignedToContigSam1;
+			String alignedToContigBam2 = alignedToContigSam2;
+//			clock = new Clock("SamToBam");
+//			clock.start();
+//			String alignedToContigBam1 = tempDir1 + "/" + "align_to_contig.bam";
+//			String alignedToContigBam2 = tempDir2 + "/" + "align_to_contig.bam";
+//			samToBam(alignedToContigSam1, alignedToContigBam1);
+//			samToBam(alignedToContigSam2, alignedToContigBam2);
+//			clock.stopAndPrint();
 			
 			String sortedAlignedToContig1 = tempDir1 + "/" + "sorted_aligned_to_contig.bam";
 			String sortedOriginalReads1 = tempDir1 + "/" + "sorted_original_reads.bam";
@@ -436,7 +440,8 @@ public class ReAligner {
 	
 	private String alignReads(String tempDir, String inputSam, String cleanContigsFasta) throws InterruptedException, IOException {
 		log("Aligning original reads to contigs");
-		String alignedToContigSam = tempDir + "/" + "align_to_contig.sam";
+		//String alignedToContigSam = tempDir + "/" + "align_to_contig.sam";
+		String alignedToContigSam = tempDir + "/" + "align_to_contig.bam";
 		alignToContigs(tempDir, inputSam, alignedToContigSam, cleanContigsFasta);
 		return alignedToContigSam;
 	}
@@ -1321,8 +1326,12 @@ public class ReAligner {
 						}
 						
 						if (readToOutput.getAttribute("YO") != null) {
-//							readToOutput.setAttribute("X0", outputReadAlignmentInfo.size());
-							readToOutput.setAttribute("X0", null);
+							// HACK: Only add X0 for final alignment.  Assembler skips X0 > 1
+							if (isTightAlignment) {
+								readToOutput.setAttribute("X0", outputReadAlignmentInfo.size());
+							} else {
+								readToOutput.setAttribute("X0", null);
+							}
 							readToOutput.setAttribute("X1", origBestHits + origSuboptimalHits);
 							
 							// Clear various tags
@@ -1602,7 +1611,7 @@ public class ReAligner {
 
 	public static void run(String[] args) throws Exception {
 		
-		System.out.println("Starting 0.01 ...");
+		System.out.println("Starting 0.03 ...");
 		
 		ReAlignerOptions options = new ReAlignerOptions();
 		options.parseOptions(args);
@@ -1748,7 +1757,6 @@ public class ReAligner {
 //		String regions = "/home/lmose/dev/ayc/regions/clinseq5/9041.gtf";
 //		String tempDir = "/home/lmose/dev/ayc/sim/s411/9041_working";
 
-		/*
 		String input = "/home/lmose/dev/ayc/sim/s339/empty.bam";
 		String input2 = "/home/lmose/dev/ayc/sim/s411/sorted_small.bam";
 		String output = "/home/lmose/dev/ayc/sim/s411/empty_realigned3.bam";
@@ -1756,16 +1764,17 @@ public class ReAligner {
 		String reference = "/home/lmose/reference/chr21/chr21.fa";
 		String regions = "/home/lmose/dev/ayc/regions/clinseq5/9041.gtf";
 		String tempDir = "/home/lmose/dev/ayc/sim/s411/small_working3";
-*/
 		
-		String input = "/home/lmose/dev/ayc/sim/s339/empty.bam";
+//		String input = "/home/lmose/dev/ayc/sim/s339/empty.bam";
+		/*
+		String input = "/home/lmose/dev/ayc/sim/s526/sorted_11551.bam";
 		String input2 = "/home/lmose/dev/ayc/sim/s526/sorted_11551.bam";
-		String output = "/home/lmose/dev/ayc/sim/s526/empty_realigned3.bam";
+		String output = "/home/lmose/dev/ayc/sim/s526/normal_realigned3.bam";
 		String output2 = "/home/lmose/dev/ayc/sim/s526/11551_realigned.bam";
 		String reference = "/home/lmose/reference/chr1/chr1.fa";
 		String regions = "/home/lmose/dev/ayc/sim/s526/11551.gtf";
 		String tempDir = "/home/lmose/dev/ayc/sim/s526/11551_working";
-
+*/
 		
 		/*
 		String input = "/home/lmose/dev/ayc/sim/38/sorted_tiny.bam";

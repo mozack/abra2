@@ -27,8 +27,19 @@ public class Aligner {
 		System.out.println("Running: [" + cmd + "]");
 		
 		long s = System.currentTimeMillis();
-		
-		Process proc = Runtime.getRuntime().exec(cmd);
+
+		String[] cmds = {
+				"bash",
+				"-c",
+				cmd
+			};
+		Process proc = Runtime.getRuntime().exec(cmds);
+
+//		Process proc;
+//		if (inBash) {
+//		} else {
+//			proc = Runtime.getRuntime().exec(cmd);
+//		}
 		
 		//TODO: Catch InterruptedException ?
 		//TODO: Capture stderr
@@ -50,10 +61,13 @@ public class Aligner {
 		
 		runCommand(aln);
 		
-		String convert = "bwa samse " + reference + " " + sai + " " + input + " -f " + outputSam  + " -n 1000";
+		String convert = "bwa samse " + reference + " " + sai + " " + input + " -n 1000 " +
+				"| samtools view -bS -F 0x04 -o " + outputSam + " -";
 		
 		runCommand(convert);
 	}
+	
+	
 	
 //	public void smallIndex() throws IOException, InterruptedException {
 //		runCommand("bwa index " + reference);

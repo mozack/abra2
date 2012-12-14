@@ -1,23 +1,28 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <iostream>
 #include <stack>
 #include <sparsehash/sparse_hash_map>
 #include <sparsehash/sparse_hash_set>
 #include <stdexcept>
+#include "abra_NativeAssembler.h"
+
 using namespace std;
 using google::sparse_hash_map;
 using google::sparse_hash_set;
-//using ext::hash;
-//using std::tr1::hash;
 
 #define READ_LENGTH 100
 #define KMER 63
 #define MIN_CONTIG_LENGTH 101
 #define MIN_NODE_FREQUENCY 3
-
 #define MAX_CONTIG_SIZE 10000
+
+#define OK 0
+#define TOO_MANY_PATHS_FROM_ROOT -1
+#define TOO_MANY_CONTIGS -2
+#define STOPPED_ON_REPEAT -3
 
 struct eqstr
 {
@@ -44,16 +49,46 @@ struct my_hash
 	}
 };
 
+struct struct_pool {
+	struct node_pool* node_pool;
+	struct kmer_pool* kmer_pool;
+	struct read_pool* read_pool;
+};
+
+#define NODES_PER_BLOCK 10000
+#define MAX_NODE_BLOCKS 50000
+#define KMERS_PER_BLOCK 10000
+#define MAX_KMER_BLOCKS 50000
+#define READS_PER_BLOCK 10000
+#define MAX_READ_BLOCKS 10000
+
+struct node_pool {
+	struct node** nodes;
+	int block_idx;
+	int node_idx;
+};
+
+struct kmer_pool {
+	char** kmers;
+	int block_idx;
+	int kmer_idx;
+};
+
+struct read_pool {
+	char** reads;
+	int block_idx;
+	int read_idx;
+};
+
 struct node {
 
 	//TODO: Collapse from 8 to 2 bits.  Only store as key.
 	char* seq;
 	int frequency;
+	//TODO: Convert to stl?
 	struct linked_node* toNodes;
 	struct linked_node* fromNodes;
-//	sparse_hash_map<const char*, struct node*, hash<const char*>, eqstr> to_nodes;
-//	sparse_hash_map<const char*, struct node*, hash<const char*>, eqstr> from_nodes;
-	char contributingRead[READ_LENGTH+1];
+	char* contributingRead;;
 	char hasMultipleUniqueReads;
 };
 
@@ -66,27 +101,104 @@ int compare(const char* s1, const char* s2) {
 	return (s1 == s2) || (s1 && s2 && strcmp(s1, s2) == 0);
 }
 
-sparse_hash_map<const char*, struct node*, my_hash, eqstr> nodes;
-//sparse_hash_map<const char*, struct node*, hash<const char*>, eqstr> nodes;
+struct struct_pool* init_pool() {
+	struct_pool* pool = (struct struct_pool*) malloc(sizeof(struct_pool));
+	pool->node_pool = (struct node_pool*) malloc(sizeof(node_pool));
+	// Allocate array of arrays
+	pool->node_pool->nodes = (struct node**) malloc(sizeof(struct node*) * MAX_NODE_BLOCKS);
+	// Allocate first array of nodes
+	pool->node_pool->nodes[0] = (struct node*) malloc(sizeof(struct node) * NODES_PER_BLOCK);
+	pool->node_pool->block_idx = 0;
+	pool->node_pool->node_idx = 0;
 
-struct node* new_node(char* seq, char* contributingRead) {
-	node* my_node = (node*) malloc(sizeof(node));
+	pool->kmer_pool = (struct kmer_pool*) malloc(sizeof(kmer_pool));
+	pool->kmer_pool->kmers = (char**) malloc(sizeof(char*) * MAX_KMER_BLOCKS);
+	pool->kmer_pool->kmers[0] = (char*) malloc(sizeof(char) * (KMER+1) * KMERS_PER_BLOCK);
+	pool->kmer_pool->block_idx = 0;
+	pool->kmer_pool->kmer_idx = 0;
+
+	pool->read_pool = (struct read_pool*) malloc(sizeof(read_pool));
+	pool->read_pool->reads = (char**) malloc(sizeof(char*) * MAX_READ_BLOCKS);
+	pool->read_pool->reads[0] = (char*) malloc(sizeof(char) * (READ_LENGTH+1) * READS_PER_BLOCK);
+	pool->read_pool->block_idx = 0;
+	pool->read_pool->read_idx = 0;
+
+	return pool;
+}
+
+char* allocate_read(struct_pool* pool) {
+	if (pool->read_pool->block_idx > MAX_READ_BLOCKS) {
+		printf("READ BLOCK INDEX TOO BIG!!!!\n");
+		exit(-1);
+	}
+
+	if (pool->read_pool->read_idx >= READS_PER_BLOCK) {
+		pool->read_pool->block_idx++;
+		pool->read_pool->read_idx = 0;
+		pool->read_pool->reads[pool->read_pool->block_idx] = (char*) malloc(sizeof(char) * (READ_LENGTH+1) * READS_PER_BLOCK);
+	}
+
+	return &pool->read_pool->reads[pool->read_pool->block_idx][pool->read_pool->read_idx++ * (READ_LENGTH+1)];
+}
+
+
+char* allocate_kmer(struct_pool* pool) {
+	if (pool->kmer_pool->block_idx > MAX_KMER_BLOCKS) {
+		printf("KMER BLOCK INDEX TOO BIG!!!!\n");
+		exit(-1);
+	}
+
+	if (pool->kmer_pool->kmer_idx >= KMERS_PER_BLOCK) {
+		pool->kmer_pool->block_idx++;
+		pool->kmer_pool->kmer_idx = 0;
+//		printf("Allocating new block...\n");
+		pool->kmer_pool->kmers[pool->kmer_pool->block_idx] = (char*) malloc(sizeof(char) * (KMER+1) * KMERS_PER_BLOCK);
+	}
+
+	return &pool->kmer_pool->kmers[pool->kmer_pool->block_idx][pool->kmer_pool->kmer_idx++ * (KMER+1)];
+}
+
+struct node* allocate_node(struct_pool* pool) {
+	if (pool->node_pool->block_idx >= MAX_NODE_BLOCKS) {
+		printf("NODE BLOCK INDEX TOO BIG!!!!\n");
+		exit(-1);
+	}
+
+	if (pool->node_pool->node_idx >= NODES_PER_BLOCK) {
+		pool->node_pool->block_idx++;
+		pool->node_pool->node_idx = 0;
+		pool->node_pool->nodes[pool->node_pool->block_idx] = (struct node*) malloc(sizeof(struct node) * NODES_PER_BLOCK);
+	}
+
+	return &pool->node_pool->nodes[pool->node_pool->block_idx][pool->node_pool->node_idx++];
+}
+
+struct node* new_node(char* seq, char* contributingRead, struct_pool* pool) {
+
+//	node* my_node = (node*) malloc(sizeof(node));
+	node* my_node = allocate_node(pool);
 	memset(my_node, 0, sizeof(node));
 	my_node->seq = seq;
-//	my_node->contributingRead = contributingRead;
-	strcpy(my_node->contributingRead, contributingRead);
+//	strcpy(my_node->contributingRead, contributingRead);
+	my_node->contributingRead = contributingRead;
 	my_node->frequency = 1;
 	my_node->hasMultipleUniqueReads = 0;
 	return my_node;
 }
 
-char* get_kmer(int idx, char* sequence) {
-	char* kmer = (char*) malloc(sizeof(char) * KMER+1);
+char* get_kmer(int idx, char* sequence, struct struct_pool* pool) {
+//	char* kmer = (char*) malloc(sizeof(char) * KMER+1);
+	char* kmer = allocate_kmer(pool);
 	memset(kmer, 0, KMER+1);
 
 	memcpy(kmer, &sequence[idx], KMER);
 
 	return kmer;
+}
+
+void unget_kmer(char* kmer, struct struct_pool* pool) {
+	memset(kmer, 0, KMER+1);
+	pool->kmer_pool->kmer_idx--;
 }
 
 int is_node_in_list(struct node* node, struct linked_node* list) {
@@ -126,27 +238,28 @@ void increment_node_freq(struct node* node, char* read_seq) {
 	}
 }
 
-void add_to_graph(char* sequence) {
+void add_to_graph(char* sequence, sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, struct_pool* pool) {
 
 	struct node* prev = 0;
 
 	for (int i=0; i<=READ_LENGTH-KMER; i++) {
 
-		char* kmer = get_kmer(i, sequence);
+		char* kmer = get_kmer(i, sequence, pool);
 //		printf("\tkmer: %s\n", kmer);
 
-		struct node* curr = nodes[kmer];
+		struct node* curr = (*nodes)[kmer];
 
 		if (curr == NULL) {
-			curr = new_node(kmer, sequence);
+			curr = new_node(kmer, sequence, pool);
 
 			if (curr == NULL) {
 				printf("Null node for kmer: %s\n", kmer);
 				exit(-1);
 			}
 
-			nodes[kmer] = curr;
+			(*nodes)[kmer] = curr;
 		} else {
+			unget_kmer(kmer, pool);
 			increment_node_freq(curr, sequence);
 		}
 
@@ -158,19 +271,28 @@ void add_to_graph(char* sequence) {
 	}
 }
 
-void build_graph(const char* read_file) {
+void build_graph(const char* read_file, sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, struct_pool* pool) {
 	FILE *fp = fopen(read_file, "r");
-	char read[101];
-	memset(read, 0, 101);
+	char read[READ_LENGTH+1];
+	memset(read, 0, READ_LENGTH+1);
 
 	int line = 0;
 	while (fscanf(fp, "%s", read) != EOF) {
 //		printf("read: %d : %s\n", line++, read);
-		add_to_graph(read);
-		line++;
+		if (strcmp(read, "") != 0) {
+			char* read_ptr = allocate_read(pool);
+			memcpy(read_ptr, read, READ_LENGTH+1);
+			add_to_graph(read_ptr, nodes, pool);
+			line++;
+
+			if ((line % 100000) == 0) {
+				printf("Processed %d reads.\n", line);
+			}
+		}
 	}
 
 	printf("Num reads: %d\n", line);
+	printf("Num nodes: %d\n", nodes->size());
 
 	fclose(fp);
 }
@@ -202,9 +324,19 @@ struct linked_node* remove_node_from_list(struct node* node, struct linked_node*
 	return list;
 }
 
-void prune_graph() {
-	for (sparse_hash_map<const char*, struct node*, my_hash, eqstr>::const_iterator it = nodes.begin();
-		         it != nodes.end(); ++it) {
+
+void cleanup(struct linked_node* linked_nodes) {
+	struct linked_node* ptr = linked_nodes;
+	while (ptr != NULL) {
+		struct linked_node* next = ptr->next;
+		free(ptr);
+		ptr = next;
+	}
+}
+
+void prune_graph(sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes) {
+	for (sparse_hash_map<const char*, struct node*, my_hash, eqstr>::const_iterator it = nodes->begin();
+		         it != nodes->end(); ++it) {
 
 		const char* key = it->first;
 		struct node* node = it->second;
@@ -226,21 +358,25 @@ void prune_graph() {
 			}
 
 			// Remove node from map
-			nodes.erase(key);
+			nodes->erase(key);
+			cleanup(node->toNodes);
+			node->toNodes = NULL;
+			cleanup(node->fromNodes);
+			node->fromNodes = NULL;
 
 			// Free memory
-			free(node);
+//			free(node);
 		}
 	}
 }
 
-struct linked_node* identify_root_nodes() {
+struct linked_node* identify_root_nodes(sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes) {
 
 	struct linked_node* root_nodes = NULL;
 	int count = 0;
 
-	for (sparse_hash_map<const char*, struct node*, my_hash, eqstr>::const_iterator it = nodes.begin();
-	         it != nodes.end(); ++it) {
+	for (sparse_hash_map<const char*, struct node*, my_hash, eqstr>::const_iterator it = nodes->begin();
+	         it != nodes->end(); ++it) {
 		struct node* node = it->second;
 		if ((node != NULL) && (node->fromNodes == NULL)) {
 			struct linked_node* next = root_nodes;
@@ -248,7 +384,7 @@ struct linked_node* identify_root_nodes() {
 			root_nodes->node = node;
 			root_nodes->next = next;
 
-			printf("Root: %s\n", node->seq);
+//			printf("Root: %s\n", node->seq);
 			count++;
 		}
 	}
@@ -282,6 +418,7 @@ struct contig* copy_contig(struct contig* orig) {
 	copy->size = orig->size;
 	copy->is_repeat = orig->is_repeat;
 	copy->visited_nodes = new sparse_hash_set<const char*, my_hash, eqstr>(*orig->visited_nodes);
+	return copy;
 }
 
 void free_contig(struct contig* contig) {
@@ -305,25 +442,44 @@ void output_contig(struct contig* contig, int& contig_count, FILE* fp, const cha
 	}
 }
 
-void build_contigs(struct node* root, int& contig_count, FILE* fp, const char* prefix) {
+//#define OK 0
+//#define TOO_MANY_PATHS_FROM_ROOT -1
+//#define TOO_MANY_CONTIGS -2
+//#define STOPPED_ON_REPEAT -3
 
+int build_contigs(
+		struct node* root,
+		int& contig_count,
+		FILE* fp,
+		const char* prefix,
+		int max_paths_from_root,
+		int max_contigs,
+		char stop_on_repeat,
+		char shadow_mode) {
+
+	int status = OK;
 	stack<contig*> contigs;
 	struct contig* root_contig = new_contig();
-//	contig->seq[0] = root->seq[0];
-//	contig->size = 1;
 	root_contig->curr_node = root;
 	contigs.push(root_contig);
 
-	while (contigs.size() > 0) {
+	int paths_from_root = 1;
+
+	while ((contigs.size() > 0) && (status == OK)) {
 		// Get contig from stack
 		struct contig* contig = contigs.top();
 
 		if (is_node_visited(contig, contig->curr_node)) {
 			// We've encountered a repeat
 			contig->is_repeat = 1;
-			output_contig(contig, contig_count, fp, prefix);
+			if ((!shadow_mode) && (!stop_on_repeat)) {
+				output_contig(contig, contig_count, fp, prefix);
+			}
 			contigs.pop();
 			free_contig(contig);
+			if (stop_on_repeat) {
+				status = STOPPED_ON_REPEAT;
+			}
 		}
 		else if (contig->curr_node->toNodes == NULL) {
 			// We've reached the end of the contig.
@@ -331,7 +487,9 @@ void build_contigs(struct node* root, int& contig_count, FILE* fp, const char* p
 			memcpy(&(contig->seq[contig->size]), contig->curr_node->seq, KMER);
 
 			// Now, write the contig
-			output_contig(contig, contig_count, fp, prefix);
+			if (!shadow_mode) {
+				output_contig(contig, contig_count, fp, prefix);
+			}
 			contigs.pop();
 			free_contig(contig);
 		}
@@ -340,6 +498,7 @@ void build_contigs(struct node* root, int& contig_count, FILE* fp, const char* p
 			contig->seq[contig->size++] = contig->curr_node->seq[0];
 			if (contig->size >= MAX_CONTIG_SIZE) {
 				printf("Max contig size exceeded at node: %s\n", contig->curr_node->seq);
+				exit(-1);
 			}
 
 			contig->visited_nodes->insert(contig->curr_node->seq);
@@ -352,67 +511,292 @@ void build_contigs(struct node* root, int& contig_count, FILE* fp, const char* p
 			// If there are multiple "to" nodes, branch the contig and push on stack
 			while (to_linked_node != NULL) {
 				struct contig* contig_branch = copy_contig(contig);
-//				memcpy(contig_branch, contig, sizeof(contig));
 				contig_branch->curr_node = to_linked_node->node;
 				contigs.push(contig_branch);
 				to_linked_node = to_linked_node->next;
+				paths_from_root++;
 			}
 		}
+
+		if (contig_count >= max_contigs) {
+			status = TOO_MANY_CONTIGS;
+		}
+
+		if (paths_from_root >= max_paths_from_root) {
+			status = TOO_MANY_PATHS_FROM_ROOT;
+		}
 	}
+
+	// Cleanup stranded contigs in case processing stopped.
+	while (contigs.size() > 0) {
+		struct contig* contig = contigs.top();
+		contigs.pop();
+		free_contig(contig);
+	}
+
+	return status;
 }
 
-void cleanup() {
-	for (sparse_hash_map<const char*, struct node*, my_hash, eqstr>::const_iterator it = nodes.begin();
-	         it != nodes.end(); ++it) {
-		char* key = (char*) it->first;
+void cleanup(sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, struct struct_pool* pool) {
+
+	// Free linked lists
+	for (sparse_hash_map<const char*, struct node*, my_hash, eqstr>::const_iterator it = nodes->begin();
+	         it != nodes->end(); ++it) {
 		struct node* node = it->second;
 
 		if (node != NULL) {
-			free(node);
-		}
-
-		if (key != NULL) {
-			free(key);
+			cleanup(node->toNodes);
+			cleanup(node->fromNodes);
 		}
 	}
+
+	// Free nodes and keys
+//	for (sparse_hash_map<const char*, struct node*, my_hash, eqstr>::const_iterator it = nodes->begin();
+//	         it != nodes->end(); ++it) {
+//		char* key = (char*) it->first;
+//		struct node* node = it->second;
+//
+////		if (node != NULL) {
+////			free(node);
+////		}
+//
+//		if (key != NULL) {
+//			free(key);
+//		}
+//	}
+//
+
+	for (int i=0; i<=pool->node_pool->block_idx; i++) {
+		free(pool->node_pool->nodes[i]);
+	}
+
+	free(pool->node_pool->nodes);
+	free(pool->node_pool);
+
+	for (int i=0; i<=pool->kmer_pool->block_idx; i++) {
+		free(pool->kmer_pool->kmers[i]);
+	}
+
+	free(pool->kmer_pool->kmers);
+	free(pool->kmer_pool);
+
+	for (int i=0; i<=pool->read_pool->block_idx; i++) {
+		free(pool->read_pool->reads[i]);
+	}
+
+	free(pool->read_pool->reads);
+	free(pool->read_pool);
+
+	free(pool);
 }
 
-void assemble(const char* input,
+int assemble(const char* input,
 			  const char* output,
 			  const char* prefix,
-			  char truncate_on_repeat,
+			  int truncate_on_repeat,
 			  int max_contigs,
 			  int max_paths_from_root) {
 
-	printf("Assembling: %s -> %s", input, output);
-	nodes.set_deleted_key(NULL);
 
-	build_graph(input);
-	prune_graph();
+	struct struct_pool* pool = init_pool();
+	sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes = new sparse_hash_map<const char*, struct node*, my_hash, eqstr>();
 
-	struct linked_node* root_nodes = identify_root_nodes();
+	long startTime = time(NULL);
+	printf("Assembling: %s -> %s\n", input, output);
+	nodes->set_deleted_key(NULL);
+
+	build_graph(input, nodes, pool);
+	prune_graph(nodes);
+
+	struct linked_node* root_nodes = identify_root_nodes(nodes);
 
 	int contig_count = 0;
+	char truncate_output = 0;
+
 	FILE *fp = fopen(output, "w");
 	while (root_nodes != NULL) {
-		build_contigs(root_nodes->node, contig_count, fp, prefix);
+
+		int shadow_count = 0;
+
+		// Run in shadow mode first
+		int status = build_contigs(root_nodes->node, shadow_count, fp, prefix, max_paths_from_root, max_contigs, truncate_on_repeat, true);
+
+		if (status == OK) {
+			// Now output the contigs
+			build_contigs(root_nodes->node, contig_count, fp, prefix, max_paths_from_root, max_contigs, truncate_on_repeat, false);
+		}
+
+		switch(status) {
+			case TOO_MANY_CONTIGS:
+				printf("TOO_MANY_CONTIGS: %s\n", prefix);
+				contig_count = 0;
+				break;
+			case STOPPED_ON_REPEAT:
+				printf("STOPPED_ON_REPEAT: %s\n", prefix);
+				contig_count = 0;
+				break;
+			case TOO_MANY_PATHS_FROM_ROOT:
+				printf("TOO_MANY_PATHS_FROM_ROOT: %s - %s\n", prefix, root_nodes->node->seq);
+				break;
+		}
+
+		// If too many contigs or abort due to repeat, break out of loop and truncate output.
+		if ((status == TOO_MANY_CONTIGS) || (status == STOPPED_ON_REPEAT)) {
+			truncate_output = 1;
+			break;
+		}
+
 		root_nodes = root_nodes->next;
 	}
 	fclose(fp);
 
-	cleanup();
 
-	printf("Done assembling: %s -> %s", input, output);
+	if (truncate_output) {
+		FILE *fp = fopen(output, "w");
+		fclose(fp);
+	}
+
+	cleanup(nodes, pool);
+
+	delete nodes;
+
+	long stopTime = time(NULL);
+	printf("Done assembling(%ld): %s -> %s\n", (stopTime-startTime), input, output);
+
+	return contig_count;
 }
+
+extern "C"
+ JNIEXPORT jint JNICALL Java_abra_NativeAssembler_assemble
+   (JNIEnv *env, jobject obj, jstring j_input, jstring j_output, jstring j_prefix,
+    jint j_truncate_on_output, jint j_max_contigs, jint j_max_paths_from_root)
+ {
+     //Get the native string from javaString
+     //const char *nativeString = env->GetStringUTFChars(javaString, 0);
+	const char* input  = env->GetStringUTFChars(j_input, 0);
+	const char* output = env->GetStringUTFChars(j_output, 0);
+	const char* prefix = env->GetStringUTFChars(j_prefix, 0);
+	int truncate_on_output = j_truncate_on_output;
+	int max_contigs = j_max_contigs;
+	int max_paths_from_root = j_max_paths_from_root;
+
+	printf("Abra JNI entry point\n");
+
+	printf("input: %s\n", input);
+	printf("output: %s\n", output);
+	printf("prefix: %s\n", prefix);
+	printf("truncate_on_output: %d\n", truncate_on_output);
+	printf("max_contigs: %d\n", max_contigs);
+	printf("max_paths_from_root: %d\n", max_paths_from_root);
+
+	int ret = assemble(input, output, prefix, truncate_on_output, max_contigs, max_paths_from_root);
+
+     //DON'T FORGET THIS LINE!!!
+    env->ReleaseStringUTFChars(j_input, input);
+    env->ReleaseStringUTFChars(j_output, output);
+    env->ReleaseStringUTFChars(j_prefix, prefix);
+
+    fflush(stdout);
+    return ret;
+ }
+
+
+/*
+//extern "C"
+JNIEXPORT void JNICALL Java_abra_NativeAssembler_assemble
+  (JNIEnv * env, jobject obj, jstring j_input, jstring j_output, jstring j_prefix)
+// JNIEXPORT void JNICALL Java_abra_NativeAssembler_assemble
+//   (JNIEnv *env, jobject obj, jstring j_input, jstring j_output, jstring j_prefix)
+ {
+     //Get the native string from javaString
+     //const char *nativeString = env->GetStringUTFChars(javaString, 0);
+	const char* input  = env->GetStringUTFChars(j_input, 0);
+	const char* output = env->GetStringUTFChars(j_output, 0);
+	const char* prefix = env->GetStringUTFChars(j_prefix, 0);
+
+	printf("input: %s\n", input);
+	printf("output: %s\n", output);
+	printf("prefix: %s\n", prefix);
+
+     //DON'T FORGET THIS LINE!!!
+    env->ReleaseStringUTFChars(j_input, input);
+    env->ReleaseStringUTFChars(j_output, output);
+    env->ReleaseStringUTFChars(j_prefix, prefix);
+ }
+ */
 
 int main(int argc, char* argv[]) {
 
+/*
+	assemble(
+		"/home/lmose/code/abra/src/main/c/sim83/unaligned.bam.reads",
+		"/home/lmose/code/abra/src/main/c/unaligned_c.fa",
+		"foo",
+		false,
+		50000,
+		5000);
+*/
 
+	/*
 	assemble(
 		"/home/lmose/code/abra/src/main/c/sim83_reads_filtered.txt",
 		"/home/lmose/code/abra/src/main/c/sim83_c.fasta",
 		"foo",
-		true,
+		false,
 		50000,
 		5000);
+*/
+
+	assemble(
+		argv[1],
+		argv[2],
+		"foo",
+		false,
+		50000,
+		5000);
+
+/*
+	assemble(
+		"/home/lmose/code/abra/src/main/c/sim83/250000.txt",
+		"/home/lmose/code/abra/src/main/c/sim83/250000.fa",
+		"foo",
+		false,
+		5000000,
+		5000);
+*/
+
+/*
+	assemble(
+		"/home/lmose/code/abra/src/main/c/sim83/500000.txt",
+		"/home/lmose/code/abra/src/main/c/sim83/500000.fa",
+		"foo",
+		false,
+		5000000,
+		5000);
+*/
+
+	/*
+	assemble(
+		"/home/lmose/code/abra/src/main/c/sim83/filtered.txt",
+		"/home/lmose/code/abra/src/main/c/sim83/filtered.fa",
+		"foo",
+		false,
+		5000000,
+		5000);
+*/
+
+/*
+	for (int i=0; i<50; i++) {
+		char file[200];
+		memset(file, 0, sizeof(file));
+		sprintf(file, "%s_%d", "/home/lmose/code/abra/src/main/c/sim83/250000_c_run", i);
+		assemble(
+			"/home/lmose/code/abra/src/main/c/sim83/250000.txt",
+			file,
+			"foo",
+			false,
+			1000000,
+			5000);
+	}
+*/
 }

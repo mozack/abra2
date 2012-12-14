@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
-import abra.Assembler.TooManyPotentialContigsException;
+//import abra.Assembler.TooManyPotentialContigsException;
 
 import net.sf.picard.sam.BuildBamIndex;
 import net.sf.picard.sam.SamFormatConverter;
@@ -132,19 +132,20 @@ public class ReAligner {
 			String sortedUnalignedRegion = unalignedDir + "/sorted_unaligned_region.bam";
 			
 			Assembler assem = newUnalignedAssembler(1);
-			boolean hasContigs = false;
-			try {
-				hasContigs = assem.assembleContigs(unalignedSam, unalignedContigFasta, "unaligned");
-			} catch (TooManyPotentialContigsException e) {
-				assem = newUnalignedAssembler(2);
-				try {
-					log("Retrying unaligned region assembly.");
-					hasContigs = assem.assembleContigs(unalignedSam, unalignedContigFasta, "unaligned");
-				} catch (TooManyPotentialContigsException e2) {
-					log("UNALIGN_FAILURE - Assembly failed for unaligned region");
-					hasContigs = false;
-				}
-			}
+			boolean hasContigs = assem.assembleContigs(unalignedSam, unalignedContigFasta, "unaligned");
+			
+//			try {
+//				hasContigs = assem.assembleContigs(unalignedSam, unalignedContigFasta, "unaligned");
+//			} catch (TooManyPotentialContigsException e) {
+//				assem = newUnalignedAssembler(2);
+//				try {
+//					log("Retrying unaligned region assembly.");
+//					hasContigs = assem.assembleContigs(unalignedSam, unalignedContigFasta, "unaligned");
+//				} catch (TooManyPotentialContigsException e2) {
+//					log("UNALIGN_FAILURE - Assembly failed for unaligned region");
+//					hasContigs = false;
+//				}
+//			}
 			
 			// Make eligible for GC
 			assem = null;
@@ -784,8 +785,6 @@ public class ReAligner {
 			
 			assem.assembleContigs(targetRegionBam, contigsFasta, region.getDescriptor());
 			
-		} catch (TooManyPotentialContigsException e) {
-			System.out.println("Too many contigs for region: " + region.getDescriptor());
 		}
 		catch (Exception e) {
 			e.printStackTrace();
@@ -1523,32 +1522,39 @@ public class ReAligner {
 	}
 		
 	private Assembler newAssembler() {
-		Assembler assem = new Assembler();
+		//Assembler assem = new JavaAssembler();
+		Assembler assem = new NativeAssembler();
+		
+		if (assem instanceof JavaAssembler) {
+			JavaAssembler ja = (JavaAssembler) assem;
+			ja.setKmerSize(assemblerSettings.getKmerSize());
+			ja.setMinNodeFrequncy(assemblerSettings.getMinNodeFrequncy());
+			ja.setMinContigLength(assemblerSettings.getMinContigLength());
+			ja.setMinContigRatio(assemblerSettings.getMinContigRatio());
+		}
 
-		assem.setKmerSize(assemblerSettings.getKmerSize());
-		assem.setMinEdgeFrequency(assemblerSettings.getMinEdgeFrequency());
-		assem.setMinNodeFrequncy(assemblerSettings.getMinNodeFrequncy());
-		assem.setMinContigLength(assemblerSettings.getMinContigLength());
-		assem.setMaxPotentialContigs(assemblerSettings
+		assem.setTruncateOutputOnRepeat(true);
+		assem.setMaxContigs(assemblerSettings
 				.getMaxPotentialContigs());
-		assem.setMinContigRatio(assemblerSettings.getMinContigRatio());
-		assem.setMaxPathsFromRoot(-1);
+
+		assem.setMaxPathsFromRoot(1000000);
 
 		return assem;
 	}
 	
 	private Assembler newUnalignedAssembler(int mnfMultiplier) {
-		Assembler assem = new Assembler();
+		//Assembler assem = new JavaAssembler();
+		Assembler assem = new NativeAssembler();
+		
+		if (assem instanceof JavaAssembler) {
+			JavaAssembler ja = (JavaAssembler) assem;
+			ja.setKmerSize(assemblerSettings.getKmerSize());
+			ja.setMinNodeFrequncy(assemblerSettings.getMinUnalignedNodeFrequency() * mnfMultiplier);
+			ja.setMinContigLength(assemblerSettings.getMinContigLength());
+			ja.setMinContigRatio(-1.0);
+		}
 
-		assem.setKmerSize(assemblerSettings.getKmerSize());
-//		assem.setMinEdgeFrequency(assemblerSettings.getMinEdgeFrequency() * 2);
-//		assem.setMinNodeFrequncy(assemblerSettings.getMinNodeFrequncy() * 2);
-		assem.setMinEdgeFrequency(assemblerSettings.getMinEdgeFrequency());
-		assem.setMinNodeFrequncy(assemblerSettings.getMinUnalignedNodeFrequency() * mnfMultiplier);
-		assem.setMinContigLength(assemblerSettings.getMinContigLength());
-//		assem.setMaxPotentialContigs(assemblerSettings.getMaxPotentialContigs() * 30);
-		assem.setMaxPotentialContigs(MAX_POTENTIAL_UNALIGNED_CONTIGS);
-		assem.setMinContigRatio(-1.0);
+		assem.setMaxContigs(MAX_POTENTIAL_UNALIGNED_CONTIGS);
 		assem.setTruncateOutputOnRepeat(false);
 		assem.setMaxPathsFromRoot(5000);
 
@@ -1611,7 +1617,7 @@ public class ReAligner {
 
 	public static void run(String[] args) throws Exception {
 		
-		System.out.println("Starting 0.03 ...");
+		System.out.println("Starting 0.04 ...");
 		
 		ReAlignerOptions options = new ReAlignerOptions();
 		options.parseOptions(args);
@@ -1728,16 +1734,18 @@ public class ReAligner {
 		String tempDir = "/home/lmose/dev/ayc/sim/s339/7449_working";
 		*/
 		
-		/*
-		String input = "/home/lmose/dev/ayc/sim/s339/empty.bam";
+		
+//		String input = "/home/lmose/dev/ayc/sim/s339/empty.bam";
 		//String input2 = "/home/lmose/dev/ayc/sim/s339/7455_sorted.bam";
+		
+		String input = "/home/lmose/dev/ayc/sim/s339/sorted_chr19_929262_929896.bam";
 		String input2 = "/home/lmose/dev/ayc/sim/s339/sorted_chr19_929262_929896.bam";
-		String output = "/home/lmose/dev/ayc/sim/s339/empty_realigned.bam";
-		String output2 = "/home/lmose/dev/ayc/sim/s339/chr19_929262_929896_realigned.bam";
+		String output = "/home/lmose/dev/ayc/sim/s339/empty_realigned_native.bam";
+		String output2 = "/home/lmose/dev/ayc/sim/s339/chr19_929262_929896_realigned_native.bam";
 		String reference = "/home/lmose/reference/chr19/chr19.fa";
 		String regions = "/home/lmose/dev/ayc/regions/clinseq5/7455.gtf";
-		String tempDir = "/home/lmose/dev/ayc/sim/s339/chr19_working";
-		*/
+		String tempDir = "/home/lmose/dev/ayc/sim/s339/chr19_working_native";
+		
 		
 		/*
 		String input = "/home/lmose/dev/ayc/sim/s339/empty.bam";
@@ -1749,21 +1757,25 @@ public class ReAligner {
 		String regions = "/home/lmose/dev/ayc/regions/clinseq5/1903.gtf";
 		String tempDir = "/home/lmose/dev/ayc/sim/s87/1903_working";
 */
-//		String input = "/home/lmose/dev/ayc/sim/s339/empty.bam";
-//		String input2 = "/home/lmose/dev/ayc/sim/s411/sorted_9041.bam";
-//		String output = "/home/lmose/dev/ayc/sim/s411/empty_realigned.bam";
-//		String output2 = "/home/lmose/dev/ayc/sim/s411/9041_realigned.bam";
-//		String reference = "/home/lmose/reference/chr21/chr21.fa";
-//		String regions = "/home/lmose/dev/ayc/regions/clinseq5/9041.gtf";
-//		String tempDir = "/home/lmose/dev/ayc/sim/s411/9041_working";
-
+		/*
 		String input = "/home/lmose/dev/ayc/sim/s339/empty.bam";
-		String input2 = "/home/lmose/dev/ayc/sim/s411/sorted_small.bam";
-		String output = "/home/lmose/dev/ayc/sim/s411/empty_realigned3.bam";
-		String output2 = "/home/lmose/dev/ayc/sim/s411/small_realigned3.bam";
+		String input2 = "/home/lmose/dev/ayc/sim/s411/sorted_9041.bam";
+		String output = "/home/lmose/dev/ayc/sim/s411/empty_realigned_old.bam";
+		String output2 = "/home/lmose/dev/ayc/sim/s411/9041_realigned_old.bam";
 		String reference = "/home/lmose/reference/chr21/chr21.fa";
 		String regions = "/home/lmose/dev/ayc/regions/clinseq5/9041.gtf";
-		String tempDir = "/home/lmose/dev/ayc/sim/s411/small_working3";
+		String tempDir = "/home/lmose/dev/ayc/sim/s411/9041_working_old";
+		*/
+
+		/*
+		String input = "/home/lmose/dev/ayc/sim/s339/empty.bam";
+		String input2 = "/home/lmose/dev/ayc/sim/s411/sorted_small.bam";
+		String output = "/home/lmose/dev/ayc/sim/s411/empty_realigned_old.bam";
+		String output2 = "/home/lmose/dev/ayc/sim/s411/small_realigned_old.bam";
+		String reference = "/home/lmose/reference/chr21/chr21.fa";
+		String regions = "/home/lmose/dev/ayc/regions/clinseq5/9041.gtf";
+		String tempDir = "/home/lmose/dev/ayc/sim/s411/small_working_old";
+		*/
 		
 //		String input = "/home/lmose/dev/ayc/sim/s339/empty.bam";
 		/*

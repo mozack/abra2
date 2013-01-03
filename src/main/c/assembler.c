@@ -405,6 +405,7 @@ struct contig {
 struct contig* new_contig() {
 	struct contig* curr_contig;
 	curr_contig = (contig*) malloc(sizeof(contig));
+//	printf("seq size: %d\n", sizeof(curr_contig->seq));
 	memset(curr_contig->seq, 0, sizeof(curr_contig->seq));
 	curr_contig->size = 0;
 	curr_contig->is_repeat = 0;
@@ -415,6 +416,7 @@ struct contig* new_contig() {
 struct contig* copy_contig(struct contig* orig) {
 	struct contig* copy = (contig*) malloc(sizeof(contig));
 	memcpy(copy->seq, orig->seq, MAX_CONTIG_SIZE);
+	strncpy(copy->seq, orig->seq, MAX_CONTIG_SIZE);
 	copy->size = orig->size;
 	copy->is_repeat = orig->is_repeat;
 	copy->visited_nodes = new sparse_hash_set<const char*, my_hash, eqstr>(*orig->visited_nodes);
@@ -506,11 +508,14 @@ int build_contigs(
 			// Move current contig to next "to" node.
 			struct linked_node* to_linked_node = contig->curr_node->toNodes;
 			contig->curr_node = to_linked_node->node;
-			to_linked_node = to_linked_node->next;
+			paths_from_root++;
 
 			// If there are multiple "to" nodes, branch the contig and push on stack
+			to_linked_node = to_linked_node->next;
 			while (to_linked_node != NULL) {
+				//TODO: Do not clone contig for first node.
 				struct contig* contig_branch = copy_contig(contig);
+//				printf("orig size: %d, copy size: %d\n", contig->visited_nodes->size(), contig_branch->visited_nodes->size());
 				contig_branch->curr_node = to_linked_node->node;
 				contigs.push(contig_branch);
 				to_linked_node = to_linked_node->next;
@@ -737,6 +742,7 @@ int main(int argc, char* argv[]) {
 		5000);
 */
 
+
 	/*
 	assemble(
 		"/home/lmose/code/abra/src/main/c/sim83_reads_filtered.txt",
@@ -745,8 +751,17 @@ int main(int argc, char* argv[]) {
 		false,
 		50000,
 		5000);
-*/
+		*/
 
+	assemble(
+		"/home/lmose/code/abra/src/main/c/sim83/sm/reads.txt",
+		"/home/lmose/code/abra/src/main/c/sim83/sm/reads.fa",
+		"foo",
+		false,
+		50000,
+		5000);
+
+	/*
 	assemble(
 		argv[1],
 		argv[2],
@@ -754,8 +769,18 @@ int main(int argc, char* argv[]) {
 		false,
 		50000,
 		5000);
+*/
+	/*
+	assemble(
+		argv[1],
+		argv[2],
+		"foo",
+		false,
+		50000,
+		5000);
+*/
 
-/*
+	/*
 	assemble(
 		"/home/lmose/code/abra/src/main/c/sim83/250000.txt",
 		"/home/lmose/code/abra/src/main/c/sim83/250000.fa",
@@ -763,7 +788,7 @@ int main(int argc, char* argv[]) {
 		false,
 		5000000,
 		5000);
-*/
+		*/
 
 /*
 	assemble(

@@ -734,7 +734,8 @@ public class ReAligner {
 		reader.setValidationStringency(ValidationStringency.SILENT);
 
 		for (SAMRecord read : reader) {
-			if (read.getReadUnmappedFlag()) {
+			//TODO: Remove hardcoded mapq.  Exclude from original region?
+			if (read.getReadUnmappedFlag() || read.getMappingQuality() < 10) {
 				unalignedReadsBam.addAlignment(read);
 				numUnalignedReads += 1;
 			}
@@ -1617,7 +1618,7 @@ public class ReAligner {
 
 	public static void run(String[] args) throws Exception {
 		
-		System.out.println("Starting 0.04 ...");
+		System.out.println("Starting 0.05 ...");
 		
 		ReAlignerOptions options = new ReAlignerOptions();
 		options.parseOptions(args);

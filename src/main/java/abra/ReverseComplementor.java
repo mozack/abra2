@@ -73,11 +73,11 @@ public class ReverseComplementor {
     	
     	//String rcStr = rc.reverseComplement("AAAATTTCCG");
 //    	String rcStr = rc.reverse("AAAATTTCCG");
-    	String rcStr = rc.reverseComplement("CTTTTTTGGATTCAAATATGTCTTCTTATTGGCTTTTCAGCTAGATCTTTT");
+    	String rcStr = rc.reverseComplement("GCAGTGAGCCGAGATTGTGCCACTGCACTCCAGCCTGGCCAACAGCAAGAATGTCTCACACACACACACACACAAAAAAAAAAAAAAAAAGAGGAAAAAG");
     	
     	System.out.println(rcStr);
     	
-    	String s = "ccagctatgcagagctataagtcaattaaatctgttttatttataaattac";
-    	System.out.println(s.toUpperCase());
+//    	String s = "ccagctatgcagagctataagtcaattaaatctgttttatttataaattac";
+//    	System.out.println(s.toUpperCase());
     }
 }

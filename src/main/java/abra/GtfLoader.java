@@ -143,6 +143,6 @@ public class GtfLoader {
 	
 	public static void main(String[] args) throws Exception {
 		GtfLoader gl = new GtfLoader();
-		gl.printSubset("/home/lmose/dev/ayc/sim/sim80/regions.txt", "/home/lmose/dev/ayc/regions/clinseq5/uncseq5.gtf");
+		gl.printSubset("/home/lmose/dev/ayc/sim/sim528/regions.txt", "/home/lmose/dev/ayc/regions/clinseq5/uncseq5.gtf");
 	}
 }

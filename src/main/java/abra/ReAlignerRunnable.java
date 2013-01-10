@@ -20,7 +20,8 @@ public class ReAlignerRunnable implements Runnable {
 	public void run() {
 		
 		try {
-			reAligner.processRegion(region, inputSam);
+//			reAligner.processRegion(region, inputSam);
+			reAligner.processRegion(region);
 		} catch (Exception e) {
 			e.printStackTrace();
 			throw new RuntimeException(e);

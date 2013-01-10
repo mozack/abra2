@@ -17,6 +17,8 @@ import net.sf.samtools.SAMFileReader.ValidationStringency;
  */
 public class Sam2Fastq {
 	
+	private static final int MAX_SAM_READ_NAME_LENGTH = 255;
+	
 	private FastqOutputFile output1;
 	private FastqOutputFile output2;
 	private ReverseComplementor reverseComplementor = new ReverseComplementor();
@@ -111,51 +113,28 @@ public class Sam2Fastq {
 		String bases = read.getReadString();
 		String qualities = read.getBaseQualityString();
 		
-		if ((isMapspliceFusions) && (isFusion(read))) {
-			String fusionAttribute = (String) read.getAttribute("ZF");
-			int parenIdx = fusionAttribute.indexOf('(');
-			if ((parenIdx < 0) || (parenIdx+2 >= fusionAttribute.length())) {
-				throw new IllegalArgumentException("Invalid fusion attribute for read: [" + read.getSAMString() + "]");
-			}
-			boolean isDonerNegative = fusionAttribute.charAt(parenIdx+1) == '-';
-			boolean isAccepterNegative = fusionAttribute.charAt(parenIdx+2) == '-';
-			
-			int donerLength = 0;
-			int accepterLength = 0;
-			
-			CigarElement firstElement = read.getCigar().getCigarElement(0);
-			CigarElement lastElement  = read.getCigar().getCigarElement(read.getCigar().getCigarElements().size()-1);
-			
-			if (firstElement.getOperator() == CigarOperator.S) {
-				donerLength = firstElement.getLength();
-				accepterLength = read.getReadLength() - donerLength;
-			} else if (lastElement.getOperator() == CigarOperator.S) {
-				accepterLength = lastElement.getLength();
-				donerLength = read.getReadLength() - accepterLength;
-			} else {
-				throw new IllegalArgumentException (
-						"Expected soft clip at begin or end of Cigar for fusion read: [" + read.getSAMString() + "]");
-			}
-			
-			String donerBases = read.getReadString().substring(0, donerLength);
-			String accepterBases = read.getReadString().substring(donerLength, read.getReadLength());
-			
-			if (isDonerNegative) {
-				donerBases = reverseComplementor.reverseComplement(donerBases);
-			}
-			
-			if (isAccepterNegative) {
-				accepterBases = reverseComplementor.reverseComplement(accepterBases);
-			}
-			
-			bases = donerBases + accepterBases;
-		}
-		else if (read.getReadNegativeStrandFlag()) {
+		if (read.getReadNegativeStrandFlag()) {
 			bases = reverseComplementor.reverseComplement(bases);
 			qualities = reverseComplementor.reverse(qualities);
 		}
 		
-		FastqRecord fastq = new FastqRecord("@" + read.getReadName(), bases, qualities);
+		read.setReadString("");
+		read.setBaseQualityString("");
+		// XA tag can be lengthy, so remove it.
+		read.setAttribute("XA", null);
+		
+		String readStr = read.getSAMString();
+		
+		if (readStr.length() > MAX_SAM_READ_NAME_LENGTH) {
+			String msg = "Error!  Max SAM Read name length exceeded for: " + readStr;
+			System.out.println(msg);
+			throw new RuntimeException(msg);
+		}
+		readStr = readStr.replace('\t','|');
+		
+		String readName = readStr; 
+		
+		FastqRecord fastq = new FastqRecord("@" + readName, bases, qualities);
 		
 		return fastq;
 	}

@@ -64,7 +64,7 @@ public class JavaAssembler implements Assembler {
 	private int maxPathsFromRoot;
 	
 	//TODO: Do not keep contigs in memory.
-	public boolean assembleContigs(String inputSam, String output, String prefix) throws FileNotFoundException, IOException, InterruptedException {
+	public boolean assembleContigs(String inputSam, String output, String prefix, boolean checkForDupes) throws FileNotFoundException, IOException, InterruptedException {
 		this.prefix = prefix;
         SAMFileReader reader = new SAMFileReader(new File(inputSam));
         reader.setValidationStringency(ValidationStringency.SILENT);
@@ -277,7 +277,7 @@ public class JavaAssembler implements Assembler {
 		for (Node node : nodes.values()) {
 			if (node.isRootNode()) {
 				rootNodes.add(node);
-				System.out.println("Root: " + node.getSequence().getSequenceAsString());
+//				System.out.println("Root: " + node.getSequence().getSequenceAsString());
 			}
 		}
 	}
@@ -312,6 +312,8 @@ public class JavaAssembler implements Assembler {
 			} catch (TooManyPathsFromRootException e) {
 				System.out.println("TOO_MANY_PATHS_FROM_ROOT: " + this.prefix + "_" + node.getSequence().getSequenceAsString());
 			} 
+			
+			System.out.println("Paths from root: " + pathsFromCurrRoot);
 			
 //			//TODO: Check for repeat and discard contigs if encountered
 //			outputContigs(prefix);
@@ -543,7 +545,9 @@ public class JavaAssembler implements Assembler {
 		
 //		ayc.assembleContigs("/home/lmose/code/abra/src/main/c/1810.sam", "/home/lmose/code/abra/src/main/c/1810_java.fasta", "foo");
 		
-		ayc.assembleContigs("/home/lmose/code/abra/src/main/c/combined_chr13_48889883_48892083.bam", "/home/lmose/code/abra/src/main/c/sim83_java.fasta", "foo");
+//		ayc.assembleContigs("/home/lmose/code/abra/src/main/c/combined_chr13_48889883_48892083.bam", "/home/lmose/code/abra/src/main/c/sim83_java.fasta", "foo");
+		
+		ayc.assembleContigs("/home/lmose/code/abra/src/main/c/sim83/sm/small.bam", "/home/lmose/code/abra/src/main/c/sim83/sm/small.fasta", "foo", false);
 		
 		
 		

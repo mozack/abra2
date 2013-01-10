@@ -75,6 +75,8 @@ public class ReAligner {
 	private String inputSam1;
 	private String inputSam2;
 	
+	private int readLength = -1;
+	
 	public void reAlign(String inputSam, String inputSam2, String outputSam, String outputSam2) throws Exception {
 
 		System.out.println("input: " + inputSam);
@@ -100,29 +102,10 @@ public class ReAligner {
 		log("Loading target regions");
 		loadRegions();
 
-		log("Reading Input SAM Header");
-		getSamHeader(inputSam);
-
-//		log("Initializing output SAM File");
-//		initOutputFile(outputSam);
+		log("Reading Input SAM Header and identifying read length");
+		getSamHeaderAndReadLength(inputSam);
 		
 		samHeader.setSortOrder(SAMFileHeader.SortOrder.unsorted);
-		
-//		String assemblyBam = inputSam;
-/*
-		if (inputSam2 != null) {
-			Clock clock = new Clock("Combine bams");
-			clock.start();
-//			log("Combining input bams for assembly");
-//			String combinedBam = tempDir + "/combined.bam";
-//			concatenateBams(inputSam, inputSam2, combinedBam);
-//			assemblyBam = tempDir + "/sorted_assembly.bam";
-//			sortBam(combinedBam, assemblyBam, "coordinate");
-//			indexBam(assemblyBam);
-			log("Combining done.");
-			clock.stopAndPrint();
-		}
-*/
 		
 		if (shouldReprocessUnaligned) {
 			Clock clock = new Clock("Process unaligned");
@@ -141,37 +124,17 @@ public class ReAligner {
 			
 			Assembler assem = newUnalignedAssembler(1);
 			boolean hasContigs = assem.assembleContigs(unalignedSam, unalignedContigFasta, "unaligned", false);
-			
-//			try {
-//				hasContigs = assem.assembleContigs(unalignedSam, unalignedContigFasta, "unaligned");
-//			} catch (TooManyPotentialContigsException e) {
-//				assem = newUnalignedAssembler(2);
-//				try {
-//					log("Retrying unaligned region assembly.");
-//					hasContigs = assem.assembleContigs(unalignedSam, unalignedContigFasta, "unaligned");
-//				} catch (TooManyPotentialContigsException e2) {
-//					log("UNALIGN_FAILURE - Assembly failed for unaligned region");
-//					hasContigs = false;
-//				}
-//			}
-			
+						
 			// Make eligible for GC
 			assem = null;
-			
-//			String finalUnaligned = unalignedDir + "/" + "unaligned_to_contig.bam";
-			
+						
 			if (hasContigs) {
 				String unalignedCleanContigsFasta = alignAndCleanContigs(unalignedContigFasta, unalignedDir, false);
 				if (unalignedCleanContigsFasta != null) {
 					String alignedToContigSam = alignReads(unalignedDir, unalignedSam, unalignedCleanContigsFasta);
 					String alignedToContigBam = alignedToContigSam;
 					
-//					String sortedAlignedToContig = unalignedDir + "/" + "sorted_aligned_to_contig.bam";
-//					String sortedOriginalReads = unalignedDir + "/" + "sorted_original_reads.bam";
-					
-//					sortBamsByName(alignedToContigBam, unalignedSam, sortedAlignedToContig, sortedOriginalReads);
 					log("Adjusting unaligned reads");
-//					adjustReads(sortedOriginalReads, sortedAlignedToContig, unalignedRegionSam, false);
 					adjustReads(alignedToContigBam, unalignedRegionSam, false, null);
 					
 					sortBam(unalignedRegionSam, sortedUnalignedRegion, "coordinate");
@@ -723,14 +686,24 @@ public class ReAligner {
 		System.out.println(currMillis/1000 + " " + message);
 	}
 
-	private void getSamHeader(String inputSam) {
+	private void getSamHeaderAndReadLength(String inputSam) {
 		SAMFileReader reader = new SAMFileReader(new File(inputSam));
-		reader.setValidationStringency(ValidationStringency.SILENT);
-
-		samHeader = reader.getFileHeader();
-		samHeader.setSortOrder(SAMFileHeader.SortOrder.unsorted);
-
-		reader.close();
+		try {
+			reader.setValidationStringency(ValidationStringency.SILENT);
+	
+			samHeader = reader.getFileHeader();
+			samHeader.setSortOrder(SAMFileHeader.SortOrder.unsorted);
+			
+			Iterator<SAMRecord> iter = reader.iterator();
+			if (iter.hasNext()) {
+				SAMRecord read = iter.next();
+				this.readLength = read.getReadLength();
+			} else {
+				throw new RuntimeException("No reads found in: " + inputSam);
+			}
+		} finally {
+			reader.close();
+		}
 	}
 	
 	private void sam2Fastq(String bam, String fastq) throws IOException {
@@ -740,23 +713,13 @@ public class ReAligner {
 	
 	private static int memCnt = 0;
 	private void logOSMemory()  {
-//		String[] cmd = new String[] { "bash", "-c", "echo " + memCnt + " >> memory.txt" };
-//		runCommand(cmd);
-//		
-//		cmd = new String[] { "bash", "-c", "free -g >> memory.txt" };
-//		runCommand(cmd);
 		
 		System.out.println(memCnt++ +
 				" mem total: " + Runtime.getRuntime().totalMemory() + 
 				", max: " + Runtime.getRuntime().maxMemory() + 
 				", free: " + Runtime.getRuntime().freeMemory());
 	}
-	
-//	private void appendFile(String file1, String file2) throws InterruptedException, IOException {
-//		String[] cmd = new String[] { "bash", "-c", "cat " + file1 + " >> " + file2 };
-//		runCommand(cmd);
-//	}
-		
+			
 	private boolean cleanAndOutputContigs(String contigsSam, String cleanContigsFasta, boolean shouldRemoveSoftClips) throws IOException {
 		
 		Reference reference = new Reference(this.reference);
@@ -1782,7 +1745,7 @@ public class ReAligner {
 	
 	public static void main(String[] args) throws Exception {
 		ReAligner ra = new ReAligner();
-		ra.getSamHeader("/home/lmose/code/abra/sim/83/header.sam");
+		ra.getSamHeaderAndReadLength("/home/lmose/code/abra/sim/83/header.sam");
 		ra.adjustReads("/home/lmose/code/abra/sim/83/align_to_contig.bam", "/home/lmose/code/abra/sim/83/output.bam", false, null);
 	}
 	

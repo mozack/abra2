@@ -2,6 +2,7 @@ package abra;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 
 
 import net.sf.samtools.CigarElement;
@@ -9,6 +10,7 @@ import net.sf.samtools.CigarOperator;
 import net.sf.samtools.SAMFileReader;
 import net.sf.samtools.SAMRecord;
 import net.sf.samtools.SAMFileReader.ValidationStringency;
+import net.sf.samtools.SAMRecord.SAMTagAndValue;
 
 /**
  * Converts SAM/BAM file to FASTQ
@@ -31,7 +33,7 @@ public class Sam2Fastq {
 	 * Convert the input paired end SAM/BAM file into 2 fastq files.
 	 * Input SAM files that contain multiple mappings should be sorted by read name.
 	 */
-	public void convert(String inputSam, String outputFastq1, String outputFastq2) throws IOException {
+	public void convertPairedEnd(String inputSam, String outputFastq) throws IOException {
 		String last1Read = "";
 		String last2Read = "";
 		
@@ -39,9 +41,7 @@ public class Sam2Fastq {
         reader.setValidationStringency(ValidationStringency.SILENT);
 
         output1 = new FastqOutputFile();
-        output1.init(outputFastq1);
-        output2 = new FastqOutputFile();
-        output2.init(outputFastq2);
+        output1.init(outputFastq);
         
         int output1Count = 0;
         int output2Count = 0;
@@ -56,8 +56,9 @@ public class Sam2Fastq {
         		}
         	} else if (isSecondInPair(read)) {
         		if (!read.getReadName().equals(last2Read)) {
-        			output2.write(samReadToFastqRecord(read));
         			last2Read = read.getReadName();
+        			read.setReadName(read.getReadName() + "_2");
+        			output1.write(samReadToFastqRecord(read));
         			output2Count += 1;
         		}
         	} else {
@@ -71,7 +72,6 @@ public class Sam2Fastq {
         }
                 
         output1.close();
-        output2.close();
         reader.close();
         
         if (output1Count != output2Count) {
@@ -122,6 +122,7 @@ public class Sam2Fastq {
 		read.setBaseQualityString("");
 		// XA tag can be lengthy, so remove it.
 		read.setAttribute("XA", null);
+		read.setAttribute("OQ", null);
 		
 		String readStr = read.getSAMString();
 		

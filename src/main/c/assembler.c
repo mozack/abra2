@@ -13,16 +13,23 @@ using namespace std;
 using google::sparse_hash_map;
 using google::sparse_hash_set;
 
-#define READ_LENGTH 100
-#define KMER 63
-#define MIN_CONTIG_LENGTH 101
+//#define READ_LENGTH 100
+//#define KMER 63
+//#define MIN_CONTIG_LENGTH 101
 #define MIN_NODE_FREQUENCY 3
 #define MAX_CONTIG_SIZE 10000
+#define MAX_READ_LENGTH 1001
 
 #define OK 0
 #define TOO_MANY_PATHS_FROM_ROOT -1
 #define TOO_MANY_CONTIGS -2
 #define STOPPED_ON_REPEAT -3
+
+#define MAX_FREQUENCY 255
+
+int read_length;
+int min_contig_length;
+int kmer_size;
 
 struct eqstr
 {
@@ -56,11 +63,11 @@ struct struct_pool {
 };
 
 #define NODES_PER_BLOCK 10000
-#define MAX_NODE_BLOCKS 50000
+#define MAX_NODE_BLOCKS 500000
 #define KMERS_PER_BLOCK 10000
-#define MAX_KMER_BLOCKS 50000
+#define MAX_KMER_BLOCKS 500000
 #define READS_PER_BLOCK 10000
-#define MAX_READ_BLOCKS 10000
+#define MAX_READ_BLOCKS 100000
 
 struct node_pool {
 	struct node** nodes;
@@ -80,6 +87,7 @@ struct read_pool {
 	int read_idx;
 };
 
+/*
 struct node {
 
 	//TODO: Collapse from 8 to 2 bits.  Only store as key.
@@ -89,6 +97,19 @@ struct node {
 	struct linked_node* toNodes;
 	struct linked_node* fromNodes;
 	char* contributingRead;;
+	char hasMultipleUniqueReads;
+};
+*/
+
+struct node {
+
+	//TODO: Collapse from 8 to 2 bits.  Only store as key.
+	char* seq;
+	//TODO: Convert to stl?
+	struct linked_node* toNodes;
+	struct linked_node* fromNodes;
+	char* contributingRead;
+	unsigned char frequency;
 	char hasMultipleUniqueReads;
 };
 
@@ -113,13 +134,13 @@ struct struct_pool* init_pool() {
 
 	pool->kmer_pool = (struct kmer_pool*) malloc(sizeof(kmer_pool));
 	pool->kmer_pool->kmers = (char**) malloc(sizeof(char*) * MAX_KMER_BLOCKS);
-	pool->kmer_pool->kmers[0] = (char*) malloc(sizeof(char) * (KMER+1) * KMERS_PER_BLOCK);
+	pool->kmer_pool->kmers[0] = (char*) malloc(sizeof(char) * (kmer_size+1) * KMERS_PER_BLOCK);
 	pool->kmer_pool->block_idx = 0;
 	pool->kmer_pool->kmer_idx = 0;
 
 	pool->read_pool = (struct read_pool*) malloc(sizeof(read_pool));
 	pool->read_pool->reads = (char**) malloc(sizeof(char*) * MAX_READ_BLOCKS);
-	pool->read_pool->reads[0] = (char*) malloc(sizeof(char) * (READ_LENGTH+1) * READS_PER_BLOCK);
+	pool->read_pool->reads[0] = (char*) malloc(sizeof(char) * (read_length+1) * READS_PER_BLOCK);
 	pool->read_pool->block_idx = 0;
 	pool->read_pool->read_idx = 0;
 
@@ -135,10 +156,10 @@ char* allocate_read(struct_pool* pool) {
 	if (pool->read_pool->read_idx >= READS_PER_BLOCK) {
 		pool->read_pool->block_idx++;
 		pool->read_pool->read_idx = 0;
-		pool->read_pool->reads[pool->read_pool->block_idx] = (char*) malloc(sizeof(char) * (READ_LENGTH+1) * READS_PER_BLOCK);
+		pool->read_pool->reads[pool->read_pool->block_idx] = (char*) malloc(sizeof(char) * (read_length+1) * READS_PER_BLOCK);
 	}
 
-	return &pool->read_pool->reads[pool->read_pool->block_idx][pool->read_pool->read_idx++ * (READ_LENGTH+1)];
+	return &pool->read_pool->reads[pool->read_pool->block_idx][pool->read_pool->read_idx++ * (read_length+1)];
 }
 
 
@@ -152,10 +173,10 @@ char* allocate_kmer(struct_pool* pool) {
 		pool->kmer_pool->block_idx++;
 		pool->kmer_pool->kmer_idx = 0;
 //		printf("Allocating new block...\n");
-		pool->kmer_pool->kmers[pool->kmer_pool->block_idx] = (char*) malloc(sizeof(char) * (KMER+1) * KMERS_PER_BLOCK);
+		pool->kmer_pool->kmers[pool->kmer_pool->block_idx] = (char*) malloc(sizeof(char) * (kmer_size+1) * KMERS_PER_BLOCK);
 	}
 
-	return &pool->kmer_pool->kmers[pool->kmer_pool->block_idx][pool->kmer_pool->kmer_idx++ * (KMER+1)];
+	return &pool->kmer_pool->kmers[pool->kmer_pool->block_idx][pool->kmer_pool->kmer_idx++ * (kmer_size+1)];
 }
 
 struct node* allocate_node(struct_pool* pool) {
@@ -189,15 +210,15 @@ struct node* new_node(char* seq, char* contributingRead, struct_pool* pool) {
 char* get_kmer(int idx, char* sequence, struct struct_pool* pool) {
 //	char* kmer = (char*) malloc(sizeof(char) * KMER+1);
 	char* kmer = allocate_kmer(pool);
-	memset(kmer, 0, KMER+1);
+	memset(kmer, 0, kmer_size+1);
 
-	memcpy(kmer, &sequence[idx], KMER);
+	memcpy(kmer, &sequence[idx], kmer_size);
 
 	return kmer;
 }
 
 void unget_kmer(char* kmer, struct struct_pool* pool) {
-	memset(kmer, 0, KMER+1);
+	memset(kmer, 0, kmer_size+1);
 	pool->kmer_pool->kmer_idx--;
 }
 
@@ -231,7 +252,9 @@ void link_nodes(struct node* from_node, struct node* to_node) {
 }
 
 void increment_node_freq(struct node* node, char* read_seq) {
-	node->frequency++;
+	if (node->frequency < MAX_FREQUENCY-1) {
+		node->frequency++;
+	}
 
 	if (!(node->hasMultipleUniqueReads) && !compare(node->contributingRead, read_seq)) {
 		node->hasMultipleUniqueReads = 1;
@@ -242,7 +265,7 @@ void add_to_graph(char* sequence, sparse_hash_map<const char*, struct node*, my_
 
 	struct node* prev = 0;
 
-	for (int i=0; i<=READ_LENGTH-KMER; i++) {
+	for (int i=0; i<=read_length-kmer_size; i++) {
 
 		char* kmer = get_kmer(i, sequence, pool);
 //		printf("\tkmer: %s\n", kmer);
@@ -273,15 +296,15 @@ void add_to_graph(char* sequence, sparse_hash_map<const char*, struct node*, my_
 
 void build_graph(const char* read_file, sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, struct_pool* pool) {
 	FILE *fp = fopen(read_file, "r");
-	char read[READ_LENGTH+1];
-	memset(read, 0, READ_LENGTH+1);
+	char read[MAX_READ_LENGTH];
+	memset(read, 0, MAX_READ_LENGTH);
 
 	int line = 0;
 	while (fscanf(fp, "%s", read) != EOF) {
 //		printf("read: %d : %s\n", line++, read);
 		if (strcmp(read, "") != 0) {
 			char* read_ptr = allocate_read(pool);
-			memcpy(read_ptr, read, READ_LENGTH+1);
+			memcpy(read_ptr, read, read_length+1);
 			add_to_graph(read_ptr, nodes, pool);
 			line++;
 
@@ -435,7 +458,7 @@ char is_node_visited(struct contig* contig, struct node* node) {
 }
 
 void output_contig(struct contig* contig, int& contig_count, FILE* fp, const char* prefix) {
-	if (strlen(contig->seq) >= MIN_CONTIG_LENGTH) {
+	if (strlen(contig->seq) >= min_contig_length) {
 		if (contig->is_repeat) {
 			fprintf(fp, ">%s_%d_repeat\n%s\n", prefix, contig_count++, contig->seq);
 		} else {
@@ -486,7 +509,7 @@ int build_contigs(
 		else if (contig->curr_node->toNodes == NULL) {
 			// We've reached the end of the contig.
 			// Append entire current node.
-			memcpy(&(contig->seq[contig->size]), contig->curr_node->seq, KMER);
+			memcpy(&(contig->seq[contig->size]), contig->curr_node->seq, kmer_size);
 
 			// Now, write the contig
 			if (!shadow_mode) {
@@ -600,8 +623,13 @@ int assemble(const char* input,
 			  const char* prefix,
 			  int truncate_on_repeat,
 			  int max_contigs,
-			  int max_paths_from_root) {
+			  int max_paths_from_root,
+			  int input_read_length,
+			  int input_kmer_size) {
 
+	read_length = input_read_length;
+	min_contig_length = read_length + 1;
+	kmer_size = input_kmer_size;
 
 	struct struct_pool* pool = init_pool();
 	sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes = new sparse_hash_map<const char*, struct node*, my_hash, eqstr>();
@@ -610,8 +638,15 @@ int assemble(const char* input,
 	printf("Assembling: %s -> %s\n", input, output);
 	nodes->set_deleted_key(NULL);
 
+	printf("Building graph\n");
+	fflush(stdout);
 	build_graph(input, nodes, pool);
+	printf("Pruning graph\n");
+	fflush(stdout);
 	prune_graph(nodes);
+
+	printf("Pruning graph done\n");
+	fflush(stdout);
 
 	struct linked_node* root_nodes = identify_root_nodes(nodes);
 
@@ -674,7 +709,8 @@ int assemble(const char* input,
 extern "C"
  JNIEXPORT jint JNICALL Java_abra_NativeAssembler_assemble
    (JNIEnv *env, jobject obj, jstring j_input, jstring j_output, jstring j_prefix,
-    jint j_truncate_on_output, jint j_max_contigs, jint j_max_paths_from_root)
+    jint j_truncate_on_output, jint j_max_contigs, jint j_max_paths_from_root,
+    jint j_read_length, jint j_kmer_size)
  {
      //Get the native string from javaString
      //const char *nativeString = env->GetStringUTFChars(javaString, 0);
@@ -684,8 +720,10 @@ extern "C"
 	int truncate_on_output = j_truncate_on_output;
 	int max_contigs = j_max_contigs;
 	int max_paths_from_root = j_max_paths_from_root;
+	int read_length = j_read_length;
+	int kmer_size = j_kmer_size;
 
-	printf("Abra JNI entry point\n");
+	printf("Abra JNI entry point v0.09\n");
 
 	printf("input: %s\n", input);
 	printf("output: %s\n", output);
@@ -693,8 +731,10 @@ extern "C"
 	printf("truncate_on_output: %d\n", truncate_on_output);
 	printf("max_contigs: %d\n", max_contigs);
 	printf("max_paths_from_root: %d\n", max_paths_from_root);
+	printf("read_length: %d\n", read_length);
+	printf("kmer_size: %d\n", kmer_size);
 
-	int ret = assemble(input, output, prefix, truncate_on_output, max_contigs, max_paths_from_root);
+	int ret = assemble(input, output, prefix, truncate_on_output, max_contigs, max_paths_from_root, read_length, kmer_size);
 
      //DON'T FORGET THIS LINE!!!
     env->ReleaseStringUTFChars(j_input, input);
@@ -753,6 +793,7 @@ int main(int argc, char* argv[]) {
 		5000);
 		*/
 
+	/*
 	assemble(
 		"/home/lmose/code/abra/src/main/c/sim83/sm/reads.txt",
 		"/home/lmose/code/abra/src/main/c/sim83/sm/reads.fa",
@@ -760,6 +801,21 @@ int main(int argc, char* argv[]) {
 		false,
 		50000,
 		5000);
+		*/
+
+	printf("node size: %d\n", sizeof(node));
+
+	assemble(
+		"/home/lmose/code/abra/src/main/c/dump/unaligned.bam.reads",
+		"/home/lmose/code/abra/src/main/c/dump/unaligned.fa",
+		"foo",
+		false,
+		500000,
+		5000,
+		151,
+		93);
+
+//	printf("node size: %d\n", sizeof(node2));
 
 	/*
 	assemble(

@@ -72,6 +72,24 @@ public class Aligner {
 		runCommand(convert);
 	}
 	
+	public void shortAlign(String input, String input2, String outputSam) throws IOException, InterruptedException {
+		String sai = outputSam + ".sai";
+		
+		String aln = "bwa aln " + reference + " " + input + " -f " + sai + " -t " + numThreads + " -o 0";
+		
+		runCommand(aln);
+		
+		//TODO: Just consume bwa output directly?  May allow longer read names.
+//		String convert = "bwa samse " + reference + " " + sai + " " + input + " -n 1000 " +
+//				"| samtools view -bS -F 0x04 -o " + outputSam + " -";
+		
+		String convert = "bwa samse " + reference + " " + sai + " " + input + " -n 1000 " +
+				"| samtools view -bS -o " + outputSam + " -";
+
+		
+		runCommand(convert);
+	}
+	
 //	public void smallIndex() throws IOException, InterruptedException {
 //		runCommand("bwa index " + reference);
 //	}

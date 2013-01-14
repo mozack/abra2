@@ -21,6 +21,7 @@ public class ReAlignerOptions extends Options {
 	private static final String NUM_THREADS = "threads";
 	private static final String SKIP_UNALIGNED_ASSEMBLY = "no-unalign";
 	private static final String MAX_UNALIGNED_READS = "mur";
+	private static final String PAIRED_END = "paired";
 	
 	private OptionParser parser;
 	private boolean isValid;
@@ -46,6 +47,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(MIN_CONTIG_MAPQ, "Minimum contig mapping quality").withRequiredArg().ofType(Integer.class);
             parser.accepts(SKIP_UNALIGNED_ASSEMBLY, "Skip assembly of reads that did not initially align.");
             parser.accepts(MAX_UNALIGNED_READS, "Maximum number of unaligned reads to assemble").withRequiredArg().ofType(Integer.class);
+            parser.accepts(PAIRED_END, "Paired end");
     	}
     	
     	return parser;
@@ -156,6 +158,10 @@ public class ReAlignerOptions extends Options {
 	
 	public int getMaxUnalignedReads() {
 		return (Integer) getOptions().valueOf(MAX_UNALIGNED_READS);
+	}
+	
+	public boolean isPairedEnd() {
+		return getOptions().has(PAIRED_END);
 	}
 	
 	public boolean isValid() {

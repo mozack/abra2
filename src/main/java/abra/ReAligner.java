@@ -77,6 +77,8 @@ public class ReAligner {
 	
 	private int readLength = -1;
 	
+	private boolean isPairedEnd = false;
+	
 	public void reAlign(String inputSam, String inputSam2, String outputSam, String outputSam2) throws Exception {
 
 		System.out.println("input: " + inputSam);
@@ -311,7 +313,7 @@ public class ReAligner {
 		log("Processing chimeric reads");
 		CombineChimera3 cc = new CombineChimera3();
 		String contigsWithChim = tempDir + "/" + "all_contigs_chim.sam";
-		//TODO: Replace 33 with percent of read length
+		//TODO: Replace 33 with percent of read length?
 		cc.combine(contigsSam, contigsWithChim, isTightAlignment ? 33 : 0);
 		
 		log("Cleaning contigs");
@@ -709,6 +711,11 @@ public class ReAligner {
 	private void sam2Fastq(String bam, String fastq) throws IOException {
 		Sam2Fastq sam2Fastq = new Sam2Fastq();
 		sam2Fastq.convert(bam, fastq);
+//		if (isPairedEnd) {
+//			sam2Fastq.convertPairedEnd(bam, fastq);
+//		} else {
+//			sam2Fastq.convert(bam, fastq);
+//		}
 	}
 	
 	private static int memCnt = 0;
@@ -752,8 +759,8 @@ public class ReAligner {
 						(last.getOperator() == CigarOperator.M)) {
 
 						// Pull in read length bases from reference to the beginning and end of the contig.
-						String prefix = reference.getSequence(contigRead.getReferenceName(), contigRead.getAlignmentStart()-100, 100);
-						String suffix = reference.getSequence(contigRead.getReferenceName(), contigRead.getAlignmentEnd()+1, 100);
+						String prefix = reference.getSequence(contigRead.getReferenceName(), contigRead.getAlignmentStart()-readLength, readLength);
+						String suffix = reference.getSequence(contigRead.getReferenceName(), contigRead.getAlignmentEnd()+1, readLength);
 						
 						bases = prefix.toUpperCase() + bases + suffix.toUpperCase();
 						
@@ -762,8 +769,8 @@ public class ReAligner {
 							CigarElement elem = new CigarElement(first.getLength(), first.getOperator());
 							cigar.add(elem);
 						} else {
-							CigarElement firstNew = new CigarElement(first.getLength() + 100, first.getOperator());
-							CigarElement lastNew = new CigarElement(last.getLength() + 100, last.getOperator());
+							CigarElement firstNew = new CigarElement(first.getLength() + readLength, first.getOperator());
+							CigarElement lastNew = new CigarElement(last.getLength() + readLength, last.getOperator());
 							
 							cigar.add(firstNew);
 							for (int i=1; i<contigRead.getCigarLength()-1; i++) {
@@ -774,7 +781,7 @@ public class ReAligner {
 						}
 						
 						contigRead.setCigar(cigar);
-						contigRead.setAlignmentStart(contigRead.getAlignmentStart()-100);
+						contigRead.setAlignmentStart(contigRead.getAlignmentStart()-readLength);
 
 					} else {
 						System.out.println("Not padding contig: " + contigRead.getReadName());
@@ -814,15 +821,21 @@ public class ReAligner {
 	private void alignToContigs(String tempDir, String inputSam, String alignedToContigSam, String contigFasta) throws IOException, InterruptedException {
 		// Convert original bam to fastq
 		String fastq = tempDir + "/" + "original_reads.fastq";
-		sam2Fastq(inputSam, fastq);
+		String fastq2 = tempDir + "/" + "original_reads2.fastq";
 		
+		sam2Fastq(inputSam, fastq);
+				
 		// Build contig fasta index
 		Aligner contigAligner = new Aligner(contigFasta, numThreads);
 		
 		contigAligner.index();
 		
 		// Align region fastq against assembled contigs
-		contigAligner.shortAlign(fastq, alignedToContigSam);
+		if (!isPairedEnd) {
+			contigAligner.shortAlign(fastq, alignedToContigSam);
+		} else {
+			contigAligner.shortAlign(fastq, fastq2, alignedToContigSam);
+		}
 	}
 	
 	static class Pair<T, Y> {
@@ -906,7 +919,11 @@ public class ReAligner {
 		SAMFileWriter outputReadsBam = new SAMFileWriterFactory().makeSAMOrBAMWriter(
 				samHeader, true, new File(outputSam));
 		
+		System.out.println("Opening sam file reader for: " + alignedToContigSam);
+		System.out.flush();
 		SAMFileReader contigReader = new SAMFileReader(new File(alignedToContigSam));
+		System.out.println("Sam file reader opened for: " + alignedToContigSam);
+		System.out.flush();
 		contigReader.setValidationStringency(ValidationStringency.SILENT);
 		
 		SamStringReader samStringReader = new SamStringReader();
@@ -914,6 +931,9 @@ public class ReAligner {
 		int ctr = 0;
 		
 		for (SAMRecord read : contigReader) {
+			
+			System.out.println("Read: " + read.getReadName());;
+			System.out.flush();
 			
 			if ((ctr++ % 100000) == 0) {
 				this.logOSMemory();
@@ -938,15 +958,15 @@ public class ReAligner {
 
 			boolean isReadWritten = false;
 			
-			//TODO: Smarter cigar check
 			// Only adjust reads that align to contig with no indel and shorter edit distance than the original alignment
-			if ((read.getCigarString().equals("100M")) && 
+			String matchingString = readLength + "M";
+//			if ((read.getCigarString().equals("100M")) && 
+			if ((read.getCigarString().equals(matchingString)) &&
 				(read.getReadUnmappedFlag() == false)  &&
 				(getEditDistance(read) < getEditDistance(orig))) {
 			
 				SAMRecord origRead = orig;
 				String contigReadStr = read.getReferenceName();
-				
 				
 				// Get alternate best hits
 				List<HitInfo> bestHits = new ArrayList<HitInfo>();
@@ -994,11 +1014,11 @@ public class ReAligner {
 							String cigar = altInfo[2];
 							int mismatches = Integer.parseInt(altInfo[3]);
 							
-							if ((cigar.equals("100M")) && (mismatches < bestMismatches)) {
+							if ((cigar.equals(matchingString)) && (mismatches < bestMismatches)) {
 								System.out.println("MISMATCH_ISSUE: " + read.getSAMString());
 							}
 							
-							if ((cigar.equals("100M")) && (mismatches == bestMismatches)) {
+							if ((cigar.equals(matchingString)) && (mismatches == bestMismatches)) {
 								altContigReadStr = altContigReadStr.substring(altContigReadStr.indexOf('~')+1);
 								altContigReadStr = altContigReadStr.replace('~', '\t');
 								contigRead = samStringReader.getRead(altContigReadStr);
@@ -1048,13 +1068,13 @@ public class ReAligner {
 							// Set read bases to the aligned read (which will be expressed in 
 							// forward strand context according to the primary alignment).
 							// If this hit's strand is opposite the primary alignment, reverse the bases
-							if (hitInfo.isOnNegativeStrand() == read.getReadNegativeStrandFlag()) {
-								updatedRead.setReadString(read.getReadString());
-								updatedRead.setBaseQualityString(read.getBaseQualityString());
-							} else {
-								updatedRead.setReadString(reverseComplementor.reverseComplement(read.getReadString()));
-								updatedRead.setBaseQualityString(reverseComplementor.reverse(read.getBaseQualityString()));								
-							}
+//							if (hitInfo.isOnNegativeStrand() == read.getReadNegativeStrandFlag()) {
+//								updatedRead.setReadString(read.getReadString());
+//								updatedRead.setBaseQualityString(read.getBaseQualityString());
+//							} else {
+//								updatedRead.setReadString(reverseComplementor.reverseComplement(read.getReadString()));
+//								updatedRead.setBaseQualityString(reverseComplementor.reverse(read.getBaseQualityString()));								
+//							}
 							
 							// If the read's alignment info has been modified, record the original alignment.
 							if (origRead.getReadUnmappedFlag() ||
@@ -1120,6 +1140,9 @@ public class ReAligner {
 						readToOutput.setMappingQuality(0);
 					}
 					
+					// This must happen prior to updateMismatchAndEditDistance
+					adjustForStrand(read.getReadNegativeStrandFlag(), readToOutput);
+					
 					if (readToOutput.getAttribute("YO") != null) {
 						// HACK: Only add X0 for final alignment.  Assembler skips X0 > 1
 						if (isTightAlignment) {
@@ -1137,7 +1160,7 @@ public class ReAligner {
 						readToOutput.setAttribute("XT", null);
 						
 						if (c2r != null) {
-							updateMismatchAndEditDistance(read, c2r);
+							updateMismatchAndEditDistance(readToOutput, c2r);
 						}
 						isReadRealigned = true;
 					}
@@ -1152,6 +1175,7 @@ public class ReAligner {
 			}
 			
 			if (!isReadWritten) {
+				adjustForStrand(read.getReadNegativeStrandFlag(), orig);
 				outputReadsBam.addAlignment(orig);
 			}
 		}
@@ -1162,281 +1186,13 @@ public class ReAligner {
 		
 		log("Done with: " + outputSam + ".  Number of reads realigned: " + realignedCount);
 	}
-
 	
-	protected void adjustReadsOld(String originalReadsSam, String alignedToContigSam, String outputSam, boolean isTightAlignment) throws IOException {
-		
-		log("Writing reads to: " + outputSam);
-		
-		int realignedCount = 0;
-		
-		SAMFileWriter outputReadsBam = new SAMFileWriterFactory().makeSAMOrBAMWriter(
-				samHeader, true, new File(outputSam));
-		
-		SAMFileReader contigReader = new SAMFileReader(new File(alignedToContigSam));
-		contigReader.setValidationStringency(ValidationStringency.SILENT);
-		
-		SAMFileReader origReader = new SAMFileReader(new File(originalReadsSam));
-		origReader.setValidationStringency(ValidationStringency.SILENT);
-
-		Iterator<SAMRecord> contigIter = contigReader.iterator();
-		Iterator<SAMRecord> origIter = origReader.iterator();
-		
-		SAMRecord cachedContig = null;
-		
-		SamStringReader samStringReader = new SamStringReader();
-		
-		int ctr = 0;
-		
-		while ((contigIter.hasNext() || cachedContig != null) && (origIter.hasNext())) {
-			
-			if ((ctr++ % 100000) == 0) {
-				this.logOSMemory();
-			}
-			
-			SAMRecord orig = origIter.next();
-			SAMRecord read;
-			
-			if (cachedContig != null) {
-				read = cachedContig;
-				cachedContig = null;
-			} else {
-				read = contigIter.next();
-			}
-			
-			boolean isReadWritten = false;
-			
-			if (orig.getReadName().equals(read.getReadName())) {
-				//TODO: Smarter cigar check
-				// Only adjust reads that align to contig with no indel and shorter edit distance than the original alignment
-				if ((read.getCigarString().equals("100M")) && 
-					(read.getReadUnmappedFlag() == false)  &&
-					(getEditDistance(read) < getEditDistance(orig))) {
-				
-					SAMRecord origRead = orig;
-					String contigReadStr = read.getReferenceName();
-					
-					
-					// Get alternate best hits
-					List<HitInfo> bestHits = new ArrayList<HitInfo>();
-
-					contigReadStr = contigReadStr.substring(contigReadStr.indexOf('~')+1);
-					contigReadStr = contigReadStr.replace('~', '\t');
-					SAMRecord contigRead = samStringReader.getRead(contigReadStr);
-					
-					int bestMismatches = getIntAttribute(read, "XM");
-					
-					// Filter this hit if it aligns past the end of the contig
-					// Must use cigar length instead of read length, because the
-					// the contig read bases are not loaded.
-					if (read.getAlignmentEnd() <= contigRead.getCigar().getReadLength()) {
-						HitInfo hit = new HitInfo(contigRead, read.getAlignmentStart(),
-								read.getReadNegativeStrandFlag() ? '-' : '+', bestMismatches);
-						
-						bestHits.add(hit);
-					}
-					
-					int numBestHits = getIntAttribute(read, "X0");
-					int subOptimalHits = getIntAttribute(read, "X1");
-					
-					int totalHits = numBestHits + subOptimalHits;
-					
-					//TODO: If too many best hits, what to do?
-					
-					if ((totalHits > 1) && (totalHits < 1000)) {
-//					if (totalHits < -1000) {
-						// Look in XA tag.
-						String alternateHitsStr = (String) read.getAttribute("XA");
-						if (alternateHitsStr == null) {
-							String msg = "best hits = " + numBestHits + ", but no XA entry for: " + read.getSAMString();
-							System.out.println(msg);							
-							this.missingXATag += 1;
-						} else {
-							
-							String[] alternates = alternateHitsStr.split(";");
-							
-							for (int i=0; i<alternates.length-1; i++) {
-								String[] altInfo = alternates[i].split(",");
-								String altContigReadStr = altInfo[0];
-								char strand = altInfo[1].charAt(0);
-								int position = Integer.parseInt(altInfo[1].substring(1));
-								String cigar = altInfo[2];
-								int mismatches = Integer.parseInt(altInfo[3]);
-								
-								if ((cigar.equals("100M")) && (mismatches < bestMismatches)) {
-									System.out.println("MISMATCH_ISSUE: " + read.getSAMString());
-								}
-								
-								if ((cigar.equals("100M")) && (mismatches == bestMismatches)) {
-									altContigReadStr = altContigReadStr.substring(altContigReadStr.indexOf('~')+1);
-									altContigReadStr = altContigReadStr.replace('~', '\t');
-									contigRead = samStringReader.getRead(altContigReadStr);
-									
-									// Filter this hit if it aligns past the end of the contig
-									// Must use cigar length instead of read length, because the
-									// the contig read bases are not loaded.
-									if ((position + read.getReadLength()) <= contigRead.getCigar().getReadLength()) {
-										HitInfo hit = new HitInfo(contigRead, position, strand, mismatches);
-										bestHits.add(hit);
-									}
-								}
-							}
-						}
-					}
-					
-					// chr_pos_cigar
-					Map<String, SAMRecord> outputReadAlignmentInfo = new HashMap<String, SAMRecord>();
-					
-					for (HitInfo hitInfo : bestHits) {
-						
-						contigRead = hitInfo.getRecord();
-						int position = hitInfo.getPosition() - 1;
-						
-						// Only consider this mapping if the assembled contig's quality is
-						// greater than the original read's quality.
-						if (contigRead.getMappingQuality() > orig.getMappingQuality()) {
-	
-							List<ReadBlock> contigReadBlocks = ReadBlock.getReadBlocks(contigRead);
-							
-							ReadPosition readPosition = new ReadPosition(origRead, position, -1);
-							SAMRecord updatedRead = updateReadAlignment(contigRead,
-									contigReadBlocks, readPosition);
-							
-							if (updatedRead != null) {
-								//TODO: Move into updateReadAlignment ?
-								if (updatedRead.getMappingQuality() == 0) {
-									updatedRead.setMappingQuality(1);
-								}
-								
-								if (updatedRead.getReadUnmappedFlag()) {
-									updatedRead.setReadUnmappedFlag(false);
-								}
-								
-								updatedRead.setReadNegativeStrandFlag(hitInfo.isOnNegativeStrand());
-	
-								// Set read bases to the aligned read (which will be expressed in 
-								// forward strand context according to the primary alignment).
-								// If this hit's strand is opposite the primary alignment, reverse the bases
-								if (hitInfo.isOnNegativeStrand() == read.getReadNegativeStrandFlag()) {
-									updatedRead.setReadString(read.getReadString());
-									updatedRead.setBaseQualityString(read.getBaseQualityString());
-								} else {
-									updatedRead.setReadString(reverseComplementor.reverseComplement(read.getReadString()));
-									updatedRead.setBaseQualityString(reverseComplementor.reverse(read.getBaseQualityString()));								
-								}
-								
-								// If the read's alignment info has been modified, record the original alignment.
-								if (origRead.getReadUnmappedFlag() ||
-									!origRead.getReferenceName().equals(updatedRead.getReferenceName()) ||
-									origRead.getAlignmentStart() != updatedRead.getAlignmentStart() ||
-									origRead.getReadNegativeStrandFlag() != updatedRead.getReadNegativeStrandFlag() ||
-									!origRead.getCigarString().equals(updatedRead.getCigarString())) {
-								
-									String originalAlignment;
-									if (origRead.getReadUnmappedFlag()) {
-										originalAlignment = "N/A";
-									} else {
-										originalAlignment = origRead.getReferenceName() + ":" + origRead.getAlignmentStart() + ":" +
-												(origRead.getReadNegativeStrandFlag() ? "-" : "+") + ":" + origRead.getCigarString();
-									}
-									
-									// Read's original alignment position
-									updatedRead.setAttribute("YO", originalAlignment);
-								}
-								
-								// Mismatches to the contig
-								updatedRead.setAttribute("YM", hitInfo.getNumMismatches());
-								
-								// Contig's mapping quality
-								updatedRead.setAttribute("YQ", hitInfo.getRecord().getMappingQuality());
-								
-								// Contig's length
-								updatedRead.setAttribute("YL", hitInfo.getRecord().getCigar().getReadLength());
-															
-								// Check to see if this read has been output with the same alignment already.
-//								String readAlignmentInfo;
-								
-								//TODO: Check strand!!!
-								String readAlignmentInfo = updatedRead.getReferenceName() + "_" + updatedRead.getAlignmentStart() + "_" +
-										updatedRead.getCigarString();
-								/*
-								if (isTightAlignment) {
-									// Check ref, pos, strand, cigar
-									readAlignmentInfo = updatedRead.getReferenceName() + "_" + updatedRead.getAlignmentStart() + "_" +
-										(updatedRead.getReadNegativeStrandFlag() ? "-" : "+") + "_" + updatedRead.getCigarString();
-								} else {
-									// For loose alignment, allow read to align to either strand (pick one only)
-									readAlignmentInfo = updatedRead.getReferenceName() + "_" + updatedRead.getAlignmentStart() + "_" +
-											updatedRead.getCigarString();
-								}
-								*/
-								
-								if (!outputReadAlignmentInfo.containsKey(readAlignmentInfo)) {
-									outputReadAlignmentInfo.put(readAlignmentInfo, updatedRead);
-								}
-							}
-						}
-					}
-					
-					boolean isReadRealigned = false;
-					for (SAMRecord readToOutput : outputReadAlignmentInfo.values()) {
-						
-						int origBestHits = this.getIntAttribute(readToOutput, "X0");
-						int origSuboptimalHits = this.getIntAttribute(readToOutput, "X1");
-						
-						// If the read mapped to multiple locations, set mapping quality to zero.
-						if ((outputReadAlignmentInfo.size() > 1) || (totalHits > 1000)) {
-							readToOutput.setMappingQuality(0);
-						}
-						
-						if (readToOutput.getAttribute("YO") != null) {
-							// HACK: Only add X0 for final alignment.  Assembler skips X0 > 1
-							if (isTightAlignment) {
-								readToOutput.setAttribute("X0", outputReadAlignmentInfo.size());
-							} else {
-								readToOutput.setAttribute("X0", null);
-							}
-							readToOutput.setAttribute("X1", origBestHits + origSuboptimalHits);
-							
-							// Clear various tags
-							readToOutput.setAttribute("XO", null);
-							readToOutput.setAttribute("XG", null);
-							readToOutput.setAttribute("MD", null);
-							readToOutput.setAttribute("XA", null);
-							readToOutput.setAttribute("XT", null);
-							isReadRealigned = true;
-						}
-
-						outputReadsBam.addAlignment(readToOutput);
-						isReadWritten = true;
-					}
-					
-					if (isReadRealigned) {
-						realignedCount += 1;
-					}
-				}
-				/*
-				else {
-					if (orig.getReadUnmappedFlag()) {
-						unalignedReadsBam.addAlignment(orig);
-					}
-				}
-				*/
-			} else {
-				cachedContig = read;
-			}
-			
-			if (!isReadWritten) {
-				outputReadsBam.addAlignment(orig);
-			}
+	private void adjustForStrand(boolean readAlreadyReversed, SAMRecord read) {
+		if ( ((!readAlreadyReversed) && (read.getReadNegativeStrandFlag())) ||
+			 ((readAlreadyReversed) && (!read.getReadNegativeStrandFlag())) ){
+			read.setReadString(reverseComplementor.reverseComplement(read.getReadString()));
+			read.setBaseQualityString(reverseComplementor.reverse(read.getBaseQualityString()));
 		}
-
-//		unalignedReadsBam.close();
-		origReader.close();
-		contigReader.close();
-		outputReadsBam.close();
-		
-		log("Done with: " + outputSam + ".  Number of reads realigned: " + realignedCount);
 	}
 	
 	SAMRecord updateReadAlignment(SAMRecord contigRead,
@@ -1588,40 +1344,45 @@ public class ReAligner {
 		
 	private Assembler newAssembler() {
 		//Assembler assem = new JavaAssembler();
-		Assembler assem = new NativeAssembler();
+		NativeAssembler assem = new NativeAssembler();
 		
-		if (assem instanceof JavaAssembler) {
-			JavaAssembler ja = (JavaAssembler) assem;
-			ja.setKmerSize(assemblerSettings.getKmerSize());
-			ja.setMinNodeFrequncy(assemblerSettings.getMinNodeFrequncy());
-			ja.setMinContigLength(assemblerSettings.getMinContigLength());
-			ja.setMinContigRatio(assemblerSettings.getMinContigRatio());
-		}
+//		if (assem instanceof JavaAssembler) {
+//			JavaAssembler ja = (JavaAssembler) assem;
+//			ja.setKmerSize(assemblerSettings.getKmerSize());
+//			ja.setMinNodeFrequncy(assemblerSettings.getMinNodeFrequncy());
+//			ja.setMinContigLength(assemblerSettings.getMinContigLength());
+//			ja.setMinContigRatio(assemblerSettings.getMinContigRatio());
+//		}
 
 		assem.setTruncateOutputOnRepeat(true);
 		assem.setMaxContigs(assemblerSettings
 				.getMaxPotentialContigs());
 
-		assem.setMaxPathsFromRoot(1000000);
+		assem.setMaxPathsFromRoot(100000);
+		assem.setReadLength(readLength);
+		assem.setKmer(assemblerSettings.getKmerSize());
 
 		return assem;
 	}
 	
 	private Assembler newUnalignedAssembler(int mnfMultiplier) {
 		//Assembler assem = new JavaAssembler();
-		Assembler assem = new NativeAssembler();
+		NativeAssembler assem = new NativeAssembler();
 		
-		if (assem instanceof JavaAssembler) {
-			JavaAssembler ja = (JavaAssembler) assem;
-			ja.setKmerSize(assemblerSettings.getKmerSize());
-			ja.setMinNodeFrequncy(assemblerSettings.getMinUnalignedNodeFrequency() * mnfMultiplier);
-			ja.setMinContigLength(assemblerSettings.getMinContigLength());
-			ja.setMinContigRatio(-1.0);
-		}
+//		if (assem instanceof JavaAssembler) {
+//			JavaAssembler ja = (JavaAssembler) assem;
+//			ja.setKmerSize(assemblerSettings.getKmerSize());
+//			ja.setMinNodeFrequncy(assemblerSettings.getMinUnalignedNodeFrequency() * mnfMultiplier);
+//			ja.setMinContigLength(assemblerSettings.getMinContigLength());
+//			ja.setMinContigRatio(-1.0);
+//		}
 
 		assem.setMaxContigs(MAX_POTENTIAL_UNALIGNED_CONTIGS);
 		assem.setTruncateOutputOnRepeat(false);
 		assem.setMaxPathsFromRoot(5000);
+		assem.setReadLength(readLength);
+		// Could be smaller for higher sensitivity here?
+		assem.setKmer(assemblerSettings.getKmerSize());
 
 		return assem;
 	}
@@ -1682,7 +1443,7 @@ public class ReAligner {
 
 	public static void run(String[] args) throws Exception {
 		
-		System.out.println("Starting 0.07 ...");
+		System.out.println("Starting 0.09 ...");
 		
 		ReAlignerOptions options = new ReAlignerOptions();
 		options.parseOptions(args);
@@ -1708,6 +1469,7 @@ public class ReAligner {
 			realigner.setMinContigMapq(options.getMinContigMapq());
 			realigner.setShouldReprocessUnaligned(!options.isSkipUnalignedAssembly());
 			realigner.setMaxUnalignedReads(options.getMaxUnalignedReads());
+			realigner.isPairedEnd = options.isPairedEnd();
 
 			long s = System.currentTimeMillis();
 
@@ -1745,8 +1507,18 @@ public class ReAligner {
 	
 	public static void main(String[] args) throws Exception {
 		ReAligner ra = new ReAligner();
-		ra.getSamHeaderAndReadLength("/home/lmose/code/abra/sim/83/header.sam");
-		ra.adjustReads("/home/lmose/code/abra/sim/83/align_to_contig.bam", "/home/lmose/code/abra/sim/83/output.bam", false, null);
+		String headerSourceBam = args[0];
+		String alignedToContigBam = args[1];
+		String outputBam = args[2];
+		String reference = args[3];
+//		ra.getSamHeaderAndReadLength("/home/lmose/code/abra/sim/83/header.sam");
+//		ra.adjustReads("/home/lmose/code/abra/sim/83/align_to_contig.bam", "/home/lmose/code/abra/sim/83/output.bam", false, null);
+		
+//		CompareToReference2 c2r = new CompareToReference2();
+//		c2r.init(reference);
+		
+		ra.getSamHeaderAndReadLength(headerSourceBam);
+		ra.adjustReads(alignedToContigBam, outputBam, false, null);
 	}
 	
 //	public static void main(String[] args) throws Exception {

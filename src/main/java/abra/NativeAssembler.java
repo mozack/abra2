@@ -18,9 +18,11 @@ public class NativeAssembler implements Assembler {
 	private boolean truncateOnRepeat;
 	private int maxContigs;
 	private int maxPathsFromRoot;
+	private int readLength;
+	private int kmer;
 	private Set<String> readIds;
 
-	private native int assemble(String input, String output, String prefix, int truncateOnRepeat, int maxContigs, int maxPathsFromRoot);
+	private native int assemble(String input, String output, String prefix, int truncateOnRepeat, int maxContigs, int maxPathsFromRoot, int readLength, int kmerSize);
 //	private native void assemble(String input, String output, String prefix);
 	
 	static{
@@ -50,6 +52,13 @@ public class NativeAssembler implements Assembler {
 			BufferedWriter writer = new BufferedWriter(new FileWriter(readFile, false));
 			
 			for (SAMRecord read : reader) {
+				
+				if (read.getReadLength() != readLength) {
+					throw new IllegalArgumentException(
+							"Read length not equal to expected value of: " + readLength + " for read [" +
+							read.getSAMString() + "]");
+				}
+				
 				// Don't allow same read to be counted twice.
 				// TODO: Handle paired end
 				if ((!checkForDupes) || (!readIds.contains(getIdentifier(read)))) {
@@ -78,7 +87,9 @@ public class NativeAssembler implements Assembler {
 					prefix, 
 					truncateOnRepeat ? 1 : 0,
 					maxContigs,
-					maxPathsFromRoot);
+					maxPathsFromRoot,
+					readLength,
+					kmer);
 
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -110,6 +121,14 @@ public class NativeAssembler implements Assembler {
 
 	public void setMaxPathsFromRoot(int maxPathsFromRoot) {
 		this.maxPathsFromRoot = maxPathsFromRoot;
+	}
+	
+	public void setReadLength(int readLength) {
+		this.readLength = readLength;
+	}
+	
+	public void setKmer(int kmer) {
+		this.kmer = kmer;
 	}
 	
 	public static void run(String input, String output) {

@@ -934,9 +934,6 @@ public class ReAligner {
 		
 		for (SAMRecord read : contigReader) {
 			
-			System.out.println("Read: " + read.getReadName());;
-			System.out.flush();
-			
 			if ((ctr++ % 100000) == 0) {
 				this.logOSMemory();
 			}

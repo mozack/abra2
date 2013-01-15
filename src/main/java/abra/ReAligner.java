@@ -506,6 +506,7 @@ public class ReAligner {
 		else if ((read.getCigarLength() > 4) && read.getMappingQuality() >= 4) {
 			shouldInclude = true;
 		}
+		/*
 		// Consider long soft clipping
 		else if (read.getCigarLength() > 1) {
 			CigarElement first = read.getCigar().getCigarElement(0);
@@ -523,6 +524,7 @@ public class ReAligner {
 				shouldInclude = true;
 			}
 		}
+		*/
 		
 		return shouldInclude;
 	}

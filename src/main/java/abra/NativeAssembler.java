@@ -67,7 +67,7 @@ public class NativeAssembler implements Assembler {
 					boolean hasAmbiguousInitialAlignment = numBestHits != null && numBestHits > 1;
 					//TODO: Stampy ambiguous read (mapq < 4)
 					
-					if (!hasAmbiguousBases && !hasAmbiguousInitialAlignment) {
+					if (!hasAmbiguousBases && !hasAmbiguousInitialAlignment && !hasLowQualityBase(read)) {
 						if (!checkForDupes) {
 							readIds.add(getIdentifier(read));
 						}
@@ -97,6 +97,17 @@ public class NativeAssembler implements Assembler {
 		}
 		
 		return count != 0;
+	}
+	
+	private boolean hasLowQualityBase(SAMRecord read) {
+		//TODO: Don't hardcode phred33
+		for (int i=0; i<read.getBaseQualityString().length(); i++) {
+			if ((read.getBaseQualityString().charAt(i) - '!') < 20) {
+				return true;
+			}
+		}
+		
+		return false;
 	}
 
 	public boolean isTruncateOnRepeat() {

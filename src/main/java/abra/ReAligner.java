@@ -12,6 +12,7 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.StringWriter;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -37,7 +38,9 @@ public class ReAligner {
 
 	private static final int DEFAULT_MAX_UNALIGNED_READS = 1000000;
 	private static final int MAX_REGION_LENGTH = 2000;
+//	private static final int MAX_REGION_LENGTH = 1000;
 	private static final int MIN_REGION_REMAINDER = 500;
+//	private static final int MIN_REGION_REMAINDER = 300;
 	private static final int REGION_OVERLAP = 200; 
 	private static final long RANDOM_SEED = 1;
 	private static final int MAX_POTENTIAL_UNALIGNED_CONTIGS = 2000000;
@@ -312,9 +315,35 @@ public class ReAligner {
 		
 		log("Processing chimeric reads");
 		CombineChimera3 cc = new CombineChimera3();
-		String contigsWithChim = tempDir + "/" + "all_contigs_chim.sam";
+		String contigsWithChim = tempDir + "/" + "all_contigs_chim.bam";
 		//TODO: Replace 33 with percent of read length?
 		cc.combine(contigsSam, contigsWithChim, isTightAlignment ? 33 : 0);
+		
+		if (isTightAlignment) {
+			// Chop and clop...
+			log("Sorting and indexing for chopper clopper.");
+			String contigsWithChimSorted = tempDir + "/" + "all_contigs_chim_sorted.bam";
+			sortBam(contigsWithChim, contigsWithChimSorted, "coordinate");
+			indexBam(contigsWithChimSorted);
+		
+			log("Loading reference for chopper clopper.");
+			CompareToReference2 c2r = new CompareToReference2();
+			c2r.init(this.reference);
+			
+			log("Chopper clopper start.");
+			ContigChopper chopper = new ContigChopper();
+			chopper.setC2R(c2r);
+			chopper.setReadLength(this.readLength);
+			
+			String contigsWithChimChopped = tempDir + "/" + "all_contigs_chim_chopped.bam";
+			chopper.chopClopDrop(this.regions, contigsWithChimSorted, contigsWithChimChopped);
+			
+			log("Chopper clopper done.");
+			contigsWithChim = contigsWithChimChopped;
+			
+			chopper = null;
+			c2r = null;
+		}
 		
 		log("Cleaning contigs");
 		String cleanContigsFasta = tempDir + "/" + "clean_contigs.fasta";
@@ -686,8 +715,7 @@ public class ReAligner {
 	}
 
 	private void log(String message) {
-		long currMillis = System.currentTimeMillis() - startMillis;
-		System.out.println(currMillis/1000 + " " + message);
+		System.out.println(new Date() + " : " + message);
 	}
 
 	private void getSamHeaderAndReadLength(String inputSam) {
@@ -1299,7 +1327,7 @@ public class ReAligner {
 	/**
 	 *  If any of the input list of features is greater than maxSize, split them into multiple features. 
 	 */
-	public List<Feature> splitRegions(List<Feature> regions) {
+	public static List<Feature> splitRegions(List<Feature> regions) {
 		List<Feature> splitRegions = new ArrayList<Feature>();
 		
 		for (Feature region : regions) {
@@ -1313,7 +1341,7 @@ public class ReAligner {
 		return splitRegions;
 	}
 	
-	public List<Feature> splitWithOverlap(Feature region) {
+	public static List<Feature> splitWithOverlap(Feature region) {
 		List<Feature> regions = new ArrayList<Feature>();
 		
 		long pos = region.getStart();

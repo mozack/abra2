@@ -37,7 +37,7 @@ import net.sf.samtools.SAMFileReader.ValidationStringency;
 public class ReAligner {
 
 	private static final int DEFAULT_MAX_UNALIGNED_READS = 1000000;
-	private static final int MAX_REGION_LENGTH = 2000;
+	public static final int MAX_REGION_LENGTH = 2000;
 //	private static final int MAX_REGION_LENGTH = 1000;
 	private static final int MIN_REGION_REMAINDER = 500;
 //	private static final int MIN_REGION_REMAINDER = 300;
@@ -1470,7 +1470,7 @@ public class ReAligner {
 
 	public static void run(String[] args) throws Exception {
 		
-		System.out.println("Starting 0.11 ...");
+		System.out.println("Starting 0.15 ...");
 		
 		ReAlignerOptions options = new ReAlignerOptions();
 		options.parseOptions(args);

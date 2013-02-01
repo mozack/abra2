@@ -16,9 +16,11 @@ using google::sparse_hash_set;
 //#define READ_LENGTH 100
 //#define KMER 63
 //#define MIN_CONTIG_LENGTH 101
-#define MIN_NODE_FREQUENCY 3
+//#define MIN_NODE_FREQUENCY 3
+#define MIN_NODE_FREQUENCY 2
 #define MAX_CONTIG_SIZE 10000
 #define MAX_READ_LENGTH 1001
+#define MIN_BASE_QUALITY 20
 
 #define OK 0
 #define TOO_MANY_PATHS_FROM_ROOT -1
@@ -261,36 +263,61 @@ void increment_node_freq(struct node* node, char* read_seq) {
 	}
 }
 
-void add_to_graph(char* sequence, sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, struct_pool* pool) {
+int include_kmer(char* sequence, char*qual, int idx) {
+
+	int include = 1;
+
+	for (int i=idx; i<idx+kmer_size; i++) {
+		// Discard kmers with ambiguous bases
+		if (sequence[i] == 'N') {
+			include = 0;
+			break;
+		}
+
+		// Discard kmers with low base qualities
+		if (qual[i] - '!' < MIN_BASE_QUALITY) {
+			include = 0;
+			break;
+		}
+	}
+
+	return include;
+}
+
+void add_to_graph(char* sequence, sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, struct_pool* pool, char* qual) {
 
 	struct node* prev = 0;
 
 	for (int i=0; i<=read_length-kmer_size; i++) {
 
-		char* kmer = get_kmer(i, sequence, pool);
-//		printf("\tkmer: %s\n", kmer);
+		if (include_kmer(sequence, qual, i)) {
+			char* kmer = get_kmer(i, sequence, pool);
+	//		printf("\tkmer: %s\n", kmer);
 
-		struct node* curr = (*nodes)[kmer];
-
-		if (curr == NULL) {
-			curr = new_node(kmer, sequence, pool);
+			struct node* curr = (*nodes)[kmer];
 
 			if (curr == NULL) {
-				printf("Null node for kmer: %s\n", kmer);
-				exit(-1);
+				curr = new_node(kmer, sequence, pool);
+
+				if (curr == NULL) {
+					printf("Null node for kmer: %s\n", kmer);
+					exit(-1);
+				}
+
+				(*nodes)[kmer] = curr;
+			} else {
+				unget_kmer(kmer, pool);
+				increment_node_freq(curr, sequence);
 			}
 
-			(*nodes)[kmer] = curr;
+			if (prev != NULL) {
+				link_nodes(prev, curr);
+			}
+
+			prev = curr;
 		} else {
-			unget_kmer(kmer, pool);
-			increment_node_freq(curr, sequence);
+			prev = NULL;
 		}
-
-		if (prev != NULL) {
-			link_nodes(prev, curr);
-		}
-
-		prev = curr;
 	}
 }
 
@@ -299,13 +326,17 @@ void build_graph(const char* read_file, sparse_hash_map<const char*, struct node
 	char read[MAX_READ_LENGTH];
 	memset(read, 0, MAX_READ_LENGTH);
 
+	char qual[MAX_READ_LENGTH];
+	memset(qual, 0, MAX_READ_LENGTH);
+
 	int line = 0;
 	while (fscanf(fp, "%s", read) != EOF) {
+		fscanf(fp, "%s", qual);
 //		printf("read: %d : %s\n", line++, read);
 		if (strcmp(read, "") != 0) {
 			char* read_ptr = allocate_read(pool);
 			memcpy(read_ptr, read, read_length+1);
-			add_to_graph(read_ptr, nodes, pool);
+			add_to_graph(read_ptr, nodes, pool, qual);
 			line++;
 
 			if ((line % 100000) == 0) {
@@ -628,7 +659,18 @@ int assemble(const char* input,
 			  int input_kmer_size) {
 
 	read_length = input_read_length;
+
 	min_contig_length = read_length + 1;
+
+	//TODO: Parameterize mcl - shorter for unaligned region?
+/*
+	if (truncate_on_repeat) {
+		min_contig_length = read_length + 1;
+	} else {
+		min_contig_length = 150;
+	}
+*/
+
 	kmer_size = input_kmer_size;
 
 	struct struct_pool* pool = init_pool();
@@ -723,7 +765,7 @@ extern "C"
 	int read_length = j_read_length;
 	int kmer_size = j_kmer_size;
 
-	printf("Abra JNI entry point v0.11\n");
+	printf("Abra JNI entry point v0.15\n");
 
 	printf("input: %s\n", input);
 	printf("output: %s\n", output);

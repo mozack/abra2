@@ -5,7 +5,10 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import net.sf.samtools.Cigar;
@@ -66,6 +69,42 @@ public class CompareToReference2 {
 		if (!read.getReadUnmappedFlag()) {
 			
 			mismatches = numDifferences(read);
+		}
+
+		return mismatches;
+	}
+	
+	public List<Integer> mismatchPositions(SAMRecord read) {
+		if (read.getReadUnmappedFlag()) {
+			return Collections.emptyList();
+		}
+		
+		List<Integer> mismatches = new ArrayList<Integer>();
+		
+		StringBuffer reference = refMap.get(read.getReferenceName().trim());
+		
+		int readIdx = 0;
+		int refIdx = read.getAlignmentStart()-1;
+		for (CigarElement element : read.getCigar().getCigarElements()) {
+			if (element.getOperator() == CigarOperator.M) {
+				for (int i=0; i<element.getLength(); i++) {
+					char readBase = Character.toUpperCase(read.getReadString().charAt(readIdx));
+					char refBase  = Character.toUpperCase(reference.charAt(refIdx));
+					if ((readBase != refBase) && (readBase != 'N') && (refBase != 'N')) {
+						
+						mismatches.add(readIdx);
+					}
+					
+					readIdx++;
+					refIdx++;
+				}
+			} else if (element.getOperator() == CigarOperator.I) {
+				readIdx += element.getLength();
+			} else if (element.getOperator() == CigarOperator.D) {
+				refIdx += element.getLength();
+			} else if (element.getOperator() == CigarOperator.S) {
+				readIdx += element.getLength();
+			}
 		}
 
 		return mismatches;

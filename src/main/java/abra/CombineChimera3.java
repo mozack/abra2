@@ -1,5 +1,7 @@
 package abra;
 
+import static abra.ReAligner.MAX_REGION_LENGTH;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -62,7 +64,8 @@ public class CombineChimera3 {
 			if ((read1.getReferenceName().equals(read2.getReferenceName())) &&
 				(read1.getReadNegativeStrandFlag() == read2.getReadNegativeStrandFlag()) &&
 				(read1.getCigarLength() >= 2) &&
-				(read2.getCigarLength() >= 2)) {
+				(read2.getCigarLength() >= 2) &&
+				(Math.abs(read1.getAlignmentStart()-read2.getAlignmentStart()) < MAX_REGION_LENGTH)) {
 				
 				SAMRecord combinedRead = combineChimericReads(read1, read2);
 				if (combinedRead != null) {
@@ -370,9 +373,11 @@ public class CombineChimera3 {
 		String in;
 		String out;
 		
-		in = "/home/lmose/dev/ayc/long_indels/next2/50I.sam";
-		out = "/home/lmose/dev/ayc/long_indels/next2/50I_c.sam";
+//		in = "/home/lmose/dev/ayc/long_indels/next2/50I.sam";
+//		out = "/home/lmose/dev/ayc/long_indels/next2/50I_c.sam";
 
+		in = "/home/lmose/dev/abra_wxs/refidx/chim.sam";
+		out = "/home/lmose/dev/abra_wxs/refidx/out.bam";
 		
 		/*
 		in = "/home/lmose/dev/ayc/long_indels/next2/50I.sam";

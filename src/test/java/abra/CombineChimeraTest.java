@@ -104,6 +104,20 @@ public class CombineChimeraTest {
 		assertEquals(combined.getCigarString(), "90M50I44M");
 	}
 	
+	@Test (groups = "unit")
+	public void testDistantReadsNotModified() {
+		List<SAMRecord> reads = new ArrayList<SAMRecord>();
+		reads.add(newRecord(11032656, "63M31S", 94));
+		reads.add(newRecord(214990735, "34S60M", 94));
+		
+		List<SAMRecord> outputList = cc.processRead(reads);
+		assertEquals(outputList.size(), 2);
+		SAMRecord read1 = outputList.get(0);
+		SAMRecord read2 = outputList.get(1);
+		assertEquals(read1.getAlignmentStart(), 11032656);
+		assertEquals(read2.getAlignmentStart(), 214990735);
+	}
+	
 	private SAMRecord newRecord(int pos, String cigar, int length) {
 		SAMRecord record = new SAMRecord(null);
 		record.setReferenceName("chr21");

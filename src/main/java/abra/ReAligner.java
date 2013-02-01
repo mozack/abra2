@@ -32,6 +32,7 @@ import net.sf.samtools.SAMFileReader;
 import net.sf.samtools.SAMFileWriter;
 import net.sf.samtools.SAMFileWriterFactory;
 import net.sf.samtools.SAMRecord;
+import net.sf.samtools.SAMFileHeader.SortOrder;
 import net.sf.samtools.SAMFileReader.ValidationStringency;
 
 public class ReAligner {
@@ -194,6 +195,8 @@ public class ReAligner {
 			clock = new Clock("Adjust reads");
 			clock.start();
 			log("Adjust reads");
+			// Output sorted by coordinate
+			samHeader.setSortOrder(SortOrder.coordinate);
 			adjustReads(alignedToContigBam1, outputSam,
 					alignedToContigBam2, outputSam2, true);
 			
@@ -947,7 +950,7 @@ public class ReAligner {
 		int realignedCount = 0;
 		
 		SAMFileWriter outputReadsBam = new SAMFileWriterFactory().makeSAMOrBAMWriter(
-				samHeader, true, new File(outputSam));
+				samHeader, false, new File(outputSam));
 		
 		System.out.println("Opening sam file reader for: " + alignedToContigSam);
 		System.out.flush();

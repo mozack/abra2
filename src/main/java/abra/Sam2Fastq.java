@@ -123,6 +123,7 @@ public class Sam2Fastq {
 		// XA tag can be lengthy, so remove it.
 		read.setAttribute("XA", null);
 		read.setAttribute("OQ", null);
+		read.setAttribute("MD", null);
 		
 		String readStr = read.getSAMString();
 		

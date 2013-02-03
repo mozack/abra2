@@ -959,7 +959,7 @@ public class ReAligner {
 		System.out.flush();
 		contigReader.setValidationStringency(ValidationStringency.SILENT);
 		
-		SamStringReader samStringReader = new SamStringReader();
+		SamStringReader samStringReader = new SamStringReader(samHeader);
 		
 		int ctr = 0;
 		
@@ -1537,10 +1537,15 @@ public class ReAligner {
 	
 	public static void main(String[] args) throws Exception {
 		ReAligner ra = new ReAligner();
-		String headerSourceBam = args[0];
-		String alignedToContigBam = args[1];
-		String outputBam = args[2];
-		String reference = args[3];
+//		String headerSourceBam = args[0];
+//		String alignedToContigBam = args[1];
+//		String outputBam = args[2];
+		
+		String headerSourceBam = "/home/lmose/dev/abra_wxs/opt1/header.sam";
+		String alignedToContigBam = "/home/lmose/dev/abra_wxs/opt1/a2c.bam";
+		String outputBam = "/home/lmose/dev/abra_wxs/opt1/output.bam";
+		
+//		String reference = args[3];
 //		ra.getSamHeaderAndReadLength("/home/lmose/code/abra/sim/83/header.sam");
 //		ra.adjustReads("/home/lmose/code/abra/sim/83/align_to_contig.bam", "/home/lmose/code/abra/sim/83/output.bam", false, null);
 		

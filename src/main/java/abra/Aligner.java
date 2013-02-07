@@ -69,11 +69,11 @@ public class Aligner {
 		
 		String convert = "bwa samse " + reference + " " + sai + " " + input + " -n 1000 " +
 				"| samtools view -bS -o " + outputSam + " -";
-
 		
 		runCommand(convert);
 	}
 	
+	/*
 	public void shortAlign(String input, String input2, String outputSam) throws IOException, InterruptedException {
 		String sai = outputSam + ".sai";
 		
@@ -91,6 +91,7 @@ public class Aligner {
 		
 		runCommand(convert);
 	}
+	*/
 	
 //	public void smallIndex() throws IOException, InterruptedException {
 //		runCommand("bwa index " + reference);

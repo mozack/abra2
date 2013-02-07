@@ -3,6 +3,8 @@ package abra;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 
 public class Aligner {
 	
@@ -34,12 +36,12 @@ public class Aligner {
 				cmd
 			};
 		Process proc = Runtime.getRuntime().exec(cmds);
-
-//		Process proc;
-//		if (inBash) {
-//		} else {
-//			proc = Runtime.getRuntime().exec(cmd);
-//		}
+		
+		Thread stdout = new Thread(new CommandOutputConsumer(proc, proc.getInputStream()));
+		stdout.start();
+		
+		Thread stderr = new Thread(new CommandOutputConsumer(proc, proc.getErrorStream()));
+		stderr.start();
 		
 		//TODO: Catch InterruptedException ?
 		//TODO: Capture stderr
@@ -122,5 +124,38 @@ public class Aligner {
 		}
 		
 		return true;
+	}
+	
+	static class CommandOutputConsumer implements Runnable {
+		
+		private Process proc;
+		private InputStream stream;
+		
+		CommandOutputConsumer(Process proc, InputStream stream) {
+			this.proc = proc;
+			this.stream = stream;
+		}
+
+		@Override
+		public void run() {
+            InputStreamReader isr = new InputStreamReader(stream);
+            BufferedReader br = new BufferedReader(isr);
+            String line = null;
+            
+            try {
+	            while ( (line = br.readLine()) != null) {
+	            	System.out.println(line);
+	            }
+	            
+	            br.close();
+	            isr.close();
+            } catch (IOException e) {
+            	e.printStackTrace();
+            	throw new RuntimeException(e);
+            }
+            
+            System.out.println("Stream thread done.");
+		}
+		
 	}
 }

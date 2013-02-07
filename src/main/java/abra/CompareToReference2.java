@@ -117,6 +117,7 @@ public class CompareToReference2 {
 		if (reference != null) {
 			int readIdx = 0;
 			int refIdx = read.getAlignmentStart()-1;
+			int elementIdx = 0;
 			for (CigarElement element : read.getCigar().getCigarElements()) {
 				if (element.getOperator() == CigarOperator.M) {
 					for (int i=0; i<element.getLength(); i++) {
@@ -134,8 +135,26 @@ public class CompareToReference2 {
 				} else if (element.getOperator() == CigarOperator.D) {
 					refIdx += element.getLength();
 				} else if (element.getOperator() == CigarOperator.S) {
-					readIdx += element.getLength();
+//					readIdx += element.getLength();
+					
+					if (elementIdx == 0) {
+						refIdx -= element.getLength();
+					}
+					
+					//TODO: Should this always be included?
+					for (int i=0; i<element.getLength(); i++) {
+						char readBase = Character.toUpperCase(read.getReadString().charAt(readIdx));
+						char refBase  = Character.toUpperCase(reference.charAt(refIdx));
+						if ((readBase != refBase) && (readBase != 'N') && (refBase != 'N')) {
+							diffs++;
+						}
+						
+						readIdx++;
+						refIdx++;
+					}
 				}
+				
+				elementIdx++;
 			}
 		}
 

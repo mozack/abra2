@@ -932,11 +932,18 @@ public class ReAligner {
 		}
 	}
 	
-	private int getEditDistance(SAMRecord read) {
-		Integer distance = read.getIntegerAttribute("NM");
+	private int getEditDistance(SAMRecord read, CompareToReference2 c2r) {
 		
-		if (distance == null) {
-			distance = read.getReadLength();
+		Integer distance = null;
+		
+		if ((c2r != null) && (read.getCigarString().contains("S"))) {
+			distance = c2r.numMismatches(read) + getNumIndelBases(read);
+		} else {
+			distance = read.getIntegerAttribute("NM");
+			
+			if (distance == null) {
+				distance = read.getReadLength();
+			}
 		}
 		
 		return distance;
@@ -993,7 +1000,7 @@ public class ReAligner {
 //			if ((read.getCigarString().equals("100M")) && 
 			if ((read.getCigarString().equals(matchingString)) &&
 				(read.getReadUnmappedFlag() == false)  &&
-				(getEditDistance(read) < getEditDistance(orig))) {
+				(getEditDistance(read, c2r) < getEditDistance(orig, c2r))) {
 			
 				SAMRecord origRead = orig;
 				String contigReadStr = read.getReferenceName();

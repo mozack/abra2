@@ -22,6 +22,8 @@ public class ReAlignerOptions extends Options {
 	private static final String SKIP_UNALIGNED_ASSEMBLY = "no-unalign";
 	private static final String MAX_UNALIGNED_READS = "mur";
 	private static final String PAIRED_END = "paired";
+	private static final String RNA = "rna";
+	private static final String RNA_OUTPUT = "rna-out";
 	
 	private OptionParser parser;
 	private boolean isValid;
@@ -48,6 +50,8 @@ public class ReAlignerOptions extends Options {
             parser.accepts(SKIP_UNALIGNED_ASSEMBLY, "Skip assembly of reads that did not initially align.");
             parser.accepts(MAX_UNALIGNED_READS, "Maximum number of unaligned reads to assemble").withRequiredArg().ofType(Integer.class);
             parser.accepts(PAIRED_END, "Paired end");
+            parser.accepts(RNA, "Input RNA sam or bam file (optional)").withRequiredArg().ofType(String.class);
+            parser.accepts(RNA_OUTPUT, "Output RNA sam or bam file (required if RNA input file specified)").withRequiredArg().ofType(String.class);
     	}
     	
     	return parser;
@@ -162,6 +166,14 @@ public class ReAlignerOptions extends Options {
 	
 	public boolean isPairedEnd() {
 		return getOptions().has(PAIRED_END);
+	}
+	
+	public String getRnaSam() {
+		return (String) getOptions().valueOf(RNA);
+	}
+	
+	public String getRnaSamOutput() {
+		return (String) getOptions().valueOf(RNA_OUTPUT);
 	}
 	
 	public boolean isValid() {

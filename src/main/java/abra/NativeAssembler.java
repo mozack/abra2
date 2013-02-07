@@ -53,9 +53,9 @@ public class NativeAssembler implements Assembler {
 			
 			for (SAMRecord read : reader) {
 				
-				if (read.getReadLength() != readLength) {
+				if (read.getReadLength() > readLength) {
 					throw new IllegalArgumentException(
-							"Read length not equal to expected value of: " + readLength + " for read [" +
+							"Read length exceeds expected value of: " + readLength + " for read [" +
 							read.getSAMString() + "]");
 				}
 				
@@ -72,8 +72,22 @@ public class NativeAssembler implements Assembler {
 						if (!checkForDupes) {
 							readIds.add(getIdentifier(read));
 						}
-						writer.write(read.getReadString() + "\n");
-						writer.write(read.getBaseQualityString() + "\n");
+						
+						if (read.getReadLength() == readLength) {
+							writer.write(read.getReadString() + "\n");
+							writer.write(read.getBaseQualityString() + "\n");
+						} else {
+							StringBuffer basePadding = new StringBuffer();
+							StringBuffer qualPadding = new StringBuffer();
+							
+							for (int i=0; i<readLength-read.getReadLength(); i++) {
+								basePadding.append('N');
+								qualPadding.append('!');
+							}
+							
+							writer.write(read.getReadString() + basePadding.toString() + "\n");
+							writer.write(read.getBaseQualityString() + qualPadding.toString() + "\n");							
+						}
 					}
 				}
 			}

@@ -83,6 +83,11 @@ public class ReAligner {
 	
 	private boolean isPairedEnd = false;
 	
+	private String rnaSam = null;
+	private String rnaOutputSam = null;
+	private SAMFileHeader rnaHeader = null;
+	private int rnaReadLength = -1;
+	
 	public void reAlign(String inputSam, String inputSam2, String outputSam, String outputSam2) throws Exception {
 
 		System.out.println("input: " + inputSam);
@@ -95,6 +100,8 @@ public class ReAligner {
 		System.out.println("num threads: " + numThreads);
 		System.out.println("max unaligned reads: " + maxUnalignedReads);
 		System.out.println(assemblerSettings.getDescription());
+		System.out.println("rna: " + rnaSam);
+		System.out.println("rna output: " + rnaOutputSam);
 		
 		System.out.println("Java version: " + System.getProperty("java.version"));
 
@@ -197,13 +204,34 @@ public class ReAligner {
 			log("Adjust reads");
 			// Output sorted by coordinate
 			samHeader.setSortOrder(SortOrder.coordinate);
-			adjustReads(alignedToContigBam1, outputSam,
-					alignedToContigBam2, outputSam2, true);
 			
-			clock.stopAndPrint();			
+			CompareToReference2 c2r = new CompareToReference2();
+			c2r.init(this.reference);
+			
+			adjustReads(alignedToContigBam1, outputSam,
+					alignedToContigBam2, outputSam2, true, c2r);
+			
+			clock.stopAndPrint();
+			
+			if (rnaSam != null) {
+				String rnaTemp = tempDir + "/rna";
+				mkdir(rnaTemp);
+				getRnaSamHeaderAndReadLength(rnaSam);
+				rnaHeader.setSortOrder(SortOrder.coordinate);
+				
+				clock = new Clock("RNA - Sam2Fastq and Align");
+				clock.start();
+				log("Aligning RNA to contigs");
+				String alignedToContigRna = alignReads(rnaTemp, rnaSam, cleanContigsFasta);
+				clock.stopAndPrint();
+				
+				clock = new Clock("Adjust reads");
+				clock.start();
+				log("Adjusting RNA reads");
+				adjustReads(alignedToContigRna, rnaOutputSam, true, c2r);
+				clock.stopAndPrint();
+			}
 		}
-		
-		System.out.println("Multiple best hit reads missing XA tag: " + this.missingXATag);
 		
 		System.out.println("Done.");
 	}
@@ -251,10 +279,8 @@ public class ReAligner {
 	}
 	
 	private void adjustReads(String sortedAlignedToContig1, String outputSam1, 
-			String sortedAlignedToContig2, String outputSam2, boolean isTightAlignment) throws InterruptedException, IOException {
-		
-		CompareToReference2 c2r = new CompareToReference2();
-		c2r.init(this.reference);
+			String sortedAlignedToContig2, String outputSam2, boolean isTightAlignment,
+			CompareToReference2 c2r) throws InterruptedException, IOException {
 		
 		if (this.numThreads > 1) {
 			
@@ -722,6 +748,8 @@ public class ReAligner {
 	}
 
 	private void getSamHeaderAndReadLength(String inputSam) {
+		
+		log("Identifying header and determining read length");
 		SAMFileReader reader = new SAMFileReader(new File(inputSam));
 		try {
 			reader.setValidationStringency(ValidationStringency.SILENT);
@@ -730,15 +758,42 @@ public class ReAligner {
 			samHeader.setSortOrder(SAMFileHeader.SortOrder.unsorted);
 			
 			Iterator<SAMRecord> iter = reader.iterator();
-			if (iter.hasNext()) {
+			
+			int cnt = 0;
+			while ((iter.hasNext()) && (cnt < 1000000)) {
 				SAMRecord read = iter.next();
-				this.readLength = read.getReadLength();
-			} else {
-				throw new RuntimeException("No reads found in: " + inputSam);
+				this.readLength = Math.max(this.readLength, read.getReadLength());
 			}
 		} finally {
 			reader.close();
 		}
+		
+		log("Max read length is: " + readLength);
+	}
+	
+	//TODO: Dedup with getSamHeaderAndReadLength
+	private void getRnaSamHeaderAndReadLength(String inputSam) {
+		
+		log("Identifying RNA header and determining read length");
+		SAMFileReader reader = new SAMFileReader(new File(inputSam));
+		try {
+			reader.setValidationStringency(ValidationStringency.SILENT);
+	
+			rnaHeader = reader.getFileHeader();
+			rnaHeader.setSortOrder(SAMFileHeader.SortOrder.unsorted);
+			
+			Iterator<SAMRecord> iter = reader.iterator();
+			
+			int cnt = 0;
+			while ((iter.hasNext()) && (cnt < 1000000)) {
+				SAMRecord read = iter.next();
+				this.rnaReadLength = Math.max(this.rnaReadLength, read.getReadLength());
+			}
+		} finally {
+			reader.close();
+		}
+		
+		log("Max RNA read length is: " + rnaReadLength);
 	}
 	
 	private void sam2Fastq(String bam, String fastq) throws IOException {
@@ -867,7 +922,7 @@ public class ReAligner {
 		if (!isPairedEnd) {
 			contigAligner.shortAlign(fastq, alignedToContigSam);
 		} else {
-			contigAligner.shortAlign(fastq, fastq2, alignedToContigSam);
+//			contigAligner.shortAlign(fastq, fastq2, alignedToContigSam);
 		}
 	}
 	
@@ -936,7 +991,7 @@ public class ReAligner {
 		
 		Integer distance = null;
 		
-		if ((c2r != null) && (read.getCigarString().contains("S"))) {
+		if (c2r != null) {
 			distance = c2r.numMismatches(read) + getNumIndelBases(read);
 		} else {
 			distance = read.getIntegerAttribute("NM");
@@ -945,7 +1000,7 @@ public class ReAligner {
 				distance = read.getReadLength();
 			}
 		}
-		
+				
 		return distance;
 	}
 	
@@ -996,10 +1051,12 @@ public class ReAligner {
 			boolean isReadWritten = false;
 			
 			// Only adjust reads that align to contig with no indel and shorter edit distance than the original alignment
-			String matchingString = readLength + "M";
+//			String matchingString = readLength + "M";
+			String matchingString = read.getReadLength() + "M";
 //			if ((read.getCigarString().equals("100M")) && 
 			if ((read.getCigarString().equals(matchingString)) &&
 				(read.getReadUnmappedFlag() == false)  &&
+				(!orig.getCigarString().contains("N")) &&  // Don't remap introns
 				(getEditDistance(read, c2r) < getEditDistance(orig, c2r))) {
 			
 				SAMRecord origRead = orig;
@@ -1507,6 +1564,8 @@ public class ReAligner {
 			realigner.setShouldReprocessUnaligned(!options.isSkipUnalignedAssembly());
 			realigner.setMaxUnalignedReads(options.getMaxUnalignedReads());
 			realigner.isPairedEnd = options.isPairedEnd();
+			realigner.rnaSam = options.getRnaSam();
+			realigner.rnaOutputSam = options.getRnaSamOutput();
 
 			long s = System.currentTimeMillis();
 

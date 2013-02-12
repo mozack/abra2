@@ -193,7 +193,10 @@ public class ReAligner {
 			clock = new Clock("Sam2Fastq and Align");
 			clock.start();
 			String alignedToContigSam1 = alignReads(tempDir1, inputSam, cleanContigsFasta);
-			String alignedToContigSam2 = alignReads(tempDir2, inputSam2, cleanContigsFasta);
+			String alignedToContigSam2 = null;
+			if (inputSam2 != null) {
+				alignedToContigSam2 = alignReads(tempDir2, inputSam2, cleanContigsFasta);
+			}
 			clock.stopAndPrint();
 
 			String alignedToContigBam1 = alignedToContigSam1;
@@ -244,8 +247,7 @@ public class ReAligner {
 			read.setAttribute("NM", numMismatches + numIndelBases);
 			read.setMappingQuality(calcMappingQuality(read));
 			
-			//TODO - Calc as fraction of read length
-			if (numMismatches > 10) {
+			if (numMismatches > (read.getReadLength()/10)) {
 				System.out.println("HIGH_MISMATCH: [" + read.getSAMString() + "]");
 			}
 		}
@@ -289,16 +291,21 @@ public class ReAligner {
 			Thread thread1 = new Thread(runnable1);
 			thread1.start();
 			
-			AdjustReadsRunnable runnable2 = new AdjustReadsRunnable(this, sortedAlignedToContig2, outputSam2, isTightAlignment, c2r);
-			Thread thread2 = new Thread(runnable2);
-			thread2.start();
+			if (inputSam2 != null) {
+				AdjustReadsRunnable runnable2 = new AdjustReadsRunnable(this, sortedAlignedToContig2, outputSam2, isTightAlignment, c2r);
+				Thread thread2 = new Thread(runnable2);
+				thread2.start();
+				thread2.join();
+			}
 			
 			thread1.join();
-			thread2.join();
+			
 		} else {
 			System.out.println("Adjusting reads sequentially");
 			adjustReads(sortedAlignedToContig1, outputSam1, isTightAlignment, c2r);
-			adjustReads(sortedAlignedToContig2, outputSam2, isTightAlignment, c2r);
+			if (inputSam2 != null) {
+				adjustReads(sortedAlignedToContig2, outputSam2, isTightAlignment, c2r);
+			}
 		}
 	}
 	
@@ -345,8 +352,8 @@ public class ReAligner {
 		log("Processing chimeric reads");
 		CombineChimera3 cc = new CombineChimera3();
 		String contigsWithChim = tempDir + "/" + "all_contigs_chim.bam";
-		//TODO: Replace 33 with percent of read length?
-		cc.combine(contigsSam, contigsWithChim, isTightAlignment ? 33 : 0);
+		int slack = this.readLength / 3;
+		cc.combine(contigsSam, contigsWithChim, isTightAlignment ? slack : 0);
 		
 		if (isTightAlignment) {
 			// Chop and clop...
@@ -610,21 +617,23 @@ public class ReAligner {
 		
 		reader.close();
 
-		reader = new SAMFileReader(new File(inputSam2));
-		reader.setValidationStringency(ValidationStringency.SILENT);
-
-		for (SAMRecord read : reader) {
-			//TODO: Remove hardcoded mapq.  Exclude from original region?
-//			if (read.getReadUnmappedFlag() || read.getMappingQuality() < 10) {
-//			if (read.getReadUnmappedFlag()) {
-//			if ((read.getReadUnmappedFlag()) || (read.getCigarLength() >= 4)) {
-			if (shouldIncludeInUnalignedPile(read)) {
-				unalignedReadsBam.addAlignment(read);
-				numUnalignedReads += 1;
+		if (inputSam2 != null) {
+			reader = new SAMFileReader(new File(inputSam2));
+			reader.setValidationStringency(ValidationStringency.SILENT);
+	
+			for (SAMRecord read : reader) {
+				//TODO: Remove hardcoded mapq.  Exclude from original region?
+	//			if (read.getReadUnmappedFlag() || read.getMappingQuality() < 10) {
+	//			if (read.getReadUnmappedFlag()) {
+	//			if ((read.getReadUnmappedFlag()) || (read.getCigarLength() >= 4)) {
+				if (shouldIncludeInUnalignedPile(read)) {
+					unalignedReadsBam.addAlignment(read);
+					numUnalignedReads += 1;
+				}
 			}
+			
+			reader.close();
 		}
-		
-		reader.close();
 		
 		unalignedReadsBam.close();
 		
@@ -1082,9 +1091,9 @@ public class ReAligner {
 				}
 				
 				int numBestHits = getIntAttribute(read, "X0");
-				int subOptimalHits = getIntAttribute(read, "X1");
+				int numSubOptimalHits = getIntAttribute(read, "X1");
 				
-				int totalHits = numBestHits + subOptimalHits;
+				int totalHits = numBestHits + numSubOptimalHits;
 				
 				//TODO: If too many best hits, what to do?
 				

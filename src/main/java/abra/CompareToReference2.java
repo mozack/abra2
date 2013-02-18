@@ -143,9 +143,13 @@ public class CompareToReference2 {
 					
 					//TODO: Should this always be included?
 					for (int i=0; i<element.getLength(); i++) {
-						char readBase = Character.toUpperCase(read.getReadString().charAt(readIdx));
-						char refBase  = Character.toUpperCase(reference.charAt(refIdx));
-						if ((readBase != refBase) && (readBase != 'N') && (refBase != 'N')) {
+						if ((refIdx >= 0) && (refIdx < reference.length()-1)) {
+							char readBase = Character.toUpperCase(read.getReadString().charAt(readIdx));
+							char refBase  = Character.toUpperCase(reference.charAt(refIdx));
+							if ((readBase != refBase) && (readBase != 'N') && (refBase != 'N')) {
+								diffs++;
+							}
+						} else {
 							diffs++;
 						}
 						

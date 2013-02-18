@@ -24,7 +24,12 @@ public class Reference {
 				if (key != null) {
 					refMap.put(key, seq);
 				}
-				key = line.substring(1, line.length());
+				
+				int endIdx = line.indexOf(' ');
+				if (endIdx < 0) {
+					endIdx = line.length();
+				}
+				key = line.substring(1, endIdx);
 				seq = new StringBuffer();
 			} else {
 				seq.append(line);
@@ -49,6 +54,6 @@ public class Reference {
 		
 		position -= 1;
 		
-		return ref.substring(position, Math.min(position + length, ref.length()));
+		return ref.substring(Math.max(position, 0), Math.min(position + length, ref.length()));
 	}
 }

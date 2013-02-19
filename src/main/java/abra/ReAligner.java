@@ -238,6 +238,53 @@ public class ReAligner {
 		
 		System.out.println("Done.");
 	}
+	
+	/*
+	public void findFusions(String inputSam, String outputSam) {
+		this.inputSam1 = inputSam;
+		
+		init();
+		
+		String fusDir = tempDir + "/fusion";
+		
+		if (!new File(fusDir).mkdir()) {
+			throw new RuntimeException("Failed to create: " + fusDir);
+		}
+		
+		log("Reading Input SAM Header and identifying read length");
+		getSamHeaderAndReadLength(inputSam);
+		
+		String candidateBam = fusDir + "/candidates.bam";
+		
+		SAMFileWriter candidateWriter = new SAMFileWriterFactory().makeSAMOrBAMWriter(
+				samHeader, true, new File(candidateBam));
+		
+		SamReadPairReader reader = new SamReadPairReader(inputSam);
+		
+		for (ReadPair pair : reader) {
+			SAMRecord read1 = pair.getRead1();
+			SAMRecord read2 = pair.getRead2();
+			
+			boolean isCandidate = false;
+			
+			if (!read1.getReadUnmappedFlag() && !read2.getReadUnmappedFlag()) {
+				if (!read1.getReferenceName().equals(read2.getReferenceName())) {
+					isCandidate = true;
+				} else if (Math.abs(read1.getAlignmentStart() - read2.getAlignmentStart()) > 2000) {
+					isCandidate = true;
+				}
+			}
+			
+			if (isCandidate) {
+				candidateWriter.addAlignment(read1);
+				candidateWriter.addAlignment(read2);
+			}
+		}
+		
+		reader.close();
+		candidateWriter.close();
+	}
+	*/
 		
 	void updateMismatchAndEditDistance(SAMRecord read, CompareToReference2 c2r) {
 		if (read.getAttribute("YO") != null) {
@@ -856,18 +903,20 @@ public class ReAligner {
 						(last.getOperator() == CigarOperator.M)) {
 
 						// Pull in read length bases from reference to the beginning and end of the contig.
-						String prefix = reference.getSequence(contigRead.getReferenceName(), contigRead.getAlignmentStart()-readLength, readLength);
+						String prefix = reference.getSequence(contigRead.getReferenceName(), 
+								contigRead.getAlignmentStart()-readLength, readLength);
 						String suffix = reference.getSequence(contigRead.getReferenceName(), contigRead.getAlignmentEnd()+1, readLength);
 						
 						bases = prefix.toUpperCase() + bases + suffix.toUpperCase();
 						
 						Cigar cigar = new Cigar();
 						if (contigRead.getCigarLength() == 1) {
-							CigarElement elem = new CigarElement(first.getLength(), first.getOperator());
+							// TODO: Pad here?
+							CigarElement elem = new CigarElement(first.getLength() + prefix.length() + suffix.length(), first.getOperator());
 							cigar.add(elem);
 						} else {
-							CigarElement firstNew = new CigarElement(first.getLength() + readLength, first.getOperator());
-							CigarElement lastNew = new CigarElement(last.getLength() + readLength, last.getOperator());
+							CigarElement firstNew = new CigarElement(first.getLength() + prefix.length(), first.getOperator());
+							CigarElement lastNew = new CigarElement(last.getLength() + suffix.length(), last.getOperator());
 							
 							cigar.add(firstNew);
 							for (int i=1; i<contigRead.getCigarLength()-1; i++) {
@@ -878,7 +927,7 @@ public class ReAligner {
 						}
 						
 						contigRead.setCigar(cigar);
-						contigRead.setAlignmentStart(contigRead.getAlignmentStart()-readLength);
+						contigRead.setAlignmentStart(contigRead.getAlignmentStart()-prefix.length());
 
 					} else {
 						System.out.println("Not padding contig: " + contigRead.getReadName());

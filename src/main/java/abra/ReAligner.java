@@ -239,6 +239,7 @@ public class ReAligner {
 		System.out.println("Done.");
 	}
 	
+	/*
 	public void findFusions(String inputSam, String outputSam) {
 		this.inputSam1 = inputSam;
 		
@@ -283,6 +284,7 @@ public class ReAligner {
 		reader.close();
 		candidateWriter.close();
 	}
+	*/
 		
 	void updateMismatchAndEditDistance(SAMRecord read, CompareToReference2 c2r) {
 		if (read.getAttribute("YO") != null) {
@@ -1593,7 +1595,7 @@ public class ReAligner {
 
 	public static void run(String[] args) throws Exception {
 		
-		System.out.println("Starting 0.25 ...");
+		System.out.println("Starting 0.26 ...");
 		
 		ReAlignerOptions options = new ReAlignerOptions();
 		options.parseOptions(args);

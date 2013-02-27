@@ -239,7 +239,6 @@ public class ReAligner {
 		System.out.println("Done.");
 	}
 	
-	/*
 	public void findFusions(String inputSam, String outputSam) {
 		this.inputSam1 = inputSam;
 		
@@ -284,7 +283,6 @@ public class ReAligner {
 		reader.close();
 		candidateWriter.close();
 	}
-	*/
 		
 	void updateMismatchAndEditDistance(SAMRecord read, CompareToReference2 c2r) {
 		if (read.getAttribute("YO") != null) {
@@ -1115,7 +1113,7 @@ public class ReAligner {
 			if ((read.getCigarString().equals(matchingString)) &&
 				(read.getReadUnmappedFlag() == false)  &&
 				(!orig.getCigarString().contains("N")) &&  // Don't remap introns
-				(getEditDistance(read, c2r) < getEditDistance(orig, c2r))) {
+				(getEditDistance(read, null) < getEditDistance(orig, c2r))) {
 			
 				SAMRecord origRead = orig;
 				String contigReadStr = read.getReferenceName();
@@ -1595,7 +1593,7 @@ public class ReAligner {
 
 	public static void run(String[] args) throws Exception {
 		
-		System.out.println("Starting 0.24 ...");
+		System.out.println("Starting 0.25 ...");
 		
 		ReAlignerOptions options = new ReAlignerOptions();
 		options.parseOptions(args);
@@ -1658,7 +1656,8 @@ public class ReAligner {
 		outputReadsBam.close();
 	}
 */
-	
+
+	/*
 	public static void main(String[] args) throws Exception {
 		ReAligner ra = new ReAligner();
 //		String headerSourceBam = args[0];
@@ -1679,12 +1678,13 @@ public class ReAligner {
 		ra.getSamHeaderAndReadLength(headerSourceBam);
 		ra.adjustReads(alignedToContigBam, outputBam, false, null);
 	}
+	*/
 	
-//	public static void main(String[] args) throws Exception {
-//		System.out.println("0.2");
-//		ReAligner realigner = new ReAligner();
-//
-//		long s = System.currentTimeMillis();
+	public static void main(String[] args) throws Exception {
+		System.out.println("0.2");
+		ReAligner realigner = new ReAligner();
+
+		long s = System.currentTimeMillis();
 //
 ///*
 //		String input = "/home/lisle/ayc/sim/sim261/chr1/sorted.bam";
@@ -1740,14 +1740,25 @@ public class ReAligner {
 ////		String input = "/home/lmose/dev/ayc/sim/s339/empty.bam";
 //		//String input2 = "/home/lmose/dev/ayc/sim/s339/7455_sorted.bam";
 //		
+		
+		
 //		String input = "/home/lmose/dev/ayc/sim/s339/sorted_chr19_929262_929896.bam";
 //		String input2 = "/home/lmose/dev/ayc/sim/s339/sorted_chr19_929262_929896.bam";
-//		String output = "/home/lmose/dev/ayc/sim/s339/empty_realigned_native.bam";
-//		String output2 = "/home/lmose/dev/ayc/sim/s339/chr19_929262_929896_realigned_native.bam";
+//		String output = "/home/lmose/dev/ayc/sim/s339/zzempty_realigned_native.bam";
+//		String output2 = "/home/lmose/dev/ayc/sim/s339/zzchr19_929262_929896_realigned_native.bam";
 //		String reference = "/home/lmose/reference/chr19/chr19.fa";
 //		String regions = "/home/lmose/dev/ayc/regions/clinseq5/7455.gtf";
-//		String tempDir = "/home/lmose/dev/ayc/sim/s339/chr19_working_native";
-//		
+//		String tempDir = "/home/lmose/dev/ayc/sim/s339/zzchr19_working_native";
+		
+		String input = "/home/lmose/dev/ayc/24/test/ntest.bam";
+		String input2 = "/home/lmose/dev/ayc/24/test/ttest.bam";
+		String output = "/home/lmose/dev/ayc/24/test/nout2.bam";
+		String output2 = "/home/lmose/dev/ayc/24/test/tout2.bam";
+		String reference = "/home/lmose/reference/chr10/chr10.fa";
+		String regions = "/home/lmose/dev/ayc/regions/clinseq5/24.gtf";
+		String tempDir = "/home/lmose/dev/ayc/24/test/working2";
+
+		
 //		
 //		/*
 //		String input = "/home/lmose/dev/ayc/sim/s339/empty.bam";
@@ -1831,27 +1842,27 @@ public class ReAligner {
 //*/
 //
 //
-//		AssemblerSettings settings = new AssemblerSettings();
-//		settings.setKmerSize(63);
-//		settings.setMinContigLength(100);
-//		settings.setMinEdgeFrequency(2);
-//		settings.setMinNodeFrequncy(3);
-//		settings.setMaxPotentialContigs(30000);
-//		settings.setMinContigRatio(-1.0);
-//
-//		realigner.setAssemblerSettings(settings);
-//		
-//		realigner.setMinContigMapq(1);
-//		realigner.setReference(reference);
-//		realigner.setRegionsGtf(regions);
-//		realigner.setTempDir(tempDir);
-//		realigner.setNumThreads(4);
-//
-//		realigner.reAlign(input, input2, output, output2);
-//
-//		long e = System.currentTimeMillis();
-//
-//		System.out.println("Elapsed seconds: " + (e - s) / 1000);
-//	}
+		AssemblerSettings settings = new AssemblerSettings();
+		settings.setKmerSize(63);
+		settings.setMinContigLength(100);
+		settings.setMinEdgeFrequency(2);
+		settings.setMinNodeFrequncy(3);
+		settings.setMaxPotentialContigs(30000);
+		settings.setMinContigRatio(-1.0);
+
+		realigner.setAssemblerSettings(settings);
+		
+		realigner.setMinContigMapq(1);
+		realigner.setReference(reference);
+		realigner.setRegionsGtf(regions);
+		realigner.setTempDir(tempDir);
+		realigner.setNumThreads(4);
+
+		realigner.reAlign(input, input2, output, output2);
+
+		long e = System.currentTimeMillis();
+
+		System.out.println("Elapsed seconds: " + (e - s) / 1000);
+	}
 }
 

@@ -128,7 +128,7 @@ public class Sam2Fastq {
 		read.setAttribute("MD", null);
 		// Calculate the number of mismatches to reference for this read.
 		if (c2r != null) {
-			read.setAttribute("YX", c2r.numMismatches(read));
+			read.setAttribute("YX", ReAligner.getEditDistance(read, c2r));
 		} else {
 			read.setAttribute("YX", read.getReadLength());
 		}

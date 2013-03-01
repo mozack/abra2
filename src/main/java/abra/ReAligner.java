@@ -144,7 +144,7 @@ public class ReAligner {
 			if (hasContigs) {
 				String unalignedCleanContigsFasta = alignAndCleanContigs(unalignedContigFasta, unalignedDir, false);
 				if (unalignedCleanContigsFasta != null) {
-					String alignedToContigSam = alignReads(unalignedDir, unalignedSam, unalignedCleanContigsFasta);
+					String alignedToContigSam = alignReads(unalignedDir, unalignedSam, unalignedCleanContigsFasta, null);
 					String alignedToContigBam = alignedToContigSam;
 					
 					log("Adjusting unaligned reads");
@@ -190,12 +190,15 @@ public class ReAligner {
 			mkdir(tempDir1);
 			mkdir(tempDir2);
 			
+			CompareToReference2 c2r = new CompareToReference2();
+			c2r.init(this.reference);
+			
 			clock = new Clock("Sam2Fastq and Align");
 			clock.start();
-			String alignedToContigSam1 = alignReads(tempDir1, inputSam, cleanContigsFasta);
+			String alignedToContigSam1 = alignReads(tempDir1, inputSam, cleanContigsFasta, c2r);
 			String alignedToContigSam2 = null;
 			if (inputSam2 != null) {
-				alignedToContigSam2 = alignReads(tempDir2, inputSam2, cleanContigsFasta);
+				alignedToContigSam2 = alignReads(tempDir2, inputSam2, cleanContigsFasta, c2r);
 			}
 			clock.stopAndPrint();
 
@@ -207,9 +210,6 @@ public class ReAligner {
 			log("Adjust reads");
 			// Output sorted by coordinate
 			samHeader.setSortOrder(SortOrder.coordinate);
-			
-			CompareToReference2 c2r = new CompareToReference2();
-			c2r.init(this.reference);
 			
 			adjustReads(alignedToContigBam1, outputSam,
 					alignedToContigBam2, outputSam2, true, c2r);
@@ -225,7 +225,7 @@ public class ReAligner {
 				clock = new Clock("RNA - Sam2Fastq and Align");
 				clock.start();
 				log("Aligning RNA to contigs");
-				String alignedToContigRna = alignReads(rnaTemp, rnaSam, cleanContigsFasta);
+				String alignedToContigRna = alignReads(rnaTemp, rnaSam, cleanContigsFasta, c2r);
 				clock.stopAndPrint();
 				
 				clock = new Clock("Adjust reads");
@@ -435,11 +435,11 @@ public class ReAligner {
 		return hasCleanContigs ? cleanContigsFasta : null;
 	}
 	
-	private String alignReads(String tempDir, String inputSam, String cleanContigsFasta) throws InterruptedException, IOException {
+	private String alignReads(String tempDir, String inputSam, String cleanContigsFasta, CompareToReference2 c2r) throws InterruptedException, IOException {
 		log("Aligning original reads to contigs");
 		//String alignedToContigSam = tempDir + "/" + "align_to_contig.sam";
 		String alignedToContigSam = tempDir + "/" + "align_to_contig.bam";
-		alignToContigs(tempDir, inputSam, alignedToContigSam, cleanContigsFasta);
+		alignToContigs(tempDir, inputSam, alignedToContigSam, cleanContigsFasta, c2r);
 		return alignedToContigSam;
 	}
 	
@@ -852,9 +852,9 @@ public class ReAligner {
 		log("Max RNA read length is: " + rnaReadLength);
 	}
 	
-	private void sam2Fastq(String bam, String fastq) throws IOException {
+	private void sam2Fastq(String bam, String fastq, CompareToReference2 c2r) throws IOException {
 		Sam2Fastq sam2Fastq = new Sam2Fastq();
-		sam2Fastq.convert(bam, fastq);
+		sam2Fastq.convert(bam, fastq, c2r);
 //		if (isPairedEnd) {
 //			sam2Fastq.convertPairedEnd(bam, fastq);
 //		} else {
@@ -964,12 +964,14 @@ public class ReAligner {
 	// Checks only the first and last Cigar element
 	// Does not adjust qualities
 	
-	private void alignToContigs(String tempDir, String inputSam, String alignedToContigSam, String contigFasta) throws IOException, InterruptedException {
+	private void alignToContigs(String tempDir, String inputSam, String alignedToContigSam, String contigFasta, CompareToReference2 c2r) throws IOException, InterruptedException {
+		
+		//TODO: Pass BAM as input instead?
 		// Convert original bam to fastq
 		String fastq = tempDir + "/" + "original_reads.fastq";
 		String fastq2 = tempDir + "/" + "original_reads2.fastq";
 		
-		sam2Fastq(inputSam, fastq);
+		sam2Fastq(inputSam, fastq, c2r);
 				
 		// Build contig fasta index
 		Aligner contigAligner = new Aligner(contigFasta, numThreads);
@@ -1045,11 +1047,30 @@ public class ReAligner {
 		}
 	}
 	
+	private int getOrigEditDistance(SAMRecord read) {
+		
+		Integer distance = null;
+		
+		if (read.getReadUnmappedFlag()) {
+			distance = read.getReadLength();
+		} else {
+			distance = read.getIntegerAttribute("YX");
+			
+			if (distance == null) {
+				distance = read.getReadLength();
+			}
+		}
+				
+		return distance;
+	}
+	
 	private int getEditDistance(SAMRecord read, CompareToReference2 c2r) {
 		
 		Integer distance = null;
 		
-		if (c2r != null) {
+		if (read.getReadUnmappedFlag()) {
+			distance = read.getReadLength();
+		} else if (c2r != null) {
 			distance = c2r.numMismatches(read) + getNumIndelBases(read);
 		} else {
 			distance = read.getIntegerAttribute("NM");
@@ -1102,7 +1123,6 @@ public class ReAligner {
 			}
 			orig.setHeader(samHeader);
 			
-			// TODO: Reverse complement and reverse as necessary
 			orig.setReadString(read.getReadString());
 			orig.setBaseQualityString(read.getBaseQualityString());
 
@@ -1115,7 +1135,7 @@ public class ReAligner {
 			if ((read.getCigarString().equals(matchingString)) &&
 				(read.getReadUnmappedFlag() == false)  &&
 				(!orig.getCigarString().contains("N")) &&  // Don't remap introns
-				(getEditDistance(read, null) < getEditDistance(orig, c2r))) {
+				(getEditDistance(read, null) < getOrigEditDistance(orig))) {
 			
 				SAMRecord origRead = orig;
 				String contigReadStr = read.getReferenceName();
@@ -1752,13 +1772,13 @@ public class ReAligner {
 //		String regions = "/home/lmose/dev/ayc/regions/clinseq5/7455.gtf";
 //		String tempDir = "/home/lmose/dev/ayc/sim/s339/zzchr19_working_native";
 		
-		String input = "/home/lmose/dev/ayc/24/test/ntest.bam";
-		String input2 = "/home/lmose/dev/ayc/24/test/ttest.bam";
-		String output = "/home/lmose/dev/ayc/24/test/nout2.bam";
-		String output2 = "/home/lmose/dev/ayc/24/test/tout2.bam";
-		String reference = "/home/lmose/reference/chr10/chr10.fa";
-		String regions = "/home/lmose/dev/ayc/regions/clinseq5/24.gtf";
-		String tempDir = "/home/lmose/dev/ayc/24/test/working2";
+		String input = "/home/lmose/dev/ayc/24/26/normal.bam";
+		String input2 = "/home/lmose/dev/ayc/24/26/tumor.bam";
+		String output = "/home/lmose/dev/ayc/24/26/normal.abra.bam";
+		String output2 = "/home/lmose/dev/ayc/24/26/tumor.abra.bam";
+		String reference = "/home/lmose/reference/chr7/chr7.fa";
+		String regions = "/home/lmose/dev/ayc/regions/clinseq5/26.gtf";
+		String tempDir = "/home/lmose/dev/ayc/24/26/working";
 
 		
 //		

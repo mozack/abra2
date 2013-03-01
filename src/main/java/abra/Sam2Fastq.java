@@ -33,6 +33,7 @@ public class Sam2Fastq {
 	 * Convert the input paired end SAM/BAM file into 2 fastq files.
 	 * Input SAM files that contain multiple mappings should be sorted by read name.
 	 */
+	/*
 	public void convertPairedEnd(String inputSam, String outputFastq) throws IOException {
 		String last1Read = "";
 		String last2Read = "";
@@ -78,13 +79,16 @@ public class Sam2Fastq {
         	throw new IllegalStateException("Non-symmetrical read counts found for " + inputSam + ".  Your reads may not be paired properly.");
         }
 	}
+	*/
 	
 	/**
 	 * Convert the input SAM/BAM file into a single fastq file.
 	 * Input SAM files that contain multiple mappings should be sorted by read name.
 	 */
-	public void convert(String inputSam, String outputFastq) throws IOException {
+	public void convert(String inputSam, String outputFastq, CompareToReference2 c2r) throws IOException {
 		String last1Read = "";
+		
+		System.out.println("sam: " + inputSam);
 		
         SAMFileReader reader = new SAMFileReader(new File(inputSam));
         reader.setValidationStringency(ValidationStringency.SILENT);
@@ -95,7 +99,7 @@ public class Sam2Fastq {
         
         for (SAMRecord read : reader) {
     		if (!read.getReadName().equals(last1Read)) {
-    			output1.write(samReadToFastqRecord(read));
+    			output1.write(samReadToFastqRecord(read, c2r));
     			last1Read = read.getReadName();
     		}
     		
@@ -109,7 +113,7 @@ public class Sam2Fastq {
         reader.close();
 	}
 	
-	private FastqRecord samReadToFastqRecord(SAMRecord read) {
+	private FastqRecord samReadToFastqRecord(SAMRecord read, CompareToReference2 c2r) {
 		String bases = read.getReadString();
 		String qualities = read.getBaseQualityString();
 		
@@ -118,12 +122,19 @@ public class Sam2Fastq {
 			qualities = reverseComplementor.reverse(qualities);
 		}
 		
-		read.setReadString("");
-		read.setBaseQualityString("");
 		// XA tag can be lengthy, so remove it.
 		read.setAttribute("XA", null);
 		read.setAttribute("OQ", null);
 		read.setAttribute("MD", null);
+		// Calculate the number of mismatches to reference for this read.
+		if (c2r != null) {
+			read.setAttribute("YX", c2r.numMismatches(read));
+		} else {
+			read.setAttribute("YX", read.getReadLength());
+		}
+		
+		read.setReadString("");
+		read.setBaseQualityString("");
 		
 		String readStr = read.getSAMString();
 		

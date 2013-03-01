@@ -315,7 +315,7 @@ public class ReAligner {
 		return mapq;
 	}
 	
-	private int getNumIndelBases(SAMRecord read) {
+	public static int getNumIndelBases(SAMRecord read) {
 		int numIndelBases = 0;
 		
 		for (CigarElement element : read.getCigar().getCigarElements()) {
@@ -1064,7 +1064,7 @@ public class ReAligner {
 		return distance;
 	}
 	
-	private int getEditDistance(SAMRecord read, CompareToReference2 c2r) {
+	public static int getEditDistance(SAMRecord read, CompareToReference2 c2r) {
 		
 		Integer distance = null;
 		

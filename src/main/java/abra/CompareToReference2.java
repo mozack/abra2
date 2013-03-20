@@ -181,6 +181,14 @@ public class CompareToReference2 {
 				}
 				
 				currSeqName = line.substring(1, line.length()).trim();
+				int spaceIdx = currSeqName.indexOf(' ');
+				if (spaceIdx > 0) {
+					currSeqName = currSeqName.substring(0, spaceIdx);
+				}
+				int tabIdx = currSeqName.indexOf('\t');
+				if (tabIdx > 0) {
+					currSeqName = currSeqName.substring(0, tabIdx);
+				}
 				sequence = new StringBuffer();
 			} else {
 				sequence.append(line);
@@ -206,20 +214,29 @@ public class CompareToReference2 {
 		return line;
 	}
 	
-	/*
 	public static void main(String[] args) throws Exception {
 		
-		String ref = args[0];
-		String sam = args[1];
-		int max = Integer.parseInt(args[2]);
+//		String ref = args[0];
+//		String sam = args[1];
 		
-//		String ref = "/home/lmose/reference/chr16/chr16.fa";
-//		String sam = "/home/lmose/dev/ayc/sim/sim80/sorted_rr4.bam";
-//		String sam = "/home/lmose/dev/ayc/sim/sim80/sorted_rr.bam";
-		//String sam = "/home/lmose/dev/ayc/sim/sim80/chr16.bam";
-//		String sam = "/home/lmose/dev/ayc/sim/sim80/rchr16.bam";
+//		String ref = "/home/lmose/reference/chr7/chr7.fa";
+//		String sam = "/home/lmose/dev/ayc/24/26/test2.bam";
+		
+		String ref = "/home/lmose/reference/chr1/1.fa";
+		String sam = "/home/lmose/dev/abra_wxs/4/test.bam";
+
+		
 		CompareToReference2 c2r = new CompareToReference2();
-		c2r.compare(sam, ref, max);
+		c2r.init(ref);
+		
+		SAMFileReader rdr = new SAMFileReader(new File(sam));
+		
+		for (SAMRecord read : rdr) {
+			int mismatches = c2r.numMismatches(read);
+			
+			System.out.println("mismatches: " + mismatches);
+		}
+		
+		rdr.close();
 	}
-	*/
 }

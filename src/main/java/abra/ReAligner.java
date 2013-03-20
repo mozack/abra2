@@ -611,32 +611,35 @@ public class ReAligner {
 	
 	private boolean shouldIncludeInUnalignedPile(SAMRecord read) {
 		boolean shouldInclude = false;
-		if (read.getReadUnmappedFlag()) {
-			shouldInclude = true;
-		}
-		// For Stampy, if Cigar length > 4 and read is not ambiguous (mapq >= 4)
-		else if ((read.getCigarLength() > 4) && read.getMappingQuality() >= 4) {
-			shouldInclude = true;
-		}
-		/*
-		// Consider long soft clipping
-		else if (read.getCigarLength() > 1) {
-			CigarElement first = read.getCigar().getCigarElement(0);
-			CigarElement last = read.getCigar().getCigarElement(read.getCigarLength()-1);
 		
-			int clipLength = 0;
-			if (first.getOperator() == CigarOperator.S) {
-				clipLength += first.getLength();
-			}
-			if (last.getOperator() == CigarOperator.S) {
-				clipLength += last.getLength(); 
-			}
-			
-			if (clipLength >= 10) {
+		if (!read.getReadFailsVendorQualityCheckFlag()) {
+			if (read.getReadUnmappedFlag()) {
 				shouldInclude = true;
 			}
+			// For Stampy, if Cigar length > 4 and read is not ambiguous (mapq >= 4)
+			else if ((read.getCigarLength() > 4) && read.getMappingQuality() >= 4) {
+				shouldInclude = true;
+			}
+			/*
+			// Consider long soft clipping
+			else if (read.getCigarLength() > 1) {
+				CigarElement first = read.getCigar().getCigarElement(0);
+				CigarElement last = read.getCigar().getCigarElement(read.getCigarLength()-1);
+			
+				int clipLength = 0;
+				if (first.getOperator() == CigarOperator.S) {
+					clipLength += first.getLength();
+				}
+				if (last.getOperator() == CigarOperator.S) {
+					clipLength += last.getLength(); 
+				}
+				
+				if (clipLength >= 10) {
+					shouldInclude = true;
+				}
+			}
+			*/
 		}
-		*/
 		
 		return shouldInclude;
 	}
@@ -741,7 +744,9 @@ public class ReAligner {
 
 		while (iter.hasNext()) {
 			SAMRecord read = iter.next();
-			outputReadsBam.addAlignment(read);
+			if (!read.getReadFailsVendorQualityCheckFlag()) {
+				outputReadsBam.addAlignment(read);
+			}
 		}
 		
 		reader.close();
@@ -754,7 +759,9 @@ public class ReAligner {
 	
 			while (iter.hasNext()) {
 				SAMRecord read = iter.next();
-				outputReadsBam.addAlignment(read);
+				if (!read.getReadFailsVendorQualityCheckFlag()) {
+					outputReadsBam.addAlignment(read);
+				}
 			}
 	
 			reader.close();
@@ -1772,14 +1779,23 @@ public class ReAligner {
 //		String regions = "/home/lmose/dev/ayc/regions/clinseq5/7455.gtf";
 //		String tempDir = "/home/lmose/dev/ayc/sim/s339/zzchr19_working_native";
 		
-		String input = "/home/lmose/dev/ayc/24/26/normal.bam";
-		String input2 = "/home/lmose/dev/ayc/24/26/tumor.bam";
-		String output = "/home/lmose/dev/ayc/24/26/normal.abra.bam";
-		String output2 = "/home/lmose/dev/ayc/24/26/tumor.abra.bam";
-		String reference = "/home/lmose/reference/chr7/chr7.fa";
-		String regions = "/home/lmose/dev/ayc/regions/clinseq5/26.gtf";
-		String tempDir = "/home/lmose/dev/ayc/24/26/working";
+//		String input = "/home/lmose/dev/ayc/24/26/normal.bam";
+//		String input2 = "/home/lmose/dev/ayc/24/26/tumor.bam";
+//		String output = "/home/lmose/dev/ayc/24/26/normal.abra.bam";
+//		String output2 = "/home/lmose/dev/ayc/24/26/tumor.abra.bam";
+//		String reference = "/home/lmose/reference/chr7/chr7.fa";
+//		String regions = "/home/lmose/dev/ayc/regions/clinseq5/26.gtf";
+//		String tempDir = "/home/lmose/dev/ayc/24/26/working";
 
+		String input = "/home/lmose/dev/abra_wxs/4/ntest1.bam";
+		String input2 = "/home/lmose/dev/abra_wxs/4/ttest1.bam";
+		String output = "/home/lmose/dev/abra_wxs/4/normal.abra.bam";
+		String output2 = "/home/lmose/dev/abra_wxs/4/tumor.abra.bam";
+		String reference = "/home/lmose/reference/chr1/1.fa";
+		String regions = "/home/lmose/dev/abra_wxs/4/4.gtf";
+		String tempDir = "/home/lmose/dev/abra_wxs/4/working";
+
+		
 		
 //		
 //		/*

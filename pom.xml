@@ -4,7 +4,7 @@
 
   <groupId>abra</groupId>
   <artifactId>abra</artifactId>
-  <version>0.30-SNAPSHOT</version>
+  <version>0.31-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>abra</name>
@@ -17,7 +17,7 @@
   <repositories>
     <repository>
       <id>UBU repository</id>
-      <url>http://lbg.unc.edu/~lmose/maven-repo</url>
+      <url>http://www.unc.edu/~lmose/maven-repo</url>
     </repository>
   </repositories>
 

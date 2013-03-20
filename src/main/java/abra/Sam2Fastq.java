@@ -145,6 +145,11 @@ public class Sam2Fastq {
 		}
 		readStr = readStr.replace('\t','|');
 		
+		// Trim newline if applicable
+		if (readStr.charAt(readStr.length()-1) == '\n') {
+			readStr = readStr.substring(0, readStr.length()-1);
+		}
+		
 		String readName = readStr; 
 		
 		FastqRecord fastq = new FastqRecord("@" + readName, bases, qualities);
@@ -227,4 +232,14 @@ public class Sam2Fastq {
 		run(argz.split(" "));
 	}
 */
+	
+	public static void main(String[] args) throws Exception {
+		
+		CompareToReference2 c2r = new CompareToReference2();
+		c2r.init("/home/lmose/reference/chr2/2.fa");
+		
+		Sam2Fastq s2f = new Sam2Fastq();
+		
+		s2f.convert("/home/lmose/dev/abra_wxs/21_1071/small_tumor.abra.bam", "/home/lmose/dev/abra_wxs/21_1071/t.fastq", c2r);
+	}
 }

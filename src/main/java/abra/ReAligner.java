@@ -136,7 +136,9 @@ public class ReAligner {
 			String sortedUnalignedRegion = unalignedDir + "/sorted_unaligned_region.bam";
 			
 			Assembler assem = newUnalignedAssembler(1);
-			boolean hasContigs = assem.assembleContigs(unalignedSam, unalignedContigFasta, "unaligned", false);
+			List<String> unalignedSamList = new ArrayList<String>();
+			unalignedSamList.add(unalignedSam);
+			boolean hasContigs = assem.assembleContigs(unalignedSamList, unalignedContigFasta, tempDir, null, "unaligned", false);
 						
 			// Make eligible for GC
 			assem = null;
@@ -705,22 +707,28 @@ public class ReAligner {
 			
 	//		log("Extracting targeted region: " + region.getDescriptor());
 			//TODO: Extract unaligned simultaneously.
-			String targetRegionBam = extractTargetRegion(inputSam1, inputSam2, region, "");
-			
-			if (this.shouldReprocessUnaligned) {
-				String unalignedTargetRegionBam = extractTargetRegion(unalignedRegionSam, null, region, "unaligned_");
-				
-				String combinedBam = targetRegionBam.replace(tempDir + "/", tempDir + "/" + "combined_");
-//				String combinedBam = "combined_" + targetRegionBam;
-				concatenateBams(targetRegionBam, unalignedTargetRegionBam, combinedBam);
-				targetRegionBam = combinedBam;
-			}
-			
+//			String targetRegionBam = extractTargetRegion(inputSam1, inputSam2, region, "");
+//			
+//			if (this.shouldReprocessUnaligned) {
+//				String unalignedTargetRegionBam = extractTargetRegion(unalignedRegionSam, null, region, "unaligned_");
+//				
+//				String combinedBam = targetRegionBam.replace(tempDir + "/", tempDir + "/" + "combined_");
+////				String combinedBam = "combined_" + targetRegionBam;
+//				concatenateBams(targetRegionBam, unalignedTargetRegionBam, combinedBam);
+//				targetRegionBam = combinedBam;
+//			}
+//			
 			String contigsFasta = tempDir + "/" + region.getDescriptor() + "_contigs.fasta";
 			
-			Assembler assem = newAssembler();
+			List<String> bams = new ArrayList<String>();
+			bams.add(inputSam1);
+			if (inputSam2 != null) {
+				bams.add(inputSam2);
+			}
+			bams.add(unalignedRegionSam);
 			
-			assem.assembleContigs(targetRegionBam, contigsFasta, region.getDescriptor(), true);
+			Assembler assem = newAssembler();
+			assem.assembleContigs(bams, contigsFasta, tempDir, region, region.getDescriptor(), true);
 			
 		}
 		catch (Exception e) {
@@ -1622,7 +1630,7 @@ public class ReAligner {
 
 	public static void run(String[] args) throws Exception {
 		
-		System.out.println("Starting 0.31 ...");
+		System.out.println("Starting 0.32 ...");
 		
 		ReAlignerOptions options = new ReAlignerOptions();
 		options.parseOptions(args);

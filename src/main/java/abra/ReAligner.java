@@ -3,14 +3,9 @@ package abra;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -22,7 +17,6 @@ import java.util.Random;
 //import abra.Assembler.TooManyPotentialContigsException;
 
 import net.sf.picard.sam.BuildBamIndex;
-import net.sf.picard.sam.SamFormatConverter;
 import net.sf.picard.sam.SortSam;
 import net.sf.samtools.Cigar;
 import net.sf.samtools.CigarElement;
@@ -478,10 +472,6 @@ public class ReAligner {
 		}
 	}
 		
-	private void sortBamsByCoordinate(String in1, String in2, String out1, String out2) throws InterruptedException {
-		sortBams(in1, in2, out1, out2, "coordinate");
-	}
-		
 	void sortBam(String input, String output, String sortOrder) {
 		String[] args = new String[] { 
 				"INPUT=" + input, 
@@ -496,35 +486,7 @@ public class ReAligner {
 			throw new RuntimeException("SortSam failed");
 		}
 	}
-		
-	private void concatenateBams(String bam1, String bam2, String outputBam) {
-		
-		SAMFileWriter outputReadsBam = new SAMFileWriterFactory().makeSAMOrBAMWriter(
-				samHeader, true, new File(outputBam));
-		
-		SAMFileReader reader = new SAMFileReader(new File(bam1));
-		reader.setValidationStringency(ValidationStringency.SILENT);
-		
-		for (SAMRecord read : reader) {
-//			read.setReadName(read.getReadName() + "_1");
-			outputReadsBam.addAlignment(read);
-		}
-		
-		reader.close();
-		
-		reader = new SAMFileReader(new File(bam2));
-		reader.setValidationStringency(ValidationStringency.SILENT);
-		
-		for (SAMRecord read : reader) {
-//			read.setReadName(read.getReadName() + "_2");
-			outputReadsBam.addAlignment(read);
-		}
-		
-		reader.close();
-		
-		outputReadsBam.close();
-	}
-	
+			
 	private void combineContigs(String contigFasta) throws IOException, InterruptedException {
 
 		System.out.println("Combining contigs...");
@@ -737,67 +699,6 @@ public class ReAligner {
 		}
 	}
 	
-	private String extractTargetRegion(String inputSam, String inputSam2, Feature region, String prefix)
-			throws IOException, InterruptedException {
-		
-		String extractFile = tempDir + "/" + prefix + region.getDescriptor() + ".bam";
-		
-		SAMFileWriter outputReadsBam = new SAMFileWriterFactory().makeSAMOrBAMWriter(
-				samHeader, true, new File(extractFile));
-		
-		SAMFileReader reader = new SAMFileReader(new File(inputSam));
-		reader.setValidationStringency(ValidationStringency.SILENT);
-		
-		Iterator<SAMRecord> iter = reader.queryOverlapping(region.getSeqname(), (int) region.getStart(), (int) region.getEnd());
-
-		while (iter.hasNext()) {
-			SAMRecord read = iter.next();
-			if (!read.getReadFailsVendorQualityCheckFlag()) {
-				outputReadsBam.addAlignment(read);
-			}
-		}
-		
-		reader.close();
-		
-		if (inputSam2 != null) {
-			reader = new SAMFileReader(new File(inputSam2));
-			reader.setValidationStringency(ValidationStringency.SILENT);
-	
-			iter = reader.queryOverlapping(region.getSeqname(), (int) region.getStart(), (int) region.getEnd());
-	
-			while (iter.hasNext()) {
-				SAMRecord read = iter.next();
-				if (!read.getReadFailsVendorQualityCheckFlag()) {
-					outputReadsBam.addAlignment(read);
-				}
-			}
-	
-			reader.close();
-		}
-		
-		outputReadsBam.close();
-		
-
-		return extractFile;
-	}
-
-	private String getOutput(InputStream is) throws IOException {
-		StringWriter writer = new StringWriter();
-
-		Reader reader = new BufferedReader(new InputStreamReader(is));
-
-		char[] buffer = new char[1024];
-
-		int n;
-		while ((n = reader.read(buffer)) != -1) {
-			writer.write(buffer, 0, n);
-		}
-
-		reader.close();
-
-		return writer.toString();
-	}
-
 	private void loadRegions() throws IOException {
 		GtfLoader loader = new GtfLoader();
 		regions = loader.load(regionsGtf);
@@ -984,7 +885,6 @@ public class ReAligner {
 		//TODO: Pass BAM as input instead?
 		// Convert original bam to fastq
 		String fastq = tempDir + "/" + "original_reads.fastq";
-		String fastq2 = tempDir + "/" + "original_reads2.fastq";
 		
 		sam2Fastq(inputSam, fastq, c2r);
 				

@@ -1,8 +1,11 @@
 package abra;
 
 import java.io.BufferedWriter;
-import java.io.FileWriter;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.util.zip.GZIPOutputStream;
 
 /**
  * Utility class for outputting fastq files
@@ -13,7 +16,9 @@ public class FastqOutputFile {
     private BufferedWriter writer;
     
     public void init(String filename) throws IOException {
-        writer = new BufferedWriter(new FileWriter(filename, false));
+    	
+    	GZIPOutputStream zip = new GZIPOutputStream(new FileOutputStream(new File(filename)));
+        writer = new BufferedWriter(new OutputStreamWriter(zip, "UTF-8"));
     }
     
     public void write(FastqRecord record) throws IOException {

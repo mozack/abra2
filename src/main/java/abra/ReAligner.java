@@ -82,6 +82,8 @@ public class ReAligner {
 	private SAMFileHeader rnaHeader = null;
 	private int rnaReadLength = -1;
 	
+	private BufferedWriter contigWriter;
+	
 	public void reAlign(String inputSam, String inputSam2, String outputSam, String outputSam2) throws Exception {
 
 		System.out.println("input: " + inputSam);
@@ -161,6 +163,10 @@ public class ReAligner {
 		
 		Clock clock = new Clock("Assembly");
 		clock.start();
+		
+		String contigFasta = tempDir + "/" + "all_contigs.fasta";
+		contigWriter = new BufferedWriter(new FileWriter(contigFasta, false));
+		
 		log("Iterating over regions");
 		for (Feature region : regions) {
 			log("Spawning thread for: " + region.getDescriptor());
@@ -170,14 +176,16 @@ public class ReAligner {
 		
 		log("Waiting for all threads to complete");
 		waitForAllThreadsToComplete();
+		
+		contigWriter.close();
 		clock.stopAndPrint();
 		
-		clock = new Clock("Combine contigs");
-		clock.start();
-		log("Combining contigs");
-		String contigFasta = tempDir + "/" + "all_contigs.fasta";
-		combineContigs(contigFasta);
-		clock.stopAndPrint();
+//		clock = new Clock("Combine contigs");
+//		clock.start();
+//		log("Combining contigs");
+//		
+//		combineContigs(contigFasta);
+//		clock.stopAndPrint();
 		
 		String cleanContigsFasta = alignAndCleanContigs(contigFasta, tempDir, true);
 		if (cleanContigsFasta != null) {
@@ -663,23 +671,18 @@ public class ReAligner {
 		return unalignedBam;		
 	}
 	
+	private synchronized void appendContigs(BufferedReader reader) throws IOException {
+		String line = reader.readLine();
+		while (line != null) {
+			contigWriter.write(line);
+			contigWriter.write('\n');
+			line = reader.readLine();
+		}
+	}
+	
 	public void processRegion(Feature region) throws Exception {
 		
 		try {
-			
-	//		log("Extracting targeted region: " + region.getDescriptor());
-			//TODO: Extract unaligned simultaneously.
-//			String targetRegionBam = extractTargetRegion(inputSam1, inputSam2, region, "");
-//			
-//			if (this.shouldReprocessUnaligned) {
-//				String unalignedTargetRegionBam = extractTargetRegion(unalignedRegionSam, null, region, "unaligned_");
-//				
-//				String combinedBam = targetRegionBam.replace(tempDir + "/", tempDir + "/" + "combined_");
-////				String combinedBam = "combined_" + targetRegionBam;
-//				concatenateBams(targetRegionBam, unalignedTargetRegionBam, combinedBam);
-//				targetRegionBam = combinedBam;
-//			}
-//			
 			String contigsFasta = tempDir + "/" + region.getDescriptor() + "_contigs.fasta";
 			
 			List<String> bams = new ArrayList<String>();
@@ -689,9 +692,20 @@ public class ReAligner {
 			}
 			bams.add(unalignedRegionSam);
 			
+			// Assemble contigs
 			Assembler assem = newAssembler();
-			assem.assembleContigs(bams, contigsFasta, tempDir, region, region.getDescriptor(), true);
+			boolean hasContigs = assem.assembleContigs(bams, contigsFasta, tempDir, region, region.getDescriptor(), true);
 			
+			// Append contigs to the global fasta file
+			if (hasContigs) {
+				BufferedReader reader = new BufferedReader(new FileReader(contigsFasta));
+				appendContigs(reader);
+				reader.close();
+			}
+			
+			// Now delete the temporary fasta file.
+			File localAssembledContigs = new File(contigsFasta);
+			localAssembledContigs.delete();
 		}
 		catch (Exception e) {
 			e.printStackTrace();
@@ -882,9 +896,8 @@ public class ReAligner {
 	
 	private void alignToContigs(String tempDir, String inputSam, String alignedToContigSam, String contigFasta, CompareToReference2 c2r) throws IOException, InterruptedException {
 		
-		//TODO: Pass BAM as input instead?
 		// Convert original bam to fastq
-		String fastq = tempDir + "/" + "original_reads.fastq";
+		String fastq = tempDir + "/" + "original_reads.fastq.gz";
 		
 		sam2Fastq(inputSam, fastq, c2r);
 				
@@ -1530,7 +1543,7 @@ public class ReAligner {
 
 	public static void run(String[] args) throws Exception {
 		
-		System.out.println("Starting 0.32 ...");
+		System.out.println("Starting 0.32c ...");
 		
 		ReAlignerOptions options = new ReAlignerOptions();
 		options.parseOptions(args);

@@ -10,8 +10,6 @@ import java.util.List;
 import java.util.Set;
 
 import net.sf.samtools.SAMFileReader;
-import net.sf.samtools.SAMFileWriter;
-import net.sf.samtools.SAMFileWriterFactory;
 import net.sf.samtools.SAMRecord;
 import net.sf.samtools.SAMFileReader.ValidationStringency;
 
@@ -25,7 +23,6 @@ public class NativeAssembler implements Assembler {
 	private Set<String> readIds;
 
 	private native int assemble(String input, String output, String prefix, int truncateOnRepeat, int maxContigs, int maxPathsFromRoot, int readLength, int kmerSize);
-//	private native void assemble(String input, String output, String prefix);
 	
 	static{
         System.loadLibrary("Abra");
@@ -128,6 +125,9 @@ public class NativeAssembler implements Assembler {
 					maxPathsFromRoot,
 					readLength,
 					kmer);
+			
+			File inputReadFile = new File(readFile);
+			inputReadFile.delete();
 
 		} catch (IOException e) {
 			e.printStackTrace();

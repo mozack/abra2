@@ -37,19 +37,21 @@ struct eqstr
 {
   bool operator()(const char* s1, const char* s2) const
   {
-    return (s1 == s2) || (s1 && s2 && strcmp(s1, s2) == 0);
+    return (s1 == s2) || (s1 && s2 && strncmp(s1, s2, kmer_size) == 0);
   }
 };
 
 struct my_hash
 {
-	unsigned long operator()(const char* s1) const
+	unsigned long operator()(const char* kmer) const
 	{
 		unsigned long hash = 0;
 		int c;
 
-		while((c = *s1++))
+//		while((c = *kmer++))
+		for (int i=0; i<kmer_size; i++)
 		{
+			c = kmer[i];
 			/* hash = hash * 33 ^ c */
 			hash = ((hash << 5) + hash) ^ c;
 		}
@@ -60,14 +62,11 @@ struct my_hash
 
 struct struct_pool {
 	struct node_pool* node_pool;
-	struct kmer_pool* kmer_pool;
 	struct read_pool* read_pool;
 };
 
 #define NODES_PER_BLOCK 10000
 #define MAX_NODE_BLOCKS 500000
-#define KMERS_PER_BLOCK 10000
-#define MAX_KMER_BLOCKS 500000
 #define READS_PER_BLOCK 10000
 #define MAX_READ_BLOCKS 100000
 
@@ -77,31 +76,11 @@ struct node_pool {
 	int node_idx;
 };
 
-struct kmer_pool {
-	char** kmers;
-	int block_idx;
-	int kmer_idx;
-};
-
 struct read_pool {
 	char** reads;
 	int block_idx;
 	int read_idx;
 };
-
-/*
-struct node {
-
-	//TODO: Collapse from 8 to 2 bits.  Only store as key.
-	char* seq;
-	int frequency;
-	//TODO: Convert to stl?
-	struct linked_node* toNodes;
-	struct linked_node* fromNodes;
-	char* contributingRead;;
-	char hasMultipleUniqueReads;
-};
-*/
 
 struct node {
 
@@ -134,12 +113,6 @@ struct struct_pool* init_pool() {
 	pool->node_pool->block_idx = 0;
 	pool->node_pool->node_idx = 0;
 
-	pool->kmer_pool = (struct kmer_pool*) malloc(sizeof(kmer_pool));
-	pool->kmer_pool->kmers = (char**) malloc(sizeof(char*) * MAX_KMER_BLOCKS);
-	pool->kmer_pool->kmers[0] = (char*) malloc(sizeof(char) * (kmer_size+1) * KMERS_PER_BLOCK);
-	pool->kmer_pool->block_idx = 0;
-	pool->kmer_pool->kmer_idx = 0;
-
 	pool->read_pool = (struct read_pool*) malloc(sizeof(read_pool));
 	pool->read_pool->reads = (char**) malloc(sizeof(char*) * MAX_READ_BLOCKS);
 	pool->read_pool->reads[0] = (char*) malloc(sizeof(char) * (read_length+1) * READS_PER_BLOCK);
@@ -162,23 +135,6 @@ char* allocate_read(struct_pool* pool) {
 	}
 
 	return &pool->read_pool->reads[pool->read_pool->block_idx][pool->read_pool->read_idx++ * (read_length+1)];
-}
-
-
-char* allocate_kmer(struct_pool* pool) {
-	if (pool->kmer_pool->block_idx > MAX_KMER_BLOCKS) {
-		printf("KMER BLOCK INDEX TOO BIG!!!!\n");
-		exit(-1);
-	}
-
-	if (pool->kmer_pool->kmer_idx >= KMERS_PER_BLOCK) {
-		pool->kmer_pool->block_idx++;
-		pool->kmer_pool->kmer_idx = 0;
-//		printf("Allocating new block...\n");
-		pool->kmer_pool->kmers[pool->kmer_pool->block_idx] = (char*) malloc(sizeof(char) * (kmer_size+1) * KMERS_PER_BLOCK);
-	}
-
-	return &pool->kmer_pool->kmers[pool->kmer_pool->block_idx][pool->kmer_pool->kmer_idx++ * (kmer_size+1)];
 }
 
 struct node* allocate_node(struct_pool* pool) {
@@ -210,18 +166,7 @@ struct node* new_node(char* seq, char* contributingRead, struct_pool* pool) {
 }
 
 char* get_kmer(int idx, char* sequence, struct struct_pool* pool) {
-//	char* kmer = (char*) malloc(sizeof(char) * KMER+1);
-	char* kmer = allocate_kmer(pool);
-	memset(kmer, 0, kmer_size+1);
-
-	memcpy(kmer, &sequence[idx], kmer_size);
-
-	return kmer;
-}
-
-void unget_kmer(char* kmer, struct struct_pool* pool) {
-	memset(kmer, 0, kmer_size+1);
-	pool->kmer_pool->kmer_idx--;
+	return &sequence[idx];
 }
 
 int is_node_in_list(struct node* node, struct linked_node* list) {
@@ -306,7 +251,6 @@ void add_to_graph(char* sequence, sparse_hash_map<const char*, struct node*, my_
 
 				(*nodes)[kmer] = curr;
 			} else {
-				unget_kmer(kmer, pool);
 				increment_node_freq(curr, sequence);
 			}
 
@@ -632,13 +576,6 @@ void cleanup(sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, 
 	free(pool->node_pool->nodes);
 	free(pool->node_pool);
 
-	for (int i=0; i<=pool->kmer_pool->block_idx; i++) {
-		free(pool->kmer_pool->kmers[i]);
-	}
-
-	free(pool->kmer_pool->kmers);
-	free(pool->kmer_pool);
-
 	for (int i=0; i<=pool->read_pool->block_idx; i++) {
 		free(pool->read_pool->reads[i]);
 	}
@@ -854,8 +791,8 @@ int main(int argc, char* argv[]) {
 		false,
 		500000,
 		5000,
-		151,
-		93);
+		100,
+		63);
 
 //	printf("node size: %d\n", sizeof(node2));
 

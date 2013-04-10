@@ -7,7 +7,10 @@ import java.util.List;
 
 import net.sf.samtools.CigarElement;
 import net.sf.samtools.CigarOperator;
+import net.sf.samtools.SAMFileHeader;
 import net.sf.samtools.SAMFileReader;
+import net.sf.samtools.SAMFileWriter;
+import net.sf.samtools.SAMFileWriterFactory;
 import net.sf.samtools.SAMRecord;
 import net.sf.samtools.SAMFileReader.ValidationStringency;
 import net.sf.samtools.SAMRecord.SAMTagAndValue;
@@ -28,78 +31,51 @@ public class Sam2Fastq {
 	private boolean isMapspliceFusions = false;
 	private String end1Suffix;
 	private String end2Suffix;
-
-	/**
-	 * Convert the input paired end SAM/BAM file into 2 fastq files.
-	 * Input SAM files that contain multiple mappings should be sorted by read name.
-	 */
-	/*
-	public void convertPairedEnd(String inputSam, String outputFastq) throws IOException {
-		String last1Read = "";
-		String last2Read = "";
-		
-        SAMFileReader reader = new SAMFileReader(new File(inputSam));
-        reader.setValidationStringency(ValidationStringency.SILENT);
-
-        output1 = new FastqOutputFile();
-        output1.init(outputFastq);
-        
-        int output1Count = 0;
-        int output2Count = 0;
-        int lineCnt = 0;
-        
-        for (SAMRecord read : reader) {
-        	if (isFirstInPair(read)) {
-        		if (!read.getReadName().equals(last1Read)) {
-        			output1.write(samReadToFastqRecord(read));
-        			last1Read = read.getReadName();
-        			output1Count += 1;
-        		}
-        	} else if (isSecondInPair(read)) {
-        		if (!read.getReadName().equals(last2Read)) {
-        			last2Read = read.getReadName();
-        			read.setReadName(read.getReadName() + "_2");
-        			output1.write(samReadToFastqRecord(read));
-        			output2Count += 1;
-        		}
-        	} else {
-        		System.out.println("Don't know what to do with unpaired read: " + read.getSAMString());
-        	}
-        	
-            lineCnt++;
-            if ((lineCnt % 1000000) == 0) {
-                System.out.println("record: " + lineCnt);
-            }
-        }
-                
-        output1.close();
-        reader.close();
-        
-        if (output1Count != output2Count) {
-        	throw new IllegalStateException("Non-symmetrical read counts found for " + inputSam + ".  Your reads may not be paired properly.");
-        }
-	}
-	*/
 	
 	/**
 	 * Convert the input SAM/BAM file into a single fastq file.
 	 * Input SAM files that contain multiple mappings should be sorted by read name.
 	 */
-	public void convert(String inputSam, String outputFastq, CompareToReference2 c2r) throws IOException {
+	public void convert(String inputSam, String outputFastq, CompareToReference2 c2r,
+			SAMFileHeader header, SAMFileWriter writer) throws IOException {
 		String last1Read = "";
 		
 		System.out.println("sam: " + inputSam);
 		
         SAMFileReader reader = new SAMFileReader(new File(inputSam));
         reader.setValidationStringency(ValidationStringency.SILENT);
-
+        
         output1 = new FastqOutputFile();
         output1.init(outputFastq);
         int lineCnt = 0;
         
         for (SAMRecord read : reader) {
     		if (!read.getReadName().equals(last1Read)) {
-    			output1.write(samReadToFastqRecord(read, c2r));
+    			
+    			// These tags can be lengthy, so remove them.
+    			read.setAttribute("XA", null);
+    			read.setAttribute("OQ", null);
+    			read.setAttribute("MD", null);
+    			
+    			// Calculate the number of mismatches to reference for this read.
+    			int yx = 0;
+    			if (c2r != null) {
+    				yx = ReAligner.getEditDistance(read, c2r);
+    			} else {
+    				yx = read.getReadLength();
+    			}
+    			
+    			read.setAttribute("YX", yx);
+    			
+    			if (yx > 0) {
+    				// Does not exactly match reference, output FASTQ record
+	    			output1.write(samReadToFastqRecord(read, c2r));
+    			} else if (writer != null) {
+    				// Exactly matches reference, so output directly to final BAM
+    				writer.addAlignment(read);
+    			}
+    			
+    			// Can this be removed???
     			last1Read = read.getReadName();
     		}
     		
@@ -114,23 +90,13 @@ public class Sam2Fastq {
 	}
 	
 	private FastqRecord samReadToFastqRecord(SAMRecord read, CompareToReference2 c2r) {
+		
 		String bases = read.getReadString();
 		String qualities = read.getBaseQualityString();
 		
 		if (read.getReadNegativeStrandFlag()) {
 			bases = reverseComplementor.reverseComplement(bases);
 			qualities = reverseComplementor.reverse(qualities);
-		}
-		
-		// XA tag can be lengthy, so remove it.
-		read.setAttribute("XA", null);
-		read.setAttribute("OQ", null);
-		read.setAttribute("MD", null);
-		// Calculate the number of mismatches to reference for this read.
-		if (c2r != null) {
-			read.setAttribute("YX", ReAligner.getEditDistance(read, c2r));
-		} else {
-			read.setAttribute("YX", read.getReadLength());
 		}
 		
 		read.setReadString("");
@@ -240,6 +206,6 @@ public class Sam2Fastq {
 		
 		Sam2Fastq s2f = new Sam2Fastq();
 		
-		s2f.convert("/home/lmose/dev/abra_wxs/21_1071/small_tumor.abra.bam", "/home/lmose/dev/abra_wxs/21_1071/t.fastq", c2r);
+//		s2f.convert("/home/lmose/dev/abra_wxs/21_1071/small_tumor.abra.bam", "/home/lmose/dev/abra_wxs/21_1071/t.fastq", c2r);
 	}
 }

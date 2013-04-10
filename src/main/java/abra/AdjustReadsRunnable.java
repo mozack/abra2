@@ -2,18 +2,20 @@ package abra;
 
 import java.io.IOException;
 
+import net.sf.samtools.SAMFileWriter;
+
 public class AdjustReadsRunnable implements Runnable {
 	
 	private ReAligner realigner;
 	private String sortedOriginalReads;
 	private String sortedAlignedToContig;
-	private String outputSam;
+	private SAMFileWriter outputSam;
 	private boolean isTightAlignment;
 	private CompareToReference2 c2r;
 	
 //	public AdjustReadsRunnable(ReAligner realigner, String sortedOriginalReads, String sortedAlignedToContig, String outputSam,
 //			boolean isTightAlignment) {
-	public AdjustReadsRunnable(ReAligner realigner, String sortedAlignedToContig, String outputSam,
+	public AdjustReadsRunnable(ReAligner realigner, String sortedAlignedToContig, SAMFileWriter outputSam,
 			boolean isTightAlignment, CompareToReference2 c2r) {
 
 		this.realigner = realigner;

@@ -1,117 +1,83 @@
 package abra;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.io.File;
 
 import net.sf.samtools.MyReader;
+import net.sf.samtools.SAMFileHeader;
+import net.sf.samtools.SAMFileHeader.SortOrder;
 import net.sf.samtools.SAMFileWriter;
+import net.sf.samtools.SAMFileWriterFactory;
 import net.sf.samtools.SAMRecord;
 
-public class PairValidatingRealignmentWriter implements RealignmentWriter {
+public class BetaPairValidatingRealignmentWriter implements RealignmentWriter {
 
 	private SAMFileWriter writer;
 	private ReAligner realigner;
-	
-	// key = read name, value = Reads
-	private Map<String, Reads> firstInPair = new HashMap<String, Reads>();
-	private Map<String, Reads> secondInPair = new HashMap<String, Reads>();
 	
 	private int realignCount = 0;
 	
 	private static final int INSERT_THRESHOLD = 5000;
 	
-	public PairValidatingRealignmentWriter(ReAligner realigner, SAMFileWriter writer) {
-		
+	private String candidatesSam;
+	private SAMFileWriter candidatesSamWriter;
+	private SamStringReader samStringReader;
+	
+	public BetaPairValidatingRealignmentWriter(ReAligner realigner, SAMFileWriter writer, String tempDir) {
 		this.writer = writer;
 		this.realigner = realigner;
-		throw new UnsupportedOperationException("don't run this...");
+		
+		SAMFileHeader header = writer.getFileHeader().clone();
+		header.setSortOrder(SortOrder.queryname);
+		
+		samStringReader = new SamStringReader(header);
+		
+		candidatesSam = tempDir + "/candidates.bam";
+		
+		candidatesSamWriter = new SAMFileWriterFactory().makeSAMOrBAMWriter(
+				header, false, new File(candidatesSam));
 	}
 	
-	static long count = 1;
+	long count = 1;
 	
-	private void put(Map<String, Reads> map, Reads reads) {
-		String key = reads.getOrigRead().getReadName();
-//		reads.stringify();
-		map.put(key, reads);
-	}
+	int r1 = 0;
+	int r2 = 0;
+	int r3 = 0;
+	int r4 = 0;
+	int r5 = 0;
+	int numCandidates = 0;
+
 	
 	public void addAlignment(SAMRecord updatedRead, SAMRecord origRead) {
 		
-//		if (updatedRead != null) {
-//			updatedRead.clearAttributes();
-//		}
-//		
-//		origRead.clearAttributes();
 		
 		if (updatedRead == null) {
+			r1++;
+			output(new Reads(updatedRead, origRead));
+		} else if (updatedRead.getAttribute("YO") == null) {
+			r5++;
 			output(new Reads(updatedRead, origRead));
 		} else if ((Math.abs(origRead.getInferredInsertSize()) > INSERT_THRESHOLD) || (origRead.getInferredInsertSize() == 0)) {
+			r2++;
 			output(new Reads(updatedRead, origRead));
-		} else if (origRead.getFirstOfPairFlag()) {
-			Reads first = new Reads(updatedRead, origRead);
-			Reads second = secondInPair.get(origRead.getReadName());
-			if (second != null) {
-				outputPair(first, second);
-				secondInPair.remove(origRead.getReadName());
-			} else {
-				put(firstInPair, first);
-				//firstInPair.put(origRead.getReadName(), first);
-			}
-		} else if (origRead.getSecondOfPairFlag()) {
-			Reads first = firstInPair.get(origRead.getReadName());
-			Reads second = new Reads(updatedRead, origRead);
-			if (first != null) {
-				outputPair(first, second);
-				firstInPair.remove(origRead.getReadName());
-			} else {
-				put(secondInPair, second);
-				//secondInPair.put(origRead.getReadName(), second);
-			}
+		} else if (origRead.getReadPairedFlag()) {
+			r3++;
+			writeToTempFile(candidatesSamWriter, updatedRead, origRead);
+			numCandidates += 1;
 		} else {
+			r4++;
 			// Unpaired read.  Just output it.
 			output(new Reads(updatedRead, origRead));
 		}
 		
 		if ((count++ % 100000) == 0) {
-			System.out.println("firstInPair size: " + firstInPair.size());
-			System.out.println("secondInPair size: " + secondInPair.size());
+			System.out.println(r1 + "," + r2 + "," + r3 + "," + r4 + "," + r5);
+			System.out.println("Num candidates: " + numCandidates);
 		}
-		/*
-		
-		// If insert size exceed the threshold, just output what we have.
-		// Use the updated read if available.  if not, just output the original read
-		if ((Math.abs(origRead.getInferredInsertSize()) > INSERT_THRESHOLD) || (origRead.getInferredInsertSize() == 0)) {
-			if (updatedRead != null) {
-				writer.addAlignment(updatedRead);
-			} else {
-				realigner.adjustForStrand(contigAlignedRead.getReadNegativeStrandFlag(), origRead);
-				writer.addAlignment(origRead);
-			}
-		} else {
-			if (origRead.getFirstOfPairFlag()) {
-				Reads first = new Reads(contigAlignedRead, updatedRead, origRead);
-				Reads second = secondInPair.get(origRead.getReadName());
-				if (second != null) {
-					outputPair(first, second);
-					secondInPair.remove(origRead.getReadName());
-				} else {
-					firstInPair.put(origRead.getReadName(), first);
-				}
-			} else if (origRead.getSecondOfPairFlag()) {
-				Reads first = firstInPair.get(origRead.getReadName());
-				Reads second = new Reads(contigAlignedRead, updatedRead, origRead);
-				if (first != null) {
-					outputPair(first, second);
-					firstInPair.remove(origRead.getReadName());
-				} else {
-					secondInPair.put(origRead.getReadName(), second);
-				}
-			} else {
-				// Unpaired read.  Just output it.
-				output(new Reads(contigAlignedRead, updatedRead, origRead));
-			}
-		}
-		*/
+	}
+	
+	private void writeToTempFile(SAMFileWriter writer, SAMRecord updatedRead, SAMRecord origRead) {
+		updatedRead.setAttribute("YG", origRead.getSAMString());
+		writer.addAlignment(updatedRead);
 	}
 	
 	private void outputPair(Reads first, Reads second) {
@@ -179,29 +145,68 @@ public class PairValidatingRealignmentWriter implements RealignmentWriter {
 		return read1.getReferenceName().equals(read2.getReferenceName());
 	}
 	
+	int updatedCount = 0;
+	int origCount = 0;
+	
 	private void output(Reads reads) {
 		if (reads.getUpdatedRead() != null) {
 			if (reads.getUpdatedRead().getAttribute("YO") != null) {
 				realignCount += 1;
 			}
 			writer.addAlignment(reads.getUpdatedRead());
+			updatedCount += 1;
 		} else {
 			SAMRecord orig = reads.getOrigRead();
-//			realigner.adjustForStrand(reads.getContigAlignedRead().getReadNegativeStrandFlag(), orig);
 			writer.addAlignment(orig);
+			origCount += 1;
 		}
 	}
 	
+	private void processCandidates() {
+		System.out.println("Processing candidates");
+		SimpleSamReadPairReader reader = new SimpleSamReadPairReader(candidatesSam);
+		
+		for (ReadPair pair : reader) {
+			SAMRecord updatedRead1 = pair.getRead1();
+			SAMRecord updatedRead2 = pair.getRead2();
+			SAMRecord origRead1 = getOriginalRead(updatedRead1);
+			SAMRecord origRead2 = getOriginalRead(updatedRead2);
+			
+			if ((updatedRead1 !=  null) && (updatedRead2 != null)) {
+				Reads reads1 = new Reads(updatedRead1, origRead1);
+				Reads reads2 = new Reads(updatedRead2, origRead2);
+				
+				outputPair(reads1, reads2);
+			} else if (updatedRead1 != null) {
+				Reads reads1 = new Reads(updatedRead1, origRead1);
+				checkOrigAndOutput(reads1);
+			} else if (updatedRead2 != null) {
+				Reads reads2 = new Reads(updatedRead2, origRead2);
+				checkOrigAndOutput(reads2);
+			}
+		}
+		System.out.println("Done processing candidates");
+	}
+	
+	private SAMRecord getOriginalRead(SAMRecord read) {
+		SAMRecord orig = null;
+		
+		if (read != null) {
+			String origStr = (String) read.getAttribute("YG");
+			orig = samStringReader.getRead(origStr);
+			read.setAttribute("YG", null);
+		}
+		
+		return orig;
+	}
+	
 	public int flush() {
-		// Mate did not realign. Use original alignment info to check insert length
-		for (Reads reads : firstInPair.values()) {
-			checkOrigAndOutput(reads);
-		}
+		System.out.println("Flushing");
+		candidatesSamWriter.close();
+		processCandidates();
 		
-		for (Reads reads : secondInPair.values()) {
-			checkOrigAndOutput(reads);
-		}
-		
+		System.out.println("updatedCount: " + updatedCount);
+		System.out.println("origCount: " + origCount);
 		return realignCount;
 	}
 	

@@ -34,75 +34,86 @@ public class BaseQualityByRegion {
 			long numInternalReadsLt20 = 0;
 			long numReadsWithAmbiguousBases = 0;
 			long numReadsIntersectLt20Ambiguous = 0;
+			long minMapq = 1000;
+			long totalMapq = 0;
 			
 			CloseableIterator<SAMRecord> iter = reader.queryOverlapping(region.getSeqname(), (int) region.getStart(), (int) region.getEnd());
 			
 			while (iter.hasNext()) {
 				SAMRecord read = iter.next();
-				String qualStr = read.getBaseQualityString();
 				
-				boolean readLt5 = false;
-				boolean readLt10 = false;
-				boolean readLt20 = false;
-				boolean internalReadLt20 = false;
-				
-				numReads++;
-				numBases += qualStr.length();
-				int readBasesLt5 = 0;
-
-				for (int i=0; i<qualStr.length(); i++) {
+				if (read.getMappingQuality() >= 10) {
+					String qualStr = read.getBaseQualityString();
 					
-					// Assuming phred33
-					int qual = qualStr.charAt(i) - '!';
-					totalQuality += qual;
+					boolean readLt5 = false;
+					boolean readLt10 = false;
+					boolean readLt20 = false;
+					boolean internalReadLt20 = false;
 					
-					if (qual < 5) {
-						numBasesLt5++;
-						readBasesLt5++;
-						readLt5 = true;
-					}
-					
-					if (qual < 10) {
-						numBasesLt10++;
-						readLt10 = true;
-					}
-					
-					if (qual < 20) {
-						numBasesLt20++;
-						readLt20 = true;
+					numReads++;
+					numBases += qualStr.length();
+					int readBasesLt5 = 0;
+	
+					for (int i=0; i<qualStr.length(); i++) {
 						
-						if ((i>=10) && (i<90)) {
-							internalReadLt20 = true;
+						// Assuming phred33
+						int qual = qualStr.charAt(i) - '!';
+						totalQuality += qual;
+						
+						if (qual < 5) {
+							numBasesLt5++;
+							readBasesLt5++;
+							readLt5 = true;
+						}
+						
+						if (qual < 10) {
+							numBasesLt10++;
+							readLt10 = true;
+						}
+						
+						if (qual < 20) {
+							numBasesLt20++;
+							readLt20 = true;
+							
+							if ((i>=10) && (i<90)) {
+								internalReadLt20 = true;
+							}
 						}
 					}
-				}
-				
-				if (readLt5) {
-					numReadsLt5++;
-				}
-				
-				if (readLt10) {
-					numReadsLt10++;
-				}
-				
-				if (readLt20) {
-					numReadsLt20++;
-				}
-				
-				if (readBasesLt5 >= 10) {
-					numReads5X10++;
-				}
-				
-				if (internalReadLt20 == true) {
-					numInternalReadsLt20++;
-				}
-				
-				if (read.getReadString().contains("N")) {
-					numReadsWithAmbiguousBases++;
-				}
-				
-				if (readLt20 || read.getReadString().contains("N")) {
-					numReadsIntersectLt20Ambiguous++;
+					
+					if (readLt5) {
+						numReadsLt5++;
+					}
+					
+					if (readLt10) {
+						numReadsLt10++;
+					}
+					
+					if (readLt20) {
+						numReadsLt20++;
+					}
+					
+					if (readBasesLt5 >= 10) {
+						numReads5X10++;
+					}
+					
+					if (internalReadLt20 == true) {
+						numInternalReadsLt20++;
+					}
+					
+					if (read.getReadString().contains("N")) {
+						numReadsWithAmbiguousBases++;
+					}
+					
+					if (readLt20 || read.getReadString().contains("N")) {
+						numReadsIntersectLt20Ambiguous++;
+					}
+					
+					if (read.getMappingQuality() < minMapq) {
+						minMapq = read.getMappingQuality();
+					}
+					
+					totalMapq += read.getMappingQuality();
 				}
 			}
 			
@@ -121,7 +132,9 @@ public class BaseQualityByRegion {
 					avg(numReads5X10, numReads) + "\t" +
 					avg(numInternalReadsLt20, numReads) + "\t" +
 					avg(numReadsWithAmbiguousBases, numReads) + "\t" +
-					avg(numReadsIntersectLt20Ambiguous, numReads));
+					avg(numReadsIntersectLt20Ambiguous, numReads) + "\t" +
+					avg(totalMapq, numReads) + "\t" +
+					minMapq);
 		}
 
 		reader.close();

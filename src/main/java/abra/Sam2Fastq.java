@@ -8,6 +8,7 @@ import java.util.List;
 import net.sf.samtools.CigarElement;
 import net.sf.samtools.CigarOperator;
 import net.sf.samtools.SAMFileHeader;
+import net.sf.samtools.SAMFileHeader.SortOrder;
 import net.sf.samtools.SAMFileReader;
 import net.sf.samtools.SAMFileWriter;
 import net.sf.samtools.SAMFileWriterFactory;
@@ -57,21 +58,25 @@ public class Sam2Fastq {
     			read.setAttribute("OQ", null);
     			read.setAttribute("MD", null);
     			
-    			// Calculate the number of mismatches to reference for this read.
     			int yx = 0;
-    			if (c2r != null) {
-    				yx = ReAligner.getEditDistance(read, c2r);
-    			} else {
-    				yx = read.getReadLength();
-    			}
     			
-    			read.setAttribute("YX", yx);
+    			if (!read.getReadFailsVendorQualityCheckFlag()) {
+	    			// Calculate the number of mismatches to reference for this read.
+	    			if (c2r != null) {
+	    				yx = ReAligner.getEditDistance(read, c2r);
+	    			} else {
+	    				yx = read.getReadLength();
+	    			}
+	    			
+	    			read.setAttribute("YX", yx);
+    			}
     			
     			if (yx > 0) {
     				// Does not exactly match reference, output FASTQ record
 	    			output1.write(samReadToFastqRecord(read, c2r));
     			} else if (writer != null) {
-    				// Exactly matches reference, so output directly to final BAM
+    				// Either xactly matches reference or failed vendor QC, so
+    				// output directly to final BAM
     				writer.addAlignment(read);
     			}
     			
@@ -201,10 +206,31 @@ public class Sam2Fastq {
 	
 	public static void main(String[] args) throws Exception {
 		
+		String inputSam = "/home/lmose/dev/ayc/opt/t7.bam";
+		SAMFileReader reader = new SAMFileReader(new File(inputSam));
+		SAMFileHeader header = reader.getFileHeader();
+		reader.close();
+				
 		CompareToReference2 c2r = new CompareToReference2();
-		c2r.init("/home/lmose/reference/chr2/2.fa");
+		c2r.init("/home/lmose/reference/chr7/chr7.fa");
+		
+		SAMFileWriterFactory writerFactory = new SAMFileWriterFactory();
+		writerFactory.setUseAsyncIo(true);
+		
+		header.setSortOrder(SortOrder.unsorted);
+		
+		SAMFileWriter writer = writerFactory.makeSAMOrBAMWriter(
+				header, false, new File("/home/lmose/dev/ayc/opt/output_t7.bam"));
 		
 		Sam2Fastq s2f = new Sam2Fastq();
+		
+		long s = System.currentTimeMillis();
+		s2f.convert(inputSam, "/home/lmose/dev/ayc/opt/t7.fastq.gz", c2r, header, writer);
+		long e = System.currentTimeMillis();
+		
+		System.out.println("Elapsed: " + (e-s)/1000);
+		
+		writer.close();
 		
 //		s2f.convert("/home/lmose/dev/abra_wxs/21_1071/small_tumor.abra.bam", "/home/lmose/dev/abra_wxs/21_1071/t.fastq", c2r);
 	}

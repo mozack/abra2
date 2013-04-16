@@ -15,8 +15,7 @@ public class SimpleRealignmentWriter implements RealignmentWriter {
 	}
 	
 	@Override
-	public void addAlignment(SAMRecord contigAlignedRead,
-			SAMRecord updatedRead, SAMRecord origRead) {
+	public void addAlignment(SAMRecord updatedRead, SAMRecord origRead) {
 		
 		if (updatedRead != null) {
 			// Output realigned read
@@ -26,7 +25,7 @@ public class SimpleRealignmentWriter implements RealignmentWriter {
 			}
 		} else {
 			// Output original read
-			realigner.adjustForStrand(contigAlignedRead.getReadNegativeStrandFlag(), origRead);
+//			realigner.adjustForStrand(contigAlignedRead.getReadNegativeStrandFlag(), origRead);
 			writer.addAlignment(origRead);
 		}
 	}

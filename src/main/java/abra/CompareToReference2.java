@@ -24,7 +24,7 @@ public class CompareToReference2 {
 	private String currSeqName = "";
 	private String cachedRefLine = null;
 	private BufferedReader refReader;
-	private Map<String, StringBuffer> refMap;
+	private Map<String, byte[]> refMap;
 /*
 	public void compare(String sam, String refFileName, int maxDiff) throws IOException, FileNotFoundException {
 		loadRefMap();
@@ -81,17 +81,18 @@ public class CompareToReference2 {
 		
 		List<Integer> mismatches = new ArrayList<Integer>();
 		
-		StringBuffer reference = refMap.get(read.getReferenceName().trim());
+		byte[] reference = refMap.get(read.getReferenceName().trim());
 		
 		int readIdx = 0;
 		int refIdx = read.getAlignmentStart()-1;
 		for (CigarElement element : read.getCigar().getCigarElements()) {
 			if (element.getOperator() == CigarOperator.M) {
 				for (int i=0; i<element.getLength(); i++) {
-					char readBase = Character.toUpperCase(read.getReadString().charAt(readIdx));
-					char refBase  = Character.toUpperCase(reference.charAt(refIdx));
+					//char readBase = Character.toUpperCase(read.getReadString().charAt(readIdx));
+					char readBase = getReadBase(read, readIdx);
+					//char readBase = (char) read.getReadBases()[readIdx];
+					char refBase  = Character.toUpperCase((char) reference[refIdx]);
 					if ((readBase != refBase) && (readBase != 'N') && (refBase != 'N')) {
-						
 						mismatches.add(readIdx);
 					}
 					
@@ -110,10 +111,15 @@ public class CompareToReference2 {
 		return mismatches;
 	}
 	
+	private char getReadBase(SAMRecord read, int index) {
+		//return Character.toUpperCase(read.getReadString().charAt(index));
+		return (char) read.getReadBases()[index];
+	}
+	
 	private int numDifferences(SAMRecord read) {
 		
 		int diffs = 0;
-		StringBuffer reference = refMap.get(read.getReferenceName().trim());
+		byte[] reference = refMap.get(read.getReferenceName().trim());
 		if (reference != null) {
 			int readIdx = 0;
 			int refIdx = read.getAlignmentStart()-1;
@@ -121,8 +127,8 @@ public class CompareToReference2 {
 			for (CigarElement element : read.getCigar().getCigarElements()) {
 				if (element.getOperator() == CigarOperator.M) {
 					for (int i=0; i<element.getLength(); i++) {
-						char readBase = Character.toUpperCase(read.getReadString().charAt(readIdx));
-						char refBase  = Character.toUpperCase(reference.charAt(refIdx));
+						char readBase = getReadBase(read, readIdx);
+						char refBase  = Character.toUpperCase((char) reference[refIdx]);
 						if ((readBase != refBase) && (readBase != 'N') && (refBase != 'N')) {
 							diffs++;
 						}
@@ -143,9 +149,10 @@ public class CompareToReference2 {
 					
 					//TODO: Should this always be included?
 					for (int i=0; i<element.getLength(); i++) {
-						if ((refIdx >= 0) && (refIdx < reference.length()-1)) {
-							char readBase = Character.toUpperCase(read.getReadString().charAt(readIdx));
-							char refBase  = Character.toUpperCase(reference.charAt(refIdx));
+						if ((refIdx >= 0) && (refIdx < reference.length-1)) {
+//							char readBase = Character.toUpperCase(read.getReadString().charAt(readIdx));
+							char readBase = getReadBase(read, readIdx);
+							char refBase  = Character.toUpperCase((char) reference[refIdx]);
 							if ((readBase != refBase) && (readBase != 'N') && (refBase != 'N')) {
 								diffs++;
 							}
@@ -166,8 +173,18 @@ public class CompareToReference2 {
 		return diffs;
 	}
 	
+	private byte[] getBytes(StringBuffer buf) {
+		byte[] bytes = new byte[buf.length()];
+		for (int i=0; i<buf.length(); i++) {
+			bytes[i] = (byte) buf.charAt(i);
+		}
+		return bytes;
+	}
+	
 	private void loadRefMap() throws IOException {
-		this.refMap = new HashMap<String, StringBuffer>();
+		System.out.println("Loading reference map:  " + this.refFileName);
+		long s = System.currentTimeMillis();
+		this.refMap = new HashMap<String, byte[]>();
 		
 		BufferedReader reader = new BufferedReader(new FileReader(refFileName));
 		
@@ -177,8 +194,10 @@ public class CompareToReference2 {
 		while (line != null) {
 			if (line.startsWith(">")) {
 				if (currSeqName != null) {
-					refMap.put(currSeqName, sequence);
+					refMap.put(currSeqName, getBytes(sequence));
 				}
+				
+				sequence = new StringBuffer();
 				
 				currSeqName = line.substring(1, line.length()).trim();
 				int spaceIdx = currSeqName.indexOf(' ');
@@ -189,7 +208,7 @@ public class CompareToReference2 {
 				if (tabIdx > 0) {
 					currSeqName = currSeqName.substring(0, tabIdx);
 				}
-				sequence = new StringBuffer();
+				
 			} else {
 				sequence.append(line);
 			}
@@ -197,9 +216,14 @@ public class CompareToReference2 {
 			line = reader.readLine();
 		}
 		
-		refMap.put(currSeqName, sequence);
+		refMap.put(currSeqName, getBytes(sequence));
+		
+		sequence = null;
 		
 		reader.close();
+		
+		long e = System.currentTimeMillis();
+		System.out.println("Done loading ref map.  Elapsed secs: " + (e-s)/1000);
 	}
 		
 	private String getRefLine() throws IOException {
@@ -214,20 +238,35 @@ public class CompareToReference2 {
 		return line;
 	}
 	
+	/*
+	public static void main(String[] args) {
+		String foo = "ATCGNatcgn";
+		System.out.println(foo);
+		byte[] bytes = foo.getBytes();
+		System.out.println("num bytes: " + bytes.length);
+		for (int i=0; i<bytes.length; i++) {
+			System.out.println("b: " + bytes[i] + "-" + ((char) bytes[i]));
+		}
+		
+	}
+	*/
+	
 	public static void main(String[] args) throws Exception {
 		
 //		String ref = args[0];
 //		String sam = args[1];
 		
 //		String ref = "/home/lmose/reference/chr7/chr7.fa";
-//		String sam = "/home/lmose/dev/ayc/24/26/test2.bam";
+//		String sam = "/home/lmose/dev/ayc/24/26/test";
 		
 		String ref = "/home/lmose/reference/chr1/1.fa";
-		String sam = "/home/lmose/dev/abra_wxs/4/test.bam";
+		String sam = "/home/lmose/dev/abra_wxs/4/ttest1.bam";
 
 		
 		CompareToReference2 c2r = new CompareToReference2();
 		c2r.init(ref);
+		
+//		Thread.sleep(100000);
 		
 		SAMFileReader rdr = new SAMFileReader(new File(sam));
 		

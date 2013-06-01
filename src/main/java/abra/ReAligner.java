@@ -74,6 +74,7 @@ public class ReAligner {
 	private String inputSam2;
 	
 	private int readLength = -1;
+	private int maxMapq = -1;
 	
 	private boolean isPairedEnd = false;
 	
@@ -384,7 +385,7 @@ public class ReAligner {
 		
 		if (read.getMappingQuality() > 0) {
 			int contigQuality = (Integer) read.getAttribute("YQ");
-			int quality = Math.min(contigQuality, 50);
+			int quality = Math.min(contigQuality, this.maxMapq);
 			int mismatchesToContig = (Integer) read.getAttribute("YM");
 			quality -= mismatchesToContig * 5;
 			mapq = Math.max(quality, 1);
@@ -405,6 +406,20 @@ public class ReAligner {
 		return numIndelBases;
 	}
 	
+	public static int getNumIndelBases2(SAMRecord read) {
+		int numIndelBases = 0;
+		
+		for (CigarElement element : read.getCigar().getCigarElements()) {
+			if (element.getOperator() == CigarOperator.D) {
+				numIndelBases += 1;
+			} else if (element.getOperator() == CigarOperator.I) {
+				numIndelBases += element.getLength();
+			}
+		}
+		
+		return numIndelBases;
+	}
+
 	private void adjustReads(String sortedAlignedToContig1, SAMFileWriter outputSam1, 
 			String sortedAlignedToContig2, SAMFileWriter outputSam2, boolean isTightAlignment,
 			CompareToReference2 c2r, String tempDir1, String tempDir2) throws InterruptedException, IOException {
@@ -824,6 +839,7 @@ public class ReAligner {
 			while ((iter.hasNext()) && (cnt < 1000000)) {
 				SAMRecord read = iter.next();
 				this.readLength = Math.max(this.readLength, read.getReadLength());
+				this.maxMapq = Math.max(this.maxMapq, read.getMappingQuality());
 			}
 		} finally {
 			reader.close();
@@ -1071,6 +1087,7 @@ public class ReAligner {
 		if (read.getReadUnmappedFlag()) {
 			distance = read.getReadLength();
 		} else if (c2r != null) {
+			//distance = c2r.numMismatches(read) + getNumIndelBases(read);
 			distance = c2r.numMismatches(read) + getNumIndelBases(read);
 		} else {
 			distance = read.getIntegerAttribute("NM");
@@ -1234,9 +1251,9 @@ public class ReAligner {
 						
 						if (updatedRead != null) {
 							//TODO: Move into updateReadAlignment ?
-							if (updatedRead.getMappingQuality() == 0) {
-								updatedRead.setMappingQuality(1);
-							}
+//							if (updatedRead.getMappingQuality() == 0) {
+//								updatedRead.setMappingQuality(1);
+//							}
 							
 							if (updatedRead.getReadUnmappedFlag()) {
 								updatedRead.setReadUnmappedFlag(false);
@@ -1675,7 +1692,7 @@ public class ReAligner {
 		outputReadsBam.close();
 	}
 */
-
+/*
 	public static void main(String[] args) throws Exception {
 		System.out.println("Adjusting 2...");
 		ReAligner ra = new ReAligner();
@@ -1712,8 +1729,8 @@ public class ReAligner {
 		
 		System.out.println("Done");
 	}
+	*/
 	
-	/*
 	public static void main(String[] args) throws Exception {
 		System.out.println("0.2");
 		ReAligner realigner = new ReAligner();
@@ -1725,7 +1742,8 @@ public class ReAligner {
 		String output = "/home/lmose/dev/abra_wxs/4/normal.abra.bam";
 		String output2 = "/home/lmose/dev/abra_wxs/4/tumor.abra.bam";
 		String reference = "/home/lmose/reference/chr1/1.fa";
-		String regions = "/home/lmose/dev/abra_wxs/4/4.gtf";
+//		String regions = "/home/lmose/dev/abra_wxs/4/4.gtf";
+		String regions = "/home/lmose/dev/ayc/v7/head7.txt";
 		String tempDir = "/home/lmose/dev/abra_wxs/4/working";
 
 		AssemblerSettings settings = new AssemblerSettings();
@@ -1750,6 +1768,5 @@ public class ReAligner {
 
 		System.out.println("Elapsed seconds: " + (e - s) / 1000);
 	}
-	*/
 }
 

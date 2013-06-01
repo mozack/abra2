@@ -54,13 +54,21 @@ public class Sam2Fastq {
     		if (!read.getReadName().equals(last1Read)) {
     			
     			// These tags can be lengthy, so remove them.
+    			String oldQualities = (String) read.getAttribute("OQ");
+    			
+    			if (oldQualities != null) {
+    				read.setBaseQualityString(oldQualities);
+    			}
+    			
     			read.setAttribute("XA", null);
     			read.setAttribute("OQ", null);
     			read.setAttribute("MD", null);
     			
     			int yx = 0;
     			
-    			if (!read.getReadFailsVendorQualityCheckFlag()) {
+    			boolean isAmbiguous = !read.getReadUnmappedFlag() && read.getMappingQuality() == 0; 
+    			
+    			if ((!read.getReadFailsVendorQualityCheckFlag()) && (!isAmbiguous)) {
 	    			// Calculate the number of mismatches to reference for this read.
 	    			if (c2r != null) {
 	    				yx = ReAligner.getEditDistance(read, c2r);

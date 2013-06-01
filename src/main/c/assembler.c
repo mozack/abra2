@@ -85,7 +85,7 @@ struct read_pool {
 struct node {
 
 	//TODO: Collapse from 8 to 2 bits.  Only store as key.
-	char* seq;
+	char* kmer;
 	//TODO: Convert to stl?
 	struct linked_node* toNodes;
 	struct linked_node* fromNodes;
@@ -101,6 +101,10 @@ struct linked_node {
 
 int compare(const char* s1, const char* s2) {
 	return (s1 == s2) || (s1 && s2 && strcmp(s1, s2) == 0);
+}
+
+int compare_kmer(const char* s1, const char* s2) {
+	return (s1 == s2) || (s1 && s2 && strncmp(s1, s2, kmer_size) == 0);
 }
 
 struct struct_pool* init_pool() {
@@ -157,7 +161,7 @@ struct node* new_node(char* seq, char* contributingRead, struct_pool* pool) {
 //	node* my_node = (node*) malloc(sizeof(node));
 	node* my_node = allocate_node(pool);
 	memset(my_node, 0, sizeof(node));
-	my_node->seq = seq;
+	my_node->kmer = seq;
 //	strcpy(my_node->contributingRead, contributingRead);
 	my_node->contributingRead = contributingRead;
 	my_node->frequency = 1;
@@ -173,7 +177,7 @@ int is_node_in_list(struct node* node, struct linked_node* list) {
 	struct linked_node* ptr = list;
 
 	while (ptr != NULL) {
-		if (compare(ptr->node->seq, node->seq)) {
+		if (compare_kmer(ptr->node->kmer, node->kmer)) {
 			return 1;
 		}
 		ptr = ptr->next;
@@ -301,7 +305,7 @@ struct linked_node* remove_node_from_list(struct node* node, struct linked_node*
 
 	char is_found = false;
 	while ((node_ptr != NULL) && (!is_found)) {
-		if (strcmp(node_ptr->node->seq, node->seq) == 0) {
+		if (strncmp(node_ptr->node->kmer, node->kmer, kmer_size) == 0) {
 			if (prev_ptr == NULL) {
 				// Set head of list to next elem
 				list = list->next;
@@ -428,7 +432,7 @@ void free_contig(struct contig* contig) {
 }
 
 char is_node_visited(struct contig* contig, struct node* node) {
-	 sparse_hash_set<const char*, my_hash, eqstr>::const_iterator it = contig->visited_nodes->find(node->seq);
+	 sparse_hash_set<const char*, my_hash, eqstr>::const_iterator it = contig->visited_nodes->find(node->kmer);
 	 return it != contig->visited_nodes->end();
 }
 
@@ -484,7 +488,7 @@ int build_contigs(
 		else if (contig->curr_node->toNodes == NULL) {
 			// We've reached the end of the contig.
 			// Append entire current node.
-			memcpy(&(contig->seq[contig->size]), contig->curr_node->seq, kmer_size);
+			memcpy(&(contig->seq[contig->size]), contig->curr_node->kmer, kmer_size);
 
 			// Now, write the contig
 			if (!shadow_mode) {
@@ -495,13 +499,16 @@ int build_contigs(
 		}
 		else {
 			// Append first base from current node
-			contig->seq[contig->size++] = contig->curr_node->seq[0];
+			contig->seq[contig->size++] = contig->curr_node->kmer[0];
 			if (contig->size >= MAX_CONTIG_SIZE) {
-				printf("Max contig size exceeded at node: %s\n", contig->curr_node->seq);
+				char kmer[1024];
+				memset(kmer, 0, 1024);
+				strncpy(kmer, contig->curr_node->kmer, kmer_size);
+				printf("Max contig size exceeded at node: %s\n", kmer);
 				exit(-1);
 			}
 
-			contig->visited_nodes->insert(contig->curr_node->seq);
+			contig->visited_nodes->insert(contig->curr_node->kmer);
 
 			// Move current contig to next "to" node.
 			struct linked_node* to_linked_node = contig->curr_node->toNodes;
@@ -655,7 +662,10 @@ int assemble(const char* input,
 				contig_count = 0;
 				break;
 			case TOO_MANY_PATHS_FROM_ROOT:
-				printf("TOO_MANY_PATHS_FROM_ROOT: %s - %s\n", prefix, root_nodes->node->seq);
+				char kmer[1024];
+				memset(kmer, 0, 1024);
+				strncpy(kmer, root_nodes->node->kmer, kmer_size);
+				printf("TOO_MANY_PATHS_FROM_ROOT: %s - %s\n", prefix, kmer);
 				break;
 		}
 

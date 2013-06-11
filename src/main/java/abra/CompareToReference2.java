@@ -75,6 +75,49 @@ public class CompareToReference2 {
 	}
 	
 	public List<Integer> mismatchPositions(SAMRecord read) {
+		return mismatchPositions(read, -1);
+	}
+	
+	public String getAlternateReference(SAMRecord read, Cigar cigar) {
+		String alt = null;
+		
+		byte[] reference = refMap.get(read.getReferenceName().trim());
+		
+		if (read.getAlignmentEnd() < reference.length) {
+			
+			StringBuffer altBuf = new StringBuffer(read.getReadLength());
+		
+			int readIdx = 0;
+			int refIdx = read.getAlignmentStart()-1;
+			for (CigarElement element : cigar.getCigarElements()) {
+				if (element.getOperator() == CigarOperator.M) {
+					
+					for (int i=0; i<element.getLength(); i++) {
+	//					char readBase = getReadBase(read, readIdx);
+						char refBase  = Character.toUpperCase((char) reference[refIdx]);
+						
+						altBuf.append(refBase);
+											
+						readIdx++;
+						refIdx++;
+					}
+				} else if (element.getOperator() == CigarOperator.I) {
+					altBuf.append(read.getReadString().substring(readIdx, readIdx + element.getLength()));
+					readIdx += element.getLength();
+				} else if (element.getOperator() == CigarOperator.D) {
+					refIdx += element.getLength();
+				} else if (element.getOperator() == CigarOperator.S) {
+					readIdx += element.getLength();
+				}
+			}
+			
+			alt = altBuf.toString();
+		}
+		
+		return alt;
+	}
+	
+	public List<Integer> mismatchPositions(SAMRecord read, int maxMismatches) {
 		if (read.getReadUnmappedFlag()) {
 			return Collections.emptyList();
 		}
@@ -105,6 +148,10 @@ public class CompareToReference2 {
 				refIdx += element.getLength();
 			} else if (element.getOperator() == CigarOperator.S) {
 				readIdx += element.getLength();
+			}
+			
+			if ((maxMismatches > 0) && (mismatches.size() > maxMismatches)) {
+				break;
 			}
 		}
 
@@ -168,7 +215,6 @@ public class CompareToReference2 {
 				elementIdx++;
 			}
 		}
-
 		
 		return diffs;
 	}
@@ -210,6 +256,7 @@ public class CompareToReference2 {
 				}
 				
 			} else {
+				line.toUpperCase();
 				sequence.append(line);
 			}
 			

@@ -85,6 +85,8 @@ public class ReAligner {
 	
 	private BufferedWriter contigWriter;
 	
+	private CompareToReference2 c2r;
+	
 	public void reAlign(String inputSam, String inputSam2, String outputSam, String outputSam2) throws Exception {
 
 		System.out.println("input: " + inputSam);
@@ -204,7 +206,7 @@ public class ReAligner {
 			mkdir(tempDir1);
 			mkdir(tempDir2);
 			
-			CompareToReference2 c2r = new CompareToReference2();
+			c2r = new CompareToReference2();
 			c2r.init(this.reference);
 			
 			SAMFileWriterFactory writerFactory = new SAMFileWriterFactory();
@@ -1625,6 +1627,10 @@ public class ReAligner {
 	
 	public void setMaxUnalignedReads(int maxUnalignedReads) {
 		this.maxUnalignedReads = maxUnalignedReads;
+	}
+	
+	public CompareToReference2 getC2r() {
+		return this.c2r;
 	}
 
 	public static void run(String[] args) throws Exception {

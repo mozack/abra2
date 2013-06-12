@@ -75,6 +75,8 @@ public class ReAligner {
 	
 	private int readLength = -1;
 	private int maxMapq = -1;
+	private int minInsertLength = Integer.MAX_VALUE;
+	private int maxInsertLength = -1;
 	
 	private boolean isPairedEnd = false;
 	
@@ -842,6 +844,12 @@ public class ReAligner {
 				SAMRecord read = iter.next();
 				this.readLength = Math.max(this.readLength, read.getReadLength());
 				this.maxMapq = Math.max(this.maxMapq, read.getMappingQuality());
+				
+				// Assumes aligner sets proper pair flag correctly
+				if ((isPairedEnd) && (read.getProperPairFlag())) {
+					this.minInsertLength = Math.min(this.minInsertLength, Math.abs(read.getInferredInsertSize()));
+					this.maxInsertLength = Math.max(this.maxInsertLength, Math.abs(read.getInferredInsertSize()));
+				}
 			}
 		} finally {
 			reader.close();
@@ -1631,6 +1639,14 @@ public class ReAligner {
 	
 	public CompareToReference2 getC2r() {
 		return this.c2r;
+	}
+	
+	public int getMaxInsertLength() {
+		return this.maxInsertLength;
+	}
+	
+	public int getMinInsertLength() {
+		return this.minInsertLength;
 	}
 
 	public static void run(String[] args) throws Exception {

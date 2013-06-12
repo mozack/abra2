@@ -19,6 +19,9 @@ public class BetaPairValidatingRealignmentWriter implements RealignmentWriter {
 	
 	private static final int INSERT_THRESHOLD = 5000;
 	
+	private int maxInsertLength;
+	private int minInsertLength;
+	
 	private String candidatesSam;
 	private SAMFileWriter candidatesSamWriter;
 	private SamStringReader samStringReader;
@@ -36,6 +39,9 @@ public class BetaPairValidatingRealignmentWriter implements RealignmentWriter {
 		
 		candidatesSamWriter = new SAMFileWriterFactory().makeSAMOrBAMWriter(
 				header, false, new File(candidatesSam));
+		
+		this.minInsertLength = realigner.getMinInsertLength();
+		this.maxInsertLength = realigner.getMaxInsertLength();
 	}
 	
 	long count = 1;
@@ -47,27 +53,45 @@ public class BetaPairValidatingRealignmentWriter implements RealignmentWriter {
 	int r5 = 0;
 	int numCandidates = 0;
 
+	private boolean isValidInsertLength(int insertLen) {
+		return Math.abs(insertLen) >= minInsertLength && insertLen <= maxInsertLength;
+	}
+	
+	private boolean isValidOrientation(SAMRecord read1, SAMRecord read2) {
+		SAMRecord first;
+		SAMRecord second;
+		
+		if (read1.getAlignmentStart() < read2.getAlignmentStart()) {
+			first = read1;
+			second = read2;
+		} else {
+			first = read2;
+			second = read1;
+		}
+		
+		return !first.getReadNegativeStrandFlag() && second.getReadNegativeStrandFlag();
+	}
 	
 	public void addAlignment(SAMRecord updatedRead, SAMRecord origRead) {
 		
 		
 		if (updatedRead == null) {
+			// Just output the original read
 			r1++;
 			output(new Reads(updatedRead, origRead));
 		} else if (updatedRead.getAttribute("YO") == null) {
+			// Updated read has not moved, just output it
 			r5++;
 			output(new Reads(updatedRead, origRead));
-		} else if ((Math.abs(origRead.getInferredInsertSize()) > INSERT_THRESHOLD) || (origRead.getInferredInsertSize() == 0)) {
+		} else if (!origRead.getProperPairFlag()) {
+			// Original read not part of "proper pair", output updated read
 			r2++;
 			output(new Reads(updatedRead, origRead));
-		} else if (origRead.getReadPairedFlag()) {
+		} else {
+			// Output candidate to temp bam for comparison with mate
 			r3++;
 			writeToTempFile(candidatesSamWriter, updatedRead, origRead);
 			numCandidates += 1;
-		} else {
-			r4++;
-			// Unpaired read.  Just output it.
-			output(new Reads(updatedRead, origRead));
 		}
 		
 		if ((count++ % 100000) == 0) {
@@ -82,7 +106,7 @@ public class BetaPairValidatingRealignmentWriter implements RealignmentWriter {
 	}
 	
 	private void outputPair(Reads first, Reads second) {
-		checkInsertLength(first, second);
+		checkPairValidity(first, second);
 		output(first);
 		output(second);
 	}
@@ -100,39 +124,39 @@ public class BetaPairValidatingRealignmentWriter implements RealignmentWriter {
 				read2.getAlignmentStart(), read2.getAlignmentEnd());
 	}
 	
-	private void checkInsertLength(Reads first, Reads second) {
+	private boolean isPairValid(SAMRecord read1, SAMRecord read2) {
+		boolean isValid = false;
+		
+		if ((read1 != null) && (read2 != null)) {
+			if (isSameChromosome(read1, read2)) {
+				int len = getInsertLength(read1, read2);
+				
+				isValid = (isValidInsertLength(len)) && (isValidOrientation(read1, read2));
+			}
+		}
+		
+		return isValid;
+	}
+	
+	private void checkPairValidity(Reads first, Reads second) {
 		
 		boolean isDone = false;
 		
-		if ((first.getUpdatedRead() != null) && (second.getUpdatedRead() != null)) {
-			if (isSameChromosome(first.getUpdatedRead(), second.getUpdatedRead())) {
-				int len = getInsertLength(first.getUpdatedRead(), second.getUpdatedRead());
+		if (isPairValid(first.getUpdatedRead(), second.getUpdatedRead())) {
+			isDone = true;
+		}
 				
-				if (len < 2 * INSERT_THRESHOLD) {
-					isDone = true;
-				}
-			}
+		if (!isDone) {
+			if (isPairValid(first.getUpdatedRead(), second.getOrigRead())) {
+				second.clearUpdatedRead();
+				isDone = true;				
+			}			
 		}
 		
 		if (!isDone) {
-			if (first.getUpdatedRead() != null) {
-				// Compare first updated read to second orig read
-				int len = getInsertLength(first.getUpdatedRead(), second.getOrigRead());
-				if (len < 2 * INSERT_THRESHOLD) {
-					second.clearUpdatedRead();
-					isDone = true;
-				}
-			}
-		}
-		
-		if (!isDone) {
-			if (second.getUpdatedRead() != null) {
-				// Compare second updated read to first orig read
-				int len = getInsertLength(first.getOrigRead(), second.getUpdatedRead());
-				if (len < 2 * INSERT_THRESHOLD) {
-					first.clearUpdatedRead();
-					isDone = true;
-				}
+			if (isPairValid(first.getOrigRead(), second.getUpdatedRead())) {
+				first.clearUpdatedRead();
+				isDone = true;
 			}
 		}
 		

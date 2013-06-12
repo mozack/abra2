@@ -79,7 +79,7 @@ public class NativeAssembler implements Assembler {
 					}
 					
 					// Don't allow same read to be counted twice.
-					if ((!read.getReadFailsVendorQualityCheckFlag()) && ((!checkForDupes) || (!readIds.contains(getIdentifier(read))))) {
+					if ( (!read.getDuplicateReadFlag()) && (!read.getReadFailsVendorQualityCheckFlag()) && ((!checkForDupes) || (!readIds.contains(getIdentifier(read))))) {
 	//					boolean hasAmbiguousBases = read.getReadString().contains("N");
 						Integer numBestHits = (Integer) read.getIntegerAttribute("X0");
 						boolean hasAmbiguousInitialAlignment = numBestHits != null && numBestHits > 1;

@@ -13,6 +13,7 @@ public class BetaPairValidatingRealignmentWriter implements RealignmentWriter {
 
 	private SAMFileWriter writer;
 	private ReAligner realigner;
+	private IndelShifter indelShifter = new IndelShifter();
 	
 	private int realignCount = 0;
 	
@@ -153,13 +154,17 @@ public class BetaPairValidatingRealignmentWriter implements RealignmentWriter {
 			if (reads.getUpdatedRead().getAttribute("YO") != null) {
 				realignCount += 1;
 			}
-			writer.addAlignment(reads.getUpdatedRead());
+			addAlignment(reads.getUpdatedRead());
 			updatedCount += 1;
 		} else {
 			SAMRecord orig = reads.getOrigRead();
-			writer.addAlignment(orig);
+			addAlignment(orig);
 			origCount += 1;
 		}
+	}
+	
+	private void addAlignment(SAMRecord read) {
+		writer.addAlignment(indelShifter.shiftIndelsLeft(read, realigner.getC2r()));
 	}
 	
 	private void processCandidates() {

@@ -1122,6 +1122,11 @@ public class ReAligner {
 		return writer;
 	}
 	
+	private boolean isFiltered(SAMRecord read) {
+		// Filter out single end reads when in paired end mode.
+		return ((isPairedEnd) && (!read.getReadPairedFlag()));
+	}
+	
 	protected void adjustReads(String alignedToContigSam, SAMFileWriter outputSam, boolean isTightAlignment,
 			CompareToReference2 c2r, String tempDir) throws IOException {
 		
@@ -1169,7 +1174,8 @@ public class ReAligner {
 			if ((read.getCigarString().equals(matchingString)) &&
 				(read.getReadUnmappedFlag() == false)  &&
 				(!orig.getCigarString().contains("N")) &&  // Don't remap introns
-				(getEditDistance(read, null) < getOrigEditDistance(orig))) {
+				(getEditDistance(read, null) < getOrigEditDistance(orig)) &&
+				(!isFiltered(orig))) {
 				
 				SAMRecord origRead = orig;
 				String contigReadStr = read.getReferenceName();

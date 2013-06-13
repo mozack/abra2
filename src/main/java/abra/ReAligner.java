@@ -913,6 +913,8 @@ public class ReAligner {
 		SAMFileReader contigReader = new SAMFileReader(new File(contigsSam));
 		contigReader.setValidationStringency(ValidationStringency.SILENT);
 		
+		int contigCount = 0;
+		
 		for (SAMRecord contigRead : contigReader) {
 			//TODO: Does this guarantee no alternate alignments?
 			if (contigRead.getMappingQuality() >= 1) {
@@ -975,7 +977,7 @@ public class ReAligner {
 					String contigReadStr = contigRead.getSAMString();
 					contigReadStr = contigReadStr.replace('\t','~');
 					
-					String contigName = contigRead.getReadName() + "~" + contigReadStr; 
+					String contigName = contigRead.getReadName() + "_" + contigCount++ + "~" + contigReadStr; 
 					
 					writer.append(">" + contigName);
 					writer.append(bases);

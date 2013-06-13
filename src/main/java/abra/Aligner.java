@@ -18,7 +18,9 @@ public class Aligner {
 	}
 	
 	public void align(String input, String outputSam) throws IOException, InterruptedException {
-		String cmd = "bwa bwasw -t " + numThreads + " -f " + outputSam + " " + reference + " " + input;
+//		String cmd = "bwa bwasw -t " + numThreads + " -f " + outputSam + " " + reference + " " + input;
+		
+		String cmd = "bwa mem -t " + numThreads + " " + reference + " " + input + " > " + outputSam;
 		
 		runCommand(cmd);
 	}
@@ -158,5 +160,11 @@ public class Aligner {
             System.out.println("Stream thread done.");
 		}
 		
+	}
+	
+	public static void main(String[] args) throws Exception {
+		Aligner a = new Aligner("/datastore/nextgenout2/share/labs/UNCseq/lmose2/mapzilla/bwamem/ref/hg19.fa", 8);
+		
+		a.align(args[0], args[1]);
 	}
 }

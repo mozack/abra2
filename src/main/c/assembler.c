@@ -18,7 +18,7 @@ using google::sparse_hash_set;
 //#define MIN_CONTIG_LENGTH 101
 //#define MIN_NODE_FREQUENCY 3
 #define MIN_NODE_FREQUENCY 2
-#define MAX_CONTIG_SIZE 10000
+#define MAX_CONTIG_SIZE 50000
 #define MAX_READ_LENGTH 1001
 #define MIN_BASE_QUALITY 20
 

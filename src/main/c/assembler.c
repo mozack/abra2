@@ -712,7 +712,7 @@ extern "C"
 	int read_length = j_read_length;
 	int kmer_size = j_kmer_size;
 
-	printf("Abra JNI entry point v0.33\n");
+	printf("Abra JNI entry point v0.40\n");
 
 	printf("input: %s\n", input);
 	printf("output: %s\n", output);

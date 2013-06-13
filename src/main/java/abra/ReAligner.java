@@ -1523,24 +1523,35 @@ public class ReAligner {
 		}
 	}
 	
-	/**
-	 *  If any of the input list of features is greater than maxSize, split them into multiple features. 
-	 */
-	public static List<Feature> splitRegions(List<Feature> regions) {
+	static List<Feature> splitRegions(List<Feature> regions, 
+			int maxRegionLength, int minRegionRemainder, int regionOverlap) {
+		
 		List<Feature> splitRegions = new ArrayList<Feature>();
 		
 		for (Feature region : regions) {
-			if (region.getLength() <= MAX_REGION_LENGTH + MIN_REGION_REMAINDER) {
+			if (region.getLength() <= maxRegionLength + minRegionRemainder) {
 				splitRegions.add(region);
 			} else {
-				splitRegions.addAll(splitWithOverlap(region));
+				splitRegions.addAll(splitWithOverlap(region, maxRegionLength, minRegionRemainder, regionOverlap));
 			}
 		}
 		
 		return splitRegions;
 	}
 	
+	/**
+	 *  If any of the input list of features is greater than maxSize, split them into multiple features. 
+	 */
+	public static List<Feature> splitRegions(List<Feature> regions) {
+		return splitRegions(regions, MAX_REGION_LENGTH, MIN_REGION_REMAINDER, REGION_OVERLAP);
+	}
+	
 	public static List<Feature> splitWithOverlap(Feature region) {
+		return splitWithOverlap(region, MAX_REGION_LENGTH, MIN_REGION_REMAINDER, REGION_OVERLAP);
+	}
+	
+	static List<Feature> splitWithOverlap(Feature region, int maxRegionLength,
+			int minRegionRemainder, int regionOverlap) {
 		List<Feature> regions = new ArrayList<Feature>();
 		
 		long pos = region.getStart();
@@ -1548,15 +1559,15 @@ public class ReAligner {
 		
 		while (end < region.getEnd()) {
 			long start = pos;
-			end = pos + MAX_REGION_LENGTH;
+			end = pos + maxRegionLength;
 			long marker = end;
 			
 			if (end < region.getEnd()) {
-				end += REGION_OVERLAP;
+				end += regionOverlap;
 			}
 			
 			// If we're at or near the end of the region, stop at region end.
-			if (end > (region.getEnd() - MIN_REGION_REMAINDER)) {
+			if (end > (region.getEnd() - minRegionRemainder)) {
 				end = region.getEnd();
 			}
 			

@@ -39,7 +39,7 @@ public class RealignerTest {
 		input.add(new Feature("chr22", 21303999, 21308037));
 		
 		ReAligner realigner = new ReAligner();
-		List<Feature> features = realigner.splitRegions(input);
+		List<Feature> features = realigner.splitRegions(input, 2000, 500, 200);
 		
 		assertEquals(features.size(), 9);
 		// first

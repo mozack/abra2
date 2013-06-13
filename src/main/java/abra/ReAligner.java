@@ -202,6 +202,7 @@ public class ReAligner {
 //		clock.stopAndPrint();
 		
 		String cleanContigsFasta = alignAndCleanContigs(contigFasta, tempDir, true);
+				
 		if (cleanContigsFasta != null) {
 			String tempDir1 = tempDir + "/temp1";
 			String tempDir2 = tempDir + "/temp2";
@@ -279,9 +280,33 @@ public class ReAligner {
 				clock.stopAndPrint();
 			}
 			*/
+		} else {
+			log("WARNING!  No contigs assembled.  Just making a copy of input converting to/from SAM/BAM as appropriate.");
+			copySam(inputSam, outputSam);
+			if (inputSam2 != null) {
+				copySam(inputSam2, outputSam2);
+			}
 		}
 		
 		System.out.println("Done.");
+	}
+	
+	private void copySam(String input, String output) {
+		
+		SAMFileWriterFactory writerFactory = new SAMFileWriterFactory();
+		
+		SAMFileReader reader = new SAMFileReader(new File(input));
+		reader.setValidationStringency(ValidationStringency.SILENT);
+		
+		SAMFileWriter writer = writerFactory.makeSAMOrBAMWriter(
+				samHeader, false, new File(output));
+		
+		for (SAMRecord read : reader) {
+			writer.addAlignment(read);
+		}
+		
+		reader.close();
+		writer.close();
 	}
 	
 	private String[] alignReads(String tempDir1, String inputSam, 

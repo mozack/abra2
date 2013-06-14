@@ -872,7 +872,7 @@ public class ReAligner {
 				this.maxMapq = Math.max(this.maxMapq, read.getMappingQuality());
 				
 				// Assumes aligner sets proper pair flag correctly
-				if ((isPairedEnd) && (read.getProperPairFlag())) {
+				if ((isPairedEnd) && (read.getReadPairedFlag()) && (read.getProperPairFlag())) {
 					this.minInsertLength = Math.min(this.minInsertLength, Math.abs(read.getInferredInsertSize()));
 					this.maxInsertLength = Math.max(this.maxInsertLength, Math.abs(read.getInferredInsertSize()));
 				}
@@ -1155,6 +1155,12 @@ public class ReAligner {
 		return ((isPairedEnd) && (!read.getReadPairedFlag()));
 	}
 	
+	private void spikeLog(String msg, SAMRecord read) {
+		if (read.getReadName().contains("spike")) {
+			System.out.println(msg);
+		}
+	}
+	
 	protected void adjustReads(String alignedToContigSam, SAMFileWriter outputSam, boolean isTightAlignment,
 			CompareToReference2 c2r, String tempDir) throws IOException {
 		
@@ -1234,7 +1240,10 @@ public class ReAligner {
 				
 				//TODO: If too many best hits, what to do?
 				
+				spikeLog("total hits: " + totalHits, origRead);
+				
 				if ((totalHits > 1) && (totalHits < 1000)) {
+					
 //					if (totalHits < -1000) {
 					// Look in XA tag.
 					String alternateHitsStr = (String) read.getAttribute("XA");
@@ -1804,20 +1813,20 @@ public class ReAligner {
 
 		long s = System.currentTimeMillis();
 
-		String input = "/home/lmose/dev/abra_wxs/4/ntest1.bam";
-		String input2 = "/home/lmose/dev/abra_wxs/4/ttest1.bam";
-		String output = "/home/lmose/dev/abra_wxs/4/normal.abra.bam";
-		String output2 = "/home/lmose/dev/abra_wxs/4/tumor.abra.bam";
-		String reference = "/home/lmose/reference/chr1/1.fa";
+		String input = "/home/lmose/dev/ayc/sim/s204/chr2.bam";
+		String input2 = "/home/lmose/dev/ayc/sim/s204/chr1.bam";
+		String output = "/home/lmose/dev/ayc/sim/s204/normal.abra.bam";
+		String output2 = "/home/lmose/dev/ayc/sim/s204/tumor.abra.bam";
+		String reference = "/home/lmose/reference/chr1b/chr1.fa";
 //		String regions = "/home/lmose/dev/abra_wxs/4/4.gtf";
-		String regions = "/home/lmose/dev/ayc/v7/head7.txt";
-		String tempDir = "/home/lmose/dev/abra_wxs/4/working";
+		String regions = "/home/lmose/dev/ayc/sim/s204/204.gtf";
+		String tempDir = "/home/lmose/dev/ayc/sim/s204/working";
 
 		AssemblerSettings settings = new AssemblerSettings();
 		settings.setKmerSize(63);
 		settings.setMinContigLength(100);
 		settings.setMinEdgeFrequency(2);
-		settings.setMinNodeFrequncy(3);
+		settings.setMinNodeFrequncy(2);
 		settings.setMaxPotentialContigs(30000);
 		settings.setMinContigRatio(-1.0);
 

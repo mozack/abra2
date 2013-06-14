@@ -83,7 +83,7 @@ public class BetaPairValidatingRealignmentWriter implements RealignmentWriter {
 			// Updated read has not moved, just output it
 			r5++;
 			output(new Reads(updatedRead, origRead));
-		} else if (!origRead.getProperPairFlag()) {
+		} else if ((!origRead.getReadPairedFlag()) || (!origRead.getProperPairFlag())) {
 			// Original read not part of "proper pair", output updated read
 			r2++;
 			output(new Reads(updatedRead, origRead));

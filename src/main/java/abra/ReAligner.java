@@ -140,7 +140,7 @@ public class ReAligner {
 			Assembler assem = newUnalignedAssembler(1);
 			List<String> unalignedSamList = new ArrayList<String>();
 			unalignedSamList.add(unalignedSam);
-			boolean hasContigs = assem.assembleContigs(unalignedSamList, unalignedContigFasta, tempDir, null, "unaligned", false);
+			boolean hasContigs = assem.assembleContigs(unalignedSamList, unalignedContigFasta, tempDir, null, "unaligned", false, this);
 
 			// Make eligible for GC
 			assem = null;
@@ -790,12 +790,18 @@ public class ReAligner {
 	}
 	
 	private synchronized void appendContigs(BufferedReader reader) throws IOException {
+		long start = System.currentTimeMillis();
+		
 		String line = reader.readLine();
 		while (line != null) {
 			contigWriter.write(line);
 			contigWriter.write('\n');
 			line = reader.readLine();
 		}
+		
+		long end = System.currentTimeMillis();
+		
+		System.out.println("Elapsed msecs in appendConting: " + (end-start));
 	}
 	
 	public void processRegion(Feature region) throws Exception {
@@ -814,7 +820,7 @@ public class ReAligner {
 			
 			// Assemble contigs
 			Assembler assem = newAssembler();
-			boolean hasContigs = assem.assembleContigs(bams, contigsFasta, tempDir, region, region.getDescriptor(), true);
+			boolean hasContigs = assem.assembleContigs(bams, contigsFasta, tempDir, region, region.getDescriptor(), true, this);
 			
 			// Append contigs to the global fasta file
 			if (hasContigs) {
@@ -911,7 +917,7 @@ public class ReAligner {
 	
 	private void sam2Fastq(String bam, String fastq, CompareToReference2 c2r, SAMFileWriter finalOutputSam) throws IOException {
 		Sam2Fastq sam2Fastq = new Sam2Fastq();
-		sam2Fastq.convert(bam, fastq, c2r, samHeader, finalOutputSam);
+		sam2Fastq.convert(bam, fastq, c2r, samHeader, finalOutputSam, this);
 //		if (isPairedEnd) {
 //			sam2Fastq.convertPairedEnd(bam, fastq);
 //		} else {
@@ -1150,7 +1156,7 @@ public class ReAligner {
 		return writer;
 	}
 	
-	private boolean isFiltered(SAMRecord read) {
+	boolean isFiltered(SAMRecord read) {
 		// Filter out single end reads when in paired end mode.
 		return ((isPairedEnd) && (!read.getReadPairedFlag()));
 	}
@@ -1159,6 +1165,31 @@ public class ReAligner {
 		if (read.getReadName().contains("spike")) {
 			System.out.println(msg);
 		}
+	}
+	
+	private int getClippingFactoredQuality(SAMRecord read) {
+		
+		// short circuit if cigar length is 1
+		if (read.getCigarLength() == 1) {
+			return read.getMappingQuality();
+		}
+		
+		int mappedLength = read.getReadLength();
+
+		CigarElement firstElement = read.getCigar().getCigarElement(0);
+		CigarElement lastElement = read.getCigar().getCigarElement(read.getCigarLength()-1);
+		
+		if (firstElement.getOperator() == CigarOperator.S) {
+			mappedLength -= firstElement.getLength();
+		}
+		
+		if (lastElement.getOperator() == CigarOperator.S) {
+			mappedLength -= lastElement.getLength();
+		}
+		
+		int qual = read.getMappingQuality() * mappedLength / read.getReadLength();
+		
+		return qual;
 	}
 	
 	protected void adjustReads(String alignedToContigSam, SAMFileWriter outputSam, boolean isTightAlignment,
@@ -1240,7 +1271,7 @@ public class ReAligner {
 				
 				//TODO: If too many best hits, what to do?
 				
-				spikeLog("total hits: " + totalHits, origRead);
+//				spikeLog("total hits: " + totalHits, origRead);
 				
 				if ((totalHits > 1) && (totalHits < 1000)) {
 					
@@ -1294,7 +1325,10 @@ public class ReAligner {
 					
 					// Only consider this mapping if the assembled contig's quality is
 					// greater than the original read's quality.
-					if (contigRead.getMappingQuality() > orig.getMappingQuality()) {
+//					if (contigRead.getMappingQuality() > orig.getMappingQuality()) {
+						
+					//TODO: Normalize mapping quality
+					if (contigRead.getMappingQuality() > getClippingFactoredQuality(orig)) {
 
 						List<ReadBlock> contigReadBlocks = ReadBlock.getReadBlocks(contigRead);
 						
@@ -1825,13 +1859,22 @@ public class ReAligner {
 
 		
 		// mem test
+//		String input = "/home/lmose/dev/ayc/sim/s204/chr2.bam";
+//		String input2 = "/home/lmose/dev/ayc/sim/s204/tchr1.bam";
+//		String output = "/home/lmose/dev/ayc/sim/s204/normal.abra2.bam";
+//		String output2 = "/home/lmose/dev/ayc/sim/s204/tumor.abra2.bam";
+//		String reference = "/home/lmose/reference/chr1b/chr1.fa";
+//		String regions = "/home/lmose/dev/ayc/regions/clinseq5/uncseq5_chr1.gtf";
+//		String tempDir = "/home/lmose/dev/ayc/sim/s204/working2";
+//
+		
 		String input = "/home/lmose/dev/ayc/sim/s204/chr2.bam";
-		String input2 = "/home/lmose/dev/ayc/sim/s204/tchr1.bam";
-		String output = "/home/lmose/dev/ayc/sim/s204/normal.abra2.bam";
-		String output2 = "/home/lmose/dev/ayc/sim/s204/tumor.abra2.bam";
+		String input2 = "/home/lmose/dev/ayc/sim/s204/t2.bam";
+		String output = "/home/lmose/dev/ayc/sim/s204/normal.abra3.bam";
+		String output2 = "/home/lmose/dev/ayc/sim/s204/tumor.abra3.bam";
 		String reference = "/home/lmose/reference/chr1b/chr1.fa";
-		String regions = "/home/lmose/dev/ayc/regions/clinseq5/uncseq5_chr1.gtf";
-		String tempDir = "/home/lmose/dev/ayc/sim/s204/working2";
+		String regions = "/home/lmose/dev/ayc/sim/s204/204.gtf";
+		String tempDir = "/home/lmose/dev/ayc/sim/s204/working3";
 
 
 
@@ -1858,7 +1901,7 @@ public class ReAligner {
 
 		System.out.println("Elapsed seconds: " + (e - s) / 1000);
 		
-		Thread.sleep(600000);
+//		Thread.sleep(600000);
 	}
 }
 

@@ -32,13 +32,16 @@ public class Sam2Fastq {
 	private boolean isMapspliceFusions = false;
 	private String end1Suffix;
 	private String end2Suffix;
+	private ReAligner realigner;
 	
 	/**
 	 * Convert the input SAM/BAM file into a single fastq file.
 	 * Input SAM files that contain multiple mappings should be sorted by read name.
 	 */
 	public void convert(String inputSam, String outputFastq, CompareToReference2 c2r,
-			SAMFileHeader header, SAMFileWriter writer) throws IOException {
+			SAMFileHeader header, SAMFileWriter writer, ReAligner realigner) throws IOException {
+		
+		this.realigner = realigner;
 		String last1Read = "";
 		
 		System.out.println("sam: " + inputSam);
@@ -51,7 +54,7 @@ public class Sam2Fastq {
         int lineCnt = 0;
         
         for (SAMRecord read : reader) {
-    		if (!read.getReadName().equals(last1Read)) {
+    		if ((!read.getReadName().equals(last1Read) && (!realigner.isFiltered(read)))) {
     			
     			// These tags can be lengthy, so remove them.
     			String oldQualities = (String) read.getAttribute("OQ");
@@ -233,7 +236,7 @@ public class Sam2Fastq {
 		Sam2Fastq s2f = new Sam2Fastq();
 		
 		long s = System.currentTimeMillis();
-		s2f.convert(inputSam, "/home/lmose/dev/ayc/opt/t7.fastq.gz", c2r, header, writer);
+//		s2f.convert(inputSam, "/home/lmose/dev/ayc/opt/t7.fastq.gz", c2r, header, writer);
 		long e = System.currentTimeMillis();
 		
 		System.out.println("Elapsed: " + (e-s)/1000);

@@ -40,7 +40,9 @@ public class NativeAssembler implements Assembler {
 	
 //	public boolean assembleContigs(String input, String output, String prefix, boolean checkForDupes) {
 	
-	public boolean assembleContigs(List<String> inputFiles, String output, String tempDir, Feature region, String prefix, boolean checkForDupes) {
+	public boolean assembleContigs(List<String> inputFiles, String output, String tempDir, Feature region, String prefix, boolean checkForDupes, ReAligner realigner) {
+		
+		long start = System.currentTimeMillis();
 		
 		int count = 0;
 		
@@ -73,13 +75,14 @@ public class NativeAssembler implements Assembler {
 					SAMRecord read = iter.next();
 					
 					if (read.getReadLength() > readLength) {
+						reader.close();
 						throw new IllegalArgumentException(
 								"Read length exceeds expected value of: " + readLength + " for read [" +
 								read.getSAMString() + "]");
 					}
 					
 					// Don't allow same read to be counted twice.
-					if ( (!read.getDuplicateReadFlag()) && (!read.getReadFailsVendorQualityCheckFlag()) && ((!checkForDupes) || (!readIds.contains(getIdentifier(read))))) {
+					if ( (!realigner.isFiltered(read)) && (!read.getDuplicateReadFlag()) && (!read.getReadFailsVendorQualityCheckFlag()) && ((!checkForDupes) || (!readIds.contains(getIdentifier(read))))) {
 	//					boolean hasAmbiguousBases = read.getReadString().contains("N");
 						Integer numBestHits = (Integer) read.getIntegerAttribute("X0");
 						boolean hasAmbiguousInitialAlignment = numBestHits != null && numBestHits > 1;
@@ -133,6 +136,10 @@ public class NativeAssembler implements Assembler {
 			e.printStackTrace();
 			throw new RuntimeException(e);
 		}
+		
+		long end = System.currentTimeMillis();
+		
+		System.out.println("Elapsed msecs in NativeAssembler: " + (end-start));
 		
 		return count != 0;
 	}

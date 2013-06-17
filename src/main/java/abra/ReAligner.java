@@ -1144,7 +1144,7 @@ public class ReAligner {
 		if (isTightAlignment && isPairedEnd) {
 			writer = new BetaPairValidatingRealignmentWriter(this, outputReadsBam, tempDir);
 		} else {
-			writer = new SimpleRealignmentWriter(this, outputReadsBam);
+			writer = new SimpleRealignmentWriter(this, outputReadsBam, isTightAlignment);
 		}
 		
 		return writer;
@@ -1813,14 +1813,27 @@ public class ReAligner {
 
 		long s = System.currentTimeMillis();
 
+		// sim204 test
+//		String input = "/home/lmose/dev/ayc/sim/s204/chr2.bam";
+//		String input2 = "/home/lmose/dev/ayc/sim/s204/chr1.bam";
+//		String output = "/home/lmose/dev/ayc/sim/s204/normal.abra.bam";
+//		String output2 = "/home/lmose/dev/ayc/sim/s204/tumor.abra.bam";
+//		String reference = "/home/lmose/reference/chr1b/chr1.fa";
+////		String regions = "/home/lmose/dev/abra_wxs/4/4.gtf";
+//		String regions = "/home/lmose/dev/ayc/sim/s204/204.gtf";
+//		String tempDir = "/home/lmose/dev/ayc/sim/s204/working";
+
+		
+		// mem test
 		String input = "/home/lmose/dev/ayc/sim/s204/chr2.bam";
-		String input2 = "/home/lmose/dev/ayc/sim/s204/chr1.bam";
-		String output = "/home/lmose/dev/ayc/sim/s204/normal.abra.bam";
-		String output2 = "/home/lmose/dev/ayc/sim/s204/tumor.abra.bam";
+		String input2 = "/home/lmose/dev/ayc/sim/s204/tchr1.bam";
+		String output = "/home/lmose/dev/ayc/sim/s204/normal.abra2.bam";
+		String output2 = "/home/lmose/dev/ayc/sim/s204/tumor.abra2.bam";
 		String reference = "/home/lmose/reference/chr1b/chr1.fa";
-//		String regions = "/home/lmose/dev/abra_wxs/4/4.gtf";
-		String regions = "/home/lmose/dev/ayc/sim/s204/204.gtf";
-		String tempDir = "/home/lmose/dev/ayc/sim/s204/working";
+		String regions = "/home/lmose/dev/ayc/regions/clinseq5/uncseq5_chr1.gtf";
+		String tempDir = "/home/lmose/dev/ayc/sim/s204/working2";
+
+
 
 		AssemblerSettings settings = new AssemblerSettings();
 		settings.setKmerSize(63);
@@ -1836,13 +1849,16 @@ public class ReAligner {
 		realigner.setReference(reference);
 		realigner.setRegionsGtf(regions);
 		realigner.setTempDir(tempDir);
-		realigner.setNumThreads(4);
+//		realigner.setNumThreads(4);
+		realigner.setNumThreads(2);
 
 		realigner.reAlign(input, input2, output, output2);
 
 		long e = System.currentTimeMillis();
 
 		System.out.println("Elapsed seconds: " + (e - s) / 1000);
+		
+		Thread.sleep(600000);
 	}
 }
 

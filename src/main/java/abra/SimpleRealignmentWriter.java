@@ -9,10 +9,12 @@ public class SimpleRealignmentWriter implements RealignmentWriter {
 	private ReAligner realigner;
 	private int realignCount = 0;
 	private IndelShifter indelShifter = new IndelShifter();
+	private boolean isTightAlignment = false;
 	
-	public SimpleRealignmentWriter(ReAligner realigner, SAMFileWriter writer) {
+	public SimpleRealignmentWriter(ReAligner realigner, SAMFileWriter writer, boolean isTightAlignment) {
 		this.writer = writer;
 		this.realigner = realigner;
+		this.isTightAlignment = isTightAlignment;
 	}
 	
 	@Override
@@ -32,7 +34,11 @@ public class SimpleRealignmentWriter implements RealignmentWriter {
 	}
 	
 	private void addAlignment(SAMRecord read) {
-		writer.addAlignment(indelShifter.shiftIndelsLeft(read, realigner.getC2r()));
+		if (isTightAlignment) {
+			writer.addAlignment(indelShifter.shiftIndelsLeft(read, realigner.getC2r()));
+		} else {
+			writer.addAlignment(read);
+		}
 	}
 
 	@Override

@@ -57,19 +57,23 @@ public class BetaPairValidatingRealignmentWriter implements RealignmentWriter {
 		return Math.abs(insertLen) >= minInsertLength && insertLen <= maxInsertLength;
 	}
 	
-	private boolean isValidOrientation(SAMRecord read1, SAMRecord read2) {
-		SAMRecord first;
-		SAMRecord second;
+	private boolean isValidOrientation(SAMRecord read1, int read2Start, boolean isRead2OnReverseStrand) {
+		boolean isFirstReadOnReverseStrand;
+		boolean isSecondReadOnReverseStrand;
 		
-		if (read1.getAlignmentStart() < read2.getAlignmentStart()) {
-			first = read1;
-			second = read2;
+		if (read1.getAlignmentStart() < read2Start) {
+			isFirstReadOnReverseStrand = read1.getReadNegativeStrandFlag();
+			isSecondReadOnReverseStrand = isRead2OnReverseStrand;
 		} else {
-			first = read2;
-			second = read1;
+			isFirstReadOnReverseStrand = isRead2OnReverseStrand;
+			isSecondReadOnReverseStrand = read1.getReadNegativeStrandFlag();
 		}
 		
-		return !first.getReadNegativeStrandFlag() && second.getReadNegativeStrandFlag();
+		return !isFirstReadOnReverseStrand && isSecondReadOnReverseStrand;
+	}
+	
+	private boolean isValidOrientation(SAMRecord read1, SAMRecord read2) {
+		return isValidOrientation(read1, read2.getAlignmentStart(), read2.getMateNegativeStrandFlag());
 	}
 	
 	public void addAlignment(SAMRecord updatedRead, SAMRecord origRead) {
@@ -107,6 +111,22 @@ public class BetaPairValidatingRealignmentWriter implements RealignmentWriter {
 	
 	private void outputPair(Reads first, Reads second) {
 		checkPairValidity(first, second);
+		
+		if ((first.getUpdatedRead() != null) && (second.getUpdatedRead() != null)) {
+			// Both reads are realigned.  insert length and read orientation is proper.
+			first.getUpdatedRead().setProperPairFlag(true);
+			first.getUpdatedRead().setMateUnmappedFlag(false);
+			first.getUpdatedRead().setMateAlignmentStart(second.getUpdatedRead().getAlignmentStart());
+			first.getUpdatedRead().setMateReferenceName(second.getUpdatedRead().getReferenceName());
+			first.getUpdatedRead().setMateNegativeStrandFlag(second.getUpdatedRead().getReadNegativeStrandFlag());
+			
+			second.getUpdatedRead().setProperPairFlag(true);
+			second.getUpdatedRead().setMateUnmappedFlag(false);
+			second.getUpdatedRead().setMateAlignmentStart(first.getUpdatedRead().getAlignmentStart());
+			second.getUpdatedRead().setMateReferenceName(first.getUpdatedRead().getReferenceName());
+			second.getUpdatedRead().setMateNegativeStrandFlag(first.getUpdatedRead().getReadNegativeStrandFlag());
+		}
+		
 		output(first);
 		output(second);
 	}
@@ -133,6 +153,24 @@ public class BetaPairValidatingRealignmentWriter implements RealignmentWriter {
 				
 				isValid = (isValidInsertLength(len)) && (isValidOrientation(read1, read2));
 			}
+		}
+		
+		return isValid;
+	}
+	
+	private boolean isPairValidWithOriginalMate(SAMRecord read) {
+		boolean isValid = false;
+		
+		String mateChr = read.getMateReferenceName();
+		int mateStart = read.getMateAlignmentStart();
+		int mateEnd = mateStart + read.getReadLength();
+		boolean isMateOnReverseStrand = read.getMateNegativeStrandFlag();
+		
+		if (read.getReferenceName().equals(mateChr)) {
+			int len = getInsertLength(read.getAlignmentStart(), read.getAlignmentEnd(),
+					mateStart, mateEnd);
+			
+			isValid = isValidInsertLength(len) && isValidOrientation(read, mateStart, isMateOnReverseStrand);
 		}
 		
 		return isValid;
@@ -240,12 +278,12 @@ public class BetaPairValidatingRealignmentWriter implements RealignmentWriter {
 	}
 	
 	private void checkOrigAndOutput(Reads reads) {
-		if (!reads.getUpdatedRead().getReferenceName().equals(reads.getOrigRead().getReferenceName())) {
-			reads.clearUpdatedRead();
-		} else if (Math.abs(reads.getUpdatedRead().getAlignmentStart() - reads.getOrigRead().getAlignmentStart()) > 2 * INSERT_THRESHOLD) {
+		
+		if (!isPairValidWithOriginalMate(reads.getUpdatedRead())) {
 			reads.clearUpdatedRead();
 		}
-		output(reads);
+		
+		output(reads);		
 	}
 	
 	class Reads {

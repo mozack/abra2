@@ -949,7 +949,8 @@ public class ReAligner {
 		
 		for (SAMRecord contigRead : contigReader) {
 			//TODO: Does this guarantee no alternate alignments?
-			if (contigRead.getMappingQuality() >= 1) {
+//			if (contigRead.getMappingQuality() >= 1) {
+			if (contigRead.getMappingQuality() >= this.minContigMapq) {
 				
 //				if (shouldRemoveSoftClips) {
 					SAMRecordUtils.removeSoftClips(contigRead);
@@ -1328,7 +1329,11 @@ public class ReAligner {
 //					if (contigRead.getMappingQuality() > orig.getMappingQuality()) {
 						
 					//TODO: Normalize mapping quality
-					if (contigRead.getMappingQuality() > getClippingFactoredQuality(orig)) {
+//					if (contigRead.getMappingQuality() > getClippingFactoredQuality(orig)) {
+					
+//					if (contigRead.getMappingQuality() > 30) {
+					
+					if (1 == 1) {
 
 						List<ReadBlock> contigReadBlocks = ReadBlock.getReadBlocks(contigRead);
 						

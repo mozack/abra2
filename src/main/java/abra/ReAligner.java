@@ -496,6 +496,10 @@ public class ReAligner {
 				(contig.getAlignmentStart() >= regionStart) &&
 				(contig.getAlignmentEnd() <= regionStop)) {
 			
+				// Remove XP tags and other attributes, the semi-colons interfere with downstream processing
+				contig.clearAttributes();
+//				contig.setAttribute("XP", null);
+				
 				outputReadsBam.addAlignment(contig);
 			} else {
 				System.out.println("Discarding: " + contig);
@@ -1848,6 +1852,65 @@ public class ReAligner {
 	}
 	*/
 	
+	public void testA2c() throws Exception {
+		SAMFileReader reader = new SAMFileReader(new File("/home/lmose/dev/ayc/40c/align_to_contig.bam"));
+		reader.setValidationStringency(ValidationStringency.SILENT);
+		
+		int count = 0;
+		
+		SamStringReader samStringReader = new SamStringReader(reader.getFileHeader());
+		for (SAMRecord read : reader) {
+			
+			try {
+				int numBestHits = getIntAttribute(read, "X0");
+				int numSubOptimalHits = getIntAttribute(read, "X1");
+				
+				int totalHits = numBestHits + numSubOptimalHits;
+				
+				//TODO: If too many best hits, what to do?
+				
+	//			spikeLog("total hits: " + totalHits, origRead);
+				
+				if ((totalHits > 1) && (totalHits < 1000)) {
+					String alternateHitsStr = (String) read.getAttribute("XA");
+						
+						String[] alternates = alternateHitsStr.split(";");
+						
+						for (int i=0; i<alternates.length-1; i++) {
+							String[] altInfo = alternates[i].split(",");
+							String altContigReadStr = altInfo[0];
+							char strand = altInfo[1].charAt(0);
+							int position = Integer.parseInt(altInfo[1].substring(1));
+							String cigar = altInfo[2];
+							int mismatches = Integer.parseInt(altInfo[3]);
+							
+							altContigReadStr = altContigReadStr.substring(altContigReadStr.indexOf('~')+1);
+							altContigReadStr = altContigReadStr.replace('~', '\t');
+							SAMRecord contigRead = samStringReader.getRead(altContigReadStr);
+						}
+	
+				}
+				
+				System.out.println("count: " + count);
+				if ((count % 100000) == 0) {
+					System.out.println("count: " + count);
+				}
+				count++;
+			} catch (Exception e) {
+				e.printStackTrace();
+				System.out.println(read.getSAMString());
+				throw e;
+			}
+		}
+		
+		reader.close();
+	}
+	
+	public static void main(String[] args) throws Exception {
+		new ReAligner().testA2c();
+	}
+	
+	/*
 	public static void main(String[] args) throws Exception {
 		System.out.println("0.2");
 		ReAligner realigner = new ReAligner();
@@ -1910,5 +1973,6 @@ public class ReAligner {
 		
 //		Thread.sleep(600000);
 	}
+	*/
 }
 

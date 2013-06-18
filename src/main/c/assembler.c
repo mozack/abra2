@@ -17,7 +17,7 @@ using google::sparse_hash_set;
 //#define KMER 63
 //#define MIN_CONTIG_LENGTH 101
 //#define MIN_NODE_FREQUENCY 3
-#define MIN_NODE_FREQUENCY 2
+//#define MIN_NODE_FREQUENCY 2
 #define MAX_CONTIG_SIZE 50000
 #define MAX_READ_LENGTH 1001
 #define MIN_BASE_QUALITY 20
@@ -32,6 +32,7 @@ using google::sparse_hash_set;
 int read_length;
 int min_contig_length;
 int kmer_size;
+int min_node_freq;
 
 struct eqstr
 {
@@ -343,7 +344,7 @@ void prune_graph(sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nod
 		const char* key = it->first;
 		struct node* node = it->second;
 
-		if ((node != NULL) && ((node->frequency < MIN_NODE_FREQUENCY) || (!(node->hasMultipleUniqueReads)))) {
+		if ((node != NULL) && ((node->frequency < min_node_freq) || (!(node->hasMultipleUniqueReads)))) {
 
 			// Remove node from "from" lists
 			struct linked_node* to_node = node->toNodes;
@@ -699,7 +700,7 @@ extern "C"
  JNIEXPORT jint JNICALL Java_abra_NativeAssembler_assemble
    (JNIEnv *env, jobject obj, jstring j_input, jstring j_output, jstring j_prefix,
     jint j_truncate_on_output, jint j_max_contigs, jint j_max_paths_from_root,
-    jint j_read_length, jint j_kmer_size)
+    jint j_read_length, jint j_kmer_size, jint j_min_node_freq)
  {
      //Get the native string from javaString
      //const char *nativeString = env->GetStringUTFChars(javaString, 0);
@@ -711,6 +712,7 @@ extern "C"
 	int max_paths_from_root = j_max_paths_from_root;
 	int read_length = j_read_length;
 	int kmer_size = j_kmer_size;
+	min_node_freq = j_min_node_freq;
 
 	printf("Abra JNI entry point v0.40\n");
 
@@ -722,6 +724,7 @@ extern "C"
 	printf("max_paths_from_root: %d\n", max_paths_from_root);
 	printf("read_length: %d\n", read_length);
 	printf("kmer_size: %d\n", kmer_size);
+	printf("min node freq: %d\n", min_node_freq);
 
 	int ret = assemble(input, output, prefix, truncate_on_output, max_contigs, max_paths_from_root, read_length, kmer_size);
 

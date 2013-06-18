@@ -20,9 +20,10 @@ public class NativeAssembler implements Assembler {
 	private int maxPathsFromRoot;
 	private int readLength;
 	private int kmer;
+	private int minKmerFrequency;
 	private Set<String> readIds;
 
-	private native int assemble(String input, String output, String prefix, int truncateOnRepeat, int maxContigs, int maxPathsFromRoot, int readLength, int kmerSize);
+	private native int assemble(String input, String output, String prefix, int truncateOnRepeat, int maxContigs, int maxPathsFromRoot, int readLength, int kmerSize, int minKmerFreq);
 	
 	static{
         System.loadLibrary("Abra");
@@ -127,7 +128,8 @@ public class NativeAssembler implements Assembler {
 					maxContigs,
 					maxPathsFromRoot,
 					readLength,
-					kmer);
+					kmer,
+					minKmerFrequency);
 			
 			File inputReadFile = new File(readFile);
 			inputReadFile.delete();
@@ -185,6 +187,10 @@ public class NativeAssembler implements Assembler {
 	
 	public void setKmer(int kmer) {
 		this.kmer = kmer;
+	}
+	
+	public void setMinKmerFrequency(int frequency) {
+		this.minKmerFrequency = frequency;
 	}
 	
 //	public static void run(String input, String output) {

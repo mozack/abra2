@@ -1646,6 +1646,7 @@ public class ReAligner {
 		assem.setMaxPathsFromRoot(100000);
 		assem.setReadLength(readLength);
 		assem.setKmer(assemblerSettings.getKmerSize());
+		assem.setMinKmerFrequency(assemblerSettings.getMinNodeFrequncy());
 
 		return assem;
 	}
@@ -1668,6 +1669,7 @@ public class ReAligner {
 		assem.setReadLength(readLength);
 		// Could be smaller for higher sensitivity here?
 		assem.setKmer(assemblerSettings.getKmerSize());
+		assem.setMinKmerFrequency(assemblerSettings.getMinUnalignedNodeFrequency());
 
 		return assem;
 	}

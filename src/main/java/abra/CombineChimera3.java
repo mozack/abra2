@@ -52,6 +52,10 @@ public class CombineChimera3 {
 		List<SAMRecord> reads = null;
 		boolean isCombined = false;
 		
+		for (SAMRecord read : readList) {
+			SAMRecordUtils.removeHardClips(read);
+		}
+		
 		sortReadsByPosition(readList);
 		
 		pruneLikelyInserts(readList);

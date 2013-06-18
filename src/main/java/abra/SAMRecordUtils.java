@@ -10,6 +10,27 @@ import net.sf.samtools.SAMRecord;
 
 public class SAMRecordUtils {
 
+	
+	public static void removeHardClips(SAMRecord read) {
+		Cigar cigar = read.getCigar();
+		
+		CigarElement firstElement = cigar.getCigarElement(0);
+		CigarElement lastElement  = cigar.getCigarElement(cigar.numCigarElements()-1);
+		
+		if ((firstElement.getOperator() == CigarOperator.H) ||
+			(lastElement.getOperator() == CigarOperator.H)) {
+			
+			Cigar newCigar = new Cigar();
+			for (CigarElement element : cigar.getCigarElements()) {
+				if (element.getOperator() != CigarOperator.H) {
+					newCigar.add(element);
+				}
+			}
+			
+			read.setCigar(newCigar);
+		}
+	}
+	
 	/**
 	 * Remove leading or trailing soft clips from the input read.
 	 * Does not modify a read entirely comprised of soft clips.

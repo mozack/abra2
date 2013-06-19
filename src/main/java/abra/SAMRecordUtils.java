@@ -34,10 +34,8 @@ public class SAMRecordUtils {
 						
 						if (isFirst) {
 							read.setReadString(padBases(element.getLength()) + read.getReadString());
-							read.setBaseQualityString(padQualities(element.getLength()) + read.getBaseQualityString());
 						} else {
-							read.setReadString(read.getReadString() + padBases(element.getLength()));
-							read.setBaseQualityString(read.getBaseQualityString() + padQualities(element.getLength()));							
+							read.setReadString(read.getReadString() + padBases(element.getLength()));							
 						}
 					}
 					
@@ -53,14 +51,6 @@ public class SAMRecordUtils {
 		StringBuffer buf = new StringBuffer(length);
 		for (int i=0; i<length; i++) {
 			buf.append('N');
-		}
-		return buf.toString();
-	}
-	
-	private static String padQualities(int length) {
-		StringBuffer buf = new StringBuffer(length);
-		for (int i=0; i<length; i++) {
-			buf.append('#');
 		}
 		return buf.toString();
 	}

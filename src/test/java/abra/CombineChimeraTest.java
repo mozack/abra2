@@ -121,14 +121,21 @@ public class CombineChimeraTest {
 	@Test (groups = "unit")
 	public void testHardClipping() {
 		List<SAMRecord> reads = new ArrayList<SAMRecord>();
-		reads.add(newRecord(6169757, "217M75S", 292));
-		reads.add(newRecord(6170072, "215H77M", 77));
+		SAMRecord read1 = newRecord(6169757, "217M75S", 292);
+		SAMRecord read2 = newRecord(6170072, "215H77M", 77);
+//		reads.add(newRecord(6169757, "217M75S", 292));
+//		reads.add(newRecord(6170072, "215H77M", 77));
+		
+		reads.add(read1);
+		reads.add(read2);
 		
 		List<SAMRecord> outputList = cc.processRead(reads);
 		assertEquals(outputList.size(), 1);
 		SAMRecord combined = outputList.get(0);
 		assertEquals(combined.getAlignmentStart(), 6169757);
 		assertEquals(combined.getCigarString(), "215M100D77M");
+		assertEquals(read1.getReadLength(), 292);
+		assertEquals(read2.getReadLength(), 292);
 	}
 	
 	private SAMRecord newRecord(int pos, String cigar, int length) {

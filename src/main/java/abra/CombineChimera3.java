@@ -53,6 +53,7 @@ public class CombineChimera3 {
 		boolean isCombined = false;
 		
 		for (SAMRecord read : readList) {
+			read.clearAttributes();
 			SAMRecordUtils.removeHardClips(read);
 		}
 		

@@ -496,8 +496,8 @@ public class ReAligner {
 				(contig.getAlignmentStart() >= regionStart) &&
 				(contig.getAlignmentEnd() <= regionStop)) {
 			
-				// Remove XP tags and other attributes, the semi-colons interfere with downstream processing
-				contig.clearAttributes();
+//				// Remove XP tags and other attributes, the semi-colons interfere with downstream processing
+//				contig.clearAttributes();
 //				contig.setAttribute("XP", null);
 				
 				outputReadsBam.addAlignment(contig);

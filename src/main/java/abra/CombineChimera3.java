@@ -54,7 +54,7 @@ public class CombineChimera3 {
 		
 		for (SAMRecord read : readList) {
 			read.clearAttributes();
-			SAMRecordUtils.removeHardClips(read);
+			SAMRecordUtils.replaceHardClips(read);
 		}
 		
 		sortReadsByPosition(readList);
@@ -88,6 +88,22 @@ public class CombineChimera3 {
 		return reads;
 	}
 	
+	private SAMRecord getTopHit(SAMRecord read1, SAMRecord read2) {
+		SAMRecord topHit = null;
+		
+		if (isTopHit(read1)) {
+			topHit = read1;
+		} else if (isTopHit(read2)) {
+			topHit = read2;
+		}
+		
+		return topHit;
+	}
+	
+	private boolean isTopHit(SAMRecord read) {
+		return (read.getFlags() & 0x800)  == 0; 
+	}
+	
 	private SAMRecord combineChimericReads(SAMRecord read1, SAMRecord read2) {
 		SAMRecord left = null;
 		SAMRecord right = null;
@@ -103,8 +119,11 @@ public class CombineChimera3 {
 		Cigar leftCigar = left.getCigar();
 		Cigar rightCigar = right.getCigar();
 		
+		SAMRecord topHit = getTopHit(read1, read2);
+		
 		if ((rightCigar.getCigarElement(0).getOperator() == CigarOperator.S) &&
-			(leftCigar.getCigarElement(left.getCigarLength()-1).getOperator() == CigarOperator.S)) {
+			(leftCigar.getCigarElement(left.getCigarLength()-1).getOperator() == CigarOperator.S) &&
+			(topHit != null)) {
 			
 			List<CigarElement> leftElements = new ArrayList<CigarElement>();
 			List<CigarElement> rightElements = new ArrayList<CigarElement>();
@@ -224,7 +243,7 @@ public class CombineChimera3 {
 			elements.addAll(rightElements);
 			
 			// Create combined read
-			SAMRecord combinedRead = cloneRead(read1);
+			SAMRecord combinedRead = cloneRead(topHit);
 			combinedRead.setAlignmentStart(leftBlocks.get(0).getReferenceStart());
 			combinedRead.setCigar(new Cigar(elements));
 			combinedRead.setMappingQuality((read1.getMappingQuality() + read2.getMappingQuality()) / 2);

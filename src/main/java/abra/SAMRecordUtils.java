@@ -11,7 +11,7 @@ import net.sf.samtools.SAMRecord;
 public class SAMRecordUtils {
 
 	
-	public static void removeHardClips(SAMRecord read) {
+	public static void replaceHardClips(SAMRecord read) {
 		Cigar cigar = read.getCigar();
 		
 		if (cigar.getCigarElements().size() > 0) {
@@ -22,15 +22,47 @@ public class SAMRecordUtils {
 				(lastElement.getOperator() == CigarOperator.H)) {
 				
 				Cigar newCigar = new Cigar();
+				
+				boolean isFirst = true;
+				
 				for (CigarElement element : cigar.getCigarElements()) {
 					if (element.getOperator() != CigarOperator.H) {
 						newCigar.add(element);
+					} else {
+						CigarElement softClip = new CigarElement(element.getLength(), CigarOperator.S);
+						newCigar.add(softClip);
+						
+						if (isFirst) {
+							read.setReadString(padBases(element.getLength()) + read.getReadString());
+							read.setBaseQualityString(padQualities(element.getLength()) + read.getBaseQualityString());
+						} else {
+							read.setReadString(read.getReadString() + padBases(element.getLength()));
+							read.setBaseQualityString(read.getBaseQualityString() + padQualities(element.getLength()));							
+						}
 					}
+					
+					isFirst = false;
 				}
 				
 				read.setCigar(newCigar);
 			}
 		}
+	}
+	
+	private static String padBases(int length) {
+		StringBuffer buf = new StringBuffer(length);
+		for (int i=0; i<length; i++) {
+			buf.append('N');
+		}
+		return buf.toString();
+	}
+	
+	private static String padQualities(int length) {
+		StringBuffer buf = new StringBuffer(length);
+		for (int i=0; i<length; i++) {
+			buf.append('#');
+		}
+		return buf.toString();
 	}
 	
 	/**

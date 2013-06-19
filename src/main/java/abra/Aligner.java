@@ -20,7 +20,7 @@ public class Aligner {
 	public void align(String input, String outputSam) throws IOException, InterruptedException {
 //		String cmd = "bwa bwasw -t " + numThreads + " -f " + outputSam + " " + reference + " " + input;
 		
-		String cmd = "bwa mem -M -t " + numThreads + " " + reference + " " + input + " > " + outputSam;
+		String cmd = "bwa mem -t " + numThreads + " " + reference + " " + input + " > " + outputSam;
 		
 		runCommand(cmd);
 	}

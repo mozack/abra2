@@ -11,7 +11,7 @@ import java.net.URL;
 public class NativeLibraryLoader {
 	
 	public void load(String tempDir) {
-		String urlPath = "libAbra.so";
+		String urlPath = "/libAbra.so";
 		
 		URL url = NativeLibraryLoader.class.getResource(urlPath);
 		

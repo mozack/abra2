@@ -4,7 +4,7 @@
 
   <groupId>abra</groupId>
   <artifactId>abra</artifactId>
-  <version>0.41-SNAPSHOT</version>
+  <version>0.42-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>abra</name>
@@ -107,5 +107,13 @@
         </executions>
   		</plugin>
    </plugins>
+   <resources>
+     <resource>
+       <directory>target</directory>
+       <includes>
+         <include>libAbra.so</include>
+       </includes>
+     </resource>
+   </resources>
   </build>
 </project>

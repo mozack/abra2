@@ -1695,6 +1695,8 @@ public class ReAligner {
 		if (!unalignedTempDir.mkdir()) {
 			throw new IllegalStateException("Unable to create: " + tempDir + "/unaligned");
 		}
+		
+		new NativeLibraryLoader().load(tempDir);
 	}
 	
 	private void mkdir(String dir) {
@@ -1750,7 +1752,7 @@ public class ReAligner {
 
 	public static void run(String[] args) throws Exception {
 		
-		System.out.println("Starting 0.41 ...");
+		System.out.println("Starting 0.42 ...");
 		
 		ReAlignerOptions options = new ReAlignerOptions();
 		options.parseOptions(args);

@@ -25,9 +25,9 @@ public class NativeAssembler implements Assembler {
 
 	private native int assemble(String input, String output, String prefix, int truncateOnRepeat, int maxContigs, int maxPathsFromRoot, int readLength, int kmerSize, int minKmerFreq);
 	
-	static{
-        System.loadLibrary("Abra");
-	}
+//	static{
+//        System.loadLibrary("Abra");
+//	}
 	
 	private String getIdentifier(SAMRecord read) {
 		String id = read.getReadName();

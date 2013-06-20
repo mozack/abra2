@@ -3,17 +3,20 @@
 
 SRCDIR=src/main/c
 
-all: clean java native
+all: clean native java
 
 java:
-	mvn clean package
+	mvn package
 
-native:
+mktargetdir:
+	mkdir target
+
+native: mktargetdir
 	g++ -g -I$(SRCDIR) -I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/linux -shared -fPIC $(SRCDIR)/assembler.c -o target/libAbra.so
 
 standalone:
 	g++ -g -I. -I$(JAVA_HOME)/include assembler.c -o abra
 
 clean:
-	mvn clean
 	rm -rf target
+	mvn clean

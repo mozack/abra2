@@ -714,7 +714,7 @@ extern "C"
 	int kmer_size = j_kmer_size;
 	min_node_freq = j_min_node_freq;
 
-	printf("Abra JNI entry point v0.41\n");
+	printf("Abra JNI entry point v0.42\n");
 
 	printf("input: %s\n", input);
 	printf("output: %s\n", output);

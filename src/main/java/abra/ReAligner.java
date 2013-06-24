@@ -1239,10 +1239,6 @@ public class ReAligner {
 
 			SAMRecord readToOutput = null;
 			
-			if (orig.getReadUnmappedFlag()  && read.getReadName().contains("spike")) {
-				System.out.println("unmapped...");
-			}
-			
 			// Only adjust reads that align to contig with no indel and shorter edit distance than the original alignment
 			String matchingString = read.getReadLength() + "M";
 			if ((read.getCigarString().equals(matchingString)) &&

@@ -395,13 +395,13 @@ public class ReAligner {
 	}
 	*/
 		
-	void updateMismatchAndEditDistance(SAMRecord read, CompareToReference2 c2r) {
+	void updateMismatchAndEditDistance(SAMRecord read, CompareToReference2 c2r, SAMRecord origRead) {
 		if (read.getAttribute("YO") != null) {
 			int numMismatches = c2r.numMismatches(read);				
 			int numIndelBases = getNumIndelBases(read);
 			read.setAttribute("XM", numMismatches);
 			read.setAttribute("NM", numMismatches + numIndelBases);
-			read.setMappingQuality(calcMappingQuality(read));
+			read.setMappingQuality(calcMappingQuality(read, origRead));
 			
 			if (numMismatches > (read.getReadLength()/10)) {
 				System.out.println("HIGH_MISMATCH: [" + read.getSAMString() + "]");
@@ -410,10 +410,12 @@ public class ReAligner {
 	}
 		
 	//TODO: Add rhyme or reason to this
-	private int calcMappingQuality(SAMRecord read) {
+	private int calcMappingQuality(SAMRecord read, SAMRecord origRead) {
 		int mapq = 0;
 		
-		if ((read.getReadUnmappedFlag()) || (read.getMappingQuality() > 0)) {
+		// Need original read here because updated read has already had 0x04 flag unset.
+		
+		if ((origRead.getReadUnmappedFlag()) || (read.getMappingQuality() > 0)) {
 			int contigQuality = (Integer) read.getAttribute("YQ");
 			int quality = Math.min(contigQuality, this.maxMapq);
 			int mismatchesToContig = (Integer) read.getAttribute("YM");
@@ -1239,6 +1241,10 @@ public class ReAligner {
 
 			SAMRecord readToOutput = null;
 			
+//			if (orig.getReadUnmappedFlag()  && read.getReadName().contains("spike")) {
+//				System.out.println("unmapped...");
+//			}
+			
 			// Only adjust reads that align to contig with no indel and shorter edit distance than the original alignment
 			String matchingString = read.getReadLength() + "M";
 			if ((read.getCigarString().equals(matchingString)) &&
@@ -1453,7 +1459,7 @@ public class ReAligner {
 						readToOutput.setAttribute("XT", null);
 						
 						if (c2r != null) {
-							updateMismatchAndEditDistance(readToOutput, c2r);
+							updateMismatchAndEditDistance(readToOutput, c2r, origRead);
 						}
 					}
 				}
@@ -1839,6 +1845,7 @@ public class ReAligner {
 		String alignedToContigBam = "/home/lmose/dev/ayc/unaligned/align_to_contig.bam";
 		String outputBam = "/home/lmose/dev/ayc/unaligned/output.bam";
 		String tempDir = "/home/lmose/dev/ayc/unaligned/adjust_temp";
+		String reference = "/home/lmose/reference/chr1b/chr1.fa";
 
 		
 		SAMFileWriterFactory writerFactory = new SAMFileWriterFactory();
@@ -1849,10 +1856,10 @@ public class ReAligner {
 		SAMFileWriter writer = writerFactory.makeSAMOrBAMWriter(
 				ra.samHeader, false, new File(outputBam));
 				
-//		CompareToReference2 c2r = new CompareToReference2();
-//		c2r.init(reference);
+		CompareToReference2 c2r = new CompareToReference2();
+		c2r.init(reference);
 		
-		CompareToReference2 c2r = null;
+//		CompareToReference2 c2r = null;
 		
 		ra.adjustReads(alignedToContigBam, writer, false, c2r, tempDir);
 				

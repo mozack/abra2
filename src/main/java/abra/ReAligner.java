@@ -413,7 +413,7 @@ public class ReAligner {
 	private int calcMappingQuality(SAMRecord read) {
 		int mapq = 0;
 		
-		if (read.getMappingQuality() > 0) {
+		if ((read.getReadUnmappedFlag()) || (read.getMappingQuality() > 0)) {
 			int contigQuality = (Integer) read.getAttribute("YQ");
 			int quality = Math.min(contigQuality, this.maxMapq);
 			int mismatchesToContig = (Integer) read.getAttribute("YM");
@@ -1239,6 +1239,10 @@ public class ReAligner {
 
 			SAMRecord readToOutput = null;
 			
+			if (orig.getReadUnmappedFlag()  && read.getReadName().contains("spike")) {
+				System.out.println("unmapped...");
+			}
+			
 			// Only adjust reads that align to contig with no indel and shorter edit distance than the original alignment
 			String matchingString = read.getReadLength() + "M";
 			if ((read.getCigarString().equals(matchingString)) &&
@@ -1792,7 +1796,8 @@ public class ReAligner {
 		}
 	}
 	
-/*
+
+	/*
 	public static void main(String[] args) throws Exception {
 		ReAligner realigner = new ReAligner();
 //		String originalReadsSam = args[0];
@@ -1815,23 +1820,30 @@ public class ReAligner {
 		outputReadsBam.close();
 	}
 */
-/*
+
+	
 	public static void main(String[] args) throws Exception {
 		System.out.println("Adjusting 2...");
 		ReAligner ra = new ReAligner();
-		ra.isPairedEnd = true;
+		ra.isPairedEnd = false;
 		
-		String headerSourceBam = args[0];
-		String alignedToContigBam = args[1];
-		String outputBam = args[2];
-		String reference = args[3];
-		String tempDir = args[4];
+//		String headerSourceBam = args[0];
+//		String alignedToContigBam = args[1];
+//		String outputBam = args[2];
+//		String reference = args[3];
+//		String tempDir = args[4];
 		
 //		String headerSourceBam = "/home/lmose/dev/ayc/paired/header.bam";
 //		String alignedToContigBam = "/home/lmose/dev/ayc/paired/a2c.bam";
 //		String outputBam = "/home/lmose/dev/ayc/paired/output.bam";
 //		String tempDir = "/home/lmose/dev/ayc/paired/adjust_temp";
 //		String reference = args[3];
+		
+		String headerSourceBam = "/home/lmose/dev/ayc/unaligned/chr1.bam";
+		String alignedToContigBam = "/home/lmose/dev/ayc/unaligned/align_to_contig.bam";
+		String outputBam = "/home/lmose/dev/ayc/unaligned/output.bam";
+		String tempDir = "/home/lmose/dev/ayc/unaligned/adjust_temp";
+
 		
 		SAMFileWriterFactory writerFactory = new SAMFileWriterFactory();
 //		writerFactory.setUseAsyncIo(true);
@@ -1841,19 +1853,20 @@ public class ReAligner {
 		SAMFileWriter writer = writerFactory.makeSAMOrBAMWriter(
 				ra.samHeader, false, new File(outputBam));
 				
-		CompareToReference2 c2r = new CompareToReference2();
-		c2r.init(reference);
+//		CompareToReference2 c2r = new CompareToReference2();
+//		c2r.init(reference);
 		
-//		CompareToReference2 c2r = null;
+		CompareToReference2 c2r = null;
 		
-		ra.adjustReads(alignedToContigBam, writer, true, c2r, tempDir);
+		ra.adjustReads(alignedToContigBam, writer, false, c2r, tempDir);
 				
 		writer.close();
 		
 		System.out.println("Done");
 	}
-	*/
 	
+	
+	/*
 	public void testA2c() throws Exception {
 		SAMFileReader reader = new SAMFileReader(new File("/home/lmose/dev/ayc/40c/align_to_contig.bam"));
 		reader.setValidationStringency(ValidationStringency.SILENT);
@@ -1911,6 +1924,7 @@ public class ReAligner {
 	public static void main(String[] args) throws Exception {
 		new ReAligner().testA2c();
 	}
+	*/
 	
 	/*
 	public static void main(String[] args) throws Exception {

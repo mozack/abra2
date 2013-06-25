@@ -338,15 +338,17 @@ void cleanup(struct linked_node* linked_nodes) {
 	}
 }
 
-void prune_graph(sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes) {
+void prune_graph(sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, char isUnalignedRegion) {
 
 	int freq = min_node_freq;
 
-	int increase_freq = nodes->size() % INCREASE_MIN_NODE_FREQ_THRESHOLD;
+	if (!isUnalignedRegion) {
+		int increase_freq = nodes->size() % INCREASE_MIN_NODE_FREQ_THRESHOLD;
 
-	if (increase_freq > 0) {
-		freq = freq + increase_freq;
-		printf("Increased mnf to: %d for nodes size: %d\n", freq, nodes->size());
+		if (increase_freq > 0) {
+			freq = freq + increase_freq;
+			printf("Increased mnf to: %d for nodes size: %d\n", freq, nodes->size());
+		}
 	}
 
 	for (sparse_hash_map<const char*, struct node*, my_hash, eqstr>::const_iterator it = nodes->begin();
@@ -641,7 +643,10 @@ int assemble(const char* input,
 	build_graph(input, nodes, pool);
 	printf("Pruning graph\n");
 	fflush(stdout);
-	prune_graph(nodes);
+
+	//TODO: Set this explicitly
+	char isUnalignedRegion = !truncate_on_repeat;
+	prune_graph(nodes, isUnalignedRegion);
 
 	printf("Pruning graph done\n");
 	fflush(stdout);

@@ -57,11 +57,11 @@ public class Sam2Fastq {
     		if ((!read.getReadName().equals(last1Read) && (!realigner.isFiltered(read)))) {
     			
     			// These tags can be lengthy, so remove them.
-    			String oldQualities = (String) read.getAttribute("OQ");
-    			
-    			if (oldQualities != null) {
-    				read.setBaseQualityString(oldQualities);
-    			}
+//    			String oldQualities = (String) read.getAttribute("OQ");
+//    			
+//    			if (oldQualities != null) {
+//    				read.setBaseQualityString(oldQualities);
+//    			}
     			
     			read.setAttribute("XA", null);
     			read.setAttribute("OQ", null);

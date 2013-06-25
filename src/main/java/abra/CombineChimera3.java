@@ -101,7 +101,8 @@ public class CombineChimera3 {
 	}
 	
 	private boolean isTopHit(SAMRecord read) {
-		return (read.getFlags() & 0x800)  == 0; 
+		// 0x800 = supplementary alignment from SAM spec v1.5
+		return ((read.getFlags() & 0x800)  == 0) && (!read.getNotPrimaryAlignmentFlag()); 
 	}
 	
 	private SAMRecord combineChimericReads(SAMRecord read1, SAMRecord read2) {

@@ -210,9 +210,6 @@ public class ReAligner {
 			mkdir(tempDir1);
 			mkdir(tempDir2);
 			
-			c2r = new CompareToReference2();
-			c2r.init(this.reference);
-			
 			SAMFileWriterFactory writerFactory = new SAMFileWriterFactory();
 //			writerFactory.setUseAsyncIo(true);
 			
@@ -538,9 +535,9 @@ public class ReAligner {
 			sortBam(contigsWithChim, contigsWithChimSorted, "coordinate");
 			indexBam(contigsWithChimSorted);
 		
-			log("Loading reference for chopper clopper.");
-			CompareToReference2 c2r = new CompareToReference2();
-			c2r.init(this.reference);
+//			log("Loading reference for chopper clopper.");
+//			CompareToReference2 c2r = new CompareToReference2();
+//			c2r.init(this.reference);
 			
 			log("Chopper clopper start.");
 			ContigChopper chopper = new ContigChopper();
@@ -1684,7 +1681,7 @@ public class ReAligner {
 		return assem;
 	}
 
-	private void init() {
+	private void init() throws IOException {
 		File workingDir = new File(tempDir);
 		if (workingDir.exists()) {
 			if (!workingDir.delete()) {
@@ -1703,6 +1700,9 @@ public class ReAligner {
 		}
 		
 		new NativeLibraryLoader().load(tempDir);
+		
+		c2r = new CompareToReference2();
+		c2r.init(this.reference);
 	}
 	
 	private void mkdir(String dir) {

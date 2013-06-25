@@ -21,6 +21,7 @@ using google::sparse_hash_set;
 #define MAX_CONTIG_SIZE 50000
 #define MAX_READ_LENGTH 1001
 #define MIN_BASE_QUALITY 20
+#define INCREASE_MIN_NODE_FREQ_THRESHOLD 25000
 
 #define OK 0
 #define TOO_MANY_PATHS_FROM_ROOT -1
@@ -338,13 +339,23 @@ void cleanup(struct linked_node* linked_nodes) {
 }
 
 void prune_graph(sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes) {
+
+	int freq = min_node_freq;
+
+	int increase_freq = nodes->size() % INCREASE_MIN_NODE_FREQ_THRESHOLD;
+
+	if (increase_freq > 0) {
+		freq = freq + increase_freq;
+		printf("Increased mnf to: %d for nodes size: %d\n", freq, nodes->size());
+	}
+
 	for (sparse_hash_map<const char*, struct node*, my_hash, eqstr>::const_iterator it = nodes->begin();
 		         it != nodes->end(); ++it) {
 
 		const char* key = it->first;
 		struct node* node = it->second;
 
-		if ((node != NULL) && ((node->frequency < min_node_freq) || (!(node->hasMultipleUniqueReads)))) {
+		if ((node != NULL) && ((node->frequency < freq) || (!(node->hasMultipleUniqueReads)))) {
 
 			// Remove node from "from" lists
 			struct linked_node* to_node = node->toNodes;

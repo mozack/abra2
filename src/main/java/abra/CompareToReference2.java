@@ -93,7 +93,13 @@ public class CompareToReference2 {
 				if (element.getOperator() == CigarOperator.M) {
 					
 					for (int i=0; i<element.getLength(); i++) {
-	//					char readBase = getReadBase(read, readIdx);
+
+						if (refIdx >= reference.length) {
+							// You're off the edge of the map matey.  Monsters be here!
+							// This read has aligned across chromosomes.  Do not proceed.
+							return null;
+						}
+						
 						char refBase  = Character.toUpperCase((char) reference[refIdx]);
 						
 						altBuf.append(refBase);

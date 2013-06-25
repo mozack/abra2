@@ -68,11 +68,8 @@ public class IndelShifter {
 						Cigar newCigar = shiftCigarLeft(read.getCigar(), i);
 						
 						String shiftedReadAltRef = c2r.getAlternateReference(read, newCigar);
-//						System.out.println("s: " + shiftedReadAltRef);
 						
-	//					System.out.println("cigar: " + newCigar.toString());
-						
-						if (origReadAltRef.equals(shiftedReadAltRef)) {					
+						if ((shiftedReadAltRef != null) && (origReadAltRef.equals(shiftedReadAltRef))) {					
 							SAMRecord newRead = cloneRead(read);
 							newRead.setCigar(newCigar);
 							newRead.setAttribute("IS", read.getCigarString());
@@ -81,10 +78,9 @@ public class IndelShifter {
 					}
 				}
 			}
-		} catch (Exception e) {
+		} catch (RuntimeException e) {
 			System.out.println("Error processing: " + read.getSAMString());
-			e.printStackTrace();
-			throw new RuntimeException(e);
+			throw e;
 		}
 		
 		return read;

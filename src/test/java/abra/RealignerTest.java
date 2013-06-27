@@ -30,6 +30,22 @@ public class RealignerTest {
 	*/
 	
 	@Test (groups = "unit")
+	public void testCollapseRegions() {
+		List<Feature> input = new ArrayList<Feature>();
+		input.add(new Feature("chr20", 1, 2000));
+		input.add(new Feature("chr20", 2050, 10000));
+		input.add(new Feature("chr20", 10020, 20000));
+		input.add(new Feature("chr20", 20100, 20200));
+		input.add(new Feature("chr21", 20201, 20300));
+		
+		List<Feature> features = ReAligner.collapseRegions(input, 70);
+		assertEquals(features.size(), 3);
+		validateFeature(features.get(0), 1, 20000);
+		validateFeature(features.get(1), 20100, 20200);
+		validateFeature(features.get(2), 20201, 20300);
+	}
+	
+	@Test (groups = "unit")
 	public void testSplitRegions() {
 		List<Feature> input = new ArrayList<Feature>();
 		input.add(new Feature("chr20", 1, 2000));

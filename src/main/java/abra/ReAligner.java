@@ -114,11 +114,13 @@ public class ReAligner {
 		
 		init();
 
-		log("Loading target regions");
-		loadRegions();
-
 		log("Reading Input SAM Header and identifying read length");
 		getSamHeaderAndReadLength(inputSam);
+		
+		log("Read length: " + readLength);
+		
+		log("Loading target regions");
+		loadRegions();
 		
 		samHeader.setSortOrder(SAMFileHeader.SortOrder.unsorted);
 		
@@ -846,9 +848,10 @@ public class ReAligner {
 		GtfLoader loader = new GtfLoader();
 		regions = loader.load(regionsGtf);
 		
+		regions = collapseRegions(regions, readLength);
+		
 		regions = splitRegions(regions);
 		
-		System.out.println("Regions:");
 		for (Feature region : regions) {
 			System.out.println(region.getSeqname() + "\t" + region.getStart() + "\t" + region.getEnd());
 		}
@@ -1592,6 +1595,35 @@ public class ReAligner {
 		}
 		
 		return splitRegions;
+	}
+	
+	public static List<Feature> collapseRegions(List<Feature> regions, int readLength) {
+		List<Feature> collapsedRegions = new ArrayList<Feature>();
+		
+		Feature currentRegion = null;
+		
+		for (Feature region : regions) {
+			if (currentRegion != null) {
+				if ((currentRegion.getSeqname().equals(region.getSeqname())) && 
+					(currentRegion.getEnd() + readLength >= region.getStart())) {
+					
+					currentRegion.setEnd(region.getEnd());
+				} else {
+					collapsedRegions.add(currentRegion);
+					currentRegion = region;
+				}
+			} else {
+				currentRegion = region;
+			}
+		}
+		
+		if (currentRegion != null) {
+			collapsedRegions.add(currentRegion);
+		}
+		
+		System.out.println("Collapsed regions from " + regions.size() + " to " + collapsedRegions.size());
+		
+		return collapsedRegions;
 	}
 	
 	/**

@@ -113,6 +113,9 @@ public class BetaPairValidatingRealignmentWriter implements RealignmentWriter {
 		checkPairValidity(first, second);
 		
 		if ((first.getUpdatedRead() != null) && (second.getUpdatedRead() != null)) {
+			
+			int insertLen = getInsertLength(first.getUpdatedRead(), second.getUpdatedRead());
+			
 			// Both reads are realigned.  insert length and read orientation is proper.
 			first.getUpdatedRead().setProperPairFlag(true);
 			first.getUpdatedRead().setMateUnmappedFlag(false);
@@ -125,6 +128,14 @@ public class BetaPairValidatingRealignmentWriter implements RealignmentWriter {
 			second.getUpdatedRead().setMateAlignmentStart(first.getUpdatedRead().getAlignmentStart());
 			second.getUpdatedRead().setMateReferenceName(first.getUpdatedRead().getReferenceName());
 			second.getUpdatedRead().setMateNegativeStrandFlag(first.getUpdatedRead().getReadNegativeStrandFlag());
+			
+			if (first.getUpdatedRead().getAlignmentStart() < second.getUpdatedRead().getAlignmentStart()) {
+				first.getUpdatedRead().setInferredInsertSize(insertLen);
+				second.getUpdatedRead().setInferredInsertSize(-insertLen);
+			} else {
+				first.getUpdatedRead().setInferredInsertSize(-insertLen);
+				second.getUpdatedRead().setInferredInsertSize(insertLen);				
+			}
 		}
 		
 		output(first);

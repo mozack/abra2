@@ -2,6 +2,7 @@ package abra;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.List;
 
 
@@ -33,13 +34,51 @@ public class Sam2Fastq {
 	private String end1Suffix;
 	private String end2Suffix;
 	private ReAligner realigner;
+	private Feature currentRegion;
+	private Iterator<Feature> regionIter;
+	
+	// Assumes input SAM file and input region list is sorted by coordinate.
+	private boolean isInRegion(SAMFileHeader header, SAMRecord read) {
+//		boolean isInRegion = currentRegion.overlapsRead(read);
+		
+		while ((currentRegion != null) &&
+			   (!currentRegion.overlapsRead(read)) &&
+			   (!isRegionBeyondRead(header, currentRegion, read))) {
+			
+			if (regionIter.hasNext()) {
+				currentRegion = (Feature) regionIter.next();
+			} else {
+				currentRegion = null;
+			}
+		}
+		
+		return (currentRegion != null) && (currentRegion.overlapsRead(read));
+	}
+	
+	private boolean isRegionBeyondRead(SAMFileHeader header, Feature region, SAMRecord read) {
+		boolean isRegionBeyond = false;
+		
+		int regionChrIdx = header.getSequenceIndex(region.getSeqname());
+		int readChrIdx = header.getSequenceIndex(read.getReferenceName());
+		
+		if (regionChrIdx > readChrIdx) {
+			isRegionBeyond = true;
+		} else if (regionChrIdx < readChrIdx) {
+			isRegionBeyond = false;
+		} else {
+			isRegionBeyond = (region.getStart() > read.getAlignmentEnd());
+		}
+		
+		return isRegionBeyond;
+	}
 	
 	/**
 	 * Convert the input SAM/BAM file into a single fastq file.
 	 * Input SAM files that contain multiple mappings should be sorted by read name.
 	 */
 	public void convert(String inputSam, String outputFastq, CompareToReference2 c2r,
-			SAMFileHeader header, SAMFileWriter writer, ReAligner realigner) throws IOException {
+			SAMFileHeader header, SAMFileWriter writer, ReAligner realigner,
+			List<Feature> regions) throws IOException {
 		
 		this.realigner = realigner;
 		String last1Read = "";
@@ -49,9 +88,16 @@ public class Sam2Fastq {
         SAMFileReader reader = new SAMFileReader(new File(inputSam));
         reader.setValidationStringency(ValidationStringency.SILENT);
         
+        header.getSequenceIndex("2");
+        
         output1 = new FastqOutputFile();
         output1.init(outputFastq);
         int lineCnt = 0;
+        
+        regionIter = regions.iterator();
+        if (regionIter.hasNext()) {
+        	currentRegion = regionIter.next();
+        }
         
         for (SAMRecord read : reader) {
     		if ((!read.getReadName().equals(last1Read) && (!realigner.isFiltered(read)))) {
@@ -83,6 +129,11 @@ public class Sam2Fastq {
     			}
     			
     			if (yx > 0) {
+    				
+	    			if (!isInRegion(header, read)) {
+	    				read.setAttribute("YR", 1);
+	    			}
+    				
     				// Does not exactly match reference, output FASTQ record
 	    			output1.write(samReadToFastqRecord(read, c2r));
     			} else if (writer != null) {
@@ -236,7 +287,26 @@ public class Sam2Fastq {
 		Sam2Fastq s2f = new Sam2Fastq();
 		
 		long s = System.currentTimeMillis();
-//		s2f.convert(inputSam, "/home/lmose/dev/ayc/opt/t7.fastq.gz", c2r, header, writer);
+		
+		
+		System.out.println("chr1: " + header.getSequenceIndex("chr1"));
+		System.out.println("chr2: " + header.getSequenceIndex("chr2"));
+		System.out.println("chrY: " + header.getSequenceIndex("chrY"));
+		System.out.println("chrM: " + header.getSequenceIndex("chrM"));
+		
+//		String inputSam, String outputFastq, CompareToReference2 c2r,
+//		SAMFileHeader header, SAMFileWriter writer, ReAligner realigner
+		ReAligner realigner = new ReAligner();
+		
+		GtfLoader loader = new GtfLoader();
+		List<Feature> regions = loader.load("/home/lmose/dev/ayc/regions/clinseq5/uncseq5.gtf");
+		
+		regions = ReAligner.collapseRegions(regions, 100);
+		
+		regions = ReAligner.splitRegions(regions);		
+		
+		s2f.convert(inputSam, "/home/lmose/dev/ayc/opt/t7.fastq.gz", c2r, header, writer, realigner, 
+				regions);
 		long e = System.currentTimeMillis();
 		
 		System.out.println("Elapsed: " + (e-s)/1000);

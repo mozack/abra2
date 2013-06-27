@@ -1,5 +1,7 @@
 package abra;
 
+import net.sf.samtools.SAMRecord;
+
 /**
  * Representation of a Feature (i.e. a line in a GTF file)
  * 
@@ -42,5 +44,18 @@ public class Feature {
 	
 	public String toString() {
 		return getDescriptor();
+	}
+	
+	private boolean spansCoordinate(int coord) {
+		return (coord >= start) && (coord <= end); 
+	}
+	
+	private boolean spansEitherCoordinate(int coord1, int coord2) {
+		return spansCoordinate(coord1) || spansCoordinate(coord2);
+	}
+	
+	public boolean overlapsRead(SAMRecord read) {
+		return ((this.seqname.equals(read.getReferenceName())) &&
+			(spansEitherCoordinate(read.getAlignmentStart(), read.getAlignmentEnd())));
 	}
 }

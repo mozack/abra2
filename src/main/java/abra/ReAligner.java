@@ -923,7 +923,7 @@ public class ReAligner {
 	
 	private void sam2Fastq(String bam, String fastq, CompareToReference2 c2r, SAMFileWriter finalOutputSam) throws IOException {
 		Sam2Fastq sam2Fastq = new Sam2Fastq();
-		sam2Fastq.convert(bam, fastq, c2r, samHeader, finalOutputSam, this);
+		sam2Fastq.convert(bam, fastq, c2r, samHeader, finalOutputSam, this, regions);
 //		if (isPairedEnd) {
 //			sam2Fastq.convertPairedEnd(bam, fastq);
 //		} else {
@@ -1199,6 +1199,29 @@ public class ReAligner {
 		return qual;
 	}
 	
+	private boolean isImprovedAlignment(SAMRecord read, SAMRecord orig, CompareToReference2 c2r) {
+		
+		boolean isImproved = false;
+		
+		// Check for closer alignment to contig than original alignment to reference
+		int origEditDistance = getOrigEditDistance(orig);
+		if (getEditDistance(read, null) < origEditDistance) {
+			
+			Integer yr = read.getIntegerAttribute("YR");
+			if ((yr != null) && (yr == 1)) {
+				// Original alignment was outside of target region list.
+				// Calc updated edit distance to reference and compare to original
+				int updatedEditDistance = getEditDistance(read, c2r);
+				
+				isImproved = updatedEditDistance < origEditDistance;
+			} else {
+				isImproved = true;
+			}
+		}
+		
+		return isImproved;
+	}
+	
 	protected void adjustReads(String alignedToContigSam, SAMFileWriter outputSam, boolean isTightAlignment,
 			CompareToReference2 c2r, String tempDir) throws IOException {
 		
@@ -1250,7 +1273,8 @@ public class ReAligner {
 			if ((read.getCigarString().equals(matchingString)) &&
 				(read.getReadUnmappedFlag() == false)  &&
 				(!orig.getCigarString().contains("N")) &&  // Don't remap introns
-				(getEditDistance(read, null) < getOrigEditDistance(orig)) &&
+//				(getEditDistance(read, null) < getOrigEditDistance(orig)) &&
+				isImprovedAlignment(read, orig, c2r) &&
 				(!isFiltered(orig))) {
 				
 				SAMRecord origRead = orig;
@@ -1786,6 +1810,14 @@ public class ReAligner {
 	
 	public int getMinInsertLength() {
 		return this.minInsertLength;
+	}
+	
+	public void setMaxInsertLength(int maxInsertLen) {
+		this.maxInsertLength = maxInsertLen;
+	}
+	
+	public void setMinInsertLength(int minInsertLen) {
+		this.minInsertLength = minInsertLen;
 	}
 
 	public static void run(String[] args) throws Exception {

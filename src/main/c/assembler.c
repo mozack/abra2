@@ -343,7 +343,7 @@ void prune_graph(sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nod
 	int freq = min_node_freq;
 
 	if (!isUnalignedRegion) {
-		int increase_freq = nodes->size() % INCREASE_MIN_NODE_FREQ_THRESHOLD;
+		int increase_freq = nodes->size() / INCREASE_MIN_NODE_FREQ_THRESHOLD;
 
 		if (increase_freq > 0) {
 			freq = freq + increase_freq;

@@ -28,6 +28,10 @@ public class Feature {
 		return end;
 	}
 	
+	public void setEnd(long end) {
+		this.end = end;
+	}
+	
 	public String getDescriptor() {
 		return seqname + "_" + start + "_" + end;
 	}

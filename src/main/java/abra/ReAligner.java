@@ -1211,21 +1211,18 @@ public class ReAligner {
 	private boolean isImprovedAlignment(SAMRecord read, SAMRecord orig, CompareToReference2 c2r) {
 		
 		boolean isImproved = false;
-		
-		// Check for closer alignment to contig than original alignment to reference
-		int origEditDistance = getOrigEditDistance(orig);
-		if (getEditDistance(read, null) < origEditDistance) {
 			
-			Integer yr = read.getIntegerAttribute("YR");
-			if ((yr != null) && (yr == 1)) {
-				// Original alignment was outside of target region list.
-				// Calc updated edit distance to reference and compare to original
-				int updatedEditDistance = getEditDistance(read, c2r);
-				
-				isImproved = updatedEditDistance < origEditDistance;
-			} else {
-				isImproved = true;
-			}
+		Integer yr = orig.getIntegerAttribute("YR");
+		if ((yr != null) && (yr == 1)) {
+			// Original alignment was outside of target region list.
+			// Calc updated edit distance to reference and compare to original
+			
+			int origEditDistance = getOrigEditDistance(orig);
+			int updatedEditDistance = c2r.numMismatches(read) + getNumIndelBases(read);
+			
+			isImproved = updatedEditDistance < origEditDistance;
+		} else {
+			isImproved = true;
 		}
 		
 		return isImproved;
@@ -1282,8 +1279,8 @@ public class ReAligner {
 			if ((read.getCigarString().equals(matchingString)) &&
 				(read.getReadUnmappedFlag() == false)  &&
 				(!orig.getCigarString().contains("N")) &&  // Don't remap introns
-//				(getEditDistance(read, null) < getOrigEditDistance(orig)) &&
-				isImprovedAlignment(read, orig, c2r) &&
+				(getEditDistance(read, null) < getOrigEditDistance(orig)) &&
+//				isImprovedAlignment(read, orig, c2r) &&
 				(!isFiltered(orig))) {
 				
 				SAMRecord origRead = orig;
@@ -1463,40 +1460,47 @@ public class ReAligner {
 				if (outputReadAlignmentInfo.size() == 1) {
 					//TODO: No need to iterate, just 1.  Dropping ambiguous reads
 					readToOutput = outputReadAlignmentInfo.values().iterator().next();
+					
+					// Check to see if the original read location was in a non-target region.
+					// If so, compare updated NM to ref versus original NM to ref
+					if ((c2r != null) && (!isImprovedAlignment(readToOutput, orig, c2r))) {
+						readToOutput = null;
+					} else {
+						int origBestHits = this.getIntAttribute(readToOutput, "X0");
+						int origSuboptimalHits = this.getIntAttribute(readToOutput, "X1");
 						
-					int origBestHits = this.getIntAttribute(readToOutput, "X0");
-					int origSuboptimalHits = this.getIntAttribute(readToOutput, "X1");
-					
-					// If the read mapped to multiple locations, set mapping quality to zero.
-					if ((outputReadAlignmentInfo.size() > 1) || (totalHits > 1000)) {
-						readToOutput.setMappingQuality(0);
-					}
-					
-					// This must happen prior to updateMismatchAndEditDistance
-					adjustForStrand(read.getReadNegativeStrandFlag(), readToOutput);
-					
-					if (readToOutput.getAttribute("YO") != null) {
-						// HACK: Only add X0 for final alignment.  Assembler skips X0 > 1
-						if (isTightAlignment) {
-							readToOutput.setAttribute("X0", outputReadAlignmentInfo.size());
-						} else {
-							readToOutput.setAttribute("X0", null);
+						// If the read mapped to multiple locations, set mapping quality to zero.
+						if ((outputReadAlignmentInfo.size() > 1) || (totalHits > 1000)) {
+							readToOutput.setMappingQuality(0);
 						}
-						readToOutput.setAttribute("X1", origBestHits + origSuboptimalHits);
 						
-						// Clear various tags
-						readToOutput.setAttribute("XO", null);
-						readToOutput.setAttribute("XG", null);
-						readToOutput.setAttribute("MD", null);
-						readToOutput.setAttribute("XA", null);
-						readToOutput.setAttribute("XT", null);
+						// This must happen prior to updateMismatchAndEditDistance
+						adjustForStrand(read.getReadNegativeStrandFlag(), readToOutput);
 						
-						if (c2r != null) {
-							updateMismatchAndEditDistance(readToOutput, c2r, origRead);
+						if (readToOutput.getAttribute("YO") != null) {
+							// HACK: Only add X0 for final alignment.  Assembler skips X0 > 1
+							if (isTightAlignment) {
+								readToOutput.setAttribute("X0", outputReadAlignmentInfo.size());
+							} else {
+								readToOutput.setAttribute("X0", null);
+							}
+							readToOutput.setAttribute("X1", origBestHits + origSuboptimalHits);
+							
+							// Clear various tags
+							readToOutput.setAttribute("XO", null);
+							readToOutput.setAttribute("XG", null);
+							readToOutput.setAttribute("MD", null);
+							readToOutput.setAttribute("XA", null);
+							readToOutput.setAttribute("XT", null);
+							
+							if (c2r != null) {
+								updateMismatchAndEditDistance(readToOutput, c2r, origRead);
+							}
 						}
 					}
 				}
 			}
+			
 			adjustForStrand(read.getReadNegativeStrandFlag(), orig);
 			writer.addAlignment(readToOutput, orig);
 		}
@@ -1869,7 +1873,7 @@ public class ReAligner {
 	}
 	
 
-	/*
+	
 	public static void main(String[] args) throws Exception {
 		ReAligner realigner = new ReAligner();
 //		String originalReadsSam = args[0];
@@ -1882,18 +1886,38 @@ public class ReAligner {
 //		String unalignedSam = args[2];
 		String outputFilename = "/home/lmose/dev/ayc/sim/s43/atc_out.bam";
 		
-		realigner.getSamHeader(originalReadsSam);
+		SAMFileReader reader = new SAMFileReader(new File(originalReadsSam));
+	
+		realigner.samHeader = reader.getFileHeader();
+		
+		reader.close();
+		
+		realigner.readLength = 76;
+		realigner.isPairedEnd = true;
+		realigner.minInsertLength = 70;
+		realigner.maxInsertLength = 550;
+		realigner.regionsGtf = "/home/lmose/dev/ayc/p3/wxs.gtf";
+		realigner.loadRegions();
+		
+//		realigner.getSamHeader(originalReadsSam);
 		
 		SAMFileWriter outputReadsBam = new SAMFileWriterFactory().makeSAMOrBAMWriter(
 				realigner.samHeader, true, new File(outputFilename));
 		
-		realigner.adjustReads(originalReadsSam, alignedToContigSam, outputReadsBam);
+		CompareToReference2 c2r = new CompareToReference2();
+		c2r.init("/home/lmose/reference/chr19/19.fa");
+		
+		SAMFileWriter writer = new SAMFileWriterFactory().makeSAMOrBAMWriter(
+				realigner.samHeader, false, new File("/home/lmose/dev/ayc/p3/output.bam"));
+
+		
+		realigner.adjustReads("/home/lmose/dev/ayc/p3/a2c2.bam", writer, true, c2r, "/home/lmose/dev/ayc/p3");
 		
 		outputReadsBam.close();
 	}
-*/
 
-	
+
+	/*
 	public static void main(String[] args) throws Exception {
 		System.out.println("Adjusting 2...");
 		ReAligner ra = new ReAligner();
@@ -1937,6 +1961,7 @@ public class ReAligner {
 		
 		System.out.println("Done");
 	}
+	*/
 	
 	
 	/*

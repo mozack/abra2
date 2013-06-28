@@ -562,7 +562,6 @@ public class ReAligner {
 			contigsWithChim = contigsWithChimChopped;
 			
 			chopper = null;
-			c2r = null;
 		}
 		
 		log("Cleaning contigs");

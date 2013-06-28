@@ -130,7 +130,7 @@ public class Sam2Fastq {
     			
     			if (yx > 0) {
     				
-	    			if (!isInRegion(header, read)) {
+	    			if ((!read.getReadUnmappedFlag()) && (!isInRegion(header, read))) {
 	    				read.setAttribute("YR", 1);
 	    			}
     				

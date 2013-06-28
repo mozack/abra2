@@ -434,6 +434,18 @@ public class ReAligner {
 		return mapq;
 	}
 	
+	public static int getNumIndels(SAMRecord read) {
+		int numIndels = 0;
+		
+		for (CigarElement element : read.getCigar().getCigarElements()) {
+			if ((element.getOperator() == CigarOperator.D) || (element.getOperator() == CigarOperator.I)) {
+				numIndels += 1;
+			}
+		}
+		
+		return numIndels;
+	}
+
 	public static int getNumIndelBases(SAMRecord read) {
 		int numIndelBases = 0;
 		
@@ -1217,8 +1229,11 @@ public class ReAligner {
 			// Original alignment was outside of target region list.
 			// Calc updated edit distance to reference and compare to original
 			
-			int origEditDistance = getOrigEditDistance(orig);
-			int updatedEditDistance = c2r.numMismatches(read) + getNumIndelBases(read);
+//			int origEditDistance = getOrigEditDistance(orig);
+//			int updatedEditDistance = c2r.numMismatches(read) + getNumIndelBases(read);
+			
+			double origEditDistance = getOrigEditDistance(orig);
+			double updatedEditDistance = c2r.numMismatches(read) + (1.5 * getNumIndels(read));
 			
 			isImproved = updatedEditDistance < origEditDistance;
 		} else {

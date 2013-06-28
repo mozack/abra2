@@ -113,6 +113,11 @@ public class ReAligner {
 		this.inputSam2 = inputSam2;
 		
 		init();
+		
+		System.out.println("c2r1: " + c2r);
+		c2r = new CompareToReference2();
+		c2r.init(this.reference);
+		System.out.println("c2r2: " + c2r);
 
 		log("Reading Input SAM Header and identifying read length");
 		getSamHeaderAndReadLength(inputSam);
@@ -233,6 +238,8 @@ public class ReAligner {
 //				alignedToContigSam2 = alignReads(tempDir2, inputSam2, cleanContigsFasta, c2r, writer2);
 //			}
 			
+			System.out.println("c2r3: " + c2r);
+			
 			String[] alignedSams = alignReads(tempDir1, inputSam, cleanContigsFasta, c2r, writer1, 
 					tempDir2, inputSam2, writer2);
 			
@@ -312,6 +319,8 @@ public class ReAligner {
 	private String[] alignReads(String tempDir1, String inputSam, 
 			String cleanContigsFasta, CompareToReference2 c2r, SAMFileWriter writer1, 
 			String tempDir2, String inputSam2, SAMFileWriter writer2) throws IOException, InterruptedException {
+		
+		System.out.println("c2r4: " + c2r);
 		
 		// Build contig fasta index
 		log("Indexing contigs");
@@ -1043,6 +1052,7 @@ public class ReAligner {
 		String fastq = tempDir + "/" + "original_reads.fastq.gz";
 		
 		log("Preprocessing original reads for alignment: " + inputSam);
+		System.out.println("c2r7: " + c2r);
 		sam2Fastq(inputSam, fastq, c2r, finalOutputSam);
 		log("Done preprocessing original reads for alignment: " + inputSam);
 		
@@ -1756,9 +1766,6 @@ public class ReAligner {
 		}
 		
 		new NativeLibraryLoader().load(tempDir);
-		
-		c2r = new CompareToReference2();
-		c2r.init(this.reference);
 	}
 	
 	private void mkdir(String dir) {

@@ -69,8 +69,10 @@ public class Aligner {
 //		String convert = "bwa samse " + reference + " " + sai + " " + input + " -n 1000 " +
 //				"| samtools view -bS -F 0x04 -o " + outputSam + " -";
 		
-		String convert = "bwa samse " + reference + " " + sai + " " + input + " -n 1000 " +
-				"| samtools view -bS -o " + outputSam + " -";
+//		String convert = "bwa samse " + reference + " " + sai + " " + input + " -n 1000 " +
+//				"| samtools view -bS -o " + outputSam + " -";
+		
+		String convert = "bwa samse " + reference + " " + sai + " " + input + " -n 1000 > " + outputSam;
 		
 		runCommand(convert);
 	}

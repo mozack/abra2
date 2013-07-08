@@ -329,7 +329,7 @@ public class ReAligner {
 		log("Contig indexing done");
 		
 		
-		String alignedToContigSam1 = tempDir1 + "/" + "align_to_contig.bam";
+		String alignedToContigSam1 = tempDir1 + "/" + "align_to_contig.sam";
 		AlignReadsRunnable alignReadsRunnable1 = new AlignReadsRunnable(this,
 				tempDir1, inputSam, cleanContigsFasta, c2r, writer1, alignedToContigSam1);
 		
@@ -341,7 +341,7 @@ public class ReAligner {
 		String alignedToContigSam2 = null;
 		
 		if (inputSam2 != null) {
-			alignedToContigSam2 = tempDir2 + "/" + "align_to_contig.bam";
+			alignedToContigSam2 = tempDir2 + "/" + "align_to_contig.sam";
 			AlignReadsRunnable alignReadsRunnable2 = new AlignReadsRunnable(this,
 					tempDir2, inputSam2, cleanContigsFasta, c2r, writer2, alignedToContigSam2);
 			Thread thread2 = new Thread(alignReadsRunnable2);

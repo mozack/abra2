@@ -30,6 +30,7 @@ public class BaseQualityByRegion {
 			long numReadsLt5 = 0;
 			long numReadsLt10 = 0;
 			long numReadsLt20 = 0;
+			long numReadsLt30 = 0;
 			long numReads5X10 = 0;
 			long numInternalReadsLt20 = 0;
 			long numReadsWithAmbiguousBases = 0;
@@ -48,6 +49,7 @@ public class BaseQualityByRegion {
 					boolean readLt5 = false;
 					boolean readLt10 = false;
 					boolean readLt20 = false;
+					boolean readLt30 = false;
 					boolean internalReadLt20 = false;
 					
 					numReads++;
@@ -79,6 +81,10 @@ public class BaseQualityByRegion {
 								internalReadLt20 = true;
 							}
 						}
+						
+						if (qual < 30) {
+							readLt30 = true;
+						}
 					}
 					
 					if (readLt5) {
@@ -91,6 +97,10 @@ public class BaseQualityByRegion {
 					
 					if (readLt20) {
 						numReadsLt20++;
+					}
+					
+					if (readLt30) {
+						numReadsLt30++;
 					}
 					
 					if (readBasesLt5 >= 10) {
@@ -129,6 +139,7 @@ public class BaseQualityByRegion {
 					avg(numReadsLt5, numReads) + "\t" +
 					avg(numReadsLt10, numReads) + "\t" +
 					avg(numReadsLt20, numReads) + "\t" +
+					avg(numReadsLt30, numReads) + "\t" +
 					avg(numReads5X10, numReads) + "\t" +
 					avg(numInternalReadsLt20, numReads) + "\t" +
 					avg(numReadsWithAmbiguousBases, numReads) + "\t" +

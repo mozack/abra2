@@ -94,6 +94,7 @@ struct node {
 	char* contributingRead;
 	unsigned char frequency;
 	char hasMultipleUniqueReads;
+	char contributing_strand;
 };
 
 struct linked_node {
@@ -158,7 +159,7 @@ struct node* allocate_node(struct_pool* pool) {
 	return &pool->node_pool->nodes[pool->node_pool->block_idx][pool->node_pool->node_idx++];
 }
 
-struct node* new_node(char* seq, char* contributingRead, struct_pool* pool) {
+struct node* new_node(char* seq, char* contributingRead, struct_pool* pool, int strand) {
 
 //	node* my_node = (node*) malloc(sizeof(node));
 	node* my_node = allocate_node(pool);
@@ -168,6 +169,7 @@ struct node* new_node(char* seq, char* contributingRead, struct_pool* pool) {
 	my_node->contributingRead = contributingRead;
 	my_node->frequency = 1;
 	my_node->hasMultipleUniqueReads = 0;
+	my_node->contributing_strand = (char) strand;
 	return my_node;
 }
 
@@ -204,12 +206,13 @@ void link_nodes(struct node* from_node, struct node* to_node) {
 	}
 }
 
-void increment_node_freq(struct node* node, char* read_seq) {
+void increment_node_freq(struct node* node, char* read_seq, int strand) {
 	if (node->frequency < MAX_FREQUENCY-1) {
 		node->frequency++;
 	}
 
-	if (!(node->hasMultipleUniqueReads) && !compare(node->contributingRead, read_seq)) {
+	if (!(node->hasMultipleUniqueReads) &&
+		(!compare(node->contributingRead, read_seq) || node->contributing_strand != (char) strand)) {
 		node->hasMultipleUniqueReads = 1;
 	}
 }
@@ -235,7 +238,9 @@ int include_kmer(char* sequence, char*qual, int idx) {
 	return include;
 }
 
-void add_to_graph(char* sequence, sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, struct_pool* pool, char* qual) {
+void add_to_graph(char* sequence, sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, struct_pool* pool, char* qual, char* read_info) {
+
+	int strand = atoi(read_info);
 
 	struct node* prev = 0;
 
@@ -248,7 +253,7 @@ void add_to_graph(char* sequence, sparse_hash_map<const char*, struct node*, my_
 			struct node* curr = (*nodes)[kmer];
 
 			if (curr == NULL) {
-				curr = new_node(kmer, sequence, pool);
+				curr = new_node(kmer, sequence, pool, strand);
 
 				if (curr == NULL) {
 					printf("Null node for kmer: %s\n", kmer);
@@ -257,7 +262,7 @@ void add_to_graph(char* sequence, sparse_hash_map<const char*, struct node*, my_
 
 				(*nodes)[kmer] = curr;
 			} else {
-				increment_node_freq(curr, sequence);
+				increment_node_freq(curr, sequence, strand);
 			}
 
 			if (prev != NULL) {
@@ -279,14 +284,17 @@ void build_graph(const char* read_file, sparse_hash_map<const char*, struct node
 	char qual[MAX_READ_LENGTH];
 	memset(qual, 0, MAX_READ_LENGTH);
 
+	char read_info[128];
+
 	int line = 0;
-	while (fscanf(fp, "%s", read) != EOF) {
+	while (fscanf(fp, "%s", read_info) != EOF) {
+		fscanf(fp, "%s", read);
 		fscanf(fp, "%s", qual);
 //		printf("read: %d : %s\n", line++, read);
 		if (strcmp(read, "") != 0) {
 			char* read_ptr = allocate_read(pool);
 			memcpy(read_ptr, read, read_length+1);
-			add_to_graph(read_ptr, nodes, pool, qual);
+			add_to_graph(read_ptr, nodes, pool, qual, read_info);
 			line++;
 
 			if ((line % 100000) == 0) {

@@ -107,6 +107,7 @@ public class NativeAssembler implements Assembler {
 									qualPadding.append('!');
 								}
 								
+								writer.write(read.getReadNegativeStrandFlag() ? "1\n" : "0\n");
 								writer.write(read.getReadString() + basePadding.toString() + "\n");
 								writer.write(read.getBaseQualityString() + qualPadding.toString() + "\n");							
 							}
@@ -203,14 +204,26 @@ public class NativeAssembler implements Assembler {
 //		
 //	}
 	
+	/*
 	public static void main(String[] args) {
 		NativeAssembler assem = new NativeAssembler();
-		assem.setTruncateOutputOnRepeat(false);
-		assem.setMaxContigs(2000000);
-		assem.setMaxPathsFromRoot(5000);
-		/*
-		assem.assembleContigs(args[0], args[1], "contig");
-		*/
+		assem.setTruncateOutputOnRepeat(true);
+		assem.setMaxContigs(50000);
+		assem.setMaxPathsFromRoot(100000);
+		assem.setKmer(43);
+		assem.setReadLength(76);
+		assem.setMinKmerFrequency(2);
+		
+		String bam1 = args[0];
+		String bam2 = args[1];
+		List<String> inputFiles = new ArrayList<String>();
+		inputFiles.add(bam1);
+		inputFiles.add(bam2);
+		String output = 
+		
+		assem.assembleContigs(inputFiles, output, tempDir, region, prefix, checkForDupes, realigner)
+		
+//		assem.assembleContigs(args[0], args[1], "contig");
 		
 //		for (int i=0; i<10; i++) {
 //			run(args[0], args[1] + "_" + i);
@@ -221,4 +234,5 @@ public class NativeAssembler implements Assembler {
 //		assem.assembleContigs("/home/lmose/code/abra/src/main/c/1810_reads.txt",
 //				"/home/lmose/code/abra/src/main/c/1810.fa", "bar");
 	}
+*/
 }

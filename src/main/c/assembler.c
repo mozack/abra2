@@ -1,3 +1,4 @@
+/* Copyright 2013 University of North Carolina at Chapel Hill.  All rights reserved. */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

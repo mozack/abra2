@@ -1,3 +1,4 @@
+/* Copyright 2013 University of North Carolina at Chapel Hill.  All rights reserved. */
 package abra;
 
 import static abra.SequenceUtil.MatchResult.EXACT_MATCH;

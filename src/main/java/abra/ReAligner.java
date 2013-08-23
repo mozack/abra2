@@ -1556,7 +1556,7 @@ public class ReAligner {
 				nonClippedOrigStart -= firstElem.getLength(); 
 			}
 			
-			if (nonClippedOrigStart != updatedRead.getAlignmentStart()) {
+			if (nonClippedOrigStart == updatedRead.getAlignmentStart()) {
 				// Compare cigars
 				List<CigarElement> elems = new ArrayList<CigarElement>(origRead.getCigar().getCigarElements());
 				

@@ -71,6 +71,10 @@ public class Sam2Fastq {
 		
 		return isRegionBeyond;
 	}
+
+	private boolean isSecondary(SAMRecord read) {
+		return ((read.getFlags() & 0x800)  == 0) && (!read.getNotPrimaryAlignmentFlag());
+	}
 	
 	/**
 	 * Convert the input SAM/BAM file into a single fastq file.
@@ -100,7 +104,7 @@ public class Sam2Fastq {
         }
         
         for (SAMRecord read : reader) {
-    		if ((!read.getReadName().equals(last1Read) && (!realigner.isFiltered(read)))) {
+    		if (!isSecondary(read) && (!realigner.isFiltered(read))) {
     			
     			// These tags can be lengthy, so remove them.
 //    			String oldQualities = (String) read.getAttribute("OQ");

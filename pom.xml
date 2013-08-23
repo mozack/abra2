@@ -1,10 +1,11 @@
+<!--  Copyright 2013 University of North Carolina at Chapel Hill.  All rights reserved. -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>abra</groupId>
   <artifactId>abra</artifactId>
-  <version>0.46-SNAPSHOT</version>
+  <version>0.47-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>abra</name>

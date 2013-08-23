@@ -1429,7 +1429,7 @@ public class ReAligner {
 							
 								if (isSoftClipEquivalent(origRead, updatedRead)) {
 									// Restore Cigar and position
-									System.out.println("Re-setting [" + updatedRead.getSAMString() + "] --- [" + origRead.getSAMString() + "]");
+//									System.out.println("Re-setting [" + updatedRead.getSAMString() + "] --- [" + origRead.getSAMString() + "]");
 									updatedRead.setAlignmentStart(origRead.getAlignmentStart());
 									updatedRead.setCigar(origRead.getCigar());
 									

@@ -1426,16 +1426,24 @@ public class ReAligner {
 								origRead.getReadNegativeStrandFlag() != updatedRead.getReadNegativeStrandFlag() ||
 								!origRead.getCigarString().equals(updatedRead.getCigarString())) {
 							
-								String originalAlignment;
-								if (origRead.getReadUnmappedFlag()) {
-									originalAlignment = "N/A";
+								if (isSoftClipEquivalent(origRead, updatedRead)) {
+									// Restore Cigar and position
+									System.out.println("Re-setting [" + updatedRead.getSAMString() + "] --- [" + origRead.getSAMString() + "]");
+									updatedRead.setAlignmentStart(origRead.getAlignmentStart());
+									updatedRead.setCigar(origRead.getCigar());
+									
 								} else {
-									originalAlignment = origRead.getReferenceName() + ":" + origRead.getAlignmentStart() + ":" +
-											(origRead.getReadNegativeStrandFlag() ? "-" : "+") + ":" + origRead.getCigarString();
+									String originalAlignment;
+									if (origRead.getReadUnmappedFlag()) {
+										originalAlignment = "N/A";
+									} else {
+										originalAlignment = origRead.getReferenceName() + ":" + origRead.getAlignmentStart() + ":" +
+												(origRead.getReadNegativeStrandFlag() ? "-" : "+") + ":" + origRead.getCigarString();
+									}
+									
+									// Read's original alignment position
+									updatedRead.setAttribute("YO", originalAlignment);
 								}
-								
-								// Read's original alignment position
-								updatedRead.setAttribute("YO", originalAlignment);
 							}
 							
 							// Mismatches to the contig
@@ -1530,6 +1538,61 @@ public class ReAligner {
 		contigReader.close();
 		
 		log("Done with: " + outputSam + ".  Number of reads realigned: " + realignedCount);
+	}
+	
+	private boolean isSoftClipEquivalent(SAMRecord origRead, SAMRecord updatedRead) {
+		
+		boolean isEquivalent = false;
+		
+		if ((origRead.getCigarString().contains("S")) &&
+			(origRead.getReferenceName().equals(updatedRead.getReferenceName())) &&
+			(origRead.getReadNegativeStrandFlag() == updatedRead.getReadNegativeStrandFlag()) &&
+			(origRead.getCigarLength() > 1)) {
+			
+			// Compare start positions
+			int nonClippedOrigStart = origRead.getAlignmentStart();
+			CigarElement firstElem = origRead.getCigar().getCigarElement(0); 
+			if (firstElem.getOperator() == CigarOperator.S) {
+				nonClippedOrigStart -= firstElem.getLength(); 
+			}
+			
+			if (nonClippedOrigStart != updatedRead.getAlignmentStart()) {
+				// Compare cigars
+				List<CigarElement> elems = new ArrayList<CigarElement>(origRead.getCigar().getCigarElements());
+				
+				CigarElement first = elems.get(0);
+				
+				// If first element is soft clipped, lengthen the second element
+				if (first.getOperator() == CigarOperator.S) {
+					CigarElement second = elems.get(1);
+					CigarElement newElem = new CigarElement(first.getLength() + second.getLength(), second.getOperator());
+					elems.set(1,  newElem);
+				}
+				
+				CigarElement last = elems.get(elems.size()-1);
+				if (last.getOperator() == CigarOperator.S) {
+					CigarElement nextToLast = elems.get(elems.size()-2);
+					CigarElement newElem = new CigarElement(last.getLength() + nextToLast.getLength(), nextToLast.getOperator());
+					elems.set(elems.size()-2, newElem);
+				}
+				
+				List<CigarElement> newElems = new ArrayList<CigarElement>();
+
+				for (CigarElement elem : elems) {
+					if (elem.getOperator() != CigarOperator.S) {
+						newElems.add(elem);
+					}
+				}
+				
+				Cigar convertedCigar = new Cigar(newElems);
+				
+				if (convertedCigar.equals(updatedRead.getCigar())) {
+					isEquivalent = true;
+				}
+			}
+		}
+		
+		return isEquivalent;
 	}
 	
 	void adjustForStrand(boolean readAlreadyReversed, SAMRecord read) {

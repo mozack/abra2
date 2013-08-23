@@ -72,7 +72,7 @@ public class Sam2Fastq {
 		return isRegionBeyond;
 	}
 
-	private boolean isSecondary(SAMRecord read) {
+	private boolean isPrimary(SAMRecord read) {
 		return ((read.getFlags() & 0x800)  == 0) && (!read.getNotPrimaryAlignmentFlag());
 	}
 	
@@ -104,7 +104,7 @@ public class Sam2Fastq {
         }
         
         for (SAMRecord read : reader) {
-    		if (!isSecondary(read) && (!realigner.isFiltered(read))) {
+    		if (isPrimary(read) && (!realigner.isFiltered(read))) {
     			
     			// These tags can be lengthy, so remove them.
 //    			String oldQualities = (String) read.getAttribute("OQ");

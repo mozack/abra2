@@ -29,7 +29,7 @@ using google::sparse_hash_set;
 #define TOO_MANY_CONTIGS -2
 #define STOPPED_ON_REPEAT -3
 
-#define MAX_FREQUENCY 255
+#define MAX_FREQUENCY 32766
 
 int read_length;
 int min_contig_length;
@@ -93,7 +93,7 @@ struct node {
 	struct linked_node* toNodes;
 	struct linked_node* fromNodes;
 	char* contributingRead;
-	unsigned char frequency;
+	unsigned short frequency;
 	char hasMultipleUniqueReads;
 	char contributing_strand;
 };

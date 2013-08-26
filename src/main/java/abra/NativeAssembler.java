@@ -96,6 +96,8 @@ public class NativeAssembler implements Assembler {
 								readIds.add(getIdentifier(read));
 							}
 							
+							writer.write(read.getReadNegativeStrandFlag() ? "1\n" : "0\n");
+							
 							if (read.getReadLength() == readLength) {
 								writer.write(read.getReadString() + "\n");
 								writer.write(read.getBaseQualityString() + "\n");
@@ -108,7 +110,7 @@ public class NativeAssembler implements Assembler {
 									qualPadding.append('!');
 								}
 								
-								writer.write(read.getReadNegativeStrandFlag() ? "1\n" : "0\n");
+//								writer.write(read.getReadNegativeStrandFlag() ? "1\n" : "0\n");
 								writer.write(read.getReadString() + basePadding.toString() + "\n");
 								writer.write(read.getBaseQualityString() + qualPadding.toString() + "\n");							
 							}

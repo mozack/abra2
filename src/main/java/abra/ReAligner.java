@@ -282,6 +282,11 @@ public class ReAligner {
 			if (writer2 != null) {
 				writer2.close();
 			}
+			
+			if (writer3 != null) {
+				writer3.close();
+			}
+			
 			clock.stopAndPrint();
 			
 			/*

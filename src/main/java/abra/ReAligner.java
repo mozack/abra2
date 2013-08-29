@@ -2024,8 +2024,8 @@ public class ReAligner {
 
 			long s = System.currentTimeMillis();
 
-			realigner.reAlign(options.getInputFile(), options.getInputFile2(), options.getOutputFile(), options.getOutputFile2(),
-					options.getInputFile3(), options.getOutputFile3());
+			realigner.reAlign(options.getInputFile(), options.getInputFile2(), options.getInputFile3(),
+					options.getOutputFile(), options.getOutputFile2(), options.getOutputFile3());
 
 			long e = System.currentTimeMillis();
 

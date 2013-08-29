@@ -74,6 +74,7 @@ public class ReAligner {
 	
 	private String inputSam1;
 	private String inputSam2;
+	private String inputSam3;
 	
 	private int readLength = -1;
 	private int maxMapq = -1;
@@ -91,12 +92,14 @@ public class ReAligner {
 	
 	private CompareToReference2 c2r;
 	
-	public void reAlign(String inputSam, String inputSam2, String outputSam, String outputSam2) throws Exception {
+	public void reAlign(String inputSam, String inputSam2, String inputSam3, String outputSam, String outputSam2, String outputSam3) throws Exception {
 
 		System.out.println("input: " + inputSam);
 		System.out.println("input2: " + inputSam2);
+		System.out.println("input3: " + inputSam3);
 		System.out.println("output: " + outputSam);
 		System.out.println("output2: " + outputSam2);
+		System.out.println("output3: " + outputSam3);
 		System.out.println("regions: " + regionsGtf);
 		System.out.println("reference: " + reference);
 		System.out.println("working dir: " + tempDir);
@@ -112,6 +115,7 @@ public class ReAligner {
 
 		this.inputSam1 = inputSam;
 		this.inputSam2 = inputSam2;
+		this.inputSam3 = inputSam3;
 		
 		init();
 		
@@ -215,8 +219,10 @@ public class ReAligner {
 		if (cleanContigsFasta != null) {
 			String tempDir1 = tempDir + "/temp1";
 			String tempDir2 = tempDir + "/temp2";
+			String tempDir3 = tempDir + "/temp3";
 			mkdir(tempDir1);
 			mkdir(tempDir2);
+			mkdir(tempDir3);
 			
 			SAMFileWriterFactory writerFactory = new SAMFileWriterFactory();
 //			writerFactory.setUseAsyncIo(true);
@@ -226,9 +232,16 @@ public class ReAligner {
 			
 			SAMFileWriter writer2 = null;
 			
+			SAMFileWriter writer3 = null;
+			
 			if (inputSam2 != null) {
 				writer2 = writerFactory.makeSAMOrBAMWriter(
 					samHeader, false, new File(outputSam2));
+			}
+			
+			if (inputSam3 != null) {
+				writer3 = writerFactory.makeSAMOrBAMWriter(
+					samHeader, false, new File(outputSam3));
 			}
 			
 			clock = new Clock("Sam2Fastq and Align");
@@ -242,15 +255,17 @@ public class ReAligner {
 			System.out.println("c2r3: " + c2r);
 			
 			String[] alignedSams = alignReads(tempDir1, inputSam, cleanContigsFasta, c2r, writer1, 
-					tempDir2, inputSam2, writer2);
+					tempDir2, inputSam2, writer2, tempDir3, inputSam3, writer3);
 			
 			String alignedToContigSam1 = alignedSams[0];
 			String alignedToContigSam2 = alignedSams[1];
+			String alignedToContigSam3 = alignedSams[2];
 			
 			clock.stopAndPrint();
 
 			String alignedToContigBam1 = alignedToContigSam1;
 			String alignedToContigBam2 = alignedToContigSam2;
+			String alignedToContigBam3 = alignedToContigSam3;
 
 			clock = new Clock("Adjust reads");
 			clock.start();
@@ -260,7 +275,8 @@ public class ReAligner {
 			samHeader.setSortOrder(SortOrder.unsorted);
 			
 			adjustReads(alignedToContigBam1, writer1,
-					alignedToContigBam2, writer2, true, c2r, tempDir1, tempDir2);
+					alignedToContigBam2, writer2, true, c2r, tempDir1, tempDir2,
+					alignedToContigBam3, writer3, tempDir3);
 			
 			writer1.close();
 			if (writer2 != null) {
@@ -294,6 +310,9 @@ public class ReAligner {
 			if (inputSam2 != null) {
 				copySam(inputSam2, outputSam2);
 			}
+			if (inputSam3 != null) {
+				copySam(inputSam2, outputSam2);
+			}
 		}
 		
 		System.out.println("Done.");
@@ -319,7 +338,8 @@ public class ReAligner {
 	
 	private String[] alignReads(String tempDir1, String inputSam, 
 			String cleanContigsFasta, CompareToReference2 c2r, SAMFileWriter writer1, 
-			String tempDir2, String inputSam2, SAMFileWriter writer2) throws IOException, InterruptedException {
+			String tempDir2, String inputSam2, SAMFileWriter writer2,
+			String tempDir3, String inputSam3, SAMFileWriter writer3) throws IOException, InterruptedException {
 		
 		System.out.println("c2r4: " + c2r);
 		
@@ -341,20 +361,41 @@ public class ReAligner {
 		
 		String alignedToContigSam2 = null;
 		
+		Thread thread2 = null;
+		
 		if (inputSam2 != null) {
 			alignedToContigSam2 = tempDir2 + "/" + "align_to_contig.sam";
 			AlignReadsRunnable alignReadsRunnable2 = new AlignReadsRunnable(this,
 					tempDir2, inputSam2, cleanContigsFasta, c2r, writer2, alignedToContigSam2);
-			Thread thread2 = new Thread(alignReadsRunnable2);
+			thread2 = new Thread(alignReadsRunnable2);
 			thread2.start();
-			thread2.join();
 			
 //			alignReads(tempDir2, inputSam2, cleanContigsFasta, c2r, writer2, alignedToContigSam2);
 		}
 		
+		String alignedToContigSam3 = null;
+		
+		Thread thread3 = null;
+		
+		if (inputSam3 != null) {
+			alignedToContigSam3 = tempDir3 + "/" + "align_to_contig.sam";
+			AlignReadsRunnable alignReadsRunnable3 = new AlignReadsRunnable(this,
+					tempDir3, inputSam3, cleanContigsFasta, c2r, writer3, alignedToContigSam3);
+			thread3 = new Thread(alignReadsRunnable3);
+			thread3.start();
+		}
+		
 		thread1.join();
 		
-		return new String[] { alignedToContigSam1, alignedToContigSam2 };
+		if (inputSam2 != null) {
+			thread2.join();
+		}
+		
+		if (inputSam3 != null) {
+			thread3.join();
+		}
+		
+		return new String[] { alignedToContigSam1, alignedToContigSam2, alignedToContigSam3 };
 	}
 	
 	/*
@@ -475,7 +516,8 @@ public class ReAligner {
 
 	private void adjustReads(String sortedAlignedToContig1, SAMFileWriter outputSam1, 
 			String sortedAlignedToContig2, SAMFileWriter outputSam2, boolean isTightAlignment,
-			CompareToReference2 c2r, String tempDir1, String tempDir2) throws InterruptedException, IOException {
+			CompareToReference2 c2r, String tempDir1, String tempDir2,
+			String sortedAlignedToContig3, SAMFileWriter outputSam3, String tempDir3) throws InterruptedException, IOException {
 		
 		if (this.numThreads > 1) {
 			
@@ -484,20 +526,38 @@ public class ReAligner {
 			Thread thread1 = new Thread(runnable1);
 			thread1.start();
 			
+			Thread thread2 = null;
 			if (inputSam2 != null) {
 				AdjustReadsRunnable runnable2 = new AdjustReadsRunnable(this, sortedAlignedToContig2, outputSam2, isTightAlignment, c2r, tempDir2);
-				Thread thread2 = new Thread(runnable2);
+				thread2 = new Thread(runnable2);
 				thread2.start();
-				thread2.join();
+			}
+			
+			Thread thread3 = null;
+			if (inputSam3 != null) {
+				AdjustReadsRunnable runnable3 = new AdjustReadsRunnable(this, sortedAlignedToContig3, outputSam3, isTightAlignment, c2r, tempDir3);
+				thread3 = new Thread(runnable3);
+				thread3.start();
 			}
 			
 			thread1.join();
+			
+			if (inputSam2 != null) {
+				thread2.join();
+			}
+			
+			if (inputSam3 != null) {
+				thread3.join();
+			}
 			
 		} else {
 			System.out.println("Adjusting reads sequentially");
 			adjustReads(sortedAlignedToContig1, outputSam1, isTightAlignment, c2r, tempDir1);
 			if (inputSam2 != null) {
 				adjustReads(sortedAlignedToContig2, outputSam2, isTightAlignment, c2r, tempDir2);
+			}
+			if (inputSam3 != null) {
+				adjustReads(sortedAlignedToContig3, outputSam3, isTightAlignment, c2r, tempDir3);
 			}
 		}
 	}
@@ -801,6 +861,24 @@ public class ReAligner {
 			reader.close();
 		}
 		
+		if (inputSam3 != null) {
+			reader = new SAMFileReader(new File(inputSam3));
+			reader.setValidationStringency(ValidationStringency.SILENT);
+	
+			for (SAMRecord read : reader) {
+				//TODO: Remove hardcoded mapq.  Exclude from original region?
+	//			if (read.getReadUnmappedFlag() || read.getMappingQuality() < 10) {
+	//			if (read.getReadUnmappedFlag()) {
+	//			if ((read.getReadUnmappedFlag()) || (read.getCigarLength() >= 4)) {
+				if (shouldIncludeInUnalignedPile(read)) {
+					unalignedReadsBam.addAlignment(read);
+					numUnalignedReads += 1;
+				}
+			}
+			
+			reader.close();
+		}
+		
 		unalignedReadsBam.close();
 		
 		System.out.println("Number of unaligned reads: " + numUnalignedReads);
@@ -839,6 +917,9 @@ public class ReAligner {
 			bams.add(inputSam1);
 			if (inputSam2 != null) {
 				bams.add(inputSam2);
+			}
+			if (inputSam3 != null) {
+				bams.add(inputSam3);
 			}
 			if (shouldReprocessUnaligned) {
 				bams.add(unalignedRegionSam);
@@ -1943,15 +2024,14 @@ public class ReAligner {
 
 			long s = System.currentTimeMillis();
 
-			realigner.reAlign(options.getInputFile(), options.getInputFile2(), options.getOutputFile(), options.getOutputFile2());
+			realigner.reAlign(options.getInputFile(), options.getInputFile2(), options.getOutputFile(), options.getOutputFile2(),
+					options.getInputFile3(), options.getOutputFile3());
 
 			long e = System.currentTimeMillis();
 
 			System.out.println("Elapsed seconds: " + (e - s) / 1000);
 		}
 	}
-	
-
 	
 	public static void main(String[] args) throws Exception {
 		ReAligner realigner = new ReAligner();
@@ -1989,7 +2069,6 @@ public class ReAligner {
 		SAMFileWriter writer = new SAMFileWriterFactory().makeSAMOrBAMWriter(
 				realigner.samHeader, false, new File("/home/lmose/dev/ayc/p3/output.bam"));
 
-		
 		realigner.adjustReads("/home/lmose/dev/ayc/p3/a2c2.bam", writer, true, c2r, "/home/lmose/dev/ayc/p3");
 		
 		outputReadsBam.close();

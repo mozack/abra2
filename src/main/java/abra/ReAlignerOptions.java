@@ -7,8 +7,10 @@ public class ReAlignerOptions extends Options {
 	
 	private static final String INPUT_SAM = "in";
 	private static final String INPUT_SAM2 = "in2";
+	private static final String INPUT_SAM3 = "in3";
 	private static final String OUTPUT_SAM = "out";
 	private static final String OUTPUT_SAM2 = "out2";
+	private static final String OUTPUT_SAM3 = "out3";
 	private static final String REFERENCE = "ref";
 	private static final String TARGET_REGIONS = "targets";
 	private static final String WORKING_DIR = "working";
@@ -34,9 +36,11 @@ public class ReAlignerOptions extends Options {
     	if (parser == null) {
             parser = new OptionParser();
             parser.accepts(INPUT_SAM, "Required input sam or bam file").withRequiredArg().ofType(String.class);
-            parser.accepts(INPUT_SAM2, "Required input sam or bam file").withRequiredArg().ofType(String.class);
+            parser.accepts(INPUT_SAM2, "Optional input sam or bam file").withRequiredArg().ofType(String.class);
+            parser.accepts(INPUT_SAM3, "Optional input sam or bam file").withRequiredArg().ofType(String.class);
             parser.accepts(OUTPUT_SAM, "Required output sam or bam file").withRequiredArg().ofType(String.class);
-            parser.accepts(OUTPUT_SAM2, "Required output sam or bam file").withRequiredArg().ofType(String.class);
+            parser.accepts(OUTPUT_SAM2, "Optional output sam or bam file").withRequiredArg().ofType(String.class);
+            parser.accepts(OUTPUT_SAM3, "Optional output sam or bam file").withRequiredArg().ofType(String.class);
             parser.accepts(REFERENCE, "Genome reference location").withRequiredArg().ofType(String.class);
             parser.accepts(TARGET_REGIONS, "GTF containing target regions").withRequiredArg().ofType(String.class);
             parser.accepts(WORKING_DIR, "Working directory for intermediate output").withRequiredArg().ofType(String.class);
@@ -111,6 +115,14 @@ public class ReAlignerOptions extends Options {
 	
 	public String getOutputFile2() {
 		return (String) getOptions().valueOf(OUTPUT_SAM2);
+	}
+	
+	public String getInputFile3() {
+		return (String) getOptions().valueOf(INPUT_SAM3);
+	}
+	
+	public String getOutputFile3() {
+		return (String) getOptions().valueOf(OUTPUT_SAM3);
 	}
 	
 	public String getReference() {

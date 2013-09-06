@@ -1997,7 +1997,7 @@ public class ReAligner {
 
 	public static void run(String[] args) throws Exception {
 		
-		System.out.println("Starting 0.49 ...");
+		System.out.println("Starting 0.51 ...");
 		
 		ReAlignerOptions options = new ReAlignerOptions();
 		options.parseOptions(args);

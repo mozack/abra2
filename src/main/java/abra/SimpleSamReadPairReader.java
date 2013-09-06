@@ -47,23 +47,19 @@ public class SimpleSamReadPairReader implements Iterable<ReadPair> {
     private ReadPair pairReads(List<SAMRecord> reads1, List<SAMRecord> reads2) {
     	
     	if ((reads1.size() > 1) || (reads2.size() > 1)) {
-    		String msg = "Error: Multi-mapped reads not supported: " + 
+    		String msg = "Warning: Multi-mapped reads not supported: " + 
     				(reads1.size() > 0 ? reads1.get(0).getReadName() : "null") + " - " + 
     				(reads2.size() > 0 ? reads2.get(0).getReadName() : "null");
     		System.out.println(msg);
-    		throw new RuntimeException(msg);
+//    		throw new RuntimeException(msg);
     	}
     	
     	SAMRecord read1 = null;
     	SAMRecord read2 = null;
     	
-    	if (reads1.size() == 1) {
-    		read1 = reads1.get(0);
-    	}
+    	read1 = reads1.get(0);
     	
-    	if (reads2.size() == 1) {
-    		read2 = reads2.get(0);
-    	}
+    	read2 = reads2.get(0);
     	
     	return new ReadPair(read1, read2);    	
     }

@@ -57,9 +57,13 @@ public class SimpleSamReadPairReader implements Iterable<ReadPair> {
     	SAMRecord read1 = null;
     	SAMRecord read2 = null;
     	
-    	read1 = reads1.get(0);
+    	if (reads1.size() >= 1) {
+    		read1 = reads1.get(0);
+    	}
     	
-    	read2 = reads2.get(0);
+    	if (reads2.size() >= 1) {
+    		read2 = reads2.get(0);
+    	}
     	
     	return new ReadPair(read1, read2);    	
     }
@@ -185,7 +189,10 @@ public class SimpleSamReadPairReader implements Iterable<ReadPair> {
     
     public static void main(String[] args) {
 //        SamReadPairReader reader = new SamReadPairReader("/home/lisle/data/coord_convert/sorted_tiny.sam");
-    	SimpleSamReadPairReader reader = new SimpleSamReadPairReader("/home/lmose/Downloads/ucsd/debug.bam");
+    	String sam = args[0];
+    	SimpleSamReadPairReader reader = new SimpleSamReadPairReader(sam);
+//    	SimpleSamReadPairReader reader = new SimpleSamReadPairReader("/home/lmose/dev/abra/simplesam/candidates.bam");
+
         
         for (ReadPair pair : reader) {
             System.out.println(pair);

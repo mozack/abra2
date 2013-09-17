@@ -8,7 +8,7 @@ import net.sf.samtools.SAMRecord;
 
 public class CalcReadMovement {
 
-	public void getReadDistance(String file) {
+	public static void getReadDistance(String file) {
 		SAMFileReader reader = new SAMFileReader(new File(file));
 		reader.setValidationStringency(ValidationStringency.SILENT);
 		
@@ -54,10 +54,9 @@ public class CalcReadMovement {
 	public static void main(String[] args) {
 		String pid = args[0];
 		String baseDir = args[1];
-		String inputFile = args[2];
-		String origBam = args[3];
-		String abraBam = args[4];
+		String abraBam = args[2];
 
 		String bam = baseDir + "/" + pid + "/" + abraBam;
+		getReadDistance(bam);
 	}
 }

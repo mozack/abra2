@@ -18,35 +18,38 @@ public class CalcReadMovement {
 			String yo = (String) read.getAttribute("YO");
 			//chr17:7579659:-:100M
 			
-			if (yo.equals("N/A")) {
-				System.out.println("N/A\t" + read.getReferenceName());
-			} else {
-				String[] fields = yo.split(":");
-				String chr = fields[0];
-				int pos = Integer.parseInt(fields[1]);
-				String strand = fields[2];
+			if (yo != null) {
 			
-				StringBuffer s = new StringBuffer();
-				if (!read.getReferenceName().equals(chr)) {
-					s.append('C');
+				if (yo.equals("N/A")) {
+					System.out.println("N/A\t" + read.getReferenceName());
+				} else {
+					String[] fields = yo.split(":");
+					String chr = fields[0];
+					int pos = Integer.parseInt(fields[1]);
+					String strand = fields[2];
+				
+					StringBuffer s = new StringBuffer();
+					if (!read.getReferenceName().equals(chr)) {
+						s.append('C');
+					}
+					
+					String readStrand = read.getReadNegativeStrandFlag() ? "-" : "+";
+					
+					if (!strand.equals(readStrand)) {
+						s.append("S");
+					}
+					
+					int diff = Math.abs(read.getAlignmentStart() - pos);
+					s.append("\t");
+					s.append(diff);
+					s.append("\t");
+					
+					if (!read.getReferenceName().equals(chr)) {
+						s.append(chr + "->" + read.getReferenceName());
+					}
+					
+					System.out.println(s.toString());
 				}
-				
-				String readStrand = read.getReadNegativeStrandFlag() ? "-" : "+";
-				
-				if (!strand.equals(readStrand)) {
-					s.append("S");
-				}
-				
-				int diff = Math.abs(read.getAlignmentStart() - pos);
-				s.append("\t");
-				s.append(diff);
-				s.append("\t");
-				
-				if (!read.getReferenceName().equals(chr)) {
-					s.append(chr + "->" + read.getReferenceName());
-				}
-				
-				System.out.println(s.toString());
 			}
 		}
 	}

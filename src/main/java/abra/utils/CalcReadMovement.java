@@ -52,6 +52,8 @@ public class CalcReadMovement {
 				}
 			}
 		}
+		
+		System.out.println("Num reads: " + numReads);
 	}
 	
 	public static void main(String[] args) {

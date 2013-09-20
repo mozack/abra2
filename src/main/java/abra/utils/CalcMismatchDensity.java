@@ -101,9 +101,9 @@ public class CalcMismatchDensity {
 		while (iter.hasNext()) {
 			SAMRecord read = (SAMRecord) iter.next();
 			
-			String yo = (String) read.getAttribute("YO");
+//			String yo = (String) read.getAttribute("YO");
 
-			if ((yo == null) || (!yo.equals("N/A"))) {
+//			if ((yo == null) || (!yo.equals("N/A"))) {
 				numMismatches += c2r.noiseAroundIndel(read, indelType, pos, length);
 				
 				for (int qual : read.getBaseQualities()) {
@@ -112,7 +112,7 @@ public class CalcMismatchDensity {
 						numBases += 1;
 					}
 				}
-			}
+//			}
 		}
 
 		iter.close();

@@ -51,7 +51,7 @@ public class CalcMismatchDensity {
 		String line = reader.readLine();
 		while (line != null) {
 			String[] fields = line.split("\t");
-			String pid = fields[0];
+			String pid = fields[1];
 			if (!pid.equals(currPid)) {
 				currPid = pid;
 				System.err.println(currPid);
@@ -59,10 +59,10 @@ public class CalcMismatchDensity {
 				origReader = initReader(origReader, baseDir + "/" + pid + "/" + origBam);
 			}
 			
-			String chromosome = fields[1];
-			int pos = Integer.parseInt(fields[2]);
-			int refLen = Integer.parseInt(fields[4]);
-			int altLen = Integer.parseInt(fields[5]);
+			String chromosome = fields[2];
+			int pos = Integer.parseInt(fields[3]);
+			int refLen = Integer.parseInt(fields[5]);
+			int altLen = Integer.parseInt(fields[6]);
 			int length = 0;
 			CigarOperator indelType;
 			

@@ -938,7 +938,7 @@ public class ReAligner {
 			List<String> assemblyFiles = assem.assembleContigs(bams, contigsFasta, tempDir, region, region.getDescriptor(), true, this);
 			
 			for (String assemblyFile : assemblyFiles) {
-				BufferedReader reader = new BufferedReader(new FileReader(contigsFasta));
+				BufferedReader reader = new BufferedReader(new FileReader(assemblyFile));
 				appendContigs(reader);
 				reader.close();
 				

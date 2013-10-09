@@ -27,7 +27,7 @@ public interface Assembler {
 			
 //	public boolean assembleContigs(String inputSam, String output, String prefix, boolean checkForDupes) throws FileNotFoundException, IOException, InterruptedException;
 	
-	public boolean assembleContigs(List<String> inputFiles, String output, String tempDir, Feature region, String prefix, boolean checkForDupes, ReAligner realigner);
+	public List<String> assembleContigs(List<String> inputFiles, String output, String tempDir, Feature region, String prefix, boolean checkForDupes, ReAligner realigner);
 		
 //	public void setKmerSize(int kmerSize);
 	

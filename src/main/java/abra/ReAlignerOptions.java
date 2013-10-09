@@ -44,7 +44,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(REFERENCE, "Genome reference location").withRequiredArg().ofType(String.class);
             parser.accepts(TARGET_REGIONS, "GTF containing target regions").withRequiredArg().ofType(String.class);
             parser.accepts(WORKING_DIR, "Working directory for intermediate output").withRequiredArg().ofType(String.class);
-            parser.accepts(KMER_SIZE, "Assembly kmer size").withRequiredArg().ofType(Integer.class);
+            parser.accepts(KMER_SIZE, "Assembly kmer size(delimit by commas if more than 1").withRequiredArg().ofType(String.class);
             parser.accepts(MIN_NODE_FREQUENCY, "Assembly minimum node frequency").withRequiredArg().ofType(Integer.class);
             parser.accepts(MIN_UNALIGNED_NODE_FREQUENCY, "Assembly minimum unaligned node frequency").withRequiredArg().ofType(Integer.class);
             parser.accepts(MIN_CONTIG_LENGTH, "Assembly minimum contig length").withRequiredArg().ofType(Integer.class);
@@ -137,8 +137,15 @@ public class ReAlignerOptions extends Options {
 		return (String) getOptions().valueOf(WORKING_DIR);
 	}
 	
-	public int getKmerSize() {
-		return (Integer) getOptions().valueOf(KMER_SIZE);
+	public int[] getKmerSizes() {
+		String[] kmerStr = ((String) getOptions().valueOf(KMER_SIZE)).split(",");
+		
+		int[] kmers = new int[kmerStr.length];
+		for (int i=0; i<kmerStr.length; i++) {
+			kmers[i] = Integer.parseInt(kmerStr[i]);
+		}
+		
+		return kmers;
 	}
 		
 	public int getMinNodeFrequency() {

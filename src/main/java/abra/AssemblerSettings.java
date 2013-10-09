@@ -3,7 +3,7 @@ package abra;
 
 public class AssemblerSettings {
 
-	private int kmerSize;
+	private int[] kmerSize;
 	private int minEdgeFrequency;
 	private int minNodeFrequncy;
 	private int minUnalignedNodeFrequency;
@@ -11,11 +11,11 @@ public class AssemblerSettings {
 	private int maxPotentialContigs;
 	private double minContigRatio;
 		
-	public int getKmerSize() {
+	public int[] getKmerSize() {
 		return kmerSize;
 	}
 	
-	public void setKmerSize(int kmerSize) {
+	public void setKmerSize(int[] kmerSize) {
 		this.kmerSize = kmerSize;
 	}
 	
@@ -70,7 +70,9 @@ public class AssemblerSettings {
 	public String getDescription() {
 		StringBuffer str = new StringBuffer();
 		
-		appendSetting(str, "kmerSize", kmerSize);
+		for (int i=0; i<kmerSize.length; i++) {
+			appendSetting(str, "kmer" + i, kmerSize[i]);
+		}
 		appendSetting(str, "minEdgeFrequency", minEdgeFrequency);
 		appendSetting(str, "minNodeFrequncy", minNodeFrequncy);
 		appendSetting(str, "minContigLength", minContigLength);

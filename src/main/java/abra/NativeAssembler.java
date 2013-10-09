@@ -5,6 +5,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -20,7 +21,7 @@ public class NativeAssembler implements Assembler {
 	private int maxContigs;
 	private int maxPathsFromRoot;
 	private int readLength;
-	private int kmer;
+	private int[] kmers;
 	private int minKmerFrequency;
 	private Set<String> readIds;
 
@@ -42,9 +43,11 @@ public class NativeAssembler implements Assembler {
 	
 //	public boolean assembleContigs(String input, String output, String prefix, boolean checkForDupes) {
 	
-	public boolean assembleContigs(List<String> inputFiles, String output, String tempDir, Feature region, String prefix, boolean checkForDupes, ReAligner realigner) {
+	public List<String> assembleContigs(List<String> inputFiles, String output, String tempDir, Feature region, String prefix, boolean checkForDupes, ReAligner realigner) {
 		
 		long start = System.currentTimeMillis();
+		
+		List<String> outputFiles = new ArrayList<String>();
 		
 		int count = 0;
 		
@@ -124,16 +127,28 @@ public class NativeAssembler implements Assembler {
 			readIds = null;
 			writer.close();
 			
-			count = assemble(
-					readFile,
-					output, 
-					prefix, 
-					truncateOnRepeat ? 1 : 0,
-					maxContigs,
-					maxPathsFromRoot,
-					readLength,
-					kmer,
-					minKmerFrequency);
+			for (int kmer : kmers) { 
+			
+				String outputFile = output + "_k" + kmer;
+				
+				count = assemble(
+						readFile,
+						outputFile, 
+						prefix, 
+						truncateOnRepeat ? 1 : 0,
+						maxContigs,
+						maxPathsFromRoot,
+						readLength,
+						kmer,
+						minKmerFrequency);
+				
+				if (count > 0) {
+					outputFiles.add(outputFile);
+				} else {
+					File fileToDelete = new File(outputFile);
+					fileToDelete.delete();
+				}
+			}
 			
 			File inputReadFile = new File(readFile);
 			inputReadFile.delete();
@@ -147,7 +162,7 @@ public class NativeAssembler implements Assembler {
 		
 		System.out.println("Elapsed msecs in NativeAssembler: " + (end-start));
 		
-		return count != 0;
+		return outputFiles;
 	}
 	
 	private boolean hasLowQualityBase(SAMRecord read) {
@@ -189,8 +204,8 @@ public class NativeAssembler implements Assembler {
 		this.readLength = readLength;
 	}
 	
-	public void setKmer(int kmer) {
-		this.kmer = kmer;
+	public void setKmer(int[] kmers) {
+		this.kmers = kmers;
 	}
 	
 	public void setMinKmerFrequency(int frequency) {

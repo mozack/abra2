@@ -152,12 +152,15 @@ public class ReAligner {
 			Assembler assem = newUnalignedAssembler(1);
 			List<String> unalignedSamList = new ArrayList<String>();
 			unalignedSamList.add(unalignedSam);
-			boolean hasContigs = assem.assembleContigs(unalignedSamList, unalignedContigFasta, tempDir, null, "unaligned", false, this);
+			List<String> unalignedAssemblies = assem.assembleContigs(unalignedSamList, unalignedContigFasta, tempDir, null, "unaligned", false, this);
+			
+			boolean hasContigs = unalignedAssemblies.size() > 0;
 
 			// Make eligible for GC
 			assem = null;
 						
 			if (hasContigs) {
+				unalignedContigFasta = unalignedAssemblies.get(0);
 				String unalignedCleanContigsFasta = alignAndCleanContigs(unalignedContigFasta, unalignedDir, false);
 				if (unalignedCleanContigsFasta != null) {
 					// Build contig fasta index
@@ -932,18 +935,27 @@ public class ReAligner {
 			
 			// Assemble contigs
 			Assembler assem = newAssembler();
-			boolean hasContigs = assem.assembleContigs(bams, contigsFasta, tempDir, region, region.getDescriptor(), true, this);
+			List<String> assemblyFiles = assem.assembleContigs(bams, contigsFasta, tempDir, region, region.getDescriptor(), true, this);
 			
-			// Append contigs to the global fasta file
-			if (hasContigs) {
+			for (String assemblyFile : assemblyFiles) {
 				BufferedReader reader = new BufferedReader(new FileReader(contigsFasta));
 				appendContigs(reader);
 				reader.close();
+				
+				File localAssembledContigs = new File(assemblyFile);
+				localAssembledContigs.delete();
 			}
 			
-			// Now delete the temporary fasta file.
-			File localAssembledContigs = new File(contigsFasta);
-			localAssembledContigs.delete();
+//			// Append contigs to the global fasta file
+//			if (hasContigs) {
+//				BufferedReader reader = new BufferedReader(new FileReader(contigsFasta));
+//				appendContigs(reader);
+//				reader.close();
+//			}
+//			
+//			// Now delete the temporary fasta file.
+//			File localAssembledContigs = new File(contigsFasta);
+//			localAssembledContigs.delete();
 		}
 		catch (Exception e) {
 			e.printStackTrace();
@@ -1909,7 +1921,9 @@ public class ReAligner {
 		assem.setMaxPathsFromRoot(5000);
 		assem.setReadLength(readLength);
 		// Could be smaller for higher sensitivity here?
-		assem.setKmer(assemblerSettings.getKmerSize());
+		int[] unalignedKmer = new int[1];
+		unalignedKmer[0] = assemblerSettings.getKmerSize()[0];
+		assem.setKmer(unalignedKmer);
 		assem.setMinKmerFrequency(assemblerSettings.getMinUnalignedNodeFrequency());
 
 		return assem;
@@ -2006,7 +2020,7 @@ public class ReAligner {
 
 			AssemblerSettings assemblerSettings = new AssemblerSettings();
 
-			assemblerSettings.setKmerSize(options.getKmerSize());
+			assemblerSettings.setKmerSize(options.getKmerSizes());
 			assemblerSettings.setMinContigLength(options.getMinContigLength());
 			assemblerSettings.setMinNodeFrequncy(options.getMinNodeFrequency());
 			assemblerSettings.setMaxPotentialContigs(options

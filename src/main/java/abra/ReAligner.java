@@ -1018,7 +1018,7 @@ public class ReAligner {
 		if(inputSam2 != null) {
 			SAMFileReader reader2 = new SAMFileReader(new File(inputSam2));
 			reader2.setValidationStringency(ValidationStringency.SILENT);
-			samHeader2 = reader.getFileHeader();
+			samHeader2 = reader2.getFileHeader();
 			samHeader2.setSortOrder(SAMFileHeader.SortOrder.unsorted);
 			reader2.close();
 		}
@@ -1026,7 +1026,7 @@ public class ReAligner {
 		if(inputSam3 != null) {
 			SAMFileReader reader3 = new SAMFileReader(new File(inputSam3));
 			reader3.setValidationStringency(ValidationStringency.SILENT);
-			samHeader3 = reader.getFileHeader();
+			samHeader3 = reader3.getFileHeader();
 			samHeader3.setSortOrder(SAMFileHeader.SortOrder.unsorted);
 			reader3.close();
 		}

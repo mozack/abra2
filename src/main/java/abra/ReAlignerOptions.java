@@ -27,6 +27,7 @@ public class ReAlignerOptions extends Options {
 	private static final String PAIRED_END = "paired";
 	private static final String RNA = "rna";
 	private static final String RNA_OUTPUT = "rna-out";
+	private static final String MIN_BASE_QUALITY = "mbq";
 	
 	private OptionParser parser;
 	private boolean isValid;
@@ -57,6 +58,8 @@ public class ReAlignerOptions extends Options {
             parser.accepts(PAIRED_END, "Paired end");
             parser.accepts(RNA, "Input RNA sam or bam file (optional)").withRequiredArg().ofType(String.class);
             parser.accepts(RNA_OUTPUT, "Output RNA sam or bam file (required if RNA input file specified)").withRequiredArg().ofType(String.class);
+            parser.accepts(MIN_BASE_QUALITY, "Minimum base quality for inclusion in assembly");
+            
     	}
     	
     	return parser;
@@ -194,6 +197,10 @@ public class ReAlignerOptions extends Options {
 	
 	public String getRnaSamOutput() {
 		return (String) getOptions().valueOf(RNA_OUTPUT);
+	}
+	
+	public int getMinBaseQuality() {
+		return (Integer) getOptions().valueOf(MIN_BASE_QUALITY);
 	}
 	
 	public boolean isValid() {

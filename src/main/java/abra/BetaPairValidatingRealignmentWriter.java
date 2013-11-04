@@ -143,6 +143,18 @@ public class BetaPairValidatingRealignmentWriter implements RealignmentWriter {
 		output(second);
 	}
 	
+	private int getInsertGap(int read1Start, int read1End, int read2Start, int read2End) {
+		int gap = 0;
+		
+		if (read1Start < read2Start) {
+			gap = read2Start - read1End;
+		} else {
+			gap = read1Start - read2End;
+		}
+		
+		return gap;
+	}
+	
 	private int getInsertLength(int read1Start, int read1End, int read2Start, int read2End) {
 		int start = Math.min(read1Start, read2Start);
 		int end = Math.max(read1End, read2End);
@@ -161,7 +173,10 @@ public class BetaPairValidatingRealignmentWriter implements RealignmentWriter {
 		
 		if ((read1 != null) && (read2 != null)) {
 			if (isSameChromosome(read1, read2)) {
-				int len = getInsertLength(read1, read2);
+				//int len = getInsertLength(read1, read2);
+				int len = getInsertGap(read1.getAlignmentStart(), read1.getAlignmentEnd(), read2.getAlignmentStart(),
+						read2.getAlignmentEnd()) +
+						read1.getReadLength() + read2.getReadLength();
 				
 				isValid = (isValidInsertLength(len)) && (isValidOrientation(read1, read2));
 			}

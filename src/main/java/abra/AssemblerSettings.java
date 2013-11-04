@@ -10,7 +10,16 @@ public class AssemblerSettings {
 	private int minContigLength;
 	private int maxPotentialContigs;
 	private double minContigRatio;
+	private int minBaseQuality;
 		
+	public int getMinBaseQuality() {
+		return minBaseQuality;
+	}
+
+	public void setMinBaseQuality(int minBaseQuality) {
+		this.minBaseQuality = minBaseQuality;
+	}
+
 	public int[] getKmerSize() {
 		return kmerSize;
 	}

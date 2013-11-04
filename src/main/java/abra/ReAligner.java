@@ -45,6 +45,8 @@ public class ReAligner {
 	private int missingXATag = 0;
 	
 	private SAMFileHeader samHeader;
+	private SAMFileHeader samHeader2;
+	private SAMFileHeader samHeader3;
 
 	private long startMillis;
 
@@ -125,7 +127,7 @@ public class ReAligner {
 		System.out.println("c2r2: " + c2r);
 
 		log("Reading Input SAM Header and identifying read length");
-		getSamHeaderAndReadLength(inputSam);
+		getSamHeaderAndReadLength(inputSam, inputSam2, inputSam3);
 		
 		log("Read length: " + readLength);
 		
@@ -239,12 +241,12 @@ public class ReAligner {
 			
 			if (inputSam2 != null) {
 				writer2 = writerFactory.makeSAMOrBAMWriter(
-					samHeader, false, new File(outputSam2));
+					samHeader2, false, new File(outputSam2));
 			}
 			
 			if (inputSam3 != null) {
 				writer3 = writerFactory.makeSAMOrBAMWriter(
-					samHeader, false, new File(outputSam3));
+					samHeader3, false, new File(outputSam3));
 			}
 			
 			clock = new Clock("Sam2Fastq and Align");
@@ -314,19 +316,19 @@ public class ReAligner {
 			*/
 		} else {
 			log("WARNING!  No contigs assembled.  Just making a copy of input converting to/from SAM/BAM as appropriate.");
-			copySam(inputSam, outputSam);
+			copySam(samHeader, inputSam, outputSam);
 			if (inputSam2 != null) {
-				copySam(inputSam2, outputSam2);
+				copySam(samHeader2, inputSam2, outputSam2);
 			}
 			if (inputSam3 != null) {
-				copySam(inputSam2, outputSam2);
+				copySam(samHeader3, inputSam3, outputSam3);
 			}
 		}
 		
 		System.out.println("Done.");
 	}
 	
-	private void copySam(String input, String output) {
+	private void copySam(SAMFileHeader header, String input, String output) {
 		
 		SAMFileWriterFactory writerFactory = new SAMFileWriterFactory();
 		
@@ -334,7 +336,7 @@ public class ReAligner {
 		reader.setValidationStringency(ValidationStringency.SILENT);
 		
 		SAMFileWriter writer = writerFactory.makeSAMOrBAMWriter(
-				samHeader, false, new File(output));
+				header, false, new File(output));
 		
 		for (SAMRecord read : reader) {
 			writer.addAlignment(read);
@@ -984,13 +986,14 @@ public class ReAligner {
 		System.out.println(new Date() + " : " + message);
 	}
 
-	private void getSamHeaderAndReadLength(String inputSam) {
+	private void getSamHeaderAndReadLength(String inputSam, String inputSam2, String inputSam3) {
 		
 		log("Identifying header and determining read length");
 		SAMFileReader reader = new SAMFileReader(new File(inputSam));
 		try {
 			reader.setValidationStringency(ValidationStringency.SILENT);
 	
+			//ASSUMPTION!: All samples have same read length.
 			samHeader = reader.getFileHeader();
 			samHeader.setSortOrder(SAMFileHeader.SortOrder.unsorted);
 			
@@ -1010,6 +1013,22 @@ public class ReAligner {
 			}
 		} finally {
 			reader.close();
+		}
+		
+		if(inputSam2 != null) {
+			SAMFileReader reader2 = new SAMFileReader(new File(inputSam2));
+			reader2.setValidationStringency(ValidationStringency.SILENT);
+			samHeader2 = reader.getFileHeader();
+			samHeader2.setSortOrder(SAMFileHeader.SortOrder.unsorted);
+			reader2.close();
+		}
+		
+		if(inputSam3 != null) {
+			SAMFileReader reader3 = new SAMFileReader(new File(inputSam3));
+			reader3.setValidationStringency(ValidationStringency.SILENT);
+			samHeader3 = reader.getFileHeader();
+			samHeader3.setSortOrder(SAMFileHeader.SortOrder.unsorted);
+			reader3.close();
 		}
 		
 		log("Max read length is: " + readLength);
@@ -1819,7 +1838,7 @@ public class ReAligner {
 		for (Feature region : regions) {
 			if (currentRegion != null) {
 				if ((currentRegion.getSeqname().equals(region.getSeqname())) && 
-					(currentRegion.getEnd() + readLength >= region.getStart())) {
+					(currentRegion.getEnd() + (readLength) >= region.getStart())) {
 					
 					currentRegion.setEnd(region.getEnd());
 				} else {
@@ -1900,6 +1919,7 @@ public class ReAligner {
 		assem.setReadLength(readLength);
 		assem.setKmer(assemblerSettings.getKmerSize());
 		assem.setMinKmerFrequency(assemblerSettings.getMinNodeFrequncy());
+		assem.setMinBaseQuality(assemblerSettings.getMinBaseQuality());
 
 		return assem;
 	}
@@ -1925,6 +1945,7 @@ public class ReAligner {
 		unalignedKmer[0] = assemblerSettings.getKmerSize()[0];
 		assem.setKmer(unalignedKmer);
 		assem.setMinKmerFrequency(assemblerSettings.getMinUnalignedNodeFrequency());
+		assem.setMinBaseQuality(assemblerSettings.getMinBaseQuality());
 
 		return assem;
 	}
@@ -2011,7 +2032,7 @@ public class ReAligner {
 
 	public static void run(String[] args) throws Exception {
 		
-		System.out.println("Starting 0.52 ...");
+		System.out.println("Starting 0.53 ...");
 		
 		ReAlignerOptions options = new ReAlignerOptions();
 		options.parseOptions(args);
@@ -2027,6 +2048,7 @@ public class ReAligner {
 					.getMaxPotentialContigs());
 			assemblerSettings.setMinContigRatio(options.getMinContigRatio());
 			assemblerSettings.setMinUnalignedNodeFrequency(options.getMinUnalignedNodeFrequency());
+			assemblerSettings.setMinBaseQuality(options.getMinBaseQuality());
 
 			ReAligner realigner = new ReAligner();
 			realigner.setReference(options.getReference());

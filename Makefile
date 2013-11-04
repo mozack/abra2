@@ -15,8 +15,12 @@ native: mktargetdir
 	g++ -g -I$(SRCDIR) -I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/linux -shared -fPIC $(SRCDIR)/assembler.c -o target/libAbra.so
 
 standalone:
-	g++ -g -I. -I$(JAVA_HOME)/include assembler.c -o abra
+	g++ -g -I$(SRCDIR) -I$(JAVA_HOME)/include $(SRCDIR)/assembler.c -o abra
 
 clean:
 	rm -rf target
 	mvn clean
+
+# TODO: Parameterize version
+javah: java
+	javah -classpath target/abra-0.53-SNAPSHOT.jar abra.NativeAssembler

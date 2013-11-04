@@ -21,7 +21,7 @@ using google::sparse_hash_set;
 //#define MIN_NODE_FREQUENCY 2
 #define MAX_CONTIG_SIZE 50000
 #define MAX_READ_LENGTH 1001
-#define MIN_BASE_QUALITY 20
+//#define MIN_BASE_QUALITY 20
 #define INCREASE_MIN_NODE_FREQ_THRESHOLD 25000
 
 #define OK 0
@@ -35,6 +35,7 @@ int read_length;
 int min_contig_length;
 int kmer_size;
 int min_node_freq;
+int min_base_quality;
 
 struct eqstr
 {
@@ -230,7 +231,7 @@ int include_kmer(char* sequence, char*qual, int idx) {
 		}
 
 		// Discard kmers with low base qualities
-		if (qual[i] - '!' < MIN_BASE_QUALITY) {
+		if (qual[i] - '!' < min_base_quality) {
 			include = 0;
 			break;
 		}
@@ -725,8 +726,9 @@ extern "C"
  JNIEXPORT jint JNICALL Java_abra_NativeAssembler_assemble
    (JNIEnv *env, jobject obj, jstring j_input, jstring j_output, jstring j_prefix,
     jint j_truncate_on_output, jint j_max_contigs, jint j_max_paths_from_root,
-    jint j_read_length, jint j_kmer_size, jint j_min_node_freq)
+    jint j_read_length, jint j_kmer_size, jint j_min_node_freq, jint j_min_base_quality)
  {
+
      //Get the native string from javaString
      //const char *nativeString = env->GetStringUTFChars(javaString, 0);
 	const char* input  = env->GetStringUTFChars(j_input, 0);
@@ -738,8 +740,9 @@ extern "C"
 	int read_length = j_read_length;
 	int kmer_size = j_kmer_size;
 	min_node_freq = j_min_node_freq;
+	min_base_quality = j_min_base_quality;
 
-	printf("Abra JNI entry point v0.52\n");
+	printf("Abra JNI entry point v0.53\n");
 
 	printf("input: %s\n", input);
 	printf("output: %s\n", output);
@@ -750,6 +753,7 @@ extern "C"
 	printf("read_length: %d\n", read_length);
 	printf("kmer_size: %d\n", kmer_size);
 	printf("min node freq: %d\n", min_node_freq);
+	printf("min base quality: %d\n", min_base_quality);
 
 	int ret = assemble(input, output, prefix, truncate_on_output, max_contigs, max_paths_from_root, read_length, kmer_size);
 

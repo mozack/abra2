@@ -35,7 +35,7 @@ struct my_hash
 };
 
 //sparse_hash_map<const char*, int, hash<const char*>, eqstr> months;
-sparse_hash_map<const char*, int, my_hash, eqstr> months;
+sparse_hash_map<const char*, const char*, my_hash, eqstr> months;
 
 int main()
 {
@@ -84,5 +84,41 @@ int main()
 
 	sparse_hash_set<const char*, my_hash, eqstr> Set;
 
-	Set.insert("1234");
+	char* foo = (char*) malloc(sizeof(char) * 100);
+
+	printf("1: %x\n", foo);
+	sprintf(foo, "bar");
+	printf("2: %x\n", foo);
+	months[foo] = "rec";
+	months["bar2"] = "rec2";
+
+
+	sparse_hash_map<const char*, const char*, my_hash, eqstr>::const_iterator it1 = months.find("bar2");
+
+	const char* val = it1->second;
+
+	printf("Val: %s\n", val);
+
+	if (it1 == months.end()) {
+		printf("it1 @ end\n");
+	}
+
+	sparse_hash_map<const char*, const char*, my_hash, eqstr>::const_iterator it2 = months.find("bar3");
+
+	printf("it2: %x\n", it2);
+
+	if (it2 == months.end()) {
+		printf("it2 @ end\n");
+	}
+
+//	for (sparse_hash_map<const char*, const char*, my_hash, eqstr>::const_iterator it = months.begin();
+//		         it != months.end(); ++it) {
+//
+//		const char* key = it->first;
+//		const char* value = it->second;
+//
+//		printf("key: %s - %x\n", key, key);
+//		printf("value: %s\n", value);
+//
+//	}
 }

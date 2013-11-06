@@ -59,4 +59,9 @@ public class Feature {
 		return ((this.seqname.equals(read.getReferenceName())) &&
 			(spansEitherCoordinate(read.getAlignmentStart(), read.getAlignmentEnd())));
 	}
+	
+	public boolean overlaps(String chromosome, int startPos, int stopPos) {
+		return ((this.seqname.equals(chromosome)) &&
+				(spansEitherCoordinate(startPos, stopPos)));
+	}
 }

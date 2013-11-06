@@ -27,9 +27,9 @@ public class DbSnpSearcher {
 		
 		while (line != null) {
 			String[] fields = line.split("\t");
-			String chr = "chr" + fields[1];
-			int pos = Integer.parseInt(fields[2]);
-			int length = Math.max(Integer.parseInt(fields[4]), Integer.parseInt(fields[5]));
+			String chr = "chr" + fields[2];
+			int pos = Integer.parseInt(fields[3]);
+			int length = Math.max(Integer.parseInt(fields[5])-1, Integer.parseInt(fields[6])-1);
 			
 //			int fuzz = 100 + length;
 			int fuzz = 100;
@@ -159,6 +159,9 @@ public class DbSnpSearcher {
 //		s.run("/home/lmose/dev/ayc/germline_analysis/dbsnp_indels.txt.gz", "/home/lmose/Documents/abra/abra46_results/abra_germline_indels2.txt");
 //		s.run("/home/lmose/dev/ayc/germline_analysis/dbsnp_indels.txt.gz", "/home/lmose/Documents/abra/abra46_results/gl3.tsv");
 //		s.run("/home/lmose/dev/ayc/germline_analysis/dbsnp_indels.txt.gz", "/home/lmose/dev/ayc/germline_analysis/round2/abra_only.txt");
-		s.run("/home/lmose/dev/ayc/germline_analysis/dbsnp_indels.txt.gz", "/home/lmose/dev/abra/calls2/germline/data/all_germline_sorted.txt");
+//		s.run("/home/lmose/dev/ayc/germline_analysis/dbsnp_indels.txt.gz", "/home/lmose/dev/abra/calls2/germline/data/all_germline.sort.txt");
+//		s.run("/home/lmose/dev/ayc/germline_analysis/dbsnp_indels.txt.gz", "/home/lmose/dev/abra/calls5/data/all.calls.txt");
+//		s.run("/home/lmose/dev/ayc/germline_analysis/dbsnp_indels.txt.gz", "/home/lmose/dev/abra/calls6/germline/data/abra48_freebayes_prim.tsv");
+		s.run("/home/lmose/dev/ayc/germline_analysis/dbsnp_indels.txt.gz", "/home/lmose/dev/abra/calls6/round2/germline/tcga_brca_germline1.txt");
 	}
 }

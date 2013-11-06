@@ -70,6 +70,9 @@ public class BetaPairValidatingRealignmentWriter implements RealignmentWriter {
 			isSecondReadOnReverseStrand = read1.getReadNegativeStrandFlag();
 		}
 		
+		log(read1.getReadName(), "vo: 1:" + isFirstReadOnReverseStrand +
+				", 2: " + isSecondReadOnReverseStrand);
+		
 		return !isFirstReadOnReverseStrand && isSecondReadOnReverseStrand;
 	}
 	
@@ -178,6 +181,17 @@ public class BetaPairValidatingRealignmentWriter implements RealignmentWriter {
 						read2.getAlignmentEnd()) +
 						read1.getReadLength() + read2.getReadLength();
 				
+				log(read1.getReadName(), "vals: " +
+						read1.getAlignmentStart() + "," +
+						read1.getAlignmentEnd() + "," +
+						read2.getAlignmentStart() + "," +
+						read2.getAlignmentEnd() + "," +
+						read1.getReadLength() + "," +
+						read2.getReadLength());
+				
+				log(read1.getReadName(), "gap calculated len: " + len);
+				log(read1.getReadName(), "min: " + this.minInsertLength + " max: " + this.maxInsertLength);
+				
 				isValid = (isValidInsertLength(len)) && (isValidOrientation(read1, read2));
 			}
 		}
@@ -201,6 +215,12 @@ public class BetaPairValidatingRealignmentWriter implements RealignmentWriter {
 		}
 		
 		return isValid;
+	}
+	
+	private void log(String name, String msg) {
+		if (name.equals("HSQ1004:134:C0D8DACXX:1:2105:9033:106751")) {
+			System.out.println("v: " + msg);
+		}
 	}
 	
 	private void checkPairValidity(Reads first, Reads second) {

@@ -208,8 +208,12 @@ public class BetaPairValidatingRealignmentWriter implements RealignmentWriter {
 		boolean isMateOnReverseStrand = read.getMateNegativeStrandFlag();
 		
 		if (read.getReferenceName().equals(mateChr)) {
-			int len = getInsertLength(read.getAlignmentStart(), read.getAlignmentEnd(),
-					mateStart, mateEnd);
+//			int len = getInsertLength(read.getAlignmentStart(), read.getAlignmentEnd(),
+//					mateStart, mateEnd);
+			
+			//TODO: mateEnd may be slightly off here.
+			int len = getInsertGap(read.getAlignmentStart(), read.getAlignmentEnd(), mateStart,
+					mateEnd) + read.getReadLength() + read.getReadLength();
 			
 			isValid = isValidInsertLength(len) && isValidOrientation(read, mateStart, isMateOnReverseStrand);
 		}

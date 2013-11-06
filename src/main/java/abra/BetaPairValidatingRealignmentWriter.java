@@ -218,9 +218,9 @@ public class BetaPairValidatingRealignmentWriter implements RealignmentWriter {
 	}
 	
 	private void log(String name, String msg) {
-		if (name.equals("HSQ1004:134:C0D8DACXX:1:2105:9033:106751")) {
+//		if (name.equals("HSQ1004:134:C0D8DACXX:1:2105:9033:106751")) {
 			System.out.println("v: " + msg);
-		}
+//		}
 	}
 	
 	private void checkPairValidity(Reads first, Reads second) {

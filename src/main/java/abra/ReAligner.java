@@ -581,9 +581,24 @@ public class ReAligner {
 
 		for (SAMRecord contig : reader) {
 			String[] fields = contig.getReadName().split("_");
-			String regionChromosome = fields[0];
-			int regionStart = Integer.parseInt(fields[1]) - 1000;
-			int regionStop = Integer.parseInt(fields[2]) + 1000;
+			
+			String regionChromosome = "";
+			
+			// Loop through fields in case the chromosome name contains
+			// an underscore.
+			for (int i=0; i<fields.length-2; i++) {
+				regionChromosome += fields[0];
+				if (i+1 < fields.length-2) {
+					regionChromosome += "_";
+				}
+			}
+			
+			int regionStart = Integer.parseInt(fields[fields.length-2]);
+			int regionStop = Integer.parseInt(fields[fields.length-1]);
+			
+//			String regionChromosome = fields[0];
+//			int regionStart = Integer.parseInt(fields[1]) - 1000;
+//			int regionStop = Integer.parseInt(fields[2]) + 1000;
 			
 			if ((contig.getReferenceName().equals(regionChromosome)) &&
 				(contig.getAlignmentStart() >= regionStart) &&

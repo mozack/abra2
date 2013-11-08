@@ -594,7 +594,7 @@ public class ReAligner {
 			}
 			
 			int regionStart = Integer.parseInt(fields[fields.length-3]);
-			int regionStop = Integer.parseInt(fields[fields.length-3]);
+			int regionStop = Integer.parseInt(fields[fields.length-2]);
 			
 			System.out.println("chr: " + regionChromosome + " start: " + regionStart + "stop: " + regionStop);
 			

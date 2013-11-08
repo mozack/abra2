@@ -586,15 +586,17 @@ public class ReAligner {
 			
 			// Loop through fields in case the chromosome name contains
 			// an underscore.
-			for (int i=0; i<fields.length-2; i++) {
+			for (int i=0; i<fields.length-3; i++) {
 				regionChromosome += fields[i];
-				if (i+1 < fields.length-2) {
+				if (i+1 < fields.length-3) {
 					regionChromosome += "_";
 				}
 			}
 			
-			int regionStart = Integer.parseInt(fields[fields.length-2]);
-			int regionStop = Integer.parseInt(fields[fields.length-1]);
+			int regionStart = Integer.parseInt(fields[fields.length-3]);
+			int regionStop = Integer.parseInt(fields[fields.length-3]);
+			
+			System.out.println("chr: " + regionChromosome + " start: " + regionStart + "stop: " + regionStop);
 			
 //			String regionChromosome = fields[0];
 //			int regionStart = Integer.parseInt(fields[1]) - 1000;

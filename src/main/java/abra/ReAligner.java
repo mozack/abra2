@@ -587,7 +587,7 @@ public class ReAligner {
 			// Loop through fields in case the chromosome name contains
 			// an underscore.
 			for (int i=0; i<fields.length-2; i++) {
-				regionChromosome += fields[0];
+				regionChromosome += fields[i];
 				if (i+1 < fields.length-2) {
 					regionChromosome += "_";
 				}

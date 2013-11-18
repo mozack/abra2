@@ -1403,7 +1403,7 @@ public class ReAligner {
 			}
 			
 			String origSamStr = read.getReadName();
-			origSamStr = origSamStr.replace('|', '\t');
+			origSamStr = origSamStr.replace(Sam2Fastq.FIELD_DELIMITER, "\t");
 			SAMRecord orig;
 			try {
 				orig = samStringReader.getRead(origSamStr);

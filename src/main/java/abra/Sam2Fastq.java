@@ -25,6 +25,7 @@ import net.sf.samtools.SAMRecord.SAMTagAndValue;
  */
 public class Sam2Fastq {
 	
+	public static final String FIELD_DELIMITER = "~|";
 	private static final int MAX_SAM_READ_NAME_LENGTH = 255;
 	
 	private FastqOutputFile output1;
@@ -182,7 +183,8 @@ public class Sam2Fastq {
 			System.out.println(msg);
 //			throw new RuntimeException(msg);
 		}
-		readStr = readStr.replace('\t','|');
+
+		readStr = readStr.replace("\t", FIELD_DELIMITER);
 		
 		// Trim newline if applicable
 		if (readStr.charAt(readStr.length()-1) == '\n') {

@@ -511,7 +511,7 @@ char is_contig_read_observed(struct contig* contig, sparse_hash_set<const char*,
 	char is_observed;
 
 	//TODO: This won't work with variable length reads.
-	if (contig->size >= read_length) {
+	if (contig->size >= read_length - 1) {
 		contig->seq[contig->size] = contig->curr_node->kmer[0];
 
 		char* read = contig->seq + contig->size + 1 - read_length;

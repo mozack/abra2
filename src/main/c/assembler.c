@@ -793,6 +793,21 @@ JNIEXPORT void JNICALL Java_abra_NativeAssembler_assemble
 
 int main(int argc, char* argv[]) {
 
+
+        min_node_freq = 2;
+        min_base_quality = 5;
+
+        assemble(
+                "/datastore/nextgenout4/seqware-analysis/lmose/platinum/test/mtest.reads",
+                "/datastore/nextgenout4/seqware-analysis/lmose/platinum/test/mtest.fa",
+                "foo",
+                false,
+                500000,
+                5000,
+                101,
+                53);
+
+
 /*
 	assemble(
 		"/home/lmose/code/abra/src/main/c/sim83/unaligned.bam.reads",
@@ -824,8 +839,8 @@ int main(int argc, char* argv[]) {
 		5000);
 		*/
 
+/*
 	printf("node size: %d\n", sizeof(node));
-
 	assemble(
 		"/home/lmose/code/abra/src/main/c/dump/unaligned.bam.reads",
 		"/home/lmose/code/abra/src/main/c/dump/unaligned.fa",
@@ -835,6 +850,7 @@ int main(int argc, char* argv[]) {
 		5000,
 		100,
 		63);
+*/
 
 //	printf("node size: %d\n", sizeof(node2));
 

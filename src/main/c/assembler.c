@@ -498,14 +498,14 @@ char is_contig_read_observed(struct contig* contig, sparse_hash_set<const char*,
 
 	//TODO: This won't work with variable length reads.
 	if (contig->size >= read_length) {
-		contig->seq[contig->size+1] = contig->curr_node->kmer[0];
+		contig->seq[contig->size] = contig->curr_node->kmer[0];
 
 		char* read = contig->seq + contig->size + 1 - read_length;
 
 		sparse_hash_set<const char*, read_hash, read_eqstr>::const_iterator it = reads->find(read);
 		is_observed = it != reads->end();
 
-		contig->seq[contig->size+1] = 0;
+		contig->seq[contig->size] = 0;
 	} else {
 		// Default to true for contigs shorter than read length.
 		// We'll rely on contig length filtering to get rid of these.

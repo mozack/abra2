@@ -482,6 +482,20 @@ struct contig* copy_contig(struct contig* orig) {
 	return copy;
 }
 
+/*
+struct contig* new_contig_from(struct contig* orig) {
+	struct contig* copy = (contig*) malloc(sizeof(contig));
+	memset(copy, sizeof(contig), 0);
+	// copy read_len-1 sequence
+	strncpy(copy->seq, orig->seq + contig->size - read_length + 1);
+	copy->size = read_length - 1;
+	copy->is_repeat = orig->is_repeat;
+	copy->is_stopped_on_fray = orig->is_stopped_on_fray;
+	copy->visited_nodes = new sparse_hash_set<const char*, my_hash, eqstr>(*orig->visited_nodes);
+	return copy;
+}
+*/
+
 void free_contig(struct contig* contig) {
 	delete contig->visited_nodes;
 	memset(contig, 0, sizeof(contig));
@@ -532,7 +546,31 @@ void output_contig(struct contig* contig, int& contig_count, FILE* fp, const cha
 //#define TOO_MANY_CONTIGS -2
 //#define STOPPED_ON_REPEAT -3
 
+void add_root_node(sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, struct linked_node* root_nodes, char* kmer) {
+
+	struct linked_node* root = root_nodes;
+	char is_already_root = false;
+
+	while ((root->next != NULL) && (!is_already_root)) {
+		if (compare_kmer(kmer, root->node->kmer)) {
+			is_already_root = true;
+		} else {
+			root = root->next;
+		}
+	}
+
+	is_already_root = is_already_root || compare_kmer(kmer, root->node->kmer);
+
+	if (is_already_root) {
+		struct linked_node* new_root = (linked_node*) malloc(sizeof(linked_node));
+		memset(new_root, sizeof(linked_node), 0);
+		root->next = new_root;
+		new_root->node = (*nodes)[kmer];
+	}
+}
+
 int build_contigs(
+		sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes,
 		struct node* root,
 		int& contig_count,
 		FILE* fp,
@@ -541,7 +579,8 @@ int build_contigs(
 		int max_contigs,
 		char stop_on_repeat,
 		char shadow_mode,
-		sparse_hash_set<const char*, read_hash, read_eqstr>* reads) {
+		sparse_hash_set<const char*, read_hash, read_eqstr>* reads,
+		struct linked_node* root_nodes) {
 
 	int status = OK;
 	stack<contig*> contigs;
@@ -561,10 +600,17 @@ int build_contigs(
 			if (!shadow_mode) {
 				output_contig(contig, contig_count, fp, prefix);
 			}
+
+			// Grab the node starting read_length back and add to root nodes, to ensure it is traversed.
+			char kmer[MAX_READ_LENGTH];
+			memset(kmer, MAX_READ_LENGTH, 0);
+			strncpy(kmer, contig->seq + contig->size - read_length, kmer_size);
+			add_root_node(nodes, root_nodes, kmer);
+
 			contigs.pop();
 			free_contig(contig);
 		}
-		else if (is_node_visited(contig, contig->curr_node)) {
+		else if (is_node_visited(contig, contig->curr_node)) {  //TODO: Track reads instead of nodes
 			// We've encountered a repeat
 			contig->is_repeat = 1;
 			if ((!shadow_mode) && (!stop_on_repeat)) {
@@ -585,6 +631,7 @@ int build_contigs(
 			if (!shadow_mode) {
 				output_contig(contig, contig_count, fp, prefix);
 			}
+
 			contigs.pop();
 			free_contig(contig);
 		}
@@ -741,11 +788,11 @@ int assemble(const char* input,
 		int shadow_count = 0;
 
 		// Run in shadow mode first
-		int status = build_contigs(root_nodes->node, shadow_count, fp, prefix, max_paths_from_root, max_contigs, truncate_on_repeat, true, reads);
+		int status = build_contigs(nodes, root_nodes->node, shadow_count, fp, prefix, max_paths_from_root, max_contigs, truncate_on_repeat, true, reads, root_nodes);
 
 		if (status == OK) {
 			// Now output the contigs
-			build_contigs(root_nodes->node, contig_count, fp, prefix, max_paths_from_root, max_contigs, truncate_on_repeat, false, reads);
+			build_contigs(nodes, root_nodes->node, contig_count, fp, prefix, max_paths_from_root, max_contigs, truncate_on_repeat, false, reads, root_nodes);
 		}
 
 		switch(status) {

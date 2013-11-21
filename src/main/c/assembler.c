@@ -64,33 +64,6 @@ struct my_hash
 	}
 };
 
-struct read_eqstr
-{
-  bool operator()(const char* s1, const char* s2) const
-  {
-    return (s1 == s2) || (s1 && s2 && strcmp(s1, s2) == 0);
-  }
-};
-
-struct read_hash
-{
-	unsigned long operator()(const char* read) const
-	{
-		unsigned long hash = 0;
-		int c;
-
-//		while((c = *kmer++))
-		for (int i=0; i<strlen(read); i++)
-		{
-			c = read[i];
-			/* hash = hash * 33 ^ c */
-			hash = ((hash << 5) + hash) ^ c;
-		}
-
-		return hash;
-	}
-};
-
 struct struct_pool {
 	struct node_pool* node_pool;
 	struct read_pool* read_pool;
@@ -305,9 +278,7 @@ void add_to_graph(char* sequence, sparse_hash_map<const char*, struct node*, my_
 	}
 }
 
-void build_graph(const char* read_file, sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, struct_pool* pool,
-		sparse_hash_set<const char*, read_hash, read_eqstr>* reads) {
-
+void build_graph(const char* read_file, sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, struct_pool* pool) {
 	FILE *fp = fopen(read_file, "r");
 	char read[MAX_READ_LENGTH];
 	memset(read, 0, MAX_READ_LENGTH);
@@ -325,7 +296,6 @@ void build_graph(const char* read_file, sparse_hash_map<const char*, struct node
 		if (strcmp(read, "") != 0) {
 			char* read_ptr = allocate_read(pool);
 			memcpy(read_ptr, read, read_length+1);
-			reads->insert(read_ptr);
 			add_to_graph(read_ptr, nodes, pool, qual, read_info);
 			line++;
 
@@ -454,7 +424,6 @@ struct contig {
 	char seq[MAX_CONTIG_SIZE];
 	int size;
 	char is_repeat;
-	char is_stopped_on_fray;
 	struct node* curr_node;
 	sparse_hash_set<const char*, my_hash, eqstr>* visited_nodes;
 };
@@ -466,7 +435,6 @@ struct contig* new_contig() {
 	memset(curr_contig->seq, 0, sizeof(curr_contig->seq));
 	curr_contig->size = 0;
 	curr_contig->is_repeat = 0;
-	curr_contig->is_stopped_on_fray = 0;
 	curr_contig->visited_nodes = new sparse_hash_set<const char*, my_hash, eqstr>();
 	return curr_contig;
 }
@@ -477,24 +445,9 @@ struct contig* copy_contig(struct contig* orig) {
 	strncpy(copy->seq, orig->seq, MAX_CONTIG_SIZE);
 	copy->size = orig->size;
 	copy->is_repeat = orig->is_repeat;
-	copy->is_stopped_on_fray = orig->is_stopped_on_fray;
 	copy->visited_nodes = new sparse_hash_set<const char*, my_hash, eqstr>(*orig->visited_nodes);
 	return copy;
 }
-
-/*
-struct contig* new_contig_from(struct contig* orig) {
-	struct contig* copy = (contig*) malloc(sizeof(contig));
-	memset(copy, sizeof(contig), 0);
-	// copy read_len-1 sequence
-	strncpy(copy->seq, orig->seq + contig->size - read_length + 1);
-	copy->size = read_length - 1;
-	copy->is_repeat = orig->is_repeat;
-	copy->is_stopped_on_fray = orig->is_stopped_on_fray;
-	copy->visited_nodes = new sparse_hash_set<const char*, my_hash, eqstr>(*orig->visited_nodes);
-	return copy;
-}
-*/
 
 void free_contig(struct contig* contig) {
 	delete contig->visited_nodes;
@@ -507,34 +460,10 @@ char is_node_visited(struct contig* contig, struct node* node) {
 	 return it != contig->visited_nodes->end();
 }
 
-char is_contig_read_observed(struct contig* contig, sparse_hash_set<const char*, read_hash, read_eqstr>* reads) {
-	char is_observed;
-
-	//TODO: This won't work with variable length reads.
-	if (contig->size >= read_length - 1) {
-		contig->seq[contig->size] = contig->curr_node->kmer[0];
-
-		char* read = contig->seq + contig->size + 1 - read_length;
-
-		sparse_hash_set<const char*, read_hash, read_eqstr>::const_iterator it = reads->find(read);
-		is_observed = it != reads->end();
-
-		contig->seq[contig->size] = 0;
-	} else {
-		// Default to true for contigs shorter than read length.
-		// We'll rely on contig length filtering to get rid of these.
-		is_observed = true;
-	}
-
-	return is_observed;
-}
-
 void output_contig(struct contig* contig, int& contig_count, FILE* fp, const char* prefix) {
 	if (strlen(contig->seq) >= min_contig_length) {
 		if (contig->is_repeat) {
 			fprintf(fp, ">%s_%d_repeat\n%s\n", prefix, contig_count++, contig->seq);
-		} else if (contig->is_stopped_on_fray) {
-			fprintf(fp, ">%s_%d_fray\n%s\n", prefix, contig_count++, contig->seq);
 		} else {
 			fprintf(fp, ">%s_%d\n%s\n", prefix, contig_count++, contig->seq);
 		}
@@ -546,31 +475,7 @@ void output_contig(struct contig* contig, int& contig_count, FILE* fp, const cha
 //#define TOO_MANY_CONTIGS -2
 //#define STOPPED_ON_REPEAT -3
 
-void add_root_node(sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, struct linked_node* root_nodes, char* kmer) {
-
-	struct linked_node* root = root_nodes;
-	char is_already_root = false;
-
-	while ((root->next != NULL) && (!is_already_root)) {
-		if (compare_kmer(kmer, root->node->kmer)) {
-			is_already_root = true;
-		} else {
-			root = root->next;
-		}
-	}
-
-	is_already_root = is_already_root || compare_kmer(kmer, root->node->kmer);
-
-	if (is_already_root) {
-		struct linked_node* new_root = (linked_node*) malloc(sizeof(linked_node));
-		memset(new_root, sizeof(linked_node), 0);
-		root->next = new_root;
-		new_root->node = (*nodes)[kmer];
-	}
-}
-
 int build_contigs(
-		sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes,
 		struct node* root,
 		int& contig_count,
 		FILE* fp,
@@ -578,9 +483,7 @@ int build_contigs(
 		int max_paths_from_root,
 		int max_contigs,
 		char stop_on_repeat,
-		char shadow_mode,
-		sparse_hash_set<const char*, read_hash, read_eqstr>* reads,
-		struct linked_node* root_nodes) {
+		char shadow_mode) {
 
 	int status = OK;
 	stack<contig*> contigs;
@@ -594,23 +497,7 @@ int build_contigs(
 		// Get contig from stack
 		struct contig* contig = contigs.top();
 
-		if (!is_contig_read_observed(contig, reads)) {
-			// This path doesn't exist in an actual read.  Output what we have so far and discontinue this path.
-			contig->is_stopped_on_fray = 1;
-			if (!shadow_mode) {
-				output_contig(contig, contig_count, fp, prefix);
-			}
-
-			// Grab the node starting read_length back and add to root nodes, to ensure it is traversed.
-			char kmer[MAX_READ_LENGTH];
-			memset(kmer, MAX_READ_LENGTH, 0);
-			strncpy(kmer, contig->seq + contig->size - read_length, kmer_size);
-			add_root_node(nodes, root_nodes, kmer);
-
-			contigs.pop();
-			free_contig(contig);
-		}
-		else if (is_node_visited(contig, contig->curr_node)) {  //TODO: Track reads instead of nodes
+		if (is_node_visited(contig, contig->curr_node)) {
 			// We've encountered a repeat
 			contig->is_repeat = 1;
 			if ((!shadow_mode) && (!stop_on_repeat)) {
@@ -631,7 +518,6 @@ int build_contigs(
 			if (!shadow_mode) {
 				output_contig(contig, contig_count, fp, prefix);
 			}
-
 			contigs.pop();
 			free_contig(contig);
 		}
@@ -757,16 +643,14 @@ int assemble(const char* input,
 
 	struct struct_pool* pool = init_pool();
 	sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes = new sparse_hash_map<const char*, struct node*, my_hash, eqstr>();
-	sparse_hash_set<const char*, read_hash, read_eqstr>* reads = new sparse_hash_set<const char*, read_hash, read_eqstr>();
 
 	long startTime = time(NULL);
 	printf("Assembling: %s -> %s\n", input, output);
 	nodes->set_deleted_key(NULL);
-	reads->set_deleted_key(NULL);
 
 	printf("Building graph\n");
 	fflush(stdout);
-	build_graph(input, nodes, pool, reads);
+	build_graph(input, nodes, pool);
 	printf("Pruning graph\n");
 	fflush(stdout);
 
@@ -788,11 +672,11 @@ int assemble(const char* input,
 		int shadow_count = 0;
 
 		// Run in shadow mode first
-		int status = build_contigs(nodes, root_nodes->node, shadow_count, fp, prefix, max_paths_from_root, max_contigs, truncate_on_repeat, true, reads, root_nodes);
+		int status = build_contigs(root_nodes->node, shadow_count, fp, prefix, max_paths_from_root, max_contigs, truncate_on_repeat, true);
 
 		if (status == OK) {
 			// Now output the contigs
-			build_contigs(nodes, root_nodes->node, contig_count, fp, prefix, max_paths_from_root, max_contigs, truncate_on_repeat, false, reads, root_nodes);
+			build_contigs(root_nodes->node, contig_count, fp, prefix, max_paths_from_root, max_contigs, truncate_on_repeat, false);
 		}
 
 		switch(status) {
@@ -831,7 +715,6 @@ int assemble(const char* input,
 	cleanup(nodes, pool);
 
 	delete nodes;
-	delete reads;
 
 	long stopTime = time(NULL);
 	printf("Done assembling(%ld): %s -> %s\n", (stopTime-startTime), input, output);
@@ -915,8 +798,10 @@ int main(int argc, char* argv[]) {
         min_base_quality = 5;
 
         assemble(
-                "/datastore/nextgenout4/seqware-analysis/lmose/platinum/test/mtest.reads",
-                "/datastore/nextgenout4/seqware-analysis/lmose/platinum/test/mtest.fa",
+//                "/datastore/nextgenout4/seqware-analysis/lmose/platinum/test/mtest.reads",
+//                "/datastore/nextgenout4/seqware-analysis/lmose/platinum/test/mtest.fa",
+                "/datastore/nextgenout4/seqware-analysis/lmose/platinum/test/ftest.reads",
+                "/datastore/nextgenout4/seqware-analysis/lmose/platinum/test/ftest.fa",
                 "foo",
                 false,
                 500000,

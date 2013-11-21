@@ -146,6 +146,7 @@ public class NativeAssembler implements Assembler {
 				
 				if (count > 0) {
 					outputFiles.add(outputFile);
+					break;
 				} else {
 					File fileToDelete = new File(outputFile);
 					fileToDelete.delete();

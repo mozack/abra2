@@ -800,8 +800,10 @@ int main(int argc, char* argv[]) {
         assemble(
 //                "/datastore/nextgenout4/seqware-analysis/lmose/platinum/test/mtest.reads",
 //                "/datastore/nextgenout4/seqware-analysis/lmose/platinum/test/mtest.fa",
-                "/datastore/nextgenout4/seqware-analysis/lmose/platinum/test/ftest.reads",
-                "/datastore/nextgenout4/seqware-analysis/lmose/platinum/test/ftest.fa",
+//                "/datastore/nextgenout4/seqware-analysis/lmose/platinum/test/ftest.reads",
+//                "/datastore/nextgenout4/seqware-analysis/lmose/platinum/test/ftest.fa",
+		"/datastore/nextgenout4/seqware-analysis/lmose/platinum/long_d/test1.reads",
+		"/datastore/nextgenout4/seqware-analysis/lmose/platinum/long_d/test1.fa",
                 "foo",
                 false,
                 500000,

@@ -18,10 +18,15 @@ public class Aligner {
 		this.numThreads = numThreads;
 	}
 	
-	public void align(String input, String outputSam) throws IOException, InterruptedException {
+	public void align(String input, String outputSam, boolean isGapExtensionFavored) throws IOException, InterruptedException {
 //		String cmd = "bwa bwasw -t " + numThreads + " -f " + outputSam + " " + reference + " " + input;
 		
-		String cmd = "bwa mem -t " + numThreads + " " + reference + " " + input + " > " + outputSam;
+		String cmd;
+		if (isGapExtensionFavored) {
+			cmd = "bwa mem -t " + numThreads + " " + reference + " " + input + " > " + outputSam;
+		} else {
+			cmd = "bwa mem -A 2 -B 8 -O 12 -L 10 -U 34 -t " + numThreads + " " + reference + " " + input + " > " + outputSam;
+		}
 		
 		runCommand(cmd);
 	}
@@ -168,6 +173,6 @@ public class Aligner {
 	public static void main(String[] args) throws Exception {
 		Aligner a = new Aligner("/datastore/nextgenout2/share/labs/UNCseq/lmose2/mapzilla/bwamem/ref/hg19.fa", 8);
 		
-		a.align(args[0], args[1]);
+		a.align(args[0], args[1], true);
 	}
 }

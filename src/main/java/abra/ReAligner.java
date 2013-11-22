@@ -84,6 +84,7 @@ public class ReAligner {
 	private int maxInsertLength = -1;
 	
 	private boolean isPairedEnd = false;
+	private boolean isGapExtensionFavored = false;
 	
 	private String rnaSam = null;
 	private String rnaOutputSam = null;
@@ -624,7 +625,7 @@ public class ReAligner {
 		log("Aligning contigs");
 		Aligner aligner = new Aligner(reference, numThreads);
 		String contigsSam = tempDir + "/" + "all_contigs.sam";
-		aligner.align(contigFasta, contigsSam);
+		aligner.align(contigFasta, contigsSam, isGapExtensionFavored);
 		
 		if (isTightAlignment) {
 			log("Discarding contigs aligned outside of region");
@@ -2079,6 +2080,7 @@ public class ReAligner {
 			realigner.isPairedEnd = options.isPairedEnd();
 			realigner.rnaSam = options.getRnaSam();
 			realigner.rnaOutputSam = options.getRnaSamOutput();
+			realigner.isGapExtensionFavored = options.isGapExtensionFavored();
 
 			long s = System.currentTimeMillis();
 

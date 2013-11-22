@@ -60,7 +60,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(RNA, "Input RNA sam or bam file (optional)").withRequiredArg().ofType(String.class);
             parser.accepts(RNA_OUTPUT, "Output RNA sam or bam file (required if RNA input file specified)").withRequiredArg().ofType(String.class);
             parser.accepts(MIN_BASE_QUALITY, "Minimum base quality for inclusion in assembly").withRequiredArg().ofType(Integer.class);
-            parser.accepts("FAVOR_GAPS", "Reduce penalty for gap extensions");
+            parser.accepts(FAVOR_GAP_EXTENSIONS, "Reduce penalty for gap extensions");
     	}
     	
     	return parser;

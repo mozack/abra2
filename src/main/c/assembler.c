@@ -31,11 +31,12 @@ using google::sparse_hash_set;
 
 #define MAX_FREQUENCY 32766
 
-int read_length;
-int min_contig_length;
+//TODO: Better variable localization
+__thread int read_length;
+__thread int min_contig_length;
 __thread int kmer_size;
-int min_node_freq;
-int min_base_quality;
+__thread int min_node_freq;
+__thread int min_base_quality;
 
 struct eqstr
 {

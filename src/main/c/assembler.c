@@ -33,7 +33,7 @@ using google::sparse_hash_set;
 
 int read_length;
 int min_contig_length;
-int kmer_size;
+__thread int kmer_size;
 int min_node_freq;
 int min_base_quality;
 
@@ -717,6 +717,11 @@ int assemble(const char* input,
 	delete nodes;
 
 	long stopTime = time(NULL);
+
+	if (kmer_size != input_kmer_size) {
+		printf("What!!?? %d : %d\n", kmer_size, input_kmer_size);
+	}
+	assert(kmer_size == input_kmer_size);
 	printf("Done assembling(%ld): %s -> %s\n", (stopTime-startTime), input, output);
 
 	return contig_count;

@@ -22,7 +22,7 @@ public class Aligner {
 //		String cmd = "bwa bwasw -t " + numThreads + " -f " + outputSam + " " + reference + " " + input;
 		
 		String cmd;
-		if (isGapExtensionFavored) {
+		if (!isGapExtensionFavored) {
 			cmd = "bwa mem -t " + numThreads + " " + reference + " " + input + " > " + outputSam;
 		} else {
 			cmd = "bwa mem -A 2 -B 8 -O 12 -L 10 -U 34 -t " + numThreads + " " + reference + " " + input + " > " + outputSam;

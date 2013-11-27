@@ -2,8 +2,6 @@ package abra.utils.trio;
 
 import java.io.IOException;
 
-import abra.utils.TrioGenotype.GenotypeStatus;
-
 public class TrioAnalysis {
 	
 	public void run(String chromosomes, String father, String mother, String child, TrioVcfReader.Caller caller) throws IOException {

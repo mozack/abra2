@@ -1011,7 +1011,7 @@ public class ReAligner {
 		try {
 			reader.setValidationStringency(ValidationStringency.SILENT);
 	
-			//ASSUMPTION!: All samples have same read length.
+			//ASSUMPTION!: All samples have same read length & insert len!
 			samHeader = reader.getFileHeader();
 			samHeader.setSortOrder(SAMFileHeader.SortOrder.unsorted);
 			
@@ -1029,6 +1029,14 @@ public class ReAligner {
 					this.maxInsertLength = Math.max(this.maxInsertLength, Math.abs(read.getInferredInsertSize()));
 				}
 			}
+			
+			// Allow some fudge in insert length
+			minInsertLength = Math.max(minInsertLength - 2*readLength, 0);
+			maxInsertLength = maxInsertLength + 2*readLength;
+			
+			System.out.println("Min insert length: " + minInsertLength);
+			System.out.println("Max insert length: " + maxInsertLength);
+			
 		} finally {
 			reader.close();
 		}
@@ -2100,38 +2108,38 @@ public class ReAligner {
 //		String unalignedSam = args[2];
 //		String outputFilename = args[3];
 		
-		String originalReadsSam = "/home/lmose/dev/ayc/sim/s43/orig_atc.bam";
-		String alignedToContigSam = "/home/lmose/dev/ayc/sim/s43/atc.bam";
+//		String originalReadsSam = "/home/lmose/dev/ayc/sim/s43/orig_atc.bam";
+//		String alignedToContigSam = "/home/lmose/dev/ayc/sim/s43/atc.bam";
 //		String unalignedSam = args[2];
-		String outputFilename = "/home/lmose/dev/ayc/sim/s43/atc_out.bam";
+//		String outputFilename = "/home/lmose/dev/ayc/sim/s43/atc_out.bam";
 		
-		SAMFileReader reader = new SAMFileReader(new File(originalReadsSam));
+		SAMFileReader reader = new SAMFileReader(new File("/home/lmose/dev/abra/missing_68i/header.sam"));
 	
 		realigner.samHeader = reader.getFileHeader();
 		
 		reader.close();
 		
-		realigner.readLength = 76;
-		realigner.isPairedEnd = true;
-		realigner.minInsertLength = 70;
-		realigner.maxInsertLength = 550;
-		realigner.regionsGtf = "/home/lmose/dev/ayc/p3/wxs.gtf";
-		realigner.loadRegions();
+//		realigner.readLength = 76;
+//		realigner.isPairedEnd = true;
+		realigner.minInsertLength = 100;
+		realigner.maxInsertLength = 500;
+//		realigner.regionsGtf = "/home/lmose/dev/ayc/p3/wxs.gtf";
+//		realigner.loadRegions();
 		
 //		realigner.getSamHeader(originalReadsSam);
 		
-		SAMFileWriter outputReadsBam = new SAMFileWriterFactory().makeSAMOrBAMWriter(
-				realigner.samHeader, true, new File(outputFilename));
-		
+		realigner.isPairedEnd = true;
+				
 		CompareToReference2 c2r = new CompareToReference2();
-		c2r.init("/home/lmose/reference/chr19/19.fa");
+		c2r.init("/home/lmose/reference/chr21/21.fa");
+		realigner.c2r = c2r;
 		
 		SAMFileWriter writer = new SAMFileWriterFactory().makeSAMOrBAMWriter(
-				realigner.samHeader, false, new File("/home/lmose/dev/ayc/p3/output.bam"));
+				realigner.samHeader, false, new File("/home/lmose/dev/abra/missing_68i/output.bam"));
 
-		realigner.adjustReads("/home/lmose/dev/ayc/p3/a2c2.bam", writer, true, c2r, "/home/lmose/dev/ayc/p3");
+		realigner.adjustReads("/home/lmose/dev/abra/missing_68i/a2c.sam", writer, true, c2r, "/home/lmose/dev/abra/missing_68i/temp");
 		
-		outputReadsBam.close();
+		writer.close();
 	}
 
 

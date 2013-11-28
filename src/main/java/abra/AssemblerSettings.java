@@ -87,6 +87,7 @@ public class AssemblerSettings {
 		appendSetting(str, "minContigLength", minContigLength);
 		appendSetting(str, "maxPotentialContigs", maxPotentialContigs);
 		appendSetting(str, "minContigRatio", minContigRatio);
+		appendSetting(str, "minBaseQuality", minBaseQuality);
 		
 		return str.toString();
 	}

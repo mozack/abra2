@@ -7,6 +7,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -111,8 +112,18 @@ public class ReAligner {
 		System.out.println(assemblerSettings.getDescription());
 		System.out.println("rna: " + rnaSam);
 		System.out.println("rna output: " + rnaOutputSam);
+		System.out.println("paired end: " + isPairedEnd);
+		System.out.println("isGapExtensionFavored: " + isGapExtensionFavored);
 		
 		System.out.println("Java version: " + System.getProperty("java.version"));
+		
+		try {
+			InetAddress localhost = java.net.InetAddress.getLocalHost();
+			String hostname = localhost.getHostName();
+			System.out.println("hostname: " + hostname);
+		} catch (Throwable t) {
+			System.out.println("Error getting hostname: " + t.getMessage());
+		}
 
 		startMillis = System.currentTimeMillis();
 

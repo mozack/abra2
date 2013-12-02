@@ -29,6 +29,7 @@ public class ReAlignerOptions extends Options {
 	private static final String RNA_OUTPUT = "rna-out";
 	private static final String MIN_BASE_QUALITY = "mbq";
 	private static final String FAVOR_GAP_EXTENSIONS = "fgap";
+	private static final String FILTER_SNP_CLUSTERS = "fsc";
 	
 	private OptionParser parser;
 	private boolean isValid;
@@ -61,6 +62,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(RNA_OUTPUT, "Output RNA sam or bam file (required if RNA input file specified)").withRequiredArg().ofType(String.class);
             parser.accepts(MIN_BASE_QUALITY, "Minimum base quality for inclusion in assembly").withRequiredArg().ofType(Integer.class);
             parser.accepts(FAVOR_GAP_EXTENSIONS, "Reduce penalty for gap extensions");
+            parser.accepts(FILTER_SNP_CLUSTERS, "Filter high numbers of nearby mismatches");
     	}
     	
     	return parser;
@@ -206,6 +208,10 @@ public class ReAlignerOptions extends Options {
 	
 	public boolean isGapExtensionFavored() {
 		return getOptions().has(FAVOR_GAP_EXTENSIONS);
+	}
+	
+	public boolean isFilterSnpClusters() {
+		return getOptions().has(FILTER_SNP_CLUSTERS);
 	}
 	
 	public boolean isValid() {

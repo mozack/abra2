@@ -86,6 +86,7 @@ public class ReAligner {
 	
 	private boolean isPairedEnd = false;
 	private boolean isGapExtensionFavored = false;
+	private boolean isFilterSnpClusters = false;
 	
 	private String rnaSam = null;
 	private String rnaOutputSam = null;
@@ -114,6 +115,7 @@ public class ReAligner {
 		System.out.println("rna output: " + rnaOutputSam);
 		System.out.println("paired end: " + isPairedEnd);
 		System.out.println("isGapExtensionFavored: " + isGapExtensionFavored);
+		System.out.println("isFilterSnpClusters: " + isFilterSnpClusters);
 		
 		System.out.println("Java version: " + System.getProperty("java.version"));
 		
@@ -666,6 +668,7 @@ public class ReAligner {
 			ContigChopper chopper = new ContigChopper();
 			chopper.setC2R(c2r);
 			chopper.setReadLength(this.readLength);
+			chopper.setFilterSnpClusters(this.isFilterSnpClusters);
 			
 			String contigsWithChimChopped = tempDir + "/" + "all_contigs_chim_chopped.bam";
 			chopper.chopClopDrop(this.regions, contigsWithChimSorted, contigsWithChimChopped);
@@ -2069,7 +2072,7 @@ public class ReAligner {
 
 	public static void run(String[] args) throws Exception {
 		
-		System.out.println("Starting 0.63 ...");
+		System.out.println("Starting 0.64 ...");
 		
 		ReAlignerOptions options = new ReAlignerOptions();
 		options.parseOptions(args);
@@ -2100,6 +2103,7 @@ public class ReAligner {
 			realigner.rnaSam = options.getRnaSam();
 			realigner.rnaOutputSam = options.getRnaSamOutput();
 			realigner.isGapExtensionFavored = options.isGapExtensionFavored();
+			realigner.isFilterSnpClusters = options.isFilterSnpClusters();
 
 			long s = System.currentTimeMillis();
 

@@ -74,7 +74,8 @@ public class Sam2Fastq {
 		return isRegionBeyond;
 	}
 
-	private boolean isPrimary(SAMRecord read) {
+	//TODO: Move to utility class
+	public static boolean isPrimary(SAMRecord read) {
 		return ((read.getFlags() & 0x800)  == 0) && (!read.getNotPrimaryAlignmentFlag());
 	}
 	

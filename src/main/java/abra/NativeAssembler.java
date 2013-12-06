@@ -44,6 +44,10 @@ public class NativeAssembler implements Assembler {
 	
 //	public boolean assembleContigs(String input, String output, String prefix, boolean checkForDupes) {
 	
+	private boolean isHardClipped(SAMRecord read) {
+		return read.getCigarString().contains("H");
+	}
+	
 	public List<String> assembleContigs(List<String> inputFiles, String output, String tempDir, Feature region, String prefix, boolean checkForDupes, ReAligner realigner) {
 		
 		long start = System.currentTimeMillis();
@@ -91,7 +95,8 @@ public class NativeAssembler implements Assembler {
 					if ( (!realigner.isFiltered(read)) && 
 						 (!read.getDuplicateReadFlag()) && 
 						 (!read.getReadFailsVendorQualityCheckFlag()) &&
-						 (Sam2Fastq.isPrimary(read)) &&
+						 //(Sam2Fastq.isPrimary(read)) &&
+						 (!isHardClipped(read)) &&
 						 ((!checkForDupes) || (!readIds.contains(getIdentifier(read))))) {
 	//					boolean hasAmbiguousBases = read.getReadString().contains("N");
 						Integer numBestHits = (Integer) read.getIntegerAttribute("X0");

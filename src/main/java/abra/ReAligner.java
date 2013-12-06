@@ -996,11 +996,11 @@ public class ReAligner {
 			throw e;
 		}
 	}
-	
+		
 	private void loadRegions() throws IOException {
 		GtfLoader loader = new GtfLoader();
 		regions = loader.load(regionsGtf);
-		
+		padRegions(regions, readLength);
 		regions = collapseRegions(regions, readLength);
 		
 		regions = splitRegions(regions);
@@ -1868,6 +1868,12 @@ public class ReAligner {
 		}
 		
 		return splitRegions;
+	}
+	
+	private void padRegions(List<Feature> regions, int readLength) {		
+		for (Feature region : regions) {
+			region.pad(readLength);
+		}
 	}
 	
 	public static List<Feature> collapseRegions(List<Feature> regions, int readLength) {

@@ -87,6 +87,7 @@ public class ReAligner {
 	private boolean isPairedEnd = false;
 	private boolean isGapExtensionFavored = false;
 	private boolean isFilterSnpClusters = false;
+	private boolean isPadRegions = false;
 	
 	private String rnaSam = null;
 	private String rnaOutputSam = null;
@@ -116,6 +117,7 @@ public class ReAligner {
 		System.out.println("paired end: " + isPairedEnd);
 		System.out.println("isGapExtensionFavored: " + isGapExtensionFavored);
 		System.out.println("isFilterSnpClusters: " + isFilterSnpClusters);
+		System.out.println("isPadRegions: " + isPadRegions);
 		
 		System.out.println("Java version: " + System.getProperty("java.version"));
 		
@@ -1000,7 +1002,9 @@ public class ReAligner {
 	private void loadRegions() throws IOException {
 		GtfLoader loader = new GtfLoader();
 		regions = loader.load(regionsGtf);
-		padRegions(regions, readLength);
+		if (isPadRegions) {
+			padRegions(regions, readLength);
+		}
 		regions = collapseRegions(regions, readLength);
 		
 		regions = splitRegions(regions);
@@ -1870,7 +1874,8 @@ public class ReAligner {
 		return splitRegions;
 	}
 	
-	private void padRegions(List<Feature> regions, int readLength) {		
+	private void padRegions(List<Feature> regions, int readLength) {
+		System.out.println("Padding regions...");
 		for (Feature region : regions) {
 			region.pad(readLength);
 		}
@@ -2110,6 +2115,7 @@ public class ReAligner {
 			realigner.rnaOutputSam = options.getRnaSamOutput();
 			realigner.isGapExtensionFavored = options.isGapExtensionFavored();
 			realigner.isFilterSnpClusters = options.isFilterSnpClusters();
+			realigner.isPadRegions = options.isPadRegions();
 
 			long s = System.currentTimeMillis();
 

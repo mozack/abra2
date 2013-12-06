@@ -30,6 +30,7 @@ public class ReAlignerOptions extends Options {
 	private static final String MIN_BASE_QUALITY = "mbq";
 	private static final String FAVOR_GAP_EXTENSIONS = "fgap";
 	private static final String FILTER_SNP_CLUSTERS = "fsc";
+	private static final String PAD_REGIONS = "pad";
 	
 	private OptionParser parser;
 	private boolean isValid;
@@ -63,6 +64,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(MIN_BASE_QUALITY, "Minimum base quality for inclusion in assembly").withRequiredArg().ofType(Integer.class);
             parser.accepts(FAVOR_GAP_EXTENSIONS, "Reduce penalty for gap extensions");
             parser.accepts(FILTER_SNP_CLUSTERS, "Filter high numbers of nearby mismatches");
+            parser.accepts(PAD_REGIONS, "Expand target regions by read length");
     	}
     	
     	return parser;
@@ -212,6 +214,10 @@ public class ReAlignerOptions extends Options {
 	
 	public boolean isFilterSnpClusters() {
 		return getOptions().has(FILTER_SNP_CLUSTERS);
+	}
+	
+	public boolean isPadRegions() {
+		return getOptions().has(PAD_REGIONS);
 	}
 	
 	public boolean isValid() {

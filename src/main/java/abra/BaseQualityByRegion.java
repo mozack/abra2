@@ -9,8 +9,14 @@ import net.sf.samtools.SAMFileReader;
 import net.sf.samtools.SAMRecord;
 import net.sf.samtools.util.CloseableIterator;
 
+/**
+ * Utility class for exploring base quality by region
+ * 
+ * @author Lisle E. Mose (lmose at unc dot edu)
+ */
 public class BaseQualityByRegion {
 
+	//TODO: Move to utils package
 	public void run(String input, String regionsGtf) throws IOException {
 		
 		SAMFileReader reader = new SAMFileReader(new File(input));

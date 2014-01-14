@@ -1,6 +1,10 @@
 /* Copyright 2013 University of North Carolina at Chapel Hill.  All rights reserved. */
 package abra;
 
+/**
+ * Settings for Contig Assembly
+ * @author Lisle E. Mose (lmose at unc dot edu)
+ */
 public class AssemblerSettings {
 
 	private int[] kmerSize;

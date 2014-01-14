@@ -5,6 +5,11 @@ import java.io.IOException;
 
 import net.sf.samtools.SAMFileWriter;
 
+/**
+ * Thread runnable class for read adjustment.
+ * 
+ * @author Lisle E. Mose (lmose at unc dot edu)
+ */
 public class AdjustReadsRunnable implements Runnable {
 	
 	private ReAligner realigner;
@@ -15,8 +20,6 @@ public class AdjustReadsRunnable implements Runnable {
 	private CompareToReference2 c2r;
 	private String tempDir;
 	
-//	public AdjustReadsRunnable(ReAligner realigner, String sortedOriginalReads, String sortedAlignedToContig, String outputSam,
-//			boolean isTightAlignment) {
 	public AdjustReadsRunnable(ReAligner realigner, String sortedAlignedToContig, SAMFileWriter outputSam,
 			boolean isTightAlignment, CompareToReference2 c2r, String tempDir) {
 

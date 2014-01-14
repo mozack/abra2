@@ -18,6 +18,11 @@ import net.sf.samtools.SAMFileWriterFactory;
 import net.sf.samtools.SAMRecord;
 import net.sf.samtools.SAMFileHeader.SortOrder;
 
+/**
+ * Combines chimeric alignments caused by indels when appropriate
+ * 
+ * @author Lisle E. Mose (lmose at unc dot edu)
+ */
 public class CombineChimera3 {
 	
 	// Minimum number of non clipped bases that must be between an identified indel and

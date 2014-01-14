@@ -1,6 +1,11 @@
 /* Copyright 2013 University of North Carolina at Chapel Hill.  All rights reserved. */
 package abra;
 
+/**
+ * Simple class used to log elapsed wall clock times.
+ * 
+ * @author Lisle E. Mose (lmose at unc dot edu)
+ */
 public class Clock {
 
 	private String descriptor;

@@ -5,15 +5,13 @@ import java.io.IOException;
 
 import net.sf.samtools.SAMFileWriter;
 
+/**
+ * Thread entry point for read alignment.
+ * 
+ * @author Lisle E. Mose (lmose at unc dot edu)
+ */
 public class AlignReadsRunnable implements Runnable {
-	
-//	private ReAligner realigner;
-//	private String sortedOriginalReads;
-//	private String sortedAlignedToContig;
-//	private SAMFileWriter outputSam;
-//	private boolean isTightAlignment;
-//	private CompareToReference2 c2r;
-	
+		
 	private ReAligner realigner;
 	private String tempDir;
 	private String inputSam;
@@ -25,7 +23,6 @@ public class AlignReadsRunnable implements Runnable {
 	public AlignReadsRunnable(ReAligner realigner, String tempDir, String inputSam, String cleanContigsFasta,
 			CompareToReference2 c2r, SAMFileWriter finalOutputSam, String alignedToContigSam) {
 
-		System.out.println("c2r5: " + c2r);
 		this.realigner = realigner;
 		this.tempDir = tempDir;
 		this.inputSam = inputSam;
@@ -38,8 +35,6 @@ public class AlignReadsRunnable implements Runnable {
 	@Override
 	public void run() {
 		try {
-			System.out.println("c2r6: " + c2r);
-			
 			realigner.alignReads(tempDir, inputSam, cleanContigsFasta, c2r, finalOutputSam, alignedToContigSam);
 		} catch (IOException e) {
 			e.printStackTrace();

@@ -10,6 +10,12 @@ import net.sf.samtools.SAMFileWriter;
 import net.sf.samtools.SAMFileWriterFactory;
 import net.sf.samtools.SAMRecord;
 
+/**
+ * Manages writing paired reads to final output.  Reads that were previously in
+ * a valid pair will not be modified to become invalid.
+ * 
+ * @author Lisle E. Mose (lmose at unc dot edu)
+ */
 public class BetaPairValidatingRealignmentWriter implements RealignmentWriter {
 
 	private SAMFileWriter writer;
@@ -17,8 +23,6 @@ public class BetaPairValidatingRealignmentWriter implements RealignmentWriter {
 	private IndelShifter indelShifter = new IndelShifter();
 	
 	private int realignCount = 0;
-	
-	private static final int INSERT_THRESHOLD = 5000;
 	
 	private int maxInsertLength;
 	private int minInsertLength;
@@ -46,12 +50,6 @@ public class BetaPairValidatingRealignmentWriter implements RealignmentWriter {
 	}
 	
 	long count = 1;
-	
-	int r1 = 0;
-	int r2 = 0;
-	int r3 = 0;
-	int r4 = 0;
-	int r5 = 0;
 	int numCandidates = 0;
 
 	private boolean isValidInsertLength(int insertLen) {
@@ -82,25 +80,20 @@ public class BetaPairValidatingRealignmentWriter implements RealignmentWriter {
 		
 		if (updatedRead == null) {
 			// Just output the original read
-			r1++;
 			output(new Reads(updatedRead, origRead));
 		} else if (updatedRead.getAttribute("YO") == null) {
 			// Updated read has not moved, just output it
-			r5++;
 			output(new Reads(updatedRead, origRead));
 		} else if ((!origRead.getReadPairedFlag()) || (!origRead.getProperPairFlag())) {
 			// Original read not part of "proper pair", output updated read
-			r2++;
 			output(new Reads(updatedRead, origRead));
 		} else {
 			// Output candidate to temp bam for comparison with mate
-			r3++;
 			writeToTempFile(candidatesSamWriter, updatedRead, origRead);
 			numCandidates += 1;
 		}
 		
 		if ((count++ % 100000) == 0) {
-			System.out.println(r1 + "," + r2 + "," + r3 + "," + r4 + "," + r5);
 			System.out.println("Num candidates: " + numCandidates);
 		}
 	}

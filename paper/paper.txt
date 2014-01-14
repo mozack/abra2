@@ -1,0 +1,60 @@
+Software
+--------
+FreeBayes version 0.9.9 check out recursively from revision: cc993c5c07e7673
+bwa version 0.7.5a-r405
+GATK version 2.7-4-g6f46d11
+SnpEff version 3.3c
+Abra version 0.69
+
+HapMap Trio
+-----------
+Reference: hg19 (hs37d5.fa downloaded from 1000 genomes + alternate haplotypes)
+Illumina Platinum genomes 50x CEPH trio fastq files downloaded from: http://www.ebi.ac.uk/ena/data/view/ERP001960
+Individuals: NA12891, NA12892, NA12878
+
+Initial alignments done with bwa mem.
+
+ABRA command line:
+java -Xss8M -Xmx32G -XX:MaxPermSize=256M  -jar $JAR --in $BAM --kmer 43,53,63,73,83 --mc-mapq 25 --mcl 102 --mcr -1.0 --mnf 2 --umnf 2 --mpc 50000 --out $ABRA_BAM --ref $REF --targets wxs.gtf --threads 16 --working $WORK --mur 50000000 --paired --no-unalign --mbq 5
+
+FreeBayes command line:
+freebayes -t <target_regions> -= -f <ref> <bam_file>
+vcfallelicprimitives from vcflib is used to decompose complex variants
+FreeBayes was run against ABRA output and without realignment
+
+UnifiedGenotyper command line:
+java -Xmx4G -jar GenomeAnalysisTK.jar -R <ref> -T UnifiedGenotyper --genotype_likelihoods_model BOTH -I <bam_file> -o <output_vcf> -L <target_regions> -rf BadCigar
+UnifiedGenotyper was run against output from ABRA, output from GATK's local realignment around indels and without realignment.
+
+GATK Local Realignment around indels command lines:
+java -Xmx2G -jar GenomeAnalysisTK.jar -T RealignerTargetCreator -R <ref> -I <input_bam> -o <output_intervals>
+java -Xmx2G -jar GenomeAnalysisTK.jar -T IndelRealigner -R <ref> -I <input_bam> -o <output_bam> --targetIntervals <intervals>
+
+HaplotypeCaller command line:
+java -Xmx4G -jar GenomeAnalysisTK.jar -R <ref> -T HaplotypeCaller -I <input_bam> -o <outout_vcf>  -rf BadCigar -L <target_regions> --bamOutput <output_bam>
+HaplotypeCaller was run without realignment
+
+All samples processed / called independently.
+Only variants called within exome capture target regions are considered.
+Variants within 100 bases of one another are collapsed into a single event.
+SnpEff was applied to filter variants not annotated as HIGH or MODERATE impact.
+
+TCGA data
+---------
+750 Breast (BRCA) tumor/normal paired BAMs downloaded from the Cancer Genomics Hub: https://cghub.ucsc.edu/
+
+ABRA command line:
+java -Xss8M -Xmx20G -XX:MaxPermSize=256M  -jar $JAR --in normal.bam --in2 tumor.bam --kmer 43,53,63,73,83 --mc-mapq 25 --mcl 101 --mcr -1.0 --mnf 2 --umnf 2 --mpc 50000 --out normal.abra69.bam --out2 tumor.abra69.bam --ref $REF --targets $TARGETS --threads 8 --working working69 --mur 50000000 --paired --no-unalign --mbq 20
+
+FreeBayes was used for germline calling.  Strelka was used for somatic calling.
+
+Special Strelka options:
+isSkipDepthFilters = 1
+isWriteRealignedBam = 1
+extraStrelkaArguments = -min-small-candidate-indel-read-frac 0.01 --ignore-conflicting-read-names
+
+For FreeBayes, variants with qual < 30 are filtered.
+For Strelka, variants with qual < 30 or normal genotype = 'het' are filtered.
+
+Only variants called within exome capture target regions are considered.
+SnpEff was applied to filter variants not annotated as HIGH or MODERATE impact.

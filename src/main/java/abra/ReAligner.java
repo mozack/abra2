@@ -709,27 +709,6 @@ public class ReAligner {
 			throw new RuntimeException("BuildBamIndex failed");
 		}
 	}	
-	
-	private void sortBams(String in1, String in2, String out1, String out2, String sortOrder) throws InterruptedException {
-		if (numThreads > 1) {
-			System.out.println("Sorting BAMs in parallel");
-			SortBamRunnable runnable1 = new SortBamRunnable(this, in1, out1, sortOrder);
-			Thread thread1 = new Thread(runnable1);
-			
-			SortBamRunnable runnable2 = new SortBamRunnable(this, in2, out2, sortOrder);
-			Thread thread2 = new Thread(runnable2);
-
-			thread1.start();
-			thread2.start();
-			
-			thread1.join();
-			thread2.join();
-		} else {
-			System.out.println("Sorting bams sequentially");
-			sortBam(in1, out1, sortOrder);
-			sortBam(in2, out2, sortOrder);
-		}
-	}
 		
 	void sortBam(String input, String output, String sortOrder) {
 		String[] args = new String[] { 
@@ -744,27 +723,6 @@ public class ReAligner {
 		if (ret != 0) {
 			throw new RuntimeException("SortSam failed");
 		}
-	}
-			
-	private void combineContigs(String contigFasta) throws IOException, InterruptedException {
-
-		System.out.println("Combining contigs...");
-		
-		BufferedWriter writer = new BufferedWriter(new FileWriter(contigFasta, false));
-		
-		for (Feature region : regions) {
-			String regionContigsFasta = tempDir + "/" + region.getDescriptor() + "_contigs.fasta";
-			BufferedReader reader = new BufferedReader(new FileReader(regionContigsFasta));
-			String line = reader.readLine();
-			while (line != null) {
-				writer.write(line);
-				writer.write('\n');
-				line = reader.readLine();
-			}
-			reader.close();
-		}
-		
-		writer.close();
 	}
 	
 	public synchronized void addThread(ReAlignerRunnable thread) {
@@ -984,17 +942,6 @@ public class ReAligner {
 				File localAssembledContigs = new File(assemblyFile);
 				localAssembledContigs.delete();
 			}
-			
-//			// Append contigs to the global fasta file
-//			if (hasContigs) {
-//				BufferedReader reader = new BufferedReader(new FileReader(contigsFasta));
-//				appendContigs(reader);
-//				reader.close();
-//			}
-//			
-//			// Now delete the temporary fasta file.
-//			File localAssembledContigs = new File(contigsFasta);
-//			localAssembledContigs.delete();
 		}
 		catch (Exception e) {
 			e.printStackTrace();
@@ -1109,11 +1056,6 @@ public class ReAligner {
 	private void sam2Fastq(String bam, String fastq, CompareToReference2 c2r, SAMFileWriter finalOutputSam) throws IOException {
 		Sam2Fastq sam2Fastq = new Sam2Fastq();
 		sam2Fastq.convert(bam, fastq, c2r, samHeader, finalOutputSam, this, regions);
-//		if (isPairedEnd) {
-//			sam2Fastq.convertPairedEnd(bam, fastq);
-//		} else {
-//			sam2Fastq.convert(bam, fastq);
-//		}
 	}
 	
 	private static int memCnt = 0;
@@ -1228,7 +1170,6 @@ public class ReAligner {
 		String fastq = tempDir + "/" + "original_reads.fastq.gz";
 		
 		log("Preprocessing original reads for alignment: " + inputSam);
-		System.out.println("c2r7: " + c2r);
 		sam2Fastq(inputSam, fastq, c2r, finalOutputSam);
 		log("Done preprocessing original reads for alignment: " + inputSam);
 		
@@ -1352,37 +1293,6 @@ public class ReAligner {
 	boolean isFiltered(SAMRecord read) {
 		// Filter out single end reads when in paired end mode.
 		return ((isPairedEnd) && (!read.getReadPairedFlag()));
-	}
-	
-	private void spikeLog(String msg, SAMRecord read) {
-		if (read.getReadName().contains("spike")) {
-			System.out.println(msg);
-		}
-	}
-	
-	private int getClippingFactoredQuality(SAMRecord read) {
-		
-		// short circuit if cigar length is 1
-		if (read.getCigarLength() == 1) {
-			return read.getMappingQuality();
-		}
-		
-		int mappedLength = read.getReadLength();
-
-		CigarElement firstElement = read.getCigar().getCigarElement(0);
-		CigarElement lastElement = read.getCigar().getCigarElement(read.getCigarLength()-1);
-		
-		if (firstElement.getOperator() == CigarOperator.S) {
-			mappedLength -= firstElement.getLength();
-		}
-		
-		if (lastElement.getOperator() == CigarOperator.S) {
-			mappedLength -= lastElement.getLength();
-		}
-		
-		int qual = read.getMappingQuality() * mappedLength / read.getReadLength();
-		
-		return qual;
 	}
 	
 	private boolean isImprovedAlignment(SAMRecord read, SAMRecord orig, CompareToReference2 c2r) {

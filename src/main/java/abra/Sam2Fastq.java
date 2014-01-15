@@ -129,7 +129,7 @@ public class Sam2Fastq {
     			if ((!read.getReadFailsVendorQualityCheckFlag()) && (!isAmbiguous)) {
 	    			// Calculate the number of mismatches to reference for this read.
 	    			if (c2r != null) {
-	    				yx = ReAligner.getEditDistance(read, c2r);
+	    				yx = SAMRecordUtils.getEditDistance(read, c2r);
 	    			} else {
 	    				yx = read.getReadLength();
 	    			}

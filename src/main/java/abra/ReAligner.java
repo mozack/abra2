@@ -1,6 +1,8 @@
 /* Copyright 2013 University of North Carolina at Chapel Hill.  All rights reserved. */
 package abra;
 
+import static abra.Logger.log;
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -48,8 +50,6 @@ public class ReAligner {
 	private static final long RANDOM_SEED = 1;
 	private static final int MAX_POTENTIAL_UNALIGNED_CONTIGS = 2000000;
 	
-	private int missingXATag = 0;
-	
 	private SAMFileHeader samHeader;
 	private SAMFileHeader samHeader2;
 	private SAMFileHeader samHeader3;
@@ -78,8 +78,6 @@ public class ReAligner {
 	
 	private List<ReAlignerRunnable> threads = new ArrayList<ReAlignerRunnable>();
 	
-	private ReverseComplementor reverseComplementor = new ReverseComplementor();
-	
 	private String inputSam1;
 	private String inputSam2;
 	private String inputSam3;
@@ -102,6 +100,8 @@ public class ReAligner {
 	private BufferedWriter contigWriter;
 	
 	private CompareToReference2 c2r;
+	
+	private ReadAdjuster readAdjuster;
 	
 	public void reAlign(String inputSam, String inputSam2, String inputSam3, String outputSam, String outputSam2, String outputSam3) throws Exception {
 
@@ -153,6 +153,8 @@ public class ReAligner {
 		log("Loading target regions");
 		loadRegions();
 		
+		readAdjuster = new ReadAdjuster(this, this.maxMapq);
+		
 		samHeader.setSortOrder(SAMFileHeader.SortOrder.unsorted);
 		
 		if (shouldReprocessUnaligned) {
@@ -196,7 +198,7 @@ public class ReAligner {
 					log("Adjusting unaligned reads");
 					SAMFileWriter unalignedWriter = new SAMFileWriterFactory().makeSAMOrBAMWriter(
 							samHeader, false, new File(unalignedRegionSam));
-					adjustReads(alignedToContigBam, unalignedWriter, false, null, unalignedDir);
+					readAdjuster.adjustReads(alignedToContigBam, unalignedWriter, false, null, unalignedDir, samHeader);
 					unalignedWriter.close();
 					
 					sortBam(unalignedRegionSam, sortedUnalignedRegion, "coordinate");
@@ -427,108 +429,6 @@ public class ReAligner {
 		return new String[] { alignedToContigSam1, alignedToContigSam2, alignedToContigSam3 };
 	}
 	
-	/*
-	public void findFusions(String inputSam, String outputSam) {
-		this.inputSam1 = inputSam;
-		
-		init();
-		
-		String fusDir = tempDir + "/fusion";
-		
-		if (!new File(fusDir).mkdir()) {
-			throw new RuntimeException("Failed to create: " + fusDir);
-		}
-		
-		log("Reading Input SAM Header and identifying read length");
-		getSamHeaderAndReadLength(inputSam);
-		
-		String candidateBam = fusDir + "/candidates.bam";
-		
-		SAMFileWriter candidateWriter = new SAMFileWriterFactory().makeSAMOrBAMWriter(
-				samHeader, true, new File(candidateBam));
-		
-		SamReadPairReader reader = new SamReadPairReader(inputSam);
-		
-		for (ReadPair pair : reader) {
-			SAMRecord read1 = pair.getRead1();
-			SAMRecord read2 = pair.getRead2();
-			
-			boolean isCandidate = false;
-			
-			if (!read1.getReadUnmappedFlag() && !read2.getReadUnmappedFlag()) {
-				if (!read1.getReferenceName().equals(read2.getReferenceName())) {
-					isCandidate = true;
-				} else if (Math.abs(read1.getAlignmentStart() - read2.getAlignmentStart()) > 2000) {
-					isCandidate = true;
-				}
-			}
-			
-			if (isCandidate) {
-				candidateWriter.addAlignment(read1);
-				candidateWriter.addAlignment(read2);
-			}
-		}
-		
-		reader.close();
-		candidateWriter.close();
-	}
-	*/
-		
-	void updateMismatchAndEditDistance(SAMRecord read, CompareToReference2 c2r, SAMRecord origRead) {
-		if (read.getAttribute("YO") != null) {
-			int numMismatches = c2r.numMismatches(read);				
-			int numIndelBases = getNumIndelBases(read);
-			read.setAttribute("XM", numMismatches);
-			read.setAttribute("NM", numMismatches + numIndelBases);
-			read.setMappingQuality(calcMappingQuality(read, origRead));
-			
-			if (numMismatches > (read.getReadLength()/10)) {
-				System.out.println("HIGH_MISMATCH: [" + read.getSAMString() + "]");
-			}
-		}
-	}
-		
-	//TODO: Add rhyme or reason to this
-	private int calcMappingQuality(SAMRecord read, SAMRecord origRead) {
-		int mapq = 0;
-		
-		// Need original read here because updated read has already had 0x04 flag unset.
-		
-		if ((origRead.getReadUnmappedFlag()) || (read.getMappingQuality() > 0)) {
-			int contigQuality = (Integer) read.getAttribute("YQ");
-			int quality = Math.min(contigQuality, this.maxMapq);
-			int mismatchesToContig = (Integer) read.getAttribute("YM");
-			quality -= mismatchesToContig * 5;
-			mapq = Math.max(quality, 1);
-		}
-		
-		return mapq;
-	}
-	
-	public static int getNumIndels(SAMRecord read) {
-		int numIndels = 0;
-		
-		for (CigarElement element : read.getCigar().getCigarElements()) {
-			if ((element.getOperator() == CigarOperator.D) || (element.getOperator() == CigarOperator.I)) {
-				numIndels += 1;
-			}
-		}
-		
-		return numIndels;
-	}
-
-	public static int getNumIndelBases(SAMRecord read) {
-		int numIndelBases = 0;
-		
-		for (CigarElement element : read.getCigar().getCigarElements()) {
-			if ((element.getOperator() == CigarOperator.D) || (element.getOperator() == CigarOperator.I)) {
-				numIndelBases += element.getLength();
-			}
-		}
-		
-		return numIndelBases;
-	}
-	
 	public static int getNumIndelBases2(SAMRecord read) {
 		int numIndelBases = 0;
 		
@@ -551,20 +451,20 @@ public class ReAligner {
 		if (this.numThreads > 1) {
 			
 			System.out.println("Adjusting reads in parallel");
-			AdjustReadsRunnable runnable1 = new AdjustReadsRunnable(this, sortedAlignedToContig1, outputSam1, isTightAlignment, c2r, tempDir1);
+			AdjustReadsRunnable runnable1 = new AdjustReadsRunnable(readAdjuster, sortedAlignedToContig1, outputSam1, isTightAlignment, c2r, tempDir1, samHeader);
 			Thread thread1 = new Thread(runnable1);
 			thread1.start();
 			
 			Thread thread2 = null;
 			if (inputSam2 != null) {
-				AdjustReadsRunnable runnable2 = new AdjustReadsRunnable(this, sortedAlignedToContig2, outputSam2, isTightAlignment, c2r, tempDir2);
+				AdjustReadsRunnable runnable2 = new AdjustReadsRunnable(readAdjuster, sortedAlignedToContig2, outputSam2, isTightAlignment, c2r, tempDir2, samHeader2);
 				thread2 = new Thread(runnable2);
 				thread2.start();
 			}
 			
 			Thread thread3 = null;
 			if (inputSam3 != null) {
-				AdjustReadsRunnable runnable3 = new AdjustReadsRunnable(this, sortedAlignedToContig3, outputSam3, isTightAlignment, c2r, tempDir3);
+				AdjustReadsRunnable runnable3 = new AdjustReadsRunnable(readAdjuster, sortedAlignedToContig3, outputSam3, isTightAlignment, c2r, tempDir3, samHeader3);
 				thread3 = new Thread(runnable3);
 				thread3.start();
 			}
@@ -581,12 +481,12 @@ public class ReAligner {
 			
 		} else {
 			System.out.println("Adjusting reads sequentially");
-			adjustReads(sortedAlignedToContig1, outputSam1, isTightAlignment, c2r, tempDir1);
+			readAdjuster.adjustReads(sortedAlignedToContig1, outputSam1, isTightAlignment, c2r, tempDir1, samHeader);
 			if (inputSam2 != null) {
-				adjustReads(sortedAlignedToContig2, outputSam2, isTightAlignment, c2r, tempDir2);
+				readAdjuster.adjustReads(sortedAlignedToContig2, outputSam2, isTightAlignment, c2r, tempDir2, samHeader2);
 			}
 			if (inputSam3 != null) {
-				adjustReads(sortedAlignedToContig3, outputSam3, isTightAlignment, c2r, tempDir3);
+				readAdjuster.adjustReads(sortedAlignedToContig3, outputSam3, isTightAlignment, c2r, tempDir3, samHeader3);
 			}
 		}
 	}
@@ -749,9 +649,6 @@ public class ReAligner {
 			long elapsedSecs = (System.currentTimeMillis() - start) / 1000;
 			if ((elapsedSecs % 60) == 0) {
 				log("Waiting on " + threads.size() + " threads.");
-				
-				logOSMemory();
-				
 			}
 			Thread.sleep(500);
 		}
@@ -968,10 +865,6 @@ public class ReAligner {
 		this.regionsGtf = gtfFile;
 	}
 
-	private void log(String message) {
-		System.out.println(new Date() + " : " + message);
-	}
-
 	private void getSamHeaderAndReadLength(String inputSam, String inputSam2, String inputSam3) {
 		
 		log("Identifying header and determining read length");
@@ -1059,13 +952,6 @@ public class ReAligner {
 	}
 	
 	private static int memCnt = 0;
-	private void logOSMemory()  {
-		
-		System.out.println(memCnt++ +
-				" mem total: " + Runtime.getRuntime().totalMemory() + 
-				", max: " + Runtime.getRuntime().maxMemory() + 
-				", free: " + Runtime.getRuntime().freeMemory());
-	}
 			
 	private boolean cleanAndOutputContigs(String contigsSam, String cleanContigsFasta, boolean shouldRemoveSoftClips) throws IOException {
 		
@@ -1196,89 +1082,8 @@ public class ReAligner {
 			return y;
 		}
 	}
-	
-	static class HitInfo {
-		private SAMRecord record;
-		private int position;
-		private char strand;
-		private int mismatches;
 		
-		public HitInfo(SAMRecord record, int position, char strand, int mismatches) {
-			this.record = record;
-			this.position = position;
-			this.strand = strand;
-			this.mismatches = mismatches;
-		}
-
-		public SAMRecord getRecord() {
-			return record;
-		}
-
-		public int getPosition() {
-			return position;
-		}
-
-		public char getStrand() {
-			return strand;
-		}
-		
-		public boolean isOnNegativeStrand() {
-			return strand == '-';
-		}
-		
-		public int getNumMismatches() {
-			return mismatches;
-		}
-	}
-	
-	private int getIntAttribute(SAMRecord read, String attribute) {
-		Integer num = read.getIntegerAttribute(attribute);
-		
-		if (num == null) {
-			return 0;
-		} else {
-			return num;
-		}
-	}
-	
-	private int getOrigEditDistance(SAMRecord read) {
-		
-		Integer distance = null;
-		
-		if (read.getReadUnmappedFlag()) {
-			distance = read.getReadLength();
-		} else {
-			distance = read.getIntegerAttribute("YX");
-			
-			if (distance == null) {
-				distance = read.getReadLength();
-			}
-		}
-				
-		return distance;
-	}
-	
-	public static int getEditDistance(SAMRecord read, CompareToReference2 c2r) {
-		
-		Integer distance = null;
-		
-		if (read.getReadUnmappedFlag()) {
-			distance = read.getReadLength();
-		} else if (c2r != null) {
-			//distance = c2r.numMismatches(read) + getNumIndelBases(read);
-			distance = c2r.numMismatches(read) + getNumIndelBases(read);
-		} else {
-			distance = read.getIntegerAttribute("NM");
-			
-			if (distance == null) {
-				distance = read.getReadLength();
-			}
-		}
-				
-		return distance;
-	}
-	
-	private RealignmentWriter getRealignmentWriter(SAMFileWriter outputReadsBam, boolean isTightAlignment, String tempDir) {
+	RealignmentWriter getRealignmentWriter(SAMFileWriter outputReadsBam, boolean isTightAlignment, String tempDir) {
 		RealignmentWriter writer;
 		
 		if (isTightAlignment && isPairedEnd) {
@@ -1293,482 +1098,6 @@ public class ReAligner {
 	boolean isFiltered(SAMRecord read) {
 		// Filter out single end reads when in paired end mode.
 		return ((isPairedEnd) && (!read.getReadPairedFlag()));
-	}
-	
-	private boolean isImprovedAlignment(SAMRecord read, SAMRecord orig, CompareToReference2 c2r) {
-		
-		boolean isImproved = false;
-			
-		Integer yr = orig.getIntegerAttribute("YR");
-		if ((yr != null) && (yr == 1)) {
-			// Original alignment was outside of target region list.
-			// Calc updated edit distance to reference and compare to original
-			
-//			int origEditDistance = getOrigEditDistance(orig);
-//			int updatedEditDistance = c2r.numMismatches(read) + getNumIndelBases(read);
-			
-			double origEditDistance = getOrigEditDistance(orig);
-			double updatedEditDistance = c2r.numMismatches(read) + (1.5 * getNumIndels(read));
-			
-			isImproved = updatedEditDistance < origEditDistance;
-		} else {
-			isImproved = true;
-		}
-		
-		return isImproved;
-	}
-	
-	protected void adjustReads(String alignedToContigSam, SAMFileWriter outputSam, boolean isTightAlignment,
-			CompareToReference2 c2r, String tempDir) throws IOException {
-		
-		log("Writing reads to: " + outputSam);
-		
-		RealignmentWriter writer = getRealignmentWriter(outputSam, isTightAlignment, tempDir);
-		
-		System.out.println("Opening sam file reader for: " + alignedToContigSam);
-		System.out.flush();
-		SAMFileReader contigReader = new SAMFileReader(new File(alignedToContigSam));
-		System.out.println("Sam file reader opened for: " + alignedToContigSam);
-		System.out.flush();
-		contigReader.setValidationStringency(ValidationStringency.SILENT);
-		
-		SamStringReader samStringReader = new SamStringReader(samHeader);
-		
-		int ctr = 0;
-		
-		for (SAMRecord read : contigReader) {
-			
-			if ((ctr++ % 100000) == 0) {
-				this.logOSMemory();
-			}
-			
-			String origSamStr = read.getReadName();
-			origSamStr = origSamStr.replace(Sam2Fastq.FIELD_DELIMITER, "\t");
-			SAMRecord orig;
-			try {
-				orig = samStringReader.getRead(origSamStr);
-			} catch (RuntimeException e) {
-				System.out.println("Error processing: [" + origSamStr + "]");
-				System.out.println("Contig read: [" + read.getSAMString() + "]");
-				e.printStackTrace();
-				throw e;
-			}
-			orig.setHeader(samHeader);
-			
-			orig.setReadString(read.getReadString());
-			orig.setBaseQualityString(read.getBaseQualityString());
-
-			SAMRecord readToOutput = null;
-			
-//			if (orig.getReadUnmappedFlag()  && read.getReadName().contains("spike")) {
-//				System.out.println("unmapped...");
-//			}
-			
-			// Only adjust reads that align to contig with no indel and shorter edit distance than the original alignment
-			String matchingString = read.getReadLength() + "M";
-			if ((read.getCigarString().equals(matchingString)) &&
-				(read.getReadUnmappedFlag() == false)  &&
-				(!orig.getCigarString().contains("N")) &&  // Don't remap introns
-				(getEditDistance(read, null) < getOrigEditDistance(orig)) &&
-//				isImprovedAlignment(read, orig, c2r) &&
-				(!isFiltered(orig))) {
-				
-				SAMRecord origRead = orig;
-				String contigReadStr = read.getReferenceName();
-				
-				// Get alternate best hits
-				List<HitInfo> bestHits = new ArrayList<HitInfo>();
-
-				contigReadStr = contigReadStr.substring(contigReadStr.indexOf('~')+1);
-				contigReadStr = contigReadStr.replace('~', '\t');
-				SAMRecord contigRead = samStringReader.getRead(contigReadStr);
-				
-				int bestMismatches = getIntAttribute(read, "XM");
-				
-				// Filter this hit if it aligns past the end of the contig
-				// Must use cigar length instead of read length, because the
-				// the contig read bases are not loaded.
-				if (read.getAlignmentEnd() <= contigRead.getCigar().getReadLength()) {
-					HitInfo hit = new HitInfo(contigRead, read.getAlignmentStart(),
-							read.getReadNegativeStrandFlag() ? '-' : '+', bestMismatches);
-					
-					bestHits.add(hit);
-				}
-				
-				int numBestHits = getIntAttribute(read, "X0");
-				int numSubOptimalHits = getIntAttribute(read, "X1");
-				
-				int totalHits = numBestHits + numSubOptimalHits;
-				
-				//TODO: If too many best hits, what to do?
-				
-//				spikeLog("total hits: " + totalHits, origRead);
-				
-				if ((totalHits > 1) && (totalHits < 1000)) {
-					
-//					if (totalHits < -1000) {
-					// Look in XA tag.
-					String alternateHitsStr = (String) read.getAttribute("XA");
-					if (alternateHitsStr == null) {
-						String msg = "best hits = " + numBestHits + ", but no XA entry for: " + read.getSAMString();
-						System.out.println(msg);							
-						this.missingXATag += 1;
-					} else {
-						
-						String[] alternates = alternateHitsStr.split(";");
-						
-						for (int i=0; i<alternates.length-1; i++) {
-							String[] altInfo = alternates[i].split(",");
-							String altContigReadStr = altInfo[0];
-							char strand = altInfo[1].charAt(0);
-							int position = Integer.parseInt(altInfo[1].substring(1));
-							String cigar = altInfo[2];
-							int mismatches = Integer.parseInt(altInfo[3]);
-							
-							if ((cigar.equals(matchingString)) && (mismatches < bestMismatches)) {
-								System.out.println("MISMATCH_ISSUE: " + read.getSAMString());
-							}
-							
-							if ((cigar.equals(matchingString)) && (mismatches == bestMismatches)) {
-								altContigReadStr = altContigReadStr.substring(altContigReadStr.indexOf('~')+1);
-								altContigReadStr = altContigReadStr.replace('~', '\t');
-								contigRead = samStringReader.getRead(altContigReadStr);
-								
-								// Filter this hit if it aligns past the end of the contig
-								// Must use cigar length instead of read length, because the
-								// the contig read bases are not loaded.
-								if ((position + read.getReadLength()) <= contigRead.getCigar().getReadLength()) {
-									HitInfo hit = new HitInfo(contigRead, position, strand, mismatches);
-									bestHits.add(hit);
-								}
-							}
-						}
-					}
-				}
-				
-				// chr_pos_cigar
-				Map<String, SAMRecord> outputReadAlignmentInfo = new HashMap<String, SAMRecord>();
-				
-				for (HitInfo hitInfo : bestHits) {
-					
-					contigRead = hitInfo.getRecord();
-					int position = hitInfo.getPosition() - 1;
-					
-					// Only consider this mapping if the assembled contig's quality is
-					// greater than the original read's quality.
-//					if (contigRead.getMappingQuality() > orig.getMappingQuality()) {
-						
-					//TODO: Normalize mapping quality
-//					if (contigRead.getMappingQuality() > getClippingFactoredQuality(orig)) {
-					
-//					if (contigRead.getMappingQuality() > 30) {
-					
-					if (1 == 1) {
-
-						List<ReadBlock> contigReadBlocks = ReadBlock.getReadBlocks(contigRead);
-						
-						ReadPosition readPosition = new ReadPosition(origRead, position, -1);
-						SAMRecord updatedRead = updateReadAlignment(contigRead,
-								contigReadBlocks, readPosition);
-						
-						if (updatedRead != null) {
-							//TODO: Move into updateReadAlignment ?
-//							if (updatedRead.getMappingQuality() == 0) {
-//								updatedRead.setMappingQuality(1);
-//							}
-							
-							if (updatedRead.getReadUnmappedFlag()) {
-								updatedRead.setReadUnmappedFlag(false);
-							}
-							
-							updatedRead.setReadNegativeStrandFlag(hitInfo.isOnNegativeStrand());
-
-							// Set read bases to the aligned read (which will be expressed in 
-							// forward strand context according to the primary alignment).
-							// If this hit's strand is opposite the primary alignment, reverse the bases
-//							if (hitInfo.isOnNegativeStrand() == read.getReadNegativeStrandFlag()) {
-//								updatedRead.setReadString(read.getReadString());
-//								updatedRead.setBaseQualityString(read.getBaseQualityString());
-//							} else {
-//								updatedRead.setReadString(reverseComplementor.reverseComplement(read.getReadString()));
-//								updatedRead.setBaseQualityString(reverseComplementor.reverse(read.getBaseQualityString()));								
-//							}
-							
-							// If the read's alignment info has been modified, record the original alignment.
-							if (origRead.getReadUnmappedFlag() ||
-								!origRead.getReferenceName().equals(updatedRead.getReferenceName()) ||
-								origRead.getAlignmentStart() != updatedRead.getAlignmentStart() ||
-								origRead.getReadNegativeStrandFlag() != updatedRead.getReadNegativeStrandFlag() ||
-								!origRead.getCigarString().equals(updatedRead.getCigarString())) {
-							
-								if (isSoftClipEquivalent(origRead, updatedRead)) {
-									// Restore Cigar and position
-//									System.out.println("Re-setting [" + updatedRead.getSAMString() + "] --- [" + origRead.getSAMString() + "]");
-									updatedRead.setAlignmentStart(origRead.getAlignmentStart());
-									updatedRead.setCigar(origRead.getCigar());
-									
-								} else {
-									String originalAlignment;
-									if (origRead.getReadUnmappedFlag()) {
-										originalAlignment = "N/A";
-									} else {
-										originalAlignment = origRead.getReferenceName() + ":" + origRead.getAlignmentStart() + ":" +
-												(origRead.getReadNegativeStrandFlag() ? "-" : "+") + ":" + origRead.getCigarString();
-									}
-									
-									// Read's original alignment position
-									updatedRead.setAttribute("YO", originalAlignment);
-								}
-							}
-							
-							// Mismatches to the contig
-							updatedRead.setAttribute("YM", hitInfo.getNumMismatches());
-							
-							// Contig's mapping quality
-							updatedRead.setAttribute("YQ", hitInfo.getRecord().getMappingQuality());
-							
-							// Contig's length
-							updatedRead.setAttribute("YL", hitInfo.getRecord().getCigar().getReadLength());
-														
-							// Check to see if this read has been output with the same alignment already.
-//								String readAlignmentInfo;
-							
-							//TODO: Check strand!!!
-							String readAlignmentInfo = updatedRead.getReferenceName() + "_" + updatedRead.getAlignmentStart() + "_" +
-									updatedRead.getCigarString();
-							/*
-							if (isTightAlignment) {
-								// Check ref, pos, strand, cigar
-								readAlignmentInfo = updatedRead.getReferenceName() + "_" + updatedRead.getAlignmentStart() + "_" +
-									(updatedRead.getReadNegativeStrandFlag() ? "-" : "+") + "_" + updatedRead.getCigarString();
-							} else {
-								// For loose alignment, allow read to align to either strand (pick one only)
-								readAlignmentInfo = updatedRead.getReferenceName() + "_" + updatedRead.getAlignmentStart() + "_" +
-										updatedRead.getCigarString();
-							}
-							*/
-							
-							if (!outputReadAlignmentInfo.containsKey(readAlignmentInfo)) {
-								outputReadAlignmentInfo.put(readAlignmentInfo, updatedRead);
-							}
-						}
-					}
-				}
-				
-				if (outputReadAlignmentInfo.size() == 1) {
-					//TODO: No need to iterate, just 1.  Dropping ambiguous reads
-					readToOutput = outputReadAlignmentInfo.values().iterator().next();
-					
-					// Check to see if the original read location was in a non-target region.
-					// If so, compare updated NM to ref versus original NM to ref
-					if ((c2r != null) && (!isImprovedAlignment(readToOutput, orig, c2r))) {
-						readToOutput = null;
-					} else {
-						int origBestHits = this.getIntAttribute(readToOutput, "X0");
-						int origSuboptimalHits = this.getIntAttribute(readToOutput, "X1");
-						
-						// If the read mapped to multiple locations, set mapping quality to zero.
-						if ((outputReadAlignmentInfo.size() > 1) || (totalHits > 1000)) {
-							readToOutput.setMappingQuality(0);
-						}
-						
-						// This must happen prior to updateMismatchAndEditDistance
-						adjustForStrand(read.getReadNegativeStrandFlag(), readToOutput);
-						
-						if (readToOutput.getAttribute("YO") != null) {
-							// HACK: Only add X0 for final alignment.  Assembler skips X0 > 1
-							if (isTightAlignment) {
-								readToOutput.setAttribute("X0", outputReadAlignmentInfo.size());
-							} else {
-								readToOutput.setAttribute("X0", null);
-							}
-							readToOutput.setAttribute("X1", origBestHits + origSuboptimalHits);
-							
-							// Clear various tags
-							readToOutput.setAttribute("XO", null);
-							readToOutput.setAttribute("XG", null);
-							readToOutput.setAttribute("MD", null);
-							readToOutput.setAttribute("XA", null);
-							readToOutput.setAttribute("XT", null);
-							
-							if (c2r != null) {
-								updateMismatchAndEditDistance(readToOutput, c2r, origRead);
-							}
-						}
-					}
-				}
-			}
-			
-			adjustForStrand(read.getReadNegativeStrandFlag(), orig);
-			writer.addAlignment(readToOutput, orig);
-		}
-//		System.out.println("Sleeping");
-//		try {
-//			Thread.sleep(200000);
-//		} catch (Exception e) {
-//			e.printStackTrace();
-//		}
-
-		int realignedCount = writer.flush();
-		contigReader.close();
-		
-		log("Done with: " + outputSam + ".  Number of reads realigned: " + realignedCount);
-	}
-	
-	private boolean isSoftClipEquivalent(SAMRecord origRead, SAMRecord updatedRead) {
-		
-		boolean isEquivalent = false;
-		
-		if ((origRead.getCigarString().contains("S")) &&
-			(origRead.getReferenceName().equals(updatedRead.getReferenceName())) &&
-			(origRead.getReadNegativeStrandFlag() == updatedRead.getReadNegativeStrandFlag()) &&
-			(origRead.getCigarLength() > 1)) {
-			
-			// Compare start positions
-			int nonClippedOrigStart = origRead.getAlignmentStart();
-			CigarElement firstElem = origRead.getCigar().getCigarElement(0); 
-			if (firstElem.getOperator() == CigarOperator.S) {
-				nonClippedOrigStart -= firstElem.getLength(); 
-			}
-			
-			if (nonClippedOrigStart == updatedRead.getAlignmentStart()) {
-				// Compare cigars
-				List<CigarElement> elems = new ArrayList<CigarElement>(origRead.getCigar().getCigarElements());
-				
-				CigarElement first = elems.get(0);
-				
-				// If first element is soft clipped, lengthen the second element
-				if (first.getOperator() == CigarOperator.S) {
-					CigarElement second = elems.get(1);
-					CigarElement newElem = new CigarElement(first.getLength() + second.getLength(), second.getOperator());
-					elems.set(1,  newElem);
-				}
-				
-				CigarElement last = elems.get(elems.size()-1);
-				if (last.getOperator() == CigarOperator.S) {
-					CigarElement nextToLast = elems.get(elems.size()-2);
-					CigarElement newElem = new CigarElement(last.getLength() + nextToLast.getLength(), nextToLast.getOperator());
-					elems.set(elems.size()-2, newElem);
-				}
-				
-				List<CigarElement> newElems = new ArrayList<CigarElement>();
-
-				for (CigarElement elem : elems) {
-					if (elem.getOperator() != CigarOperator.S) {
-						newElems.add(elem);
-					}
-				}
-				
-				Cigar convertedCigar = new Cigar(newElems);
-				
-				if (convertedCigar.equals(updatedRead.getCigar())) {
-					isEquivalent = true;
-				}
-			}
-		}
-		
-		return isEquivalent;
-	}
-	
-	void adjustForStrand(boolean readAlreadyReversed, SAMRecord read) {
-		if ( ((!readAlreadyReversed) && (read.getReadNegativeStrandFlag())) ||
-			 ((readAlreadyReversed) && (!read.getReadNegativeStrandFlag())) ){
-			read.setReadString(reverseComplementor.reverseComplement(read.getReadString()));
-			read.setBaseQualityString(reverseComplementor.reverse(read.getBaseQualityString()));
-		}
-	}
-	
-	SAMRecord updateReadAlignment(SAMRecord contigRead,
-			List<ReadBlock> contigReadBlocks, ReadPosition orig) {
-		List<ReadBlock> blocks = new ArrayList<ReadBlock>();
-		SAMRecord read = cloneRead(orig.getRead());
-
-		read.setReferenceName(contigRead.getReferenceName());
-
-		int contigPosition = orig.getPosition();
-		int accumulatedLength = 0;
-
-		// read block positions are one based
-		// ReadPosition is zero based
-		
-		int totalInsertLength = 0;
-
-		for (ReadBlock contigBlock : contigReadBlocks) {
-			if ((contigBlock.getReadStart() + contigBlock.getReferenceLength()) >= orig
-					.getPosition() + 1) {
-				ReadBlock block = contigBlock.getSubBlock(accumulatedLength,
-						contigPosition, read.getReadLength()
-								- accumulatedLength);
-				
-				block.setReferenceStart(block.getReferenceStart() - totalInsertLength);
-				
-				// If this is an insert, we need to adjust the alignment start
-				if ((block.getType() == CigarOperator.I) && (block.getLength() != 0)) {
-					contigPosition = contigPosition - (contigBlock.getLength() - block.getLength());
-					block.setReferenceStart(block.getReferenceStart() - (contigBlock.getLength() - block.getLength()));
-//					block = contigBlock.getSubBlock(accumulatedLength,
-//								contigPosition, read.getReadLength()
-//								- accumulatedLength);
-					
-					totalInsertLength += block.getLength();
-				}
-				
-				//TODO: Drop leading and trailing delete blocks
-
-				// TODO: Investigate how this could happen
-				if (block.getLength() != 0) {
-					blocks.add(block);
-
-					if (block.getType() != CigarOperator.D) {
-						accumulatedLength += block.getLength();
-					}
-
-					if (accumulatedLength > read.getReadLength()) {
-						throw new IllegalStateException("Accumulated Length: "
-								+ accumulatedLength
-								+ " is greater than read length: "
-								+ read.getReadLength());
-					}
-
-					if (accumulatedLength == read.getReadLength()) {
-						break;
-					}
-				}
-			}
-		}
-
-		if (blocks.size() > 0) {
-			
-			// Don't allow reads to align past end of contig.
-//			int cigarLength = ReadBlock.getTotalLength(blocks);
-//			if (cigarLength != read.getReadLength()) {
-//				read = null;
-//			}
-			
-			// If we've aligned past the end of the contig resulting in a short Cigar
-			// length, append additonal M to the Cigar			
-			ReadBlock.fillToLength(blocks, read.getReadLength());
-			int newAlignmentStart = blocks.get(0).getReferenceStart();
-			String newCigar = ReadBlock.toCigarString(blocks);
-
-			read.setCigarString(newCigar);
-			read.setAlignmentStart(newAlignmentStart);
-		} else {
-			// TODO: Investigate how this could happen.
-			read = null;
-		}
-
-		return read;
-	}
-
-	private SAMRecord cloneRead(SAMRecord read) {
-		try {
-			return (SAMRecord) read.clone();
-		} catch (CloneNotSupportedException e) {
-			// Infamous "this should never happen" comment here.
-			e.printStackTrace();
-			throw new RuntimeException(e);
-		}
 	}
 	
 	static List<Feature> splitRegions(List<Feature> regions, 
@@ -2077,7 +1406,8 @@ public class ReAligner {
 		SAMFileWriter writer = new SAMFileWriterFactory().makeSAMOrBAMWriter(
 				realigner.samHeader, false, new File("/home/lmose/dev/abra/missing_68i/output.bam"));
 
-		realigner.adjustReads("/home/lmose/dev/abra/missing_68i/a2c.sam", writer, true, c2r, "/home/lmose/dev/abra/missing_68i/temp");
+		ReadAdjuster readAdjuster = new ReadAdjuster(realigner, realigner.maxMapq);
+		readAdjuster.adjustReads("/home/lmose/dev/abra/missing_68i/a2c.sam", writer, true, c2r, "/home/lmose/dev/abra/missing_68i/temp", realigner.samHeader);
 		
 		writer.close();
 	}

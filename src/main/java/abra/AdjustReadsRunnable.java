@@ -3,6 +3,7 @@ package abra;
 
 import java.io.IOException;
 
+import net.sf.samtools.SAMFileHeader;
 import net.sf.samtools.SAMFileWriter;
 
 /**
@@ -12,18 +13,19 @@ import net.sf.samtools.SAMFileWriter;
  */
 public class AdjustReadsRunnable implements Runnable {
 	
-	private ReAligner realigner;
+	private ReadAdjuster readAdjuster;
 	private String sortedOriginalReads;
 	private String sortedAlignedToContig;
 	private SAMFileWriter outputSam;
 	private boolean isTightAlignment;
 	private CompareToReference2 c2r;
 	private String tempDir;
+	private SAMFileHeader samHeader;
 	
-	public AdjustReadsRunnable(ReAligner realigner, String sortedAlignedToContig, SAMFileWriter outputSam,
-			boolean isTightAlignment, CompareToReference2 c2r, String tempDir) {
+	public AdjustReadsRunnable(ReadAdjuster readAdjuster, String sortedAlignedToContig, SAMFileWriter outputSam,
+			boolean isTightAlignment, CompareToReference2 c2r, String tempDir, SAMFileHeader samHeader) {
 
-		this.realigner = realigner;
+		this.readAdjuster = readAdjuster;
 		this.sortedOriginalReads = sortedOriginalReads;
 		this.sortedAlignedToContig = sortedAlignedToContig;
 		this.outputSam = outputSam;
@@ -35,7 +37,7 @@ public class AdjustReadsRunnable implements Runnable {
 	@Override
 	public void run() {
 		try {
-			realigner.adjustReads(sortedAlignedToContig, outputSam, isTightAlignment, c2r, tempDir);
+			readAdjuster.adjustReads(sortedAlignedToContig, outputSam, isTightAlignment, c2r, tempDir, samHeader);
 		} catch (IOException e) {
 			e.printStackTrace();
 			throw new RuntimeException(e);

@@ -253,6 +253,8 @@ public class CompareToReference2 {
 		long e = System.currentTimeMillis();
 		System.out.println("Done loading ref map.  Elapsed secs: " + (e-s)/1000);
 	}
+	
+	
 		
 	private String getRefLine() throws IOException {
 		String line = null;

@@ -16,7 +16,9 @@ import net.sf.samtools.SAMRecord;
  */
 public class SAMRecordUtils {
 
-	
+	/**
+	 * Replace hard clips with soft clips.
+	 */
 	public static void replaceHardClips(SAMRecord read) {
 		Cigar cigar = read.getCigar();
 		
@@ -147,4 +149,165 @@ public class SAMRecordUtils {
 		
 		return new Cigar(subElements);
 	}
+	
+	/**
+	 * Calculates edit distance for the input read.
+	 * If the input c2r is not null, compare to the actual reference.
+	 * If c2r is null, check the input NM tag.
+	 */
+	public static int getEditDistance(SAMRecord read, CompareToReference2 c2r) {
+		
+		Integer distance = null;
+		
+		if (read.getReadUnmappedFlag()) {
+			distance = read.getReadLength();
+		} else if (c2r != null) {
+			//distance = c2r.numMismatches(read) + getNumIndelBases(read);
+			distance = c2r.numMismatches(read) + getNumIndelBases(read);
+		} else {
+			distance = read.getIntegerAttribute("NM");
+			
+			if (distance == null) {
+				distance = read.getReadLength();
+			}
+		}
+				
+		return distance;
+	}
+		
+	/**
+	 *  Returns total length of deletions and insertions for the input read. 
+	 */
+	public static int getNumIndelBases(SAMRecord read) {
+		int numIndelBases = 0;
+		
+		for (CigarElement element : read.getCigar().getCigarElements()) {
+			if ((element.getOperator() == CigarOperator.D) || (element.getOperator() == CigarOperator.I)) {
+				numIndelBases += element.getLength();
+			}
+		}
+		
+		return numIndelBases;
+	}
+	
+	/**
+	 *  Returns original edit distance as set in YX tag.
+	 */
+	public static int getOrigEditDistance(SAMRecord read) {
+		
+		Integer distance = null;
+		
+		if (read.getReadUnmappedFlag()) {
+			distance = read.getReadLength();
+		} else {
+			distance = read.getIntegerAttribute("YX");
+			
+			if (distance == null) {
+				distance = read.getReadLength();
+			}
+		}
+				
+		return distance;
+	}
+	
+	/**
+	 * Convenience method for retrieving int attribute
+	 */
+	public static int getIntAttribute(SAMRecord read, String attribute) {
+		Integer num = read.getIntegerAttribute(attribute);
+		
+		if (num == null) {
+			return 0;
+		} else {
+			return num;
+		}
+	}
+	
+	/**
+	 * Return the number of insertions and deletions in a SAMRecord 
+	 */
+	public static int getNumIndels(SAMRecord read) {
+		int numIndels = 0;
+		
+		for (CigarElement element : read.getCigar().getCigarElements()) {
+			if ((element.getOperator() == CigarOperator.D) || (element.getOperator() == CigarOperator.I)) {
+				numIndels += 1;
+			}
+		}
+		
+		return numIndels;
+	}
+	
+	/**
+	 *  Returns true if the updatedRead is essentially the same as the origRead
+	 *  minus soft clipping. 
+	 */
+	public static boolean isSoftClipEquivalent(SAMRecord origRead, SAMRecord updatedRead) {
+		
+		boolean isEquivalent = false;
+		
+		if ((origRead.getCigarString().contains("S")) &&
+			(origRead.getReferenceName().equals(updatedRead.getReferenceName())) &&
+			(origRead.getReadNegativeStrandFlag() == updatedRead.getReadNegativeStrandFlag()) &&
+			(origRead.getCigarLength() > 1)) {
+			
+			// Compare start positions
+			int nonClippedOrigStart = origRead.getAlignmentStart();
+			CigarElement firstElem = origRead.getCigar().getCigarElement(0); 
+			if (firstElem.getOperator() == CigarOperator.S) {
+				nonClippedOrigStart -= firstElem.getLength(); 
+			}
+			
+			if (nonClippedOrigStart == updatedRead.getAlignmentStart()) {
+				// Compare cigars
+				List<CigarElement> elems = new ArrayList<CigarElement>(origRead.getCigar().getCigarElements());
+				
+				CigarElement first = elems.get(0);
+				
+				// If first element is soft clipped, lengthen the second element
+				if (first.getOperator() == CigarOperator.S) {
+					CigarElement second = elems.get(1);
+					CigarElement newElem = new CigarElement(first.getLength() + second.getLength(), second.getOperator());
+					elems.set(1,  newElem);
+				}
+				
+				CigarElement last = elems.get(elems.size()-1);
+				if (last.getOperator() == CigarOperator.S) {
+					CigarElement nextToLast = elems.get(elems.size()-2);
+					CigarElement newElem = new CigarElement(last.getLength() + nextToLast.getLength(), nextToLast.getOperator());
+					elems.set(elems.size()-2, newElem);
+				}
+				
+				List<CigarElement> newElems = new ArrayList<CigarElement>();
+
+				for (CigarElement elem : elems) {
+					if (elem.getOperator() != CigarOperator.S) {
+						newElems.add(elem);
+					}
+				}
+				
+				Cigar convertedCigar = new Cigar(newElems);
+				
+				if (convertedCigar.equals(updatedRead.getCigar())) {
+					isEquivalent = true;
+				}
+			}
+		}
+		
+		return isEquivalent;
+	}
+	
+	/**
+	 * Returns a clone of the input read
+	 */
+	public static SAMRecord cloneRead(SAMRecord read) {
+		try {
+			return (SAMRecord) read.clone();
+		} catch (CloneNotSupportedException e) {
+			// Infamous "this should never happen" comment here.
+			e.printStackTrace();
+			throw new RuntimeException(e);
+		}
+	}
+
 }

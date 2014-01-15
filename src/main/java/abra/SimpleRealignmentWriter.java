@@ -4,6 +4,11 @@ package abra;
 import net.sf.samtools.SAMFileWriter;
 import net.sf.samtools.SAMRecord;
 
+/**
+ * Simple realignment writer.  Does not consider read pair information when writing to output BAM.
+ * 
+ * @author Lisle E. Mose (lmose at unc dot edu)
+ */
 public class SimpleRealignmentWriter implements RealignmentWriter {
 
 	private SAMFileWriter writer;

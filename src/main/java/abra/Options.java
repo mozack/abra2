@@ -9,7 +9,7 @@ import joptsimple.OptionSet;
 /**
  * Abstract base class for helping with options parsing.
  * 
- * @author Lisle Mose (lmose at unc dot edu)
+ * @author Lisle E. Mose (lmose at unc dot edu)
  */
 public abstract class Options {
 	protected static final String HELP = "help";

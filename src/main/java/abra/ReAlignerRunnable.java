@@ -1,9 +1,11 @@
 /* Copyright 2013 University of North Carolina at Chapel Hill.  All rights reserved. */
 package abra;
 
-import java.io.IOException;
-
-
+/**
+ * Thread entry point for region specific processing.
+ * 
+ * @author Lisle E. Mose (lmose at unc dot edu)
+ */
 public class ReAlignerRunnable implements Runnable {
 
 	private ReAligner reAligner;
@@ -21,7 +23,6 @@ public class ReAlignerRunnable implements Runnable {
 	public void run() {
 		
 		try {
-//			reAligner.processRegion(region, inputSam);
 			reAligner.processRegion(region);
 		} catch (Exception e) {
 			e.printStackTrace();

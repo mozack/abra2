@@ -6,7 +6,7 @@ import net.sf.samtools.SAMRecord;
 /**
  * A Pair of SAMRecord's
  * 
- * @author Lisle Mose (lmose at unc dot edu)
+ * @author Lisle E. Mose (lmose at unc dot edu)
  */
 public class ReadPair {
     private SAMRecord read1;

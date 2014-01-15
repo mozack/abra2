@@ -9,6 +9,11 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URL;
 
+/**
+ * Manages loading of native assembly code.
+ * 
+ * @author Lisle E. Mose (lmose at unc dot edu)
+ */
 public class NativeLibraryLoader {
 	
 	public void load(String tempDir) {

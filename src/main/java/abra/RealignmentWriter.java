@@ -3,10 +3,15 @@ package abra;
 
 import net.sf.samtools.SAMRecord;
 
+/**
+ * Concrete implementations of this interface are responsible for outputting
+ * realigned reads to the output BAM file.
+ * 
+ * @author Lisle E. Mose (lmose at unc dot edu)
+ */
 public interface RealignmentWriter {
 
 	public void addAlignment(SAMRecord updatedRead, SAMRecord origRead);
 	
 	public int flush();
-	
 }

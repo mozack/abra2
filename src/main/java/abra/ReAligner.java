@@ -31,6 +31,11 @@ import net.sf.samtools.SAMRecord;
 import net.sf.samtools.SAMFileHeader.SortOrder;
 import net.sf.samtools.SAMFileReader.ValidationStringency;
 
+/**
+ * ABRA's main entry point
+ * 
+ * @author Lisle E. Mose (lmose at unc dot edu)
+ */
 public class ReAligner {
 
 	private static final int DEFAULT_MAX_UNALIGNED_READS = 1000000;
@@ -137,10 +142,8 @@ public class ReAligner {
 		
 		init();
 		
-		System.out.println("c2r1: " + c2r);
 		c2r = new CompareToReference2();
 		c2r.init(this.reference);
-		System.out.println("c2r2: " + c2r);
 
 		log("Reading Input SAM Header and identifying read length");
 		getSamHeaderAndReadLength(inputSam, inputSam2, inputSam3);

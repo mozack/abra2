@@ -11,7 +11,7 @@ import java.util.zip.GZIPOutputStream;
 /**
  * Utility class for outputting fastq files
  * 
- * @author Lisle Mose (lmose at unc dot edu)
+ * @author Lisle E. Mose (lmose at unc dot edu)
  */
 public class FastqOutputFile {
     private BufferedWriter writer;

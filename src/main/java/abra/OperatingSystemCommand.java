@@ -3,6 +3,11 @@ package abra;
 
 import java.io.IOException;
 
+/**
+ * Handles spawning of programs.  Likely to be replaced with JNI.
+ * 
+ * @author Lisle E. Mose (lmose at unc dot edu)
+ */
 public class OperatingSystemCommand {
 
 	public static void runCommand(String cmd) throws IOException, InterruptedException {

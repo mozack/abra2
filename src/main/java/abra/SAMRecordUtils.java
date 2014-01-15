@@ -9,6 +9,11 @@ import net.sf.samtools.CigarElement;
 import net.sf.samtools.CigarOperator;
 import net.sf.samtools.SAMRecord;
 
+/**
+ * Utility methods for dealing with SAMRecord
+ * 
+ * @author Lisle E. Mose (lmose at unc dot edu)
+ */
 public class SAMRecordUtils {
 
 	

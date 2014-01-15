@@ -15,7 +15,7 @@ import net.sf.samtools.SAMRecord;
  * Represents a Block of a read.  i.e. A Cigar of 15M5I30M would be represented
  * by 3 ReadBlocks.
  * 
- * @author Lisle Mose (lmose at unc dot edu)
+ * @author Lisle E. Mose (lmose at unc dot edu)
  */
 public class ReadBlock {
     private int readStart;

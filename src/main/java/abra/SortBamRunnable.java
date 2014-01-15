@@ -1,6 +1,11 @@
 /* Copyright 2013 University of North Carolina at Chapel Hill.  All rights reserved. */
 package abra;
 
+/**
+ * Thread entry point for BAM sorting.
+ * 
+ * @author Lisle E. Mose (lmose at unc dot edu)
+ */
 public class SortBamRunnable implements Runnable {
 
 	private ReAligner realigner;

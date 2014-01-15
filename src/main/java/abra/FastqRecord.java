@@ -3,12 +3,11 @@ package abra;
 
 import java.util.Arrays;
 
-
 /**
  * Representation of a single Fastq record.
  * Some code here may be specific to paired end processing.
  * 
- * @author Lisle Mose (lmose at unc dot edu)
+ * @author Lisle E. Mose (lmose at unc dot edu)
  */
 public class FastqRecord {
     

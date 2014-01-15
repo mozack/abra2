@@ -3,6 +3,11 @@ package abra;
 
 import joptsimple.OptionParser;
 
+/**
+ * Manages ABRA command line options
+ * 
+ * @author Lisle E. Mose (lmose at unc dot edu)
+ */
 public class ReAlignerOptions extends Options {
 	
 	private static final String INPUT_SAM = "in";

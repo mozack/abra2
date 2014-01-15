@@ -4,7 +4,7 @@ package abra;
 /**
  * Utility class that can be used to convert quality scores.
  * 
- * @author Lisle Mose (lmose at unc dot edu)
+ * @author Lisle E. Mose (lmose at unc dot edu)
  */
 public class QualityConverter {
 	

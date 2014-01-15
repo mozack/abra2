@@ -10,8 +10,14 @@ import java.util.Map;
 import net.sf.samtools.SAMFileReader;
 import net.sf.samtools.SAMRecord;
 
+/**
+ * Utility class for assessing mismatches by base quality
+ * 
+ * @author Lisle E. Mose (lmose at unc dot edu)
+ */
 public class MismatchBaseQuality {
 	
+	//TODO: Move to utils
 	private CompareToReference2 c2r;
 	private Map<Integer, Long> qualityCounts;
 	private Map<Integer, Long> qualityMismatches;

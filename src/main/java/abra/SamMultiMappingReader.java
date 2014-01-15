@@ -15,7 +15,7 @@ import net.sf.samtools.SAMRecord;
  * Iterates over a Sam or Bam file returning a List of SAMRecords for each unique read name.
  * Assumes the input file is sorted by read name.
  * 
- * @author Lisle Mose (lmose at unc dot edu)
+ * @author Lisle E. Mose (lmose at unc dot edu)
  */
 public class SamMultiMappingReader implements Iterable<List<SAMRecord>> {
 	

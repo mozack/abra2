@@ -7,8 +7,13 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Representation of reference
+ * @author Lisle E. Mose (lmose at unc dot edu)
+ */
 public class Reference {
 
+	//TODO: Delete this class in favor CompareToReference2
 	private Map<String, StringBuffer> refMap = new HashMap<String, StringBuffer>();
 	
 	public Reference(String reference) throws IOException {

@@ -12,8 +12,14 @@ import net.sf.samtools.SAMFileWriterFactory;
 import net.sf.samtools.SAMFileReader.ValidationStringency;
 import net.sf.samtools.SAMRecord;
 
+/**
+ * Sets NM tag to num mismatches plus total indel length.
+ * 
+ * @author Lisle E. Mose (lmose at unc dot edu)
+ */
 public class FixEditDistance {
 
+	//TODO: Move to utils package
 	public void fix(String input, String output, String reference) throws IOException {
 		SAMFileReader reader = new SAMFileReader(new File(input));
 		reader.setValidationStringency(ValidationStringency.SILENT);

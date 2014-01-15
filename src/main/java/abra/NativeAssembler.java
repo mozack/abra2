@@ -15,6 +15,11 @@ import net.sf.samtools.SAMFileReader;
 import net.sf.samtools.SAMRecord;
 import net.sf.samtools.SAMFileReader.ValidationStringency;
 
+/**
+ * Handles regional assembly by invoking the native assembler.
+ * 
+ * @author Lisle E. Mose (lmose at unc dot edu)
+ */
 public class NativeAssembler implements Assembler {
 	
 	private boolean truncateOnRepeat;
@@ -28,10 +33,6 @@ public class NativeAssembler implements Assembler {
 
 	private native int assemble(String input, String output, String prefix, int truncateOnRepeat, int maxContigs, int maxPathsFromRoot, int readLength, int kmerSize, int minKmerFreq, int minBaseQuality);
 	
-//	static{
-//        System.loadLibrary("Abra");
-//	}
-	
 	private String getIdentifier(SAMRecord read) {
 		String id = read.getReadName();
 		
@@ -41,8 +42,6 @@ public class NativeAssembler implements Assembler {
 		
 		return id;
 	}
-	
-//	public boolean assembleContigs(String input, String output, String prefix, boolean checkForDupes) {
 	
 	private boolean isHardClipped(SAMRecord read) {
 		return read.getCigarString().contains("H");

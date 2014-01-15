@@ -3,7 +3,6 @@ package abra;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.List;
 
 import net.sf.samtools.Cigar;
 import net.sf.samtools.CigarElement;
@@ -16,7 +15,7 @@ import net.sf.samtools.SAMRecord;
 /**
  * Utility class for shifting Indels into leftmost position.
  * 
- * @author lmose
+ * @author Lisle E. Mose (lmose at unc dot edu)
  */
 public class IndelShifter {
 

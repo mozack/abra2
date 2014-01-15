@@ -19,7 +19,8 @@ import net.sf.samtools.SAMFileReader.ValidationStringency;
 import net.sf.samtools.SAMRecord.SAMTagAndValue;
 
 /**
- * Converts SAM/BAM file to FASTQ
+ * Responsible for creating fastq files for reads of interest to be realigned.
+ * Those reads that are not eligible for realignment are written directly to the output BAM file.
  * 
  * @author Lisle Mose (lmose at unc dot edu)
  */

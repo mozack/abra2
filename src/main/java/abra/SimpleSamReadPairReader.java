@@ -17,7 +17,7 @@ import net.sf.samtools.SAMRecord;
  * Supports multiple mappings for the same read. (i.e. repeating read id's)
  * SAM versus BAM format is determined from the file suffix.  i.e. ".sam" or ".bam"
  * 
- * @author Lisle Mose (lmose at unc dot edu)
+ * @author Lisle E. Mose (lmose at unc dot edu)
  */
 public class SimpleSamReadPairReader implements Iterable<ReadPair> {
     

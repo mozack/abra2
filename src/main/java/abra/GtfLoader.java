@@ -11,7 +11,7 @@ import java.util.List;
 /**
  * Loads GTF file content into memory.
  * 
- * @author Lisle Mose (lmose at unc dot edu)
+ * @author Lisle E. Mose (lmose at unc dot edu)
  */
 public class GtfLoader {
 	

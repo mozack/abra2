@@ -6,7 +6,7 @@ import net.sf.samtools.SAMRecord;
 /**
  * Representation of a Feature (i.e. a line in a GTF file)
  * 
- * @author Lisle Mose (lmose at unc dot edu)
+ * @author Lisle E. Mose (lmose at unc dot edu)
  */
 public class Feature {
 	private String seqname;

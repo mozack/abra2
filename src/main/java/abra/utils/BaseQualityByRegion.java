@@ -1,9 +1,13 @@
 /* Copyright 2013 University of North Carolina at Chapel Hill.  All rights reserved. */
-package abra;
+package abra.utils;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+
+import abra.Feature;
+import abra.GtfLoader;
+import abra.ReAligner;
 
 import net.sf.samtools.SAMFileReader;
 import net.sf.samtools.SAMRecord;

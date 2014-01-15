@@ -1,11 +1,13 @@
 /* Copyright 2013 University of North Carolina at Chapel Hill.  All rights reserved. */
-package abra;
+package abra.utils;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import abra.CompareToReference2;
 
 import net.sf.samtools.SAMFileReader;
 import net.sf.samtools.SAMRecord;

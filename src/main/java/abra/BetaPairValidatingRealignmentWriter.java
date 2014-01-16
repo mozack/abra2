@@ -12,14 +12,14 @@ import net.sf.samtools.SAMRecord;
 
 /**
  * Manages writing paired reads to final output.  Reads that were previously in
- * a valid pair will not be modified to become invalid.
+ * a "proper pair" will not be modified to become an "inproper pair".
  * 
  * @author Lisle E. Mose (lmose at unc dot edu)
  */
 public class BetaPairValidatingRealignmentWriter implements RealignmentWriter {
 
 	private SAMFileWriter writer;
-	private ReAligner realigner;
+//	private ReAligner realigner;
 	private IndelShifter indelShifter = new IndelShifter();
 	
 	private int realignCount = 0;
@@ -31,11 +31,15 @@ public class BetaPairValidatingRealignmentWriter implements RealignmentWriter {
 	private SAMFileWriter candidatesSamWriter;
 	private SamStringReader samStringReader;
 	
-	public BetaPairValidatingRealignmentWriter(ReAligner realigner, SAMFileWriter writer, String tempDir) {
+	private CompareToReference2 c2r;
+	private SAMFileHeader header;
+	
+	public BetaPairValidatingRealignmentWriter(CompareToReference2 c2r,
+			SAMFileWriter writer, String tempDir, int minInsertLen, int maxInsertLen) {
 		this.writer = writer;
-		this.realigner = realigner;
+		this.c2r = c2r;
 		
-		SAMFileHeader header = writer.getFileHeader().clone();
+		header = writer.getFileHeader().clone();
 		header.setSortOrder(SortOrder.queryname);
 		
 		samStringReader = new SamStringReader(header);
@@ -45,8 +49,8 @@ public class BetaPairValidatingRealignmentWriter implements RealignmentWriter {
 		candidatesSamWriter = new SAMFileWriterFactory().makeSAMOrBAMWriter(
 				header, false, new File(candidatesSam));
 		
-		this.minInsertLength = realigner.getMinInsertLength();
-		this.maxInsertLength = realigner.getMaxInsertLength();
+		this.minInsertLength = minInsertLen;
+		this.maxInsertLength = maxInsertLen;
 	}
 	
 	long count = 1;
@@ -250,7 +254,7 @@ public class BetaPairValidatingRealignmentWriter implements RealignmentWriter {
 	}
 	
 	private void addAlignment(SAMRecord read) {
-		writer.addAlignment(indelShifter.shiftIndelsLeft(read, realigner.getC2r()));
+		writer.addAlignment(indelShifter.shiftIndelsLeft(read, c2r));
 	}
 	
 	private void processCandidates() {
@@ -324,7 +328,7 @@ public class BetaPairValidatingRealignmentWriter implements RealignmentWriter {
 
 		public SAMRecord getUpdatedRead() {
 			if ( (updatedReadStr != null) && (updatedRead == null) ) {
-				updatedRead = MyReader.getRead(updatedReadStr, realigner.getHeader());
+				updatedRead = MyReader.getRead(updatedReadStr, header);
 			}
 			
 			return updatedRead;
@@ -332,7 +336,7 @@ public class BetaPairValidatingRealignmentWriter implements RealignmentWriter {
 
 		public SAMRecord getOrigRead() {
 			if (origRead == null) {
-				origRead = MyReader.getRead(origReadStr, realigner.getHeader());
+				origRead = MyReader.getRead(origReadStr, header);
 			}
 			
 			return origRead;

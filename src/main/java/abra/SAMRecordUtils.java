@@ -310,4 +310,11 @@ public class SAMRecordUtils {
 		}
 	}
 
+	/**
+	 * Returs true if the input read should be filtered
+	 */
+	public static boolean isFiltered(boolean isPairedEnd, SAMRecord read) {
+		// Filter out single end reads when in paired end mode.
+		return ((isPairedEnd) && (!read.getReadPairedFlag()));
+	}
 }

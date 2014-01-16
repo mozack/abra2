@@ -136,6 +136,10 @@ public class NativeAssembler implements Assembler {
 			readIds = null;
 			writer.close();
 			
+			long end1 = System.currentTimeMillis();
+			
+			System.out.println("Elapsed msecs collection data to assemble" + (end1-start));
+			
 			for (int kmer : kmers) { 
 			
 				String outputFile = output + "_k" + kmer;

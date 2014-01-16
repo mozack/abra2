@@ -18,25 +18,33 @@ import net.sf.samtools.SAMFileReader.ValidationStringency;
 
 /**
  * Responsible for adjusting read alignments.
+ * This class is used by multiple threads simultaneously.  Do not store thread
+ * specific variables as members.
+ * 
  * @author Lisle E. Mose (lmose at unc dot edu)
  */
 public class ReadAdjuster {
 	
-	private ReAligner realigner;
 	private int maxMapq;
 	private ReverseComplementor reverseComplementor = new ReverseComplementor();
+	private boolean isPairedEnd;
+	private CompareToReference2 c2r;
+	private int minInsertLen;
+	private int maxInsertLen;
 	
-	public ReadAdjuster(ReAligner realigner, int maxMapq) {
-		this.realigner = realigner;
+	public ReadAdjuster(boolean isPairedEnd, int maxMapq, CompareToReference2 c2r, int minInsertLen, int maxInsertLen) {
+		this.isPairedEnd = isPairedEnd;
 		this.maxMapq = maxMapq;
+		this.minInsertLen = minInsertLen;
+		this.maxInsertLen = maxInsertLen;
 	}
 	
 	public void adjustReads(String alignedToContigSam, SAMFileWriter outputSam, boolean isTightAlignment,
-			CompareToReference2 c2r, String tempDir, SAMFileHeader samHeader) throws IOException {
+			String tempDir, SAMFileHeader samHeader) throws IOException {
 		
-		log("Writing reads to: " + outputSam);
+		log("Adjusting reads.");
 		
-		RealignmentWriter writer = realigner.getRealignmentWriter(outputSam, isTightAlignment, tempDir);
+		RealignmentWriter writer = getRealignmentWriter(outputSam, isTightAlignment, tempDir);
 		
 		SAMFileReader contigReader = new SAMFileReader(new File(alignedToContigSam));
 		contigReader.setValidationStringency(ValidationStringency.SILENT);
@@ -69,8 +77,7 @@ public class ReadAdjuster {
 				(read.getReadUnmappedFlag() == false)  &&
 				(!orig.getCigarString().contains("N")) &&  // Don't remap introns
 				(SAMRecordUtils.getEditDistance(read, null) < SAMRecordUtils.getOrigEditDistance(orig)) &&
-//				isImprovedAlignment(read, orig, c2r) &&
-				(!realigner.isFiltered(orig))) {
+				(!isFiltered(orig))) {
 				
 				SAMRecord origRead = orig;
 				String contigReadStr = read.getReferenceName();
@@ -92,17 +99,11 @@ public class ReadAdjuster {
 			adjustForStrand(read.getReadNegativeStrandFlag(), orig);
 			writer.addAlignment(readToOutput, orig);
 		}
-//		System.out.println("Sleeping");
-//		try {
-//			Thread.sleep(200000);
-//		} catch (Exception e) {
-//			e.printStackTrace();
-//		}
 
 		int realignedCount = writer.flush();
 		contigReader.close();
 		
-		log("Done with: " + outputSam + ".  Number of reads realigned: " + realignedCount);
+		log("Done adjusting reads.  Number of reads realigned: " + realignedCount);
 	}
 	
 	private SAMRecord getUpdatedReadInfo(Map<String, SAMRecord> outputReadAlignmentInfo, SAMRecord read, 
@@ -425,6 +426,22 @@ public class ReadAdjuster {
 		}
 
 		return read;
+	}
+	
+	private boolean isFiltered(SAMRecord read) {
+		return SAMRecordUtils.isFiltered(isPairedEnd, read);
+	}
+	
+	private RealignmentWriter getRealignmentWriter(SAMFileWriter outputReadsBam, boolean isTightAlignment, String tempDir) {
+		RealignmentWriter writer;
+		
+		if (isTightAlignment && isPairedEnd) {
+			writer = new BetaPairValidatingRealignmentWriter(c2r, outputReadsBam, tempDir, minInsertLen, maxInsertLen);
+		} else {
+			writer = new SimpleRealignmentWriter(c2r, outputReadsBam, isTightAlignment);
+		}
+		
+		return writer;
 	}
 	
 	static class HitInfo {

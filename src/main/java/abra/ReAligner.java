@@ -153,7 +153,7 @@ public class ReAligner {
 		log("Loading target regions");
 		loadRegions();
 		
-		readAdjuster = new ReadAdjuster(this, this.maxMapq);
+		readAdjuster = new ReadAdjuster(isPairedEnd, this.maxMapq, c2r, minInsertLength, maxInsertLength);
 		
 		samHeader.setSortOrder(SAMFileHeader.SortOrder.unsorted);
 		
@@ -198,7 +198,8 @@ public class ReAligner {
 					log("Adjusting unaligned reads");
 					SAMFileWriter unalignedWriter = new SAMFileWriterFactory().makeSAMOrBAMWriter(
 							samHeader, false, new File(unalignedRegionSam));
-					readAdjuster.adjustReads(alignedToContigBam, unalignedWriter, false, null, unalignedDir, samHeader);
+					ReadAdjuster unalignedReadAdjuster = new ReadAdjuster(isPairedEnd, this.maxMapq, null, minInsertLength, maxInsertLength);					
+					unalignedReadAdjuster.adjustReads(alignedToContigBam, unalignedWriter, false, unalignedDir, samHeader);
 					unalignedWriter.close();
 					
 					sortBam(unalignedRegionSam, sortedUnalignedRegion, "coordinate");
@@ -451,20 +452,20 @@ public class ReAligner {
 		if (this.numThreads > 1) {
 			
 			System.out.println("Adjusting reads in parallel");
-			AdjustReadsRunnable runnable1 = new AdjustReadsRunnable(readAdjuster, sortedAlignedToContig1, outputSam1, isTightAlignment, c2r, tempDir1, samHeader);
+			AdjustReadsRunnable runnable1 = new AdjustReadsRunnable(readAdjuster, sortedAlignedToContig1, outputSam1, isTightAlignment, tempDir1, samHeader);
 			Thread thread1 = new Thread(runnable1);
 			thread1.start();
 			
 			Thread thread2 = null;
 			if (inputSam2 != null) {
-				AdjustReadsRunnable runnable2 = new AdjustReadsRunnable(readAdjuster, sortedAlignedToContig2, outputSam2, isTightAlignment, c2r, tempDir2, samHeader2);
+				AdjustReadsRunnable runnable2 = new AdjustReadsRunnable(readAdjuster, sortedAlignedToContig2, outputSam2, isTightAlignment, tempDir2, samHeader2);
 				thread2 = new Thread(runnable2);
 				thread2.start();
 			}
 			
 			Thread thread3 = null;
 			if (inputSam3 != null) {
-				AdjustReadsRunnable runnable3 = new AdjustReadsRunnable(readAdjuster, sortedAlignedToContig3, outputSam3, isTightAlignment, c2r, tempDir3, samHeader3);
+				AdjustReadsRunnable runnable3 = new AdjustReadsRunnable(readAdjuster, sortedAlignedToContig3, outputSam3, isTightAlignment, tempDir3, samHeader3);
 				thread3 = new Thread(runnable3);
 				thread3.start();
 			}
@@ -481,12 +482,13 @@ public class ReAligner {
 			
 		} else {
 			System.out.println("Adjusting reads sequentially");
-			readAdjuster.adjustReads(sortedAlignedToContig1, outputSam1, isTightAlignment, c2r, tempDir1, samHeader);
+			
+			readAdjuster.adjustReads(sortedAlignedToContig1, outputSam1, isTightAlignment, tempDir1, samHeader);
 			if (inputSam2 != null) {
-				readAdjuster.adjustReads(sortedAlignedToContig2, outputSam2, isTightAlignment, c2r, tempDir2, samHeader2);
+				readAdjuster.adjustReads(sortedAlignedToContig2, outputSam2, isTightAlignment, tempDir2, samHeader2);
 			}
 			if (inputSam3 != null) {
-				readAdjuster.adjustReads(sortedAlignedToContig3, outputSam3, isTightAlignment, c2r, tempDir3, samHeader3);
+				readAdjuster.adjustReads(sortedAlignedToContig3, outputSam3, isTightAlignment, tempDir3, samHeader3);
 			}
 		}
 	}
@@ -1082,23 +1084,6 @@ public class ReAligner {
 			return y;
 		}
 	}
-		
-	RealignmentWriter getRealignmentWriter(SAMFileWriter outputReadsBam, boolean isTightAlignment, String tempDir) {
-		RealignmentWriter writer;
-		
-		if (isTightAlignment && isPairedEnd) {
-			writer = new BetaPairValidatingRealignmentWriter(this, outputReadsBam, tempDir);
-		} else {
-			writer = new SimpleRealignmentWriter(this, outputReadsBam, isTightAlignment);
-		}
-		
-		return writer;
-	}
-	
-	boolean isFiltered(SAMRecord read) {
-		// Filter out single end reads when in paired end mode.
-		return ((isPairedEnd) && (!read.getReadPairedFlag()));
-	}
 	
 	static List<Feature> splitRegions(List<Feature> regions, 
 			int maxRegionLength, int minRegionRemainder, int regionOverlap) {
@@ -1322,6 +1307,10 @@ public class ReAligner {
 	public void setMinInsertLength(int minInsertLen) {
 		this.minInsertLength = minInsertLen;
 	}
+	
+	boolean isFiltered(SAMRecord read) {
+		return SAMRecordUtils.isFiltered(isPairedEnd, read);
+	}
 
 	public static void run(String[] args) throws Exception {
 		
@@ -1406,8 +1395,8 @@ public class ReAligner {
 		SAMFileWriter writer = new SAMFileWriterFactory().makeSAMOrBAMWriter(
 				realigner.samHeader, false, new File("/home/lmose/dev/abra/missing_68i/output.bam"));
 
-		ReadAdjuster readAdjuster = new ReadAdjuster(realigner, realigner.maxMapq);
-		readAdjuster.adjustReads("/home/lmose/dev/abra/missing_68i/a2c.sam", writer, true, c2r, "/home/lmose/dev/abra/missing_68i/temp", realigner.samHeader);
+//		ReadAdjuster readAdjuster = new ReadAdjuster(realigner, realigner.maxMapq);
+//		readAdjuster.adjustReads("/home/lmose/dev/abra/missing_68i/a2c.sam", writer, true, c2r, "/home/lmose/dev/abra/missing_68i/temp", realigner.samHeader);
 		
 		writer.close();
 	}

@@ -12,14 +12,14 @@ import net.sf.samtools.SAMRecord;
 public class SimpleRealignmentWriter implements RealignmentWriter {
 
 	private SAMFileWriter writer;
-	private ReAligner realigner;
 	private int realignCount = 0;
 	private IndelShifter indelShifter = new IndelShifter();
 	private boolean isTightAlignment = false;
+	private CompareToReference2 c2r;
 	
-	public SimpleRealignmentWriter(ReAligner realigner, SAMFileWriter writer, boolean isTightAlignment) {
+	public SimpleRealignmentWriter(CompareToReference2 c2r, SAMFileWriter writer, boolean isTightAlignment) {
 		this.writer = writer;
-		this.realigner = realigner;
+		this.c2r = c2r;
 		this.isTightAlignment = isTightAlignment;
 	}
 	
@@ -41,7 +41,7 @@ public class SimpleRealignmentWriter implements RealignmentWriter {
 	
 	private void addAlignment(SAMRecord read) {
 		if (isTightAlignment) {
-			writer.addAlignment(indelShifter.shiftIndelsLeft(read, realigner.getC2r()));
+			writer.addAlignment(indelShifter.shiftIndelsLeft(read, c2r));
 		} else {
 			writer.addAlignment(read);
 		}

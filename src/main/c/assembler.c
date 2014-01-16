@@ -5,6 +5,7 @@
 #include <time.h>
 #include <iostream>
 #include <stack>
+#include <list>
 #include <sparsehash/sparse_hash_map>
 #include <sparsehash/sparse_hash_set>
 #include <stdexcept>
@@ -19,7 +20,7 @@ using google::sparse_hash_set;
 //#define MIN_CONTIG_LENGTH 101
 //#define MIN_NODE_FREQUENCY 3
 //#define MIN_NODE_FREQUENCY 2
-#define MAX_CONTIG_SIZE 50000
+#define MAX_CONTIG_SIZE 5000
 #define MAX_READ_LENGTH 1001
 //#define MIN_BASE_QUALITY 20
 #define INCREASE_MIN_NODE_FREQ_THRESHOLD 25000
@@ -339,7 +340,6 @@ struct linked_node* remove_node_from_list(struct node* node, struct linked_node*
 	return list;
 }
 
-
 void cleanup(struct linked_node* linked_nodes) {
 	struct linked_node* ptr = linked_nodes;
 	while (ptr != NULL) {
@@ -488,6 +488,7 @@ int build_contigs(
 
 	int status = OK;
 	stack<contig*> contigs;
+	stack<contig*> contigs_to_output;
 	struct contig* root_contig = new_contig();
 	root_contig->curr_node = root;
 	contigs.push(root_contig);
@@ -502,10 +503,10 @@ int build_contigs(
 			// We've encountered a repeat
 			contig->is_repeat = 1;
 			if ((!shadow_mode) && (!stop_on_repeat)) {
-				output_contig(contig, contig_count, fp, prefix);
+				contigs_to_output.push(contig);
+//				output_contig(contig, contig_count, fp, prefix);
 			}
 			contigs.pop();
-			free_contig(contig);
 			if (stop_on_repeat) {
 				status = STOPPED_ON_REPEAT;
 			}
@@ -517,10 +518,11 @@ int build_contigs(
 
 			// Now, write the contig
 			if (!shadow_mode) {
-				output_contig(contig, contig_count, fp, prefix);
+				contigs_to_output.push(contig);
+//				output_contig(contig, contig_count, fp, prefix);
 			}
 			contigs.pop();
-			free_contig(contig);
+//			free_contig(contig);
 		}
 		else {
 			// Append first base from current node
@@ -559,6 +561,15 @@ int build_contigs(
 
 		if (paths_from_root >= max_paths_from_root) {
 			status = TOO_MANY_PATHS_FROM_ROOT;
+		}
+
+		if (status == OK) {
+			while (contigs_to_output.size() > 0) {
+				struct contig* contig = contigs_to_output.top();
+				output_contig(contig, contig_count, fp, prefix);
+				contigs_to_output.pop();
+				free_contig(contig);
+			}
 		}
 	}
 
@@ -673,12 +684,14 @@ int assemble(const char* input,
 		int shadow_count = 0;
 
 		// Run in shadow mode first
-		int status = build_contigs(root_nodes->node, shadow_count, fp, prefix, max_paths_from_root, max_contigs, truncate_on_repeat, true);
+//		int status = build_contigs(root_nodes->node, shadow_count, fp, prefix, max_paths_from_root, max_contigs, truncate_on_repeat, true);
+//
+//		if (status == OK) {
+//			// Now output the contigs
+//			build_contigs(root_nodes->node, contig_count, fp, prefix, max_paths_from_root, max_contigs, truncate_on_repeat, false);
+//		}
 
-		if (status == OK) {
-			// Now output the contigs
-			build_contigs(root_nodes->node, contig_count, fp, prefix, max_paths_from_root, max_contigs, truncate_on_repeat, false);
-		}
+		int status = build_contigs(root_nodes->node, contig_count, fp, prefix, max_paths_from_root, max_contigs, truncate_on_repeat, false);
 
 		switch(status) {
 			case TOO_MANY_CONTIGS:

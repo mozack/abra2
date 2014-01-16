@@ -14,7 +14,6 @@ import net.sf.samtools.SAMFileWriter;
 public class AdjustReadsRunnable implements Runnable {
 	
 	private ReadAdjuster readAdjuster;
-	private String sortedOriginalReads;
 	private String sortedAlignedToContig;
 	private SAMFileWriter outputSam;
 	private boolean isTightAlignment;
@@ -26,12 +25,12 @@ public class AdjustReadsRunnable implements Runnable {
 			boolean isTightAlignment, CompareToReference2 c2r, String tempDir, SAMFileHeader samHeader) {
 
 		this.readAdjuster = readAdjuster;
-		this.sortedOriginalReads = sortedOriginalReads;
 		this.sortedAlignedToContig = sortedAlignedToContig;
 		this.outputSam = outputSam;
 		this.isTightAlignment = isTightAlignment;
 		this.c2r = c2r;
 		this.tempDir = tempDir;
+		this.samHeader = samHeader;
 	}
 
 	@Override

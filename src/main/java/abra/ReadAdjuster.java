@@ -37,6 +37,7 @@ public class ReadAdjuster {
 		this.maxMapq = maxMapq;
 		this.minInsertLen = minInsertLen;
 		this.maxInsertLen = maxInsertLen;
+		this.c2r = c2r;
 	}
 	
 	public void adjustReads(String alignedToContigSam, SAMFileWriter outputSam, boolean isTightAlignment,

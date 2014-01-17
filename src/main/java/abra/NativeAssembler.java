@@ -67,6 +67,9 @@ public class NativeAssembler implements Assembler {
 			}
 			
 			BufferedWriter writer = new BufferedWriter(new FileWriter(readFile, false));
+			
+			boolean isAssemblyCandidate = false;
+			int candidateReadCount = 0;
 
 			for (String input : inputFiles) {
 				SAMFileReader reader = new SAMFileReader(new File(input));
@@ -110,6 +113,14 @@ public class NativeAssembler implements Assembler {
 							
 							writer.write(read.getReadNegativeStrandFlag() ? "1\n" : "0\n");
 							
+							//TODO: Check for high base quality soft clipping or mismatches
+							if (!isAssemblyCandidate && (read.getCigarString().contains("S") || SAMRecordUtils.getIntAttribute(read, "NM") > 0)) {
+								candidateReadCount++;
+								if (candidateReadCount > 2) {
+									isAssemblyCandidate = true;
+								}
+							}
+							
 							if (read.getReadLength() == readLength) {
 								writer.write(read.getReadString() + "\n");
 								writer.write(read.getBaseQualityString() + "\n");
@@ -140,29 +151,33 @@ public class NativeAssembler implements Assembler {
 			
 			System.out.println("Elapsed msecs collection data to assemble" + (end1-start));
 			
-			for (int kmer : kmers) { 
-			
-				String outputFile = output + "_k" + kmer;
+			if (isAssemblyCandidate) {
+				for (int kmer : kmers) { 
 				
-				count = assemble(
-						readFile,
-						outputFile, 
-						prefix, 
-						truncateOnRepeat ? 1 : 0,
-						maxContigs,
-						maxPathsFromRoot,
-						readLength,
-						kmer,
-						minKmerFrequency,
-						minBaseQuality);
-				
-				if (count > 0) {
-					outputFiles.add(outputFile);
-					break;
-				} else {
-					File fileToDelete = new File(outputFile);
-					fileToDelete.delete();
+					String outputFile = output + "_k" + kmer;
+					
+					count = assemble(
+							readFile,
+							outputFile, 
+							prefix, 
+							truncateOnRepeat ? 1 : 0,
+							maxContigs,
+							maxPathsFromRoot,
+							readLength,
+							kmer,
+							minKmerFrequency,
+							minBaseQuality);
+					
+					if (count > 0) {
+						outputFiles.add(outputFile);
+						break;
+					} else {
+						File fileToDelete = new File(outputFile);
+						fileToDelete.delete();
+					}
 				}
+			} else {
+				System.out.println("Skipping assembly for: " + prefix);
 			}
 			
 			File inputReadFile = new File(readFile);

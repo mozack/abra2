@@ -98,6 +98,8 @@ public class NativeAssembler implements Assembler {
 				List<Integer> candidateReadStartPositions = new ArrayList<Integer>();
 				List<Integer> allReadStartPositions = new ArrayList<Integer>();
 				
+				int startPos = -1;
+				
 				while (iter.hasNext()) {
 					
 					SAMRecord read = iter.next();
@@ -130,6 +132,10 @@ public class NativeAssembler implements Assembler {
 							filterPositionList(candidateReadStartPositions, read.getAlignmentStart());
 							filterPositionList(allReadStartPositions, read.getAlignmentStart());
 							
+							if (startPos < 0) {
+								startPos = read.getAlignmentStart();
+							}
+							
 							// Consider this region a candidate if there are any indels.
 							if (!isAssemblyCandidate && read.getCigarString().contains("I") || read.getCigarString().contains("D")) {
 								isAssemblyCandidate = true;
@@ -149,8 +155,8 @@ public class NativeAssembler implements Assembler {
 
 							allReadStartPositions.add(read.getAlignmentStart());
 							
-							if (read.getAlignmentStart() >= region.getStart() + readLength) {
-								if ((float) candidateReadStartPositions.size() / (float) allReadStartPositions.size() >= .02) {
+							if (read.getAlignmentStart() >= startPos + readLength) {
+								if ((float) candidateReadStartPositions.size() / (float) allReadStartPositions.size() >= .05) {
 									isAssemblyCandidate = true;
 								}
 							}

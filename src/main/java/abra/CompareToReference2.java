@@ -177,7 +177,7 @@ public class CompareToReference2 {
 						char readBase = getReadBase(read, readIdx);
 						char refBase  = Character.toUpperCase((char) reference[refIdx]);
 						if ((readBase != refBase) && (readBase != 'N') && (refBase != 'N')) {
-							if (getBaseQuality(read, readIdx) >= minBaseQual) {
+							if (minBaseQual == 0 || getBaseQuality(read, readIdx) >= minBaseQual) {
 								diffs++;
 							}
 						}
@@ -203,7 +203,7 @@ public class CompareToReference2 {
 							char readBase = getReadBase(read, readIdx);
 							char refBase  = Character.toUpperCase((char) reference[refIdx]);
 							if ((readBase != refBase) && (readBase != 'N') && (refBase != 'N')) {
-								if (getBaseQuality(read, readIdx) >= minBaseQual) {
+								if (minBaseQual == 0 || getBaseQuality(read, readIdx) >= minBaseQual) {
 									diffs++;
 								}
 							}

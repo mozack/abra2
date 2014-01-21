@@ -117,7 +117,7 @@ public class NativeAssembler implements Assembler {
 							
 							// TODO: Requires input NM tag to be set appropriately.
 							if (!isAssemblyCandidate && (read.getCigarString().contains("S") || SAMRecordUtils.getIntAttribute(read, "NM") > 0)) {
-								if (c2r != null && c2r.numHighQualityMismatches(read, minBaseQuality) > 0) {
+								if (c2r.numHighQualityMismatches(read, minBaseQuality) > 1 || read.getCigarString().contains("I") || read.getCigarString().contains("D")) {
 									candidateReadCount++;
 									if (candidateReadCount > 2) {
 										isAssemblyCandidate = true;

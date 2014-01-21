@@ -47,6 +47,15 @@ public class NativeAssembler implements Assembler {
 		return read.getCigarString().contains("H");
 	}
 	
+	private void filterPositionList(List<Integer> positions, int currentPos) {
+		Iterator<Integer> iter = positions.iterator();
+		while (iter.hasNext()) {
+			if (iter.next() < currentPos-readLength) {
+				iter.remove();
+			}
+		}
+	}
+	
 	public List<String> assembleContigs(List<String> inputFiles, String output, String tempDir, Feature region, String prefix,
 			boolean checkForDupes, ReAligner realigner, CompareToReference2 c2r) {
 		
@@ -71,6 +80,8 @@ public class NativeAssembler implements Assembler {
 			
 			// if c2r is null, this is the unaligned region.
 			boolean isAssemblyCandidate = c2r == null ? true : false;
+			
+			int indelReadCount = 0;
 			int candidateReadCount = 0;
 
 			for (String input : inputFiles) {
@@ -83,6 +94,9 @@ public class NativeAssembler implements Assembler {
 				} else {
 					iter = reader.iterator();
 				}
+				
+				List<Integer> candidateReadStartPositions = new ArrayList<Integer>();
+				List<Integer> allReadStartPositions = new ArrayList<Integer>();
 				
 				while (iter.hasNext()) {
 					
@@ -113,18 +127,36 @@ public class NativeAssembler implements Assembler {
 								readIds.add(getIdentifier(read));
 							}
 							
-							writer.write(read.getReadNegativeStrandFlag() ? "1\n" : "0\n");
+							filterPositionList(candidateReadStartPositions, read.getAlignmentStart());
+							filterPositionList(allReadStartPositions, read.getAlignmentStart());
 							
+							// Consider this region a candidate if there are any indels.
+							if (!isAssemblyCandidate && read.getCigarString().contains("I") || read.getCigarString().contains("D")) {
+								isAssemblyCandidate = true;
+							}
+
 							// TODO: Requires input NM tag to be set appropriately.
+							// Consider factoring out and processing along with Sam2Fastq
 							if (!isAssemblyCandidate && (read.getCigarString().contains("S") || SAMRecordUtils.getIntAttribute(read, "NM") > 0)) {
-								if (c2r.numHighQualityMismatches(read, minBaseQuality) > 1 || read.getCigarString().contains("I") || read.getCigarString().contains("D")) {
+								if (c2r.numHighQualityMismatches(read, minBaseQuality) > 1) {
 									candidateReadCount++;
-									if (candidateReadCount > 2) {
-										isAssemblyCandidate = true;
-									}
+									candidateReadStartPositions.add(read.getAlignmentStart());
+//									if (candidateReadCount > 2) {
+//										isAssemblyCandidate = true;
+//									}
+								}
+							}
+
+							allReadStartPositions.add(read.getAlignmentStart());
+							
+							if (read.getAlignmentStart() >= region.getStart() + readLength) {
+								if ((float) candidateReadStartPositions.size() / (float) allReadStartPositions.size() >= .02) {
+									isAssemblyCandidate = true;
 								}
 							}
 							
+							writer.write(read.getReadNegativeStrandFlag() ? "1\n" : "0\n");
+														
 							if (read.getReadLength() == readLength) {
 								writer.write(read.getReadString() + "\n");
 								writer.write(read.getBaseQualityString() + "\n");
@@ -143,6 +175,10 @@ public class NativeAssembler implements Assembler {
 							}
 						}
 					}
+				}
+				
+				if ((float) candidateReadStartPositions.size() / (float) allReadStartPositions.size() >= .05) {
+					isAssemblyCandidate = true;
 				}
 				
 				reader.close();

@@ -7,8 +7,6 @@ import java.util.Iterator;
 import java.util.List;
 
 
-import net.sf.samtools.CigarElement;
-import net.sf.samtools.CigarOperator;
 import net.sf.samtools.SAMFileHeader;
 import net.sf.samtools.SAMFileHeader.SortOrder;
 import net.sf.samtools.SAMFileReader;
@@ -16,7 +14,6 @@ import net.sf.samtools.SAMFileWriter;
 import net.sf.samtools.SAMFileWriterFactory;
 import net.sf.samtools.SAMRecord;
 import net.sf.samtools.SAMFileReader.ValidationStringency;
-import net.sf.samtools.SAMRecord.SAMTagAndValue;
 
 /**
  * Responsible for creating fastq files for reads of interest to be realigned.
@@ -30,19 +27,16 @@ public class Sam2Fastq {
 	private static final int MAX_SAM_READ_NAME_LENGTH = 255;
 	
 	private FastqOutputFile output1;
-	private FastqOutputFile output2;
 	private ReverseComplementor reverseComplementor = new ReverseComplementor();
 	private boolean shouldIdentifyEndByReadId = false;
 	private boolean isMapspliceFusions = false;
 	private String end1Suffix;
 	private String end2Suffix;
-	private ReAligner realigner;
 	private Feature currentRegion;
 	private Iterator<Feature> regionIter;
 	
 	// Assumes input SAM file and input region list is sorted by coordinate.
 	private boolean isInRegion(SAMFileHeader header, SAMRecord read) {
-//		boolean isInRegion = currentRegion.overlapsRead(read);
 		
 		while ((currentRegion != null) &&
 			   (!currentRegion.overlapsRead(read)) &&
@@ -74,22 +68,14 @@ public class Sam2Fastq {
 		
 		return isRegionBeyond;
 	}
-
-	//TODO: Move to utility class
-	public static boolean isPrimary(SAMRecord read) {
-		return ((read.getFlags() & 0x800)  == 0) && (!read.getNotPrimaryAlignmentFlag());
-	}
 	
 	/**
 	 * Convert the input SAM/BAM file into a single fastq file.
 	 * Input SAM files that contain multiple mappings should be sorted by read name.
 	 */
 	public void convert(String inputSam, String outputFastq, CompareToReference2 c2r,
-			SAMFileHeader header, SAMFileWriter writer, ReAligner realigner,
+			SAMFileHeader header, SAMFileWriter writer, boolean isPairedEnd,
 			List<Feature> regions) throws IOException {
-		
-		this.realigner = realigner;
-		String last1Read = "";
 		
 		System.out.println("sam: " + inputSam);
 		
@@ -108,7 +94,7 @@ public class Sam2Fastq {
         }
         
         for (SAMRecord read : reader) {
-    		if (isPrimary(read) && (!realigner.isFiltered(read))) {
+    		if (SAMRecordUtils.isPrimary(read) && (!SAMRecordUtils.isFiltered(isPairedEnd, read))) {
     			
     			// These tags can be lengthy, so remove them.
 //    			String oldQualities = (String) read.getAttribute("OQ");
@@ -150,9 +136,6 @@ public class Sam2Fastq {
     				// output directly to final BAM
     				writer.addAlignment(read);
     			}
-    			
-    			// Can this be removed???
-    			last1Read = read.getReadName();
     		}
     		
             lineCnt++;
@@ -287,7 +270,7 @@ public class Sam2Fastq {
 		c2r.init("/home/lmose/reference/chr7/chr7.fa");
 		
 		SAMFileWriterFactory writerFactory = new SAMFileWriterFactory();
-		writerFactory.setUseAsyncIo(true);
+//		writerFactory.setUseAsyncIo(true);
 		
 		header.setSortOrder(SortOrder.unsorted);
 		
@@ -306,7 +289,6 @@ public class Sam2Fastq {
 		
 //		String inputSam, String outputFastq, CompareToReference2 c2r,
 //		SAMFileHeader header, SAMFileWriter writer, ReAligner realigner
-		ReAligner realigner = new ReAligner();
 		
 		GtfLoader loader = new GtfLoader();
 		List<Feature> regions = loader.load("/home/lmose/dev/ayc/regions/clinseq5/uncseq5.gtf");
@@ -315,7 +297,7 @@ public class Sam2Fastq {
 		
 		regions = ReAligner.splitRegions(regions);		
 		
-		s2f.convert(inputSam, "/home/lmose/dev/ayc/opt/t7.fastq.gz", c2r, header, writer, realigner, 
+		s2f.convert(inputSam, "/home/lmose/dev/ayc/opt/t7.fastq.gz", c2r, header, writer, false, 
 				regions);
 		long e = System.currentTimeMillis();
 		

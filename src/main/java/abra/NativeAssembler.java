@@ -47,7 +47,8 @@ public class NativeAssembler implements Assembler {
 		return read.getCigarString().contains("H");
 	}
 	
-	public List<String> assembleContigs(List<String> inputFiles, String output, String tempDir, Feature region, String prefix, boolean checkForDupes, ReAligner realigner) {
+	public List<String> assembleContigs(List<String> inputFiles, String output, String tempDir, Feature region, String prefix,
+			boolean checkForDupes, ReAligner realigner, CompareToReference2 c2r) {
 		
 		long start = System.currentTimeMillis();
 		
@@ -68,7 +69,8 @@ public class NativeAssembler implements Assembler {
 			
 			BufferedWriter writer = new BufferedWriter(new FileWriter(readFile, false));
 			
-			boolean isAssemblyCandidate = false;
+			// if c2r is null, this is the unaligned region.
+			boolean isAssemblyCandidate = c2r == null ? true : false;
 			int candidateReadCount = 0;
 
 			for (String input : inputFiles) {
@@ -113,11 +115,13 @@ public class NativeAssembler implements Assembler {
 							
 							writer.write(read.getReadNegativeStrandFlag() ? "1\n" : "0\n");
 							
-							//TODO: Check for high base quality soft clipping or mismatches
+							// TODO: Requires input NM tag to be set appropriately.
 							if (!isAssemblyCandidate && (read.getCigarString().contains("S") || SAMRecordUtils.getIntAttribute(read, "NM") > 0)) {
-								candidateReadCount++;
-								if (candidateReadCount > 2) {
-									isAssemblyCandidate = true;
+								if (c2r != null && c2r.numHighQualityMismatches(read, minBaseQuality) > 0) {
+									candidateReadCount++;
+									if (candidateReadCount > 2) {
+										isAssemblyCandidate = true;
+									}
 								}
 							}
 							

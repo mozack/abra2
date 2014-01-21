@@ -175,7 +175,7 @@ public class ReAligner {
 			Assembler assem = newUnalignedAssembler(1);
 			List<String> unalignedSamList = new ArrayList<String>();
 			unalignedSamList.add(unalignedSam);
-			List<String> unalignedAssemblies = assem.assembleContigs(unalignedSamList, unalignedContigFasta, tempDir, null, "unaligned", false, this);
+			List<String> unalignedAssemblies = assem.assembleContigs(unalignedSamList, unalignedContigFasta, tempDir, null, "unaligned", false, this, null);
 			
 			boolean hasContigs = unalignedAssemblies.size() > 0;
 
@@ -273,13 +273,6 @@ public class ReAligner {
 			
 			clock = new Clock("Sam2Fastq and Align");
 			clock.start();
-//			String alignedToContigSam1 = alignReads(tempDir1, inputSam, cleanContigsFasta, c2r, writer1);
-//			String alignedToContigSam2 = null;
-//			if (inputSam2 != null) {
-//				alignedToContigSam2 = alignReads(tempDir2, inputSam2, cleanContigsFasta, c2r, writer2);
-//			}
-			
-			System.out.println("c2r3: " + c2r);
 			
 			String[] alignedSams = alignReads(tempDir1, inputSam, cleanContigsFasta, c2r, writer1, 
 					tempDir2, inputSam2, writer2, tempDir3, inputSam3, writer3);
@@ -373,14 +366,11 @@ public class ReAligner {
 			String tempDir2, String inputSam2, SAMFileWriter writer2,
 			String tempDir3, String inputSam3, SAMFileWriter writer3) throws IOException, InterruptedException {
 		
-		System.out.println("c2r4: " + c2r);
-		
 		// Build contig fasta index
 		log("Indexing contigs");
 		Aligner contigAligner = new Aligner(cleanContigsFasta, numThreads);
 		contigAligner.index();
 		log("Contig indexing done");
-		
 		
 		String alignedToContigSam1 = tempDir1 + "/" + "align_to_contig.sam";
 		AlignReadsRunnable alignReadsRunnable1 = new AlignReadsRunnable(this,
@@ -831,7 +821,7 @@ public class ReAligner {
 			
 			// Assemble contigs
 			Assembler assem = newAssembler();
-			List<String> assemblyFiles = assem.assembleContigs(bams, contigsFasta, tempDir, region, region.getDescriptor(), true, this);
+			List<String> assemblyFiles = assem.assembleContigs(bams, contigsFasta, tempDir, region, region.getDescriptor(), true, this, c2r);
 			
 			for (String assemblyFile : assemblyFiles) {
 				BufferedReader reader = new BufferedReader(new FileReader(assemblyFile));
@@ -950,7 +940,7 @@ public class ReAligner {
 	
 	private void sam2Fastq(String bam, String fastq, CompareToReference2 c2r, SAMFileWriter finalOutputSam) throws IOException {
 		Sam2Fastq sam2Fastq = new Sam2Fastq();
-		sam2Fastq.convert(bam, fastq, c2r, samHeader, finalOutputSam, this, regions);
+		sam2Fastq.convert(bam, fastq, c2r, samHeader, finalOutputSam, isPairedEnd, regions);
 	}
 	
 	private static int memCnt = 0;

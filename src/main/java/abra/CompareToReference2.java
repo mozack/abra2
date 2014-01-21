@@ -45,10 +45,25 @@ public class CompareToReference2 {
 		
 		if (!read.getReadUnmappedFlag()) {
 			
-			mismatches = numDifferences(read);
+			mismatches = numDifferences(read, 0);
 		}
 
 		return mismatches;
+	}
+	
+	/**
+	 * Returns # of read mismatches with bases exceeding minBaseQual + indel lengths.
+	 * Soft clipped bases are included in comparison to reference. 
+	 */
+	public int numHighQualityMismatches(SAMRecord read, int minBaseQual) {
+		int mismatches = 0;
+		
+		if (!read.getReadUnmappedFlag()) {
+			
+			mismatches = numDifferences(read, minBaseQual);
+		}
+
+		return mismatches;		
 	}
 	
 	public List<Integer> mismatchPositions(SAMRecord read) {
@@ -144,7 +159,11 @@ public class CompareToReference2 {
 		return (char) read.getReadBases()[index];
 	}
 	
-	private int numDifferences(SAMRecord read) {
+	private int getBaseQuality(SAMRecord read, int index) {
+		return (char) read.getBaseQualities()[index];
+	}
+	
+	private int numDifferences(SAMRecord read, int minBaseQual) {
 		
 		int diffs = 0;
 		byte[] reference = refMap.get(read.getReferenceName().trim());
@@ -158,7 +177,9 @@ public class CompareToReference2 {
 						char readBase = getReadBase(read, readIdx);
 						char refBase  = Character.toUpperCase((char) reference[refIdx]);
 						if ((readBase != refBase) && (readBase != 'N') && (refBase != 'N')) {
-							diffs++;
+							if (getBaseQuality(read, readIdx) >= minBaseQual) {
+								diffs++;
+							}
 						}
 						
 						readIdx++;
@@ -182,10 +203,14 @@ public class CompareToReference2 {
 							char readBase = getReadBase(read, readIdx);
 							char refBase  = Character.toUpperCase((char) reference[refIdx]);
 							if ((readBase != refBase) && (readBase != 'N') && (refBase != 'N')) {
-								diffs++;
+								if (getBaseQuality(read, readIdx) >= minBaseQual) {
+									diffs++;
+								}
 							}
 						} else {
-							diffs++;
+							if (minBaseQual > 0) {
+								diffs++;
+							}
 						}
 						
 						readIdx++;

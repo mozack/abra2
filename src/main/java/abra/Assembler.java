@@ -10,7 +10,8 @@ import java.util.List;
  */
 public interface Assembler {
 	
-	public List<String> assembleContigs(List<String> inputFiles, String output, String tempDir, Feature region, String prefix, boolean checkForDupes, ReAligner realigner);
+	public List<String> assembleContigs(List<String> inputFiles, String output, String tempDir, Feature region, 
+			String prefix, boolean checkForDupes, ReAligner realigner, CompareToReference2 c2r);
 	
 	public void setTruncateOutputOnRepeat(boolean truncateOutputOnRepeat);
 	

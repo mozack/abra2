@@ -857,13 +857,13 @@ public class ReAligner {
 			padRegions(regions, readLength);
 		}
 		
-		RegionTracker regionTracker = new RegionTracker(regions, null);
-		regions = regionTracker.identifyTargetRegions(inputBams, this.assemblerSettings.getMinBaseQuality(), readLength, c2r);
+//		RegionTracker regionTracker = new RegionTracker(regions, null);
+//		regions = regionTracker.identifyTargetRegions(inputBams, this.assemblerSettings.getMinBaseQuality(), readLength, c2r);
 		
-//		regions = collapseRegions(regions, readLength);
-//		
-//		regions = splitRegions(regions);
-//		
+		regions = collapseRegions(regions, readLength);
+		
+		regions = splitRegions(regions);
+		
 		
 		System.out.println("Num regions: " + regions.size());
 		for (Feature region : regions) {

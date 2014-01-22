@@ -67,6 +67,8 @@ public class NativeAssembler implements Assembler {
 		
 		readIds = new HashSet<String>();
 		
+		int readCount = 0;
+		
 		try {
 			
 			String readFile;
@@ -99,6 +101,7 @@ public class NativeAssembler implements Assembler {
 				while (iter.hasNext()) {
 					
 					SAMRecord read = iter.next();
+					readCount++;
 					
 					if (read.getReadLength() > readLength) {
 						reader.close();
@@ -213,7 +216,7 @@ public class NativeAssembler implements Assembler {
 		
 		long end = System.currentTimeMillis();
 		
-		System.out.println("Elapsed msecs in NativeAssembler: " + (end-start));
+		System.out.println("Elapsed_msecs_in_NativeAssembler\tRegion:\t" + region.getDescriptor() + "\tLength:\t" + region.getLength() + "\tReadCount:\t" + readCount + "\tElapsed\t" + (end-start));
 		
 		return outputFiles;
 	}

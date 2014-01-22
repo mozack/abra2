@@ -26,8 +26,9 @@ public class RegionTracker {
 	private SAMFileHeader header;
 
 	public RegionTracker(List<Feature> regions, SAMFileHeader header) {
-		init();
+		this.regions = regions;
 		this.header = header;
+		init();
 	}
 	
 	public void init() {

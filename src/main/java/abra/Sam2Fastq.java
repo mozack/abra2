@@ -32,43 +32,8 @@ public class Sam2Fastq {
 	private boolean isMapspliceFusions = false;
 	private String end1Suffix;
 	private String end2Suffix;
-	private Feature currentRegion;
-	private Iterator<Feature> regionIter;
-	
-	// Assumes input SAM file and input region list is sorted by coordinate.
-	private boolean isInRegion(SAMFileHeader header, SAMRecord read) {
+	private RegionTracker regionTracker;
 		
-		while ((currentRegion != null) &&
-			   (!currentRegion.overlapsRead(read)) &&
-			   (!isRegionBeyondRead(header, currentRegion, read))) {
-			
-			if (regionIter.hasNext()) {
-				currentRegion = (Feature) regionIter.next();
-			} else {
-				currentRegion = null;
-			}
-		}
-		
-		return (currentRegion != null) && (currentRegion.overlapsRead(read));
-	}
-	
-	private boolean isRegionBeyondRead(SAMFileHeader header, Feature region, SAMRecord read) {
-		boolean isRegionBeyond = false;
-		
-		int regionChrIdx = header.getSequenceIndex(region.getSeqname());
-		int readChrIdx = header.getSequenceIndex(read.getReferenceName());
-		
-		if (regionChrIdx > readChrIdx) {
-			isRegionBeyond = true;
-		} else if (regionChrIdx < readChrIdx) {
-			isRegionBeyond = false;
-		} else {
-			isRegionBeyond = (region.getStart() > read.getAlignmentEnd());
-		}
-		
-		return isRegionBeyond;
-	}
-	
 	/**
 	 * Convert the input SAM/BAM file into a single fastq file.
 	 * Input SAM files that contain multiple mappings should be sorted by read name.
@@ -88,10 +53,7 @@ public class Sam2Fastq {
         output1.init(outputFastq);
         int lineCnt = 0;
         
-        regionIter = regions.iterator();
-        if (regionIter.hasNext()) {
-        	currentRegion = regionIter.next();
-        }
+        this.regionTracker = new RegionTracker(regions, header);
         
         for (SAMRecord read : reader) {
     		if (SAMRecordUtils.isPrimary(read) && (!SAMRecordUtils.isFiltered(isPairedEnd, read))) {
@@ -125,7 +87,7 @@ public class Sam2Fastq {
     			
     			if (yx > 0) {
     				
-	    			if ((!read.getReadUnmappedFlag()) && (!isInRegion(header, read))) {
+	    			if ((!read.getReadUnmappedFlag()) && (!regionTracker.isInRegion(read))) {
 	    				read.setAttribute("YR", 1);
 	    			}
     				

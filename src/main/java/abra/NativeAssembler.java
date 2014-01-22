@@ -81,8 +81,7 @@ public class NativeAssembler implements Assembler {
 			// if c2r is null, this is the unaligned region.
 			boolean isAssemblyCandidate = c2r == null ? true : false;
 			
-			int indelReadCount = 0;
-			int candidateReadCount = 0;
+//			int indelReadCount = 0;
 
 			for (String input : inputFiles) {
 				SAMFileReader reader = new SAMFileReader(new File(input));
@@ -94,6 +93,8 @@ public class NativeAssembler implements Assembler {
 				} else {
 					iter = reader.iterator();
 				}
+				
+				int candidateReadCount = 0;
 				
 				while (iter.hasNext()) {
 					

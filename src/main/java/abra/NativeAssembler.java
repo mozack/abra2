@@ -95,11 +95,6 @@ public class NativeAssembler implements Assembler {
 					iter = reader.iterator();
 				}
 				
-				List<Integer> candidateReadStartPositions = new ArrayList<Integer>();
-				List<Integer> allReadStartPositions = new ArrayList<Integer>();
-				
-				int startPos = -1;
-				
 				while (iter.hasNext()) {
 					
 					SAMRecord read = iter.next();
@@ -129,35 +124,17 @@ public class NativeAssembler implements Assembler {
 								readIds.add(getIdentifier(read));
 							}
 							
-							filterPositionList(candidateReadStartPositions, read.getAlignmentStart());
-							filterPositionList(allReadStartPositions, read.getAlignmentStart());
-							
-							if (startPos < 0) {
-								startPos = read.getAlignmentStart();
-							}
-							
 							// Consider this region a candidate if there are any indels.
 							if (!isAssemblyCandidate && read.getCigarString().contains("I") || read.getCigarString().contains("D")) {
 								isAssemblyCandidate = true;
 							}
 
-							// TODO: Requires input NM tag to be set appropriately.
-							// Consider factoring out and processing along with Sam2Fastq
-							if (!isAssemblyCandidate && (read.getCigarString().contains("S") || SAMRecordUtils.getIntAttribute(read, "NM") > 0)) {
+							if (!isAssemblyCandidate && (read.getCigarString().contains("S"))) {
 								if (c2r.numHighQualityMismatches(read, minBaseQuality) > 1) {
 									candidateReadCount++;
-									candidateReadStartPositions.add(read.getAlignmentStart());
-//									if (candidateReadCount > 2) {
-//										isAssemblyCandidate = true;
-//									}
-								}
-							}
-
-							allReadStartPositions.add(read.getAlignmentStart());
-							
-							if (read.getAlignmentStart() >= startPos + readLength) {
-								if ((float) candidateReadStartPositions.size() / (float) allReadStartPositions.size() >= .05) {
-									isAssemblyCandidate = true;
+									if (candidateReadCount >= 2) {
+										isAssemblyCandidate = true;
+									}
 								}
 							}
 							
@@ -181,10 +158,6 @@ public class NativeAssembler implements Assembler {
 							}
 						}
 					}
-				}
-				
-				if ((float) candidateReadStartPositions.size() / (float) allReadStartPositions.size() >= .05) {
-					isAssemblyCandidate = true;
 				}
 				
 				reader.close();

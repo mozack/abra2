@@ -11,11 +11,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 
 //import abra.Assembler.TooManyPotentialContigsException;
@@ -140,6 +137,20 @@ public class ReAligner {
 		this.inputSam2 = inputSam2;
 		this.inputSam3 = inputSam3;
 		
+		List<String> inputBams = new ArrayList<String>();
+		
+		if (this.inputSam1 != null) {
+			inputBams.add(inputSam1);
+		}
+		
+		if (this.inputSam2 != null) {
+			inputBams.add(inputSam2);
+		}
+		
+		if (this.inputSam3 != null) {
+			inputBams.add(inputSam3);
+		}
+		
 		init();
 		
 		c2r = new CompareToReference2();
@@ -151,7 +162,7 @@ public class ReAligner {
 		log("Read length: " + readLength);
 		
 		log("Loading target regions");
-		loadRegions();
+		loadRegions(inputBams);
 		
 		readAdjuster = new ReadAdjuster(isPairedEnd, this.maxMapq, c2r, minInsertLength, maxInsertLength);
 		
@@ -222,6 +233,7 @@ public class ReAligner {
 		contigWriter = new BufferedWriter(new FileWriter(contigFasta, false));
 		
 		log("Iterating over regions");
+		
 		for (Feature region : regions) {
 			log("Spawning thread for: " + region.getDescriptor());
 //			spawnRegionThread(region, assemblyBam);
@@ -838,16 +850,22 @@ public class ReAligner {
 		}
 	}
 		
-	private void loadRegions() throws IOException {
+	private void loadRegions(List<String> inputBams) throws IOException {
 		GtfLoader loader = new GtfLoader();
 		regions = loader.load(regionsGtf);
 		if (isPadRegions) {
 			padRegions(regions, readLength);
 		}
-		regions = collapseRegions(regions, readLength);
 		
-		regions = splitRegions(regions);
+		RegionTracker regionTracker = new RegionTracker(regions, null);
+		regions = regionTracker.identifyTargetRegions(inputBams, this.assemblerSettings.getMinBaseQuality(), readLength, c2r);
 		
+//		regions = collapseRegions(regions, readLength);
+//		
+//		regions = splitRegions(regions);
+//		
+		
+		System.out.println("Num regions: " + regions.size());
 		for (Feature region : regions) {
 			System.out.println(region.getSeqname() + "\t" + region.getStart() + "\t" + region.getEnd());
 		}

@@ -85,12 +85,18 @@ public class RegionTracker {
 	private List<Feature> locationsToRegions(Map<String, List<Integer>> locations, int readLength) {
 		List<Feature> regions = new ArrayList<Feature>();
 		
-		int prev = -readLength;
-		int start = -readLength;
 		for (String chr : locations.keySet()) {
+			int prev = -readLength;
+			int start = -readLength;
+			
 			List<Integer> positions = locations.get(chr);
 			
 			for (int pos : positions) {
+				
+				if (start < 0) {
+					start = pos;
+				}
+				
 				if (pos < prev+readLength) {
 					prev = pos;
 				} else {

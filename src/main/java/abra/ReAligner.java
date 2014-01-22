@@ -38,12 +38,15 @@ import net.sf.samtools.SAMFileReader.ValidationStringency;
 public class ReAligner {
 
 	private static final int DEFAULT_MAX_UNALIGNED_READS = 1000000;
-	public static final int MAX_REGION_LENGTH = 2000;
-//	public static final int MAX_REGION_LENGTH = 25000;
-	private static final int MIN_REGION_REMAINDER = 500;
-//	private static final int MIN_REGION_REMAINDER = 300;
-//	private static final int REGION_OVERLAP = 200; 
-	private static final int REGION_OVERLAP = 500;
+	
+//	public static final int MAX_REGION_LENGTH = 2000;
+//	private static final int MIN_REGION_REMAINDER = 500;
+//	private static final int REGION_OVERLAP = 500;
+	
+	public static final int MAX_REGION_LENGTH = 400;
+	private static final int MIN_REGION_REMAINDER = 200;
+	private static final int REGION_OVERLAP = 200;
+
 	private static final long RANDOM_SEED = 1;
 	private static final int MAX_POTENTIAL_UNALIGNED_CONTIGS = 2000000;
 	

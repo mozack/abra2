@@ -126,13 +126,16 @@ public class NativeAssembler implements Assembler {
 							
 							// Consider this region a candidate if there are any indels.
 							if (!isAssemblyCandidate && read.getCigarString().contains("I") || read.getCigarString().contains("D")) {
-								isAssemblyCandidate = true;
+								candidateReadCount++;
+								if (candidateReadCount >= 3) {
+									isAssemblyCandidate = true;
+								}
 							}
 
 							if (!isAssemblyCandidate && (read.getCigarString().contains("S"))) {
 								if (c2r.numHighQualityMismatches(read, minBaseQuality) > 1) {
 									candidateReadCount++;
-									if (candidateReadCount >= 2) {
+									if (candidateReadCount >= 3) {
 										isAssemblyCandidate = true;
 									}
 								}

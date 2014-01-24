@@ -46,6 +46,7 @@ public class RealignerTest {
 		validateFeature(features.get(2), 20201, 20300);
 	}
 	
+	/*
 	@Test (groups = "unit")
 	public void testSplitRegions() {
 		List<Feature> input = new ArrayList<Feature>();
@@ -74,6 +75,7 @@ public class RealignerTest {
 		validateFeature(features.get(7), 21303999, 21306199);
 		validateFeature(features.get(8), 21305999, 21308037);		
 	}
+	*/
 	
 	private void validateFeature(Feature feature, int expectedStart, int expectedEnd) {
 		assertEquals(feature.getStart(), expectedStart);

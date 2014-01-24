@@ -76,7 +76,7 @@ public class CombineChimera3 {
 				(read1.getReadNegativeStrandFlag() == read2.getReadNegativeStrandFlag()) &&
 				(read1.getCigarLength() >= 2) &&
 				(read2.getCigarLength() >= 2) &&
-				(Math.abs(read1.getAlignmentStart()-read2.getAlignmentStart()) < MAX_REGION_LENGTH)) {
+				(Math.abs(read1.getAlignmentStart()-read2.getAlignmentStart()) < MAX_REGION_LENGTH*2)) {
 				
 				SAMRecord combinedRead = combineChimericReads(read1, read2);
 				if (combinedRead != null) {

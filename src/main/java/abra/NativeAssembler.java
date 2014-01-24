@@ -66,8 +66,6 @@ public class NativeAssembler implements Assembler {
 		
 		int count = 0;
 		
-		readIds = new HashSet<String>();
-		
 		int readCount = 0;
 		
 		try {
@@ -86,6 +84,7 @@ public class NativeAssembler implements Assembler {
 			List<List<SAMRecord>> readsList = new ArrayList<List<SAMRecord>>();
 
 			for (String input : inputFiles) {
+				readIds = new HashSet<String>();
 				List<SAMRecord> reads = new ArrayList<SAMRecord>();
 				readsList.add(reads);
 				
@@ -166,6 +165,8 @@ public class NativeAssembler implements Assembler {
 				}
 			}
 			
+			readIds = null;
+			
 			if (isAssemblyCandidate) {
 				BufferedWriter writer = new BufferedWriter(new FileWriter(readFile, false));
 				
@@ -202,10 +203,9 @@ public class NativeAssembler implements Assembler {
 							}
 						}
 					}
-					
-					readIds = null;
-					writer.close();
 				}
+				
+				writer.close();
 			}
 			
 			long end1 = System.currentTimeMillis();

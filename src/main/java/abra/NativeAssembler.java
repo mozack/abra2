@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
 
 import net.sf.samtools.SAMFileReader;
@@ -78,14 +79,16 @@ public class NativeAssembler implements Assembler {
 				readFile = tempDir + "/" + "unaligned.reads";
 			}
 			
-			BufferedWriter writer = new BufferedWriter(new FileWriter(readFile, false));
-			
 			// if c2r is null, this is the unaligned region.
 			boolean isAssemblyCandidate = c2r == null ? true : false;
 			
 //			int indelReadCount = 0;
+			List<List<SAMRecord>> readsList = new ArrayList<List<SAMRecord>>();
 
 			for (String input : inputFiles) {
+				List<SAMRecord> reads = new ArrayList<SAMRecord>();
+				readsList.add(reads);
+				
 				SAMFileReader reader = new SAMFileReader(new File(input));
 				reader.setValidationStringency(ValidationStringency.SILENT);
 	
@@ -128,25 +131,59 @@ public class NativeAssembler implements Assembler {
 								readIds.add(getIdentifier(read));
 							}
 							
-							// Consider this region a candidate if there are any indels.
+							// Increment candidate count for indels
 							if (!isAssemblyCandidate && read.getCigarString().contains("I") || read.getCigarString().contains("D")) {
 								candidateReadCount++;
-								if (candidateReadCount >= 3) {
-									isAssemblyCandidate = true;
-								}
 							}
 
+							// Increment candidate count for substantial high quality soft clipping
+							// TODO: Check for chimera directly?
 							if (!isAssemblyCandidate && (read.getCigarString().contains("S"))) {
-								if (c2r.numHighQualityMismatches(read, minBaseQuality) > 1) {
+								if (c2r.numHighQualityMismatches(read, minBaseQuality) > (readLength/10)) {
 									candidateReadCount++;
-									if (candidateReadCount >= 3) {
-										isAssemblyCandidate = true;
-									}
 								}
 							}
 							
+							// Increment candidate count if read contains at least 3 high quality mismatches
+							// TODO: # mismatches should be function of read length
+							if (!isAssemblyCandidate && (SAMRecordUtils.getIntAttribute(read, "NM") >= 3)) {
+								if (c2r.numHighQualityMismatches(read, minBaseQuality) > 3) {
+									candidateReadCount++;
+								}
+							}
+							
+							reads.add(read);
+							
+						}
+					}
+				}
+				
+				reader.close();
+				
+				//TODO: Calc read fraction based upon read length & region size
+				if ((candidateReadCount > reads.size() * .01 / 4.0) && (candidateReadCount >= 2)) {
+					isAssemblyCandidate = true;
+				}
+			}
+			
+			if (isAssemblyCandidate) {
+				BufferedWriter writer = new BufferedWriter(new FileWriter(readFile, false));
+				
+				for (List<SAMRecord> reads : readsList) {
+					// Default to always keep
+					double keepProbability = 1.1;
+					
+					//TODO : Change constant to be a function of read length & region size.
+					if (reads.size() > 600) {
+						keepProbability = (double) 600 / (double) reads.size();
+					}
+					
+					Random random = new Random(1);
+					
+					for (SAMRecord read : reads) {
+						if (random.nextDouble() < keepProbability) {
 							writer.write(read.getReadNegativeStrandFlag() ? "1\n" : "0\n");
-														
+							
 							if (read.getReadLength() == readLength) {
 								writer.write(read.getReadString() + "\n");
 								writer.write(read.getBaseQualityString() + "\n");
@@ -159,19 +196,17 @@ public class NativeAssembler implements Assembler {
 									qualPadding.append('!');
 								}
 								
-//								writer.write(read.getReadNegativeStrandFlag() ? "1\n" : "0\n");
+				//				writer.write(read.getReadNegativeStrandFlag() ? "1\n" : "0\n");
 								writer.write(read.getReadString() + basePadding.toString() + "\n");
 								writer.write(read.getBaseQualityString() + qualPadding.toString() + "\n");							
 							}
 						}
 					}
+					
+					readIds = null;
+					writer.close();
 				}
-				
-				reader.close();
 			}
-			
-			readIds = null;
-			writer.close();
 			
 			long end1 = System.currentTimeMillis();
 			
@@ -206,8 +241,10 @@ public class NativeAssembler implements Assembler {
 				System.out.println("Skipping assembly for: " + prefix);
 			}
 			
-			File inputReadFile = new File(readFile);
-			inputReadFile.delete();
+			if (isAssemblyCandidate) {
+				File inputReadFile = new File(readFile);
+				inputReadFile.delete();
+			}
 
 		} catch (IOException e) {
 			e.printStackTrace();

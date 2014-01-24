@@ -646,7 +646,7 @@ public class ReAligner {
 	
 	private void waitForAvailableThread() throws InterruptedException {
 		while (activeThreads() == numThreads) {
-			Thread.sleep(500);
+			Thread.sleep(50);
 		}
 	}
 	
@@ -1171,16 +1171,16 @@ public class ReAligner {
 			end = pos + maxRegionLength;
 			long marker = end;
 			
-			if (end < region.getEnd()) {
-				end += regionOverlap;
-			}
+//			if (end < region.getEnd()) {
+//				end += regionOverlap;
+//			}
 			
 			// If we're at or near the end of the region, stop at region end.
 			if (end > (region.getEnd() - minRegionRemainder)) {
 				end = region.getEnd();
 			}
 			
-			pos = marker;
+			pos = marker - regionOverlap;
 			
 			regions.add(new Feature(region.getSeqname(), start, end));
 		}

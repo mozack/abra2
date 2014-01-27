@@ -10,13 +10,11 @@ public class ReAlignerRunnable implements Runnable {
 
 	private ReAligner reAligner;
 	private Feature region;
-	private String inputSam;
 	private boolean isAlive = true;
 	
-	public ReAlignerRunnable(ReAligner reAligner, Feature region, String inputSam) {
+	public ReAlignerRunnable(ReAligner reAligner, Feature region) {
 		this.reAligner = reAligner;
 		this.region = region;
-		this.inputSam = inputSam;
 	}
 	
 	@Override

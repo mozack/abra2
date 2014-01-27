@@ -1055,7 +1055,8 @@ public class ReAligner {
 //		String fastq = tempDir + "/" + "original_reads.fastq.gz";
 		String fastq = getPreprocessedFastq(tempDir);
 		
-		Aligner contigAligner = new Aligner(contigFasta, numThreads);
+		//TODO: Manage threads more intelligently based upon number of samples being processed.
+		Aligner contigAligner = new Aligner(contigFasta, numThreads/2);
 		
 		// Align region fastq against assembled contigs
 		contigAligner.shortAlign(fastq, alignedToContigSam);

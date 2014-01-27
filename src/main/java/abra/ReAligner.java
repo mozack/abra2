@@ -397,48 +397,23 @@ public class ReAligner {
 		log("Contig indexing done");
 		
 		String alignedToContigSam1 = tempDir1 + "/" + "align_to_contig.sam";
-		AlignReadsRunnable alignReadsRunnable1 = new AlignReadsRunnable(this,
-				tempDir1, inputSam, cleanContigsFasta, c2r, writer1, alignedToContigSam1);
 		
-		Thread thread1 = new Thread(alignReadsRunnable1);
-		thread1.start();
+		alignReads(tempDir1, inputSam, cleanContigsFasta, c2r, writer1, alignedToContigSam1);
 		
 		String alignedToContigSam2 = null;
 		
-		Thread thread2 = null;
-		
 		if (inputSam2 != null) {
 			alignedToContigSam2 = tempDir2 + "/" + "align_to_contig.sam";
-			AlignReadsRunnable alignReadsRunnable2 = new AlignReadsRunnable(this,
-					tempDir2, inputSam2, cleanContigsFasta, c2r, writer2, alignedToContigSam2);
-			thread2 = new Thread(alignReadsRunnable2);
-			thread2.start();
-			
-//			alignReads(tempDir2, inputSam2, cleanContigsFasta, c2r, writer2, alignedToContigSam2);
+			alignReads(tempDir2, inputSam2, cleanContigsFasta, c2r, writer2, alignedToContigSam2);
 		}
 		
 		String alignedToContigSam3 = null;
 		
-		Thread thread3 = null;
-		
 		if (inputSam3 != null) {
 			alignedToContigSam3 = tempDir3 + "/" + "align_to_contig.sam";
-			AlignReadsRunnable alignReadsRunnable3 = new AlignReadsRunnable(this,
-					tempDir3, inputSam3, cleanContigsFasta, c2r, writer3, alignedToContigSam3);
-			thread3 = new Thread(alignReadsRunnable3);
-			thread3.start();
+			alignReads(tempDir3, inputSam3, cleanContigsFasta, c2r, writer3, alignedToContigSam3);
 		}
-		
-		thread1.join();
-		
-		if (inputSam2 != null) {
-			thread2.join();
-		}
-		
-		if (inputSam3 != null) {
-			thread3.join();
-		}
-		
+				
 		return new String[] { alignedToContigSam1, alignedToContigSam2, alignedToContigSam3 };
 	}
 	
@@ -1032,7 +1007,7 @@ public class ReAligner {
 		log("Done preprocessing original reads for alignment: " + inputSam);
 		
 		//TODO: Only cut threads in half if in somatic mode.
-		Aligner contigAligner = new Aligner(contigFasta, numThreads/2);
+		Aligner contigAligner = new Aligner(contigFasta, numThreads);
 		
 		// Align region fastq against assembled contigs
 		contigAligner.shortAlign(fastq, alignedToContigSam);

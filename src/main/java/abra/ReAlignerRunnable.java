@@ -10,7 +10,6 @@ public class ReAlignerRunnable implements Runnable {
 
 	private ReAligner reAligner;
 	private Feature region;
-	private boolean isAlive = true;
 	
 	public ReAlignerRunnable(ReAligner reAligner, Feature region) {
 		this.reAligner = reAligner;
@@ -27,11 +26,6 @@ public class ReAlignerRunnable implements Runnable {
 			throw new RuntimeException(e);
 		} finally {
 			reAligner.removeThread(this);
-			isAlive = false;
 		}
-	}
-	
-	public boolean isAlive() {
-		return isAlive;
 	}
 }

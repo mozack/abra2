@@ -418,22 +418,49 @@ public class ReAligner {
 		
 		String alignedToContigSam1 = tempDir1 + "/" + "align_to_contig.sam";
 		
-		alignReads(tempDir1, inputSam, cleanContigsFasta, c2r, writer1, alignedToContigSam1);
+		Thread thread1 = null;
+		Thread thread2 = null;
+		Thread thread3 = null;
+		
+		AlignReadsRunnable runnable1 = new AlignReadsRunnable(this, tempDir1, inputSam, cleanContigsFasta,
+				c2r, writer1, alignedToContigSam1);
+		thread1 = new Thread(runnable1);
+		thread1.start();
+		
+//		alignReads(tempDir1, inputSam, cleanContigsFasta, c2r, writer1, alignedToContigSam1);
 		
 		String alignedToContigSam2 = null;
 		
 		if (inputSam2 != null) {
 			alignedToContigSam2 = tempDir2 + "/" + "align_to_contig.sam";
-			alignReads(tempDir2, inputSam2, cleanContigsFasta, c2r, writer2, alignedToContigSam2);
+//			alignReads(tempDir2, inputSam2, cleanContigsFasta, c2r, writer2, alignedToContigSam2);
+			
+			AlignReadsRunnable runnable2 = new AlignReadsRunnable(this, tempDir2, inputSam2, cleanContigsFasta,
+					c2r, writer2, alignedToContigSam2);
+			thread2 = new Thread(runnable2);
+			thread2.start();
 		}
 		
 		String alignedToContigSam3 = null;
 		
 		if (inputSam3 != null) {
 			alignedToContigSam3 = tempDir3 + "/" + "align_to_contig.sam";
-			alignReads(tempDir3, inputSam3, cleanContigsFasta, c2r, writer3, alignedToContigSam3);
+//			alignReads(tempDir3, inputSam3, cleanContigsFasta, c2r, writer3, alignedToContigSam3);
+			
+			AlignReadsRunnable runnable3 = new AlignReadsRunnable(this, tempDir3, inputSam3, cleanContigsFasta,
+					c2r, writer3, alignedToContigSam3);
+			thread3 = new Thread(runnable3);
+			thread3.start();
 		}
-				
+		
+		thread1.join();
+		if (thread2 != null) {
+			thread2.join();
+		}
+		if (thread3 != null) {
+			thread3.join();
+		}
+
 		return new String[] { alignedToContigSam1, alignedToContigSam2, alignedToContigSam3 };
 	}
 	

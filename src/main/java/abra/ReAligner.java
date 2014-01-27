@@ -924,8 +924,10 @@ public class ReAligner {
 	}
 	
 	void sam2Fastq(String bam, String fastq, CompareToReference2 c2r, SAMFileWriter finalOutputSam) throws IOException {
+		log("Preprocessing: " + bam);
 		Sam2Fastq sam2Fastq = new Sam2Fastq();
 		sam2Fastq.convert(bam, fastq, c2r, samHeader, finalOutputSam, isPairedEnd, regions);
+		log("Done Preprocessing: " + bam);
 	}
 			
 	private boolean cleanAndOutputContigs(String contigsSam, String cleanContigsFasta, boolean shouldRemoveSoftClips) throws IOException {

@@ -25,6 +25,8 @@ using google::sparse_hash_set;
 //#define MIN_BASE_QUALITY 20
 #define INCREASE_MIN_NODE_FREQ_THRESHOLD 25000
 
+#define MAX_TOTAL_CONTIG_LEN 10000000
+
 #define OK 0
 #define TOO_MANY_PATHS_FROM_ROOT -1
 #define TOO_MANY_CONTIGS -2
@@ -557,6 +559,12 @@ char is_node_visited(struct contig* contig, struct node* node) {
 
 void output_contig(struct contig* contig, int& contig_count, const char* prefix, char* contigs) {
 	char buf[1024];
+
+	if (strlen(contigs) + strlen(contig->seq) > MAX_TOTAL_CONTIG_LEN) {
+		printf("contig string too long: %s\n", prefix);
+		exit(-1);
+	}
+
 	if (strlen(contig->seq) >= min_contig_length) {
 		if (contig->is_repeat) {
 			sprintf(buf, ">%s_%d_repeat\n", prefix, contig_count++);
@@ -590,7 +598,7 @@ int build_contigs(
 		int max_contigs,
 		char stop_on_repeat,
 		char shadow_mode,
-		char** contig_str) {
+		char* contig_str) {
 
 	int status = OK;
 	stack<contig*> contigs;
@@ -677,12 +685,9 @@ int build_contigs(
 
 	if (status == OK) {
 
-		*contig_str = (char*) malloc(all_contigs_len);
-		memset(*contig_str, 0, all_contigs_len);
-
 		while (contigs_to_output.size() > 0) {
 			struct contig* contig = contigs_to_output.top();
-			output_contig(contig, contig_count, prefix, *contig_str);
+			output_contig(contig, contig_count, prefix, contig_str);
 
 			contigs_to_output.pop();
 			free_contig(contig);
@@ -796,7 +801,8 @@ char* assemble(const char* input,
 
 	int status = -1;
 
-	char* contig_str = NULL;
+	char* contig_str = (char*) malloc(MAX_TOTAL_CONTIG_LEN);
+	memset(contig_str, 0, MAX_TOTAL_CONTIG_LEN);
 
 //	FILE *fp = fopen(output, "w");
 	while (root_nodes != NULL) {
@@ -811,7 +817,7 @@ char* assemble(const char* input,
 //			build_contigs(root_nodes->node, contig_count, fp, prefix, max_paths_from_root, max_contigs, truncate_on_repeat, false);
 //		}
 
-		status = build_contigs(root_nodes->node, contig_count, prefix, max_paths_from_root, max_contigs, truncate_on_repeat, false, &contig_str);
+		status = build_contigs(root_nodes->node, contig_count, prefix, max_paths_from_root, max_contigs, truncate_on_repeat, false, contig_str);
 		printf("after bc: %s - %d\n", prefix, strlen(contig_str));
 
 		switch(status) {

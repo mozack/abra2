@@ -164,7 +164,7 @@ public class ReAligner {
 		mkdir(tempDir3);
 		
 		SAMFileWriterFactory writerFactory = new SAMFileWriterFactory();
-//		writerFactory.setUseAsyncIo(true);
+		writerFactory.setUseAsyncIo(true);
 		
 		SAMFileWriter writer1 = writerFactory.makeSAMOrBAMWriter(
 				samHeader, false, new File(outputSam));

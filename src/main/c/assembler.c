@@ -867,12 +867,10 @@ char* assemble(const char* input,
 	if (status == OK || status == TOO_MANY_PATHS_FROM_ROOT) {
 		return contig_str;
 	} else if (status == STOPPED_ON_REPEAT) {
-		contig_str = (char*) malloc(32);
 		strcpy(contig_str, "<REPEAT>");
 		return contig_str;
 	} else {
-		contig_str = (char*) malloc(32);
-		strcpy(contig_str, "<REPEAT>");
+		strcpy(contig_str, "<ERROR>");
 		return contig_str;
 	}
 }

@@ -682,6 +682,7 @@ int build_contigs(
 			while (contigs_to_output.size() > 0) {
 				struct contig* contig = contigs_to_output.top();
 				output_contig(contig, contig_count, prefix, *contig_str);
+
 				contigs_to_output.pop();
 				free_contig(contig);
 			}
@@ -811,6 +812,7 @@ char* assemble(const char* input,
 //		}
 
 		status = build_contigs(root_nodes->node, contig_count, prefix, max_paths_from_root, max_contigs, truncate_on_repeat, false, &contig_str);
+		printf("after bc: %s - %d\n", prefix, strlen(contig_str));
 
 		switch(status) {
 			case TOO_MANY_CONTIGS:

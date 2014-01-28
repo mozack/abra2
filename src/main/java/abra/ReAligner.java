@@ -797,6 +797,10 @@ public class ReAligner {
 		return unalignedBam;		
 	}
 	
+	private synchronized void appendContigs(String contigs) throws IOException {
+		contigWriter.write(contigs);
+	}
+	
 	private synchronized void appendContigs(BufferedReader reader) throws IOException {
 		long start = System.currentTimeMillis();
 		
@@ -833,7 +837,7 @@ public class ReAligner {
 			Assembler assem = newAssembler();
 			String contigs = assem.assembleContigs(bams, contigsFasta, tempDir, region, region.getDescriptor(), true, this, c2r);
 			if (!contigs.equals("<ERROR>") && !contigs.equals("<REPEAT>") && !contigs.isEmpty()) {
-				contigWriter.write(contigs);
+				appendContigs(contigs);
 			}
 			
 //			for (String assemblyFile : assemblyFiles) {

@@ -104,25 +104,6 @@ struct my_hash
 	}
 };
 
-//struct my_hash
-//{
-//	unsigned long operator()(const char* kmer) const
-//	{
-//		unsigned long hash = 0;
-//		int c;
-//
-////		while((c = *kmer++))
-//		for (int i=0; i<kmer_size; i++)
-//		{
-//			c = kmer[i];
-//			/* hash = hash * 33 ^ c */
-//			hash = ((hash << 5) + hash) ^ c;
-//		}
-//
-//		return hash;
-//	}
-//};
-
 struct struct_pool {
 	struct node_pool* node_pool;
 	struct read_pool* read_pool;
@@ -301,8 +282,6 @@ int include_kmer(char* sequence, char*qual, int idx) {
 
 void add_to_graph(char* sequence, sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, struct_pool* pool, char* qual, int strand) {
 
-//	int strand = atoi(read_info);
-
 	struct node* prev = 0;
 
 	for (int i=0; i<=read_length-kmer_size; i++) {
@@ -389,7 +368,6 @@ void build_graph(const char* read_file, sparse_hash_map<const char*, struct node
 	while (fscanf(fp, "%s", read_info) != EOF) {
 		fscanf(fp, "%s", read);
 		fscanf(fp, "%s", qual);
-//		printf("read: %d : %s\n", line++, read);
 		if (strcmp(read, "") != 0) {
 			char* read_ptr = allocate_read(pool);
 			memcpy(read_ptr, read, read_length+1);
@@ -571,12 +549,7 @@ void output_contig(struct contig* contig, int& contig_count, const char* prefix,
 			strcat(contigs, buf);
 			strcat(contigs, contig->seq);
 			strcat(contigs, "\n");
-
-			//fprintf(fp, ">%s_%d_repeat\n%s\n", prefix, contig_count++, contig->seq);
-
 		} else {
-//			fprintf(fp, ">%s_%d\n%s\n", prefix, contig_count++, contig->seq);
-
 			sprintf(buf, ">%s_%d\n", prefix, contig_count++);
 			strcat(contigs, buf);
 			strcat(contigs, contig->seq);
@@ -717,22 +690,6 @@ void cleanup(sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, 
 		}
 	}
 
-	// Free nodes and keys
-//	for (sparse_hash_map<const char*, struct node*, my_hash, eqstr>::const_iterator it = nodes->begin();
-//	         it != nodes->end(); ++it) {
-//		char* key = (char*) it->first;
-//		struct node* node = it->second;
-//
-////		if (node != NULL) {
-////			free(node);
-////		}
-//
-//		if (key != NULL) {
-//			free(key);
-//		}
-//	}
-//
-
 	for (int i=0; i<=pool->node_pool->block_idx; i++) {
 		free(pool->node_pool->nodes[i]);
 	}
@@ -782,17 +739,14 @@ char* assemble(const char* input,
 	nodes->set_deleted_key(NULL);
 
 	printf("Building graph\n");
-	fflush(stdout);
 	build_graph2(input, nodes, pool);
 	printf("Pruning graph\n");
-	fflush(stdout);
 
 	//TODO: Set this explicitly
 	char isUnalignedRegion = !truncate_on_repeat;
 	prune_graph(nodes, isUnalignedRegion);
 
 	printf("Pruning graph done\n");
-	fflush(stdout);
 
 	struct linked_node* root_nodes = identify_root_nodes(nodes);
 
@@ -809,16 +763,7 @@ char* assemble(const char* input,
 
 		int shadow_count = 0;
 
-		// Run in shadow mode first
-//		int status = build_contigs(root_nodes->node, shadow_count, fp, prefix, max_paths_from_root, max_contigs, truncate_on_repeat, true);
-//
-//		if (status == OK) {
-//			// Now output the contigs
-//			build_contigs(root_nodes->node, contig_count, fp, prefix, max_paths_from_root, max_contigs, truncate_on_repeat, false);
-//		}
-
 		status = build_contigs(root_nodes->node, contig_count, prefix, max_paths_from_root, max_contigs, truncate_on_repeat, false, contig_str);
-		printf("after bc: %s - %d\n", prefix, strlen(contig_str));
 
 		switch(status) {
 			case TOO_MANY_CONTIGS:
@@ -845,12 +790,6 @@ char* assemble(const char* input,
 
 		root_nodes = root_nodes->next;
 	}
-//	fclose(fp);
-//
-//	if (truncate_output) {
-//		FILE *fp = fopen(output, "w");
-//		fclose(fp);
-//	}
 
 	cleanup(nodes, pool);
 
@@ -917,34 +856,8 @@ extern "C"
     env->ReleaseStringUTFChars(j_prefix, prefix);
     free(contig_str);
 
-    fflush(stdout);
     return ret;
  }
-
-
-/*
-//extern "C"
-JNIEXPORT void JNICALL Java_abra_NativeAssembler_assemble
-  (JNIEnv * env, jobject obj, jstring j_input, jstring j_output, jstring j_prefix)
-// JNIEXPORT void JNICALL Java_abra_NativeAssembler_assemble
-//   (JNIEnv *env, jobject obj, jstring j_input, jstring j_output, jstring j_prefix)
- {
-     //Get the native string from javaString
-     //const char *nativeString = env->GetStringUTFChars(javaString, 0);
-	const char* input  = env->GetStringUTFChars(j_input, 0);
-	const char* output = env->GetStringUTFChars(j_output, 0);
-	const char* prefix = env->GetStringUTFChars(j_prefix, 0);
-
-	printf("input: %s\n", input);
-	printf("output: %s\n", output);
-	printf("prefix: %s\n", prefix);
-
-     //DON'T FORGET THIS LINE!!!
-    env->ReleaseStringUTFChars(j_input, input);
-    env->ReleaseStringUTFChars(j_output, output);
-    env->ReleaseStringUTFChars(j_prefix, prefix);
- }
- */
 
 int main(int argc, char* argv[]) {
 

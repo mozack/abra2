@@ -673,19 +673,19 @@ int build_contigs(
 		if (paths_from_root >= max_paths_from_root) {
 			status = TOO_MANY_PATHS_FROM_ROOT;
 		}
+	}
 
-		if (status == OK) {
+	if (status == OK) {
 
-			*contig_str = (char*) malloc(all_contigs_len);
-			memset(*contig_str, 0, all_contigs_len);
+		*contig_str = (char*) malloc(all_contigs_len);
+		memset(*contig_str, 0, all_contigs_len);
 
-			while (contigs_to_output.size() > 0) {
-				struct contig* contig = contigs_to_output.top();
-				output_contig(contig, contig_count, prefix, *contig_str);
+		while (contigs_to_output.size() > 0) {
+			struct contig* contig = contigs_to_output.top();
+			output_contig(contig, contig_count, prefix, *contig_str);
 
-				contigs_to_output.pop();
-				free_contig(contig);
-			}
+			contigs_to_output.pop();
+			free_contig(contig);
 		}
 	}
 

@@ -297,9 +297,9 @@ int include_kmer(char* sequence, char*qual, int idx) {
 	return include;
 }
 
-void add_to_graph(char* sequence, sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, struct_pool* pool, char* qual, char* read_info) {
+void add_to_graph(char* sequence, sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, struct_pool* pool, char* qual, int strand) {
 
-	int strand = atoi(read_info);
+//	int strand = atoi(read_info);
 
 	struct node* prev = 0;
 
@@ -335,6 +335,44 @@ void add_to_graph(char* sequence, sparse_hash_map<const char*, struct node*, my_
 	}
 }
 
+void build_graph2(const char* input, sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, struct_pool* pool) {
+	int input_len = strlen(input);
+	int record_len = read_length*2 + 1;
+	int num_records = input_len / record_len;
+	int record = 0;
+	const char* ptr = input;
+	int num_reads = 0;
+
+	while (record < num_records) {
+		ptr = &(input[record*record_len]);
+		int strand = 0;
+
+		if (ptr[0] == '0') {
+			strand = 0;
+		} else if (ptr[0] == '1') {
+			strand = 1;
+		} else {
+			printf("ERROR!  INVALID INPUT:\n===========================%s\n===========================\n", input);
+			exit(-1);
+		}
+
+		// TODO: skip copying the input read.  Downstream code appears to depend
+		// upon null terminator.
+		char* read_ptr = allocate_read(pool);
+		memset(read_ptr, 0, read_length+1);
+		memcpy(read_ptr, &(ptr[1]), read_length);
+
+//		char* read_ptr = (char*) &(ptr[1]);
+
+		char* qual_ptr = (char*) &(ptr[read_length+1]);
+		add_to_graph(read_ptr, nodes, pool, qual_ptr, strand);
+		record++;
+	}
+
+	printf("Num reads: %d\n", record);
+	printf("Num nodes: %d\n", nodes->size());
+}
+
 void build_graph(const char* read_file, sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, struct_pool* pool) {
 	FILE *fp = fopen(read_file, "r");
 	char read[MAX_READ_LENGTH];
@@ -353,7 +391,8 @@ void build_graph(const char* read_file, sparse_hash_map<const char*, struct node
 		if (strcmp(read, "") != 0) {
 			char* read_ptr = allocate_read(pool);
 			memcpy(read_ptr, read, read_length+1);
-			add_to_graph(read_ptr, nodes, pool, qual, read_info);
+			int strand = atoi(read_info);
+			add_to_graph(read_ptr, nodes, pool, qual, strand);
 			line++;
 
 			if ((line % 100000) == 0) {
@@ -712,12 +751,12 @@ int assemble(const char* input,
 	sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes = new sparse_hash_map<const char*, struct node*, my_hash, eqstr>();
 
 	long startTime = time(NULL);
-	printf("Assembling: %s -> %s\n", input, output);
+	printf("Assembling: -> %s\n", output);
 	nodes->set_deleted_key(NULL);
 
 	printf("Building graph\n");
 	fflush(stdout);
-	build_graph(input, nodes, pool);
+	build_graph2(input, nodes, pool);
 	printf("Pruning graph\n");
 	fflush(stdout);
 
@@ -791,7 +830,7 @@ int assemble(const char* input,
 		printf("What!!?? %d : %d\n", kmer_size, input_kmer_size);
 	}
 	assert(kmer_size == input_kmer_size);
-	printf("Done assembling(%ld): %s -> %s\n", (stopTime-startTime), input, output);
+	printf("Done assembling(%ld): %s, %d\n", (stopTime-startTime), output, contig_count);
 
 	return contig_count;
 }
@@ -818,7 +857,7 @@ extern "C"
 
 	printf("Abra JNI entry point v0.69\n");
 
-	printf("input: %s\n", input);
+	printf("input len: %s : %d\n", prefix, strlen(input));
 	printf("output: %s\n", output);
 	printf("prefix: %s\n", prefix);
 	printf("truncate_on_output: %d\n", truncate_on_output);

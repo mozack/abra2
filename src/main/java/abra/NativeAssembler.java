@@ -70,13 +70,6 @@ public class NativeAssembler implements Assembler {
 		
 		try {
 			
-			String readFile;
-			if (region != null) {
-				readFile = tempDir + "/" + region.getDescriptor() + ".reads";
-			} else {
-				readFile = tempDir + "/" + "unaligned.reads";
-			}
-			
 			// if c2r is null, this is the unaligned region.
 			boolean isAssemblyCandidate = c2r == null ? true : false;
 			
@@ -167,8 +160,9 @@ public class NativeAssembler implements Assembler {
 			
 			readIds = null;
 			
+			StringBuffer readBuffer = new StringBuffer();
+			
 			if (isAssemblyCandidate) {
-				BufferedWriter writer = new BufferedWriter(new FileWriter(readFile, false));
 				
 				for (List<SAMRecord> reads : readsList) {
 					// Default to always keep
@@ -183,11 +177,11 @@ public class NativeAssembler implements Assembler {
 					
 					for (SAMRecord read : reads) {
 						if (random.nextDouble() < keepProbability) {
-							writer.write(read.getReadNegativeStrandFlag() ? "1\n" : "0\n");
+							readBuffer.append(read.getReadNegativeStrandFlag() ? "1" : "0");
 							
 							if (read.getReadLength() == readLength) {
-								writer.write(read.getReadString() + "\n");
-								writer.write(read.getBaseQualityString() + "\n");
+								readBuffer.append(read.getReadString());
+								readBuffer.append(read.getBaseQualityString());
 							} else {
 								StringBuffer basePadding = new StringBuffer();
 								StringBuffer qualPadding = new StringBuffer();
@@ -197,16 +191,18 @@ public class NativeAssembler implements Assembler {
 									qualPadding.append('!');
 								}
 								
-				//				writer.write(read.getReadNegativeStrandFlag() ? "1\n" : "0\n");
-								writer.write(read.getReadString() + basePadding.toString() + "\n");
-								writer.write(read.getBaseQualityString() + qualPadding.toString() + "\n");							
+								readBuffer.append(read.getReadString() + basePadding.toString());
+								readBuffer.append(read.getBaseQualityString() + qualPadding.toString());							
 							}
 						}
 					}
+					
+					// Make this set of reads eligible for GC
+					reads.clear();
 				}
-				
-				writer.close();
 			}
+			
+			readsList.clear();
 			
 			long end1 = System.currentTimeMillis();
 			
@@ -218,7 +214,7 @@ public class NativeAssembler implements Assembler {
 					String outputFile = output + "_k" + kmer;
 					
 					count = assemble(
-							readFile,
+							readBuffer.toString(),
 							outputFile, 
 							prefix, 
 							truncateOnRepeat ? 1 : 0,
@@ -240,13 +236,8 @@ public class NativeAssembler implements Assembler {
 			} else {
 				System.out.println("Skipping assembly for: " + prefix);
 			}
-			
-			if (isAssemblyCandidate) {
-				File inputReadFile = new File(readFile);
-				inputReadFile.delete();
-			}
 
-		} catch (IOException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 			throw new RuntimeException(e);
 		}
@@ -309,24 +300,13 @@ public class NativeAssembler implements Assembler {
 		this.minBaseQuality = minBaseQuality;
 	}
 	
-//	public static void run(String input, String output) {
-//		NativeAssembler assem = new NativeAssembler();
-//		assem.setTruncateOutputOnRepeat(false);
-//		assem.setMaxContigs(2000000);
-//		assem.setMaxPathsFromRoot(5000);
-//		
-//		assem.assembleContigs(input, output, "contig", true);
-//		
-//	}
-	
-	/*
-	public static void main(String[] args) {
+	public static void main(String[] args) throws Exception {
 		NativeAssembler assem = new NativeAssembler();
 		assem.setTruncateOutputOnRepeat(true);
 		assem.setMaxContigs(50000);
 		assem.setMaxPathsFromRoot(100000);
-		assem.setKmer(43);
-		assem.setReadLength(76);
+		assem.setKmer(new int[] { 43 });
+		assem.setReadLength(100);
 		assem.setMinKmerFrequency(2);
 		
 		String bam1 = args[0];
@@ -334,9 +314,17 @@ public class NativeAssembler implements Assembler {
 		List<String> inputFiles = new ArrayList<String>();
 		inputFiles.add(bam1);
 		inputFiles.add(bam2);
-		String output = 
 		
-		assem.assembleContigs(inputFiles, output, tempDir, region, prefix, checkForDupes, realigner)
+		String output = args[2];
+		
+		Feature region = new Feature("chr1", 6162053, 6162453);
+		String prefix = "pre";
+		boolean checkForDupes = true;
+		ReAligner realigner = new ReAligner();
+		CompareToReference2 c2r = new CompareToReference2();
+		c2r.init(args[3]);
+		
+		assem.assembleContigs(inputFiles, output, "asm_temp", region, prefix, checkForDupes, realigner, c2r);
 		
 //		assem.assembleContigs(args[0], args[1], "contig");
 		
@@ -349,5 +337,6 @@ public class NativeAssembler implements Assembler {
 //		assem.assembleContigs("/home/lmose/code/abra/src/main/c/1810_reads.txt",
 //				"/home/lmose/code/abra/src/main/c/1810.fa", "bar");
 	}
-*/
+
+	
 }

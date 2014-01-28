@@ -10,9 +10,9 @@ extern "C" {
 /*
  * Class:     abra_NativeAssembler
  * Method:    assemble
- * Signature: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IIIIIII)I
+ * Signature: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IIIIIII)Ljava/lang/String;
  */
-JNIEXPORT jint JNICALL Java_abra_NativeAssembler_assemble
+JNIEXPORT jstring JNICALL Java_abra_NativeAssembler_assemble
   (JNIEnv *, jobject, jstring, jstring, jstring, jint, jint, jint, jint, jint, jint, jint);
 
 #ifdef __cplusplus

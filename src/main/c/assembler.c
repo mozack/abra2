@@ -555,12 +555,24 @@ char is_node_visited(struct contig* contig, struct node* node) {
 	 return it != contig->visited_nodes->end();
 }
 
-void output_contig(struct contig* contig, int& contig_count, FILE* fp, const char* prefix) {
+void output_contig(struct contig* contig, int& contig_count, const char* prefix, char* contigs) {
+	char buf[1024];
 	if (strlen(contig->seq) >= min_contig_length) {
 		if (contig->is_repeat) {
-			fprintf(fp, ">%s_%d_repeat\n%s\n", prefix, contig_count++, contig->seq);
+			sprintf(buf, ">%s_%d_repeat\n", prefix, contig_count++);
+			strcat(contigs, buf);
+			strcat(contigs, contig->seq);
+			strcat(contigs, "\n");
+
+			//fprintf(fp, ">%s_%d_repeat\n%s\n", prefix, contig_count++, contig->seq);
+
 		} else {
-			fprintf(fp, ">%s_%d\n%s\n", prefix, contig_count++, contig->seq);
+//			fprintf(fp, ">%s_%d\n%s\n", prefix, contig_count++, contig->seq);
+
+			sprintf(buf, ">%s_%d\n", prefix, contig_count++);
+			strcat(contigs, buf);
+			strcat(contigs, contig->seq);
+			strcat(contigs, "\n");
 		}
 	}
 }
@@ -573,12 +585,12 @@ void output_contig(struct contig* contig, int& contig_count, FILE* fp, const cha
 int build_contigs(
 		struct node* root,
 		int& contig_count,
-		FILE* fp,
 		const char* prefix,
 		int max_paths_from_root,
 		int max_contigs,
 		char stop_on_repeat,
-		char shadow_mode) {
+		char shadow_mode,
+		char** contig_str) {
 
 	int status = OK;
 	stack<contig*> contigs;
@@ -589,6 +601,8 @@ int build_contigs(
 
 	int paths_from_root = 1;
 
+	int all_contigs_len = 0;
+
 	while ((contigs.size() > 0) && (status == OK)) {
 		// Get contig from stack
 		struct contig* contig = contigs.top();
@@ -597,6 +611,8 @@ int build_contigs(
 			// We've encountered a repeat
 			contig->is_repeat = 1;
 			if ((!shadow_mode) && (!stop_on_repeat)) {
+				// Add length of contig + padding for prefix
+				all_contigs_len += strlen(contig->seq) + 100;
 				contigs_to_output.push(contig);
 //				output_contig(contig, contig_count, fp, prefix);
 			}
@@ -612,6 +628,7 @@ int build_contigs(
 
 			// Now, write the contig
 			if (!shadow_mode) {
+				all_contigs_len += strlen(contig->seq) + 100;
 				contigs_to_output.push(contig);
 //				output_contig(contig, contig_count, fp, prefix);
 			}
@@ -658,9 +675,13 @@ int build_contigs(
 		}
 
 		if (status == OK) {
+
+			*contig_str = (char*) malloc(all_contigs_len);
+			memset(*contig_str, 0, all_contigs_len);
+
 			while (contigs_to_output.size() > 0) {
 				struct contig* contig = contigs_to_output.top();
-				output_contig(contig, contig_count, fp, prefix);
+				output_contig(contig, contig_count, prefix, *contig_str);
 				contigs_to_output.pop();
 				free_contig(contig);
 			}
@@ -723,7 +744,7 @@ void cleanup(sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, 
 	free(pool);
 }
 
-int assemble(const char* input,
+char* assemble(const char* input,
 			  const char* output,
 			  const char* prefix,
 			  int truncate_on_repeat,
@@ -772,7 +793,11 @@ int assemble(const char* input,
 	int contig_count = 0;
 	char truncate_output = 0;
 
-	FILE *fp = fopen(output, "w");
+	int status = -1;
+
+	char* contig_str = NULL;
+
+//	FILE *fp = fopen(output, "w");
 	while (root_nodes != NULL) {
 
 		int shadow_count = 0;
@@ -785,7 +810,7 @@ int assemble(const char* input,
 //			build_contigs(root_nodes->node, contig_count, fp, prefix, max_paths_from_root, max_contigs, truncate_on_repeat, false);
 //		}
 
-		int status = build_contigs(root_nodes->node, contig_count, fp, prefix, max_paths_from_root, max_contigs, truncate_on_repeat, false);
+		status = build_contigs(root_nodes->node, contig_count, prefix, max_paths_from_root, max_contigs, truncate_on_repeat, false, &contig_str);
 
 		switch(status) {
 			case TOO_MANY_CONTIGS:
@@ -812,13 +837,12 @@ int assemble(const char* input,
 
 		root_nodes = root_nodes->next;
 	}
-	fclose(fp);
-
-
-	if (truncate_output) {
-		FILE *fp = fopen(output, "w");
-		fclose(fp);
-	}
+//	fclose(fp);
+//
+//	if (truncate_output) {
+//		FILE *fp = fopen(output, "w");
+//		fclose(fp);
+//	}
 
 	cleanup(nodes, pool);
 
@@ -832,11 +856,21 @@ int assemble(const char* input,
 	assert(kmer_size == input_kmer_size);
 	printf("Done assembling(%ld): %s, %d\n", (stopTime-startTime), output, contig_count);
 
-	return contig_count;
+	if (status == OK || status == TOO_MANY_PATHS_FROM_ROOT) {
+		return contig_str;
+	} else if (status == STOPPED_ON_REPEAT) {
+		contig_str = (char*) malloc(32);
+		strcpy(contig_str, "<REPEAT>");
+		return contig_str;
+	} else {
+		contig_str = (char*) malloc(32);
+		strcpy(contig_str, "<REPEAT>");
+		return contig_str;
+	}
 }
 
 extern "C"
- JNIEXPORT jint JNICALL Java_abra_NativeAssembler_assemble
+ JNIEXPORT jstring JNICALL Java_abra_NativeAssembler_assemble
    (JNIEnv *env, jobject obj, jstring j_input, jstring j_output, jstring j_prefix,
     jint j_truncate_on_output, jint j_max_contigs, jint j_max_paths_from_root,
     jint j_read_length, jint j_kmer_size, jint j_min_node_freq, jint j_min_base_quality)
@@ -868,12 +902,14 @@ extern "C"
 	printf("min node freq: %d\n", min_node_freq);
 	printf("min base quality: %d\n", min_base_quality);
 
-	int ret = assemble(input, output, prefix, truncate_on_output, max_contigs, max_paths_from_root, read_length, kmer_size);
+	char* contig_str = assemble(input, output, prefix, truncate_on_output, max_contigs, max_paths_from_root, read_length, kmer_size);
+	jstring ret = env->NewStringUTF(contig_str);
 
      //DON'T FORGET THIS LINE!!!
     env->ReleaseStringUTFChars(j_input, input);
     env->ReleaseStringUTFChars(j_output, output);
     env->ReleaseStringUTFChars(j_prefix, prefix);
+    free(contig_str);
 
     fflush(stdout);
     return ret;

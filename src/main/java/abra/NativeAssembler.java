@@ -32,7 +32,7 @@ public class NativeAssembler implements Assembler {
 	private int minBaseQuality;
 	private Set<String> readIds;
 
-	private native int assemble(String input, String output, String prefix, int truncateOnRepeat, int maxContigs, int maxPathsFromRoot, int readLength, int kmerSize, int minKmerFreq, int minBaseQuality);
+	private native String assemble(String input, String output, String prefix, int truncateOnRepeat, int maxContigs, int maxPathsFromRoot, int readLength, int kmerSize, int minKmerFreq, int minBaseQuality);
 	
 	private String getIdentifier(SAMRecord read) {
 		String id = read.getReadName();
@@ -57,8 +57,10 @@ public class NativeAssembler implements Assembler {
 		}
 	}
 	
-	public List<String> assembleContigs(List<String> inputFiles, String output, String tempDir, Feature region, String prefix,
+	public String assembleContigs(List<String> inputFiles, String output, String tempDir, Feature region, String prefix,
 			boolean checkForDupes, ReAligner realigner, CompareToReference2 c2r) {
+		
+		String contigs = "";
 		
 		long start = System.currentTimeMillis();
 		
@@ -213,7 +215,7 @@ public class NativeAssembler implements Assembler {
 				
 					String outputFile = output + "_k" + kmer;
 					
-					count = assemble(
+					contigs = assemble(
 							readBuffer.toString(),
 							outputFile, 
 							prefix, 
@@ -225,12 +227,8 @@ public class NativeAssembler implements Assembler {
 							minKmerFrequency,
 							minBaseQuality);
 					
-					if (count > 0) {
-						outputFiles.add(outputFile);
+					if (!contigs.equals("<REPEAT>")) {
 						break;
-					} else {
-						File fileToDelete = new File(outputFile);
-						fileToDelete.delete();
 					}
 				}
 			} else {
@@ -246,7 +244,7 @@ public class NativeAssembler implements Assembler {
 		
 		System.out.println("Elapsed_msecs_in_NativeAssembler\tRegion:\t" + region.getDescriptor() + "\tLength:\t" + region.getLength() + "\tReadCount:\t" + readCount + "\tElapsed\t" + (end-start));
 		
-		return outputFiles;
+		return contigs;
 	}
 	
 	private boolean hasLowQualityBase(SAMRecord read) {

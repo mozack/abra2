@@ -145,7 +145,7 @@ public class ReAligner {
 		samHeader.setSortOrder(SAMFileHeader.SortOrder.unsorted);
 		
 		if (shouldReprocessUnaligned) {
-			processUnaligned();
+//			processUnaligned();
 		}
 		
 		Clock clock = new Clock("Assembly");
@@ -328,6 +328,7 @@ public class ReAligner {
 		}
 	}
 	
+	/*
 	private void processUnaligned() throws IOException, InterruptedException {
 		Clock clock = new Clock("Process unaligned");
 		clock.start();
@@ -386,6 +387,7 @@ public class ReAligner {
 		clock.stopAndPrint();
 
 	}
+	*/
 	
 	private void copySam(SAMFileHeader header, String input, String output) {
 		
@@ -829,16 +831,19 @@ public class ReAligner {
 			
 			// Assemble contigs
 			Assembler assem = newAssembler();
-			List<String> assemblyFiles = assem.assembleContigs(bams, contigsFasta, tempDir, region, region.getDescriptor(), true, this, c2r);
-			
-			for (String assemblyFile : assemblyFiles) {
-				BufferedReader reader = new BufferedReader(new FileReader(assemblyFile));
-				appendContigs(reader);
-				reader.close();
-				
-				File localAssembledContigs = new File(assemblyFile);
-				localAssembledContigs.delete();
+			String contigs = assem.assembleContigs(bams, contigsFasta, tempDir, region, region.getDescriptor(), true, this, c2r);
+			if (!contigs.equals("<ERROR>") && !contigs.equals("<REPEAT>") && !contigs.isEmpty()) {
+				contigWriter.write(contigs);
 			}
+			
+//			for (String assemblyFile : assemblyFiles) {
+//				BufferedReader reader = new BufferedReader(new FileReader(assemblyFile));
+//				appendContigs(reader);
+//				reader.close();
+//				
+//				File localAssembledContigs = new File(assemblyFile);
+//				localAssembledContigs.delete();
+//			}
 		}
 		catch (Exception e) {
 			e.printStackTrace();

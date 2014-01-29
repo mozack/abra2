@@ -7,6 +7,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -279,7 +280,21 @@ public class CompareToReference2 {
 		System.out.println("Done loading ref map.  Elapsed secs: " + (e-s)/1000);
 	}
 	
-	
+	public String getSequence(String chromosome, int position, int length) {
+		byte[] ref = refMap.get(chromosome);
+		
+		if (ref == null) {
+			System.out.println("No ref for chromosome: " + chromosome);
+		}
+		
+		position -= 1;
+		
+		byte[] sub = Arrays.copyOfRange(ref, Math.max(position,0), Math.min(position+length, ref.length));
+		
+		return new String(sub);
+		
+//		return ref.substring(Math.max(position, 0), Math.min(position + length, ref.length()));
+	}	
 		
 	private String getRefLine() throws IOException {
 		String line = null;
@@ -307,6 +322,15 @@ public class CompareToReference2 {
 	*/
 	
 	public static void main(String[] args) throws Exception {
+		CompareToReference2 c2r = new CompareToReference2(); 
+//		c2r.init("/home/lmose/reference/chr3/chr3.fa");
+		c2r.init("/home/lmose/reference/test/test.fa");
+		System.out.println(c2r.getSequence("chr3", 178948013, 100));
+
+	}
+	
+	/*
+	public static void main(String[] args) throws Exception {
 		
 //		String ref = args[0];
 //		String sam = args[1];
@@ -333,4 +357,5 @@ public class CompareToReference2 {
 		
 		rdr.close();
 	}
+	*/
 }

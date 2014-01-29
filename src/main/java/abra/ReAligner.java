@@ -968,8 +968,6 @@ public class ReAligner {
 			
 	private boolean cleanAndOutputContigs(String contigsSam, String cleanContigsFasta, boolean shouldRemoveSoftClips) throws IOException {
 		
-		Reference reference = new Reference(this.reference);
-		
 		boolean hasCleanContigs = false;
 		
 		BufferedWriter writer = new BufferedWriter(new FileWriter(cleanContigsFasta, false));
@@ -997,9 +995,9 @@ public class ReAligner {
 						(last.getOperator() == CigarOperator.M)) {
 
 						// Pull in read length bases from reference to the beginning and end of the contig.
-						String prefix = reference.getSequence(contigRead.getReferenceName(), 
+						String prefix = c2r.getSequence(contigRead.getReferenceName(), 
 								contigRead.getAlignmentStart()-readLength, readLength);
-						String suffix = reference.getSequence(contigRead.getReferenceName(), contigRead.getAlignmentEnd()+1, readLength);
+						String suffix = c2r.getSequence(contigRead.getReferenceName(), contigRead.getAlignmentEnd()+1, readLength);
 						
 						bases = prefix.toUpperCase() + bases + suffix.toUpperCase();
 						
@@ -1346,6 +1344,11 @@ public class ReAligner {
 	}
 	
 	public static void main(String[] args) throws Exception {
+		String inp = "--in /home/lmose/dev/ayc/opt/mem/test_tumor.bam --kmer 43 --mc-mapq 25 --mcl 101 --mcr -1.0 --mnf 2 --umnf 2 --mpc 50000 --out /home/lmose/dev/ayc/opt/mem/test_tumor.abra.bam --ref /home/lmose/reference/test/test.fa --targets /home/lmose/dev/ayc/opt/mem/test.gtf --threads 2 --working /home/lmose/dev/ayc/opt/mem/work1 --mur 50000000 --no-unalign --mbq 20";
+		run(inp.split("\\s+"));
+	}
+	/*
+	public static void main(String[] args) throws Exception {
 		ReAligner realigner = new ReAligner();
 //		String originalReadsSam = args[0];
 //		String alignedToContigSam = args[1];
@@ -1386,7 +1389,7 @@ public class ReAligner {
 		
 		writer.close();
 	}
-
+*/
 
 	/*
 	public static void main(String[] args) throws Exception {

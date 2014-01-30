@@ -6,11 +6,11 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 import net.sf.samtools.Cigar;
 import net.sf.samtools.CigarElement;
@@ -24,6 +24,7 @@ import net.sf.samtools.SAMRecord;
  */
 public class CompareToReference2 {
 	
+	private Random random = new Random(1);
 	private String refFileName;
 	private BufferedReader refReader;
 	private Map<String, byte[]> refMap;
@@ -67,12 +68,14 @@ public class CompareToReference2 {
 		return mismatchPositions(read, -1);
 	}
 	
+	private long getRefLength(String refName) {
+		return refMap.get(refName.trim()).length * 4 + 1;
+	}
+	
 	public String getAlternateReference(SAMRecord read, Cigar cigar) {
 		String alt = null;
 		
-		byte[] reference = refMap.get(read.getReferenceName().trim());
-		
-		if (read.getAlignmentEnd() < reference.length) {
+		if (read.getAlignmentEnd() < getRefLength(read.getReferenceName())) {
 			
 			StringBuffer altBuf = new StringBuffer(read.getReadLength());
 		
@@ -83,13 +86,13 @@ public class CompareToReference2 {
 					
 					for (int i=0; i<element.getLength(); i++) {
 
-						if (refIdx >= reference.length) {
+						if (refIdx >= getRefLength(read.getReferenceName())) {
 							// You're off the edge of the map matey.  Monsters be here!
 							// This read has aligned across chromosomes.  Do not proceed.
 							return null;
 						}
 						
-						char refBase  = Character.toUpperCase((char) reference[refIdx]);
+						char refBase = getRefBase(refIdx, read.getReferenceName());
 						
 						altBuf.append(refBase);
 											
@@ -119,15 +122,13 @@ public class CompareToReference2 {
 		
 		List<Integer> mismatches = new ArrayList<Integer>();
 		
-		byte[] reference = refMap.get(read.getReferenceName().trim());
-		
 		int readIdx = 0;
 		int refIdx = read.getAlignmentStart()-1;
 		for (CigarElement element : read.getCigar().getCigarElements()) {
 			if (element.getOperator() == CigarOperator.M) {
 				for (int i=0; i<element.getLength(); i++) {
 					char readBase = getReadBase(read, readIdx);
-					char refBase  = Character.toUpperCase((char) reference[refIdx]);
+					char refBase = getRefBase(refIdx, read.getReferenceName());
 					if ((readBase != refBase) && (readBase != 'N') && (refBase != 'N')) {
 						mismatches.add(readIdx);
 					}
@@ -152,7 +153,6 @@ public class CompareToReference2 {
 	}
 	
 	private char getReadBase(SAMRecord read, int index) {
-		//return Character.toUpperCase(read.getReadString().charAt(index));
 		return (char) read.getReadBases()[index];
 	}
 	
@@ -163,8 +163,7 @@ public class CompareToReference2 {
 	private int numDifferences(SAMRecord read, int minBaseQual) {
 		
 		int diffs = 0;
-		byte[] reference = refMap.get(read.getReferenceName().trim());
-		if (reference != null) {
+		if (refMap.get(read.getReferenceName().trim()) != null) {
 			int readIdx = 0;
 			int refIdx = read.getAlignmentStart()-1;
 			int elementIdx = 0;
@@ -172,7 +171,7 @@ public class CompareToReference2 {
 				if (element.getOperator() == CigarOperator.M) {
 					for (int i=0; i<element.getLength(); i++) {
 						char readBase = getReadBase(read, readIdx);
-						char refBase  = Character.toUpperCase((char) reference[refIdx]);
+						char refBase = getRefBase(refIdx, read.getReferenceName());
 						if ((readBase != refBase) && (readBase != 'N') && (refBase != 'N')) {
 							if (minBaseQual == 0 || getBaseQuality(read, readIdx) >= minBaseQual) {
 								diffs++;
@@ -187,7 +186,6 @@ public class CompareToReference2 {
 				} else if (element.getOperator() == CigarOperator.D) {
 					refIdx += element.getLength();
 				} else if (element.getOperator() == CigarOperator.S) {
-//					readIdx += element.getLength();
 					
 					if (elementIdx == 0) {
 						refIdx -= element.getLength();
@@ -195,10 +193,10 @@ public class CompareToReference2 {
 					
 					//TODO: Should this always be included?
 					for (int i=0; i<element.getLength(); i++) {
-						if ((refIdx >= 0) && (refIdx < reference.length-1)) {
+						if ((refIdx >= 0) && (refIdx < getRefLength(read.getReferenceName())-1)) {
 //							char readBase = Character.toUpperCase(read.getReadString().charAt(readIdx));
 							char readBase = getReadBase(read, readIdx);
-							char refBase  = Character.toUpperCase((char) reference[refIdx]);
+							char refBase = getRefBase(refIdx, read.getReferenceName());
 							if ((readBase != refBase) && (readBase != 'N') && (refBase != 'N')) {
 								if (minBaseQual == 0 || getBaseQuality(read, readIdx) >= minBaseQual) {
 									diffs++;
@@ -222,12 +220,62 @@ public class CompareToReference2 {
 		return diffs;
 	}
 	
+	// Convert input StringBuffer to 2 bit representation.
 	private byte[] getBytes(StringBuffer buf) {
-		byte[] bytes = new byte[buf.length()];
+		int numBytes = buf.length()/4;
+		if (buf.length() % 4 > 0) {
+			numBytes += 1;
+		}
+		byte[] bytes = new byte[numBytes];
+		
+		int subIdx = 0;
+		int byteIdx = 0;
 		for (int i=0; i<buf.length(); i++) {
-			bytes[i] = (byte) buf.charAt(i);
+			
+			byte base = getBase(buf.charAt(i));
+			byte shifted = (byte) (base << (6-subIdx*2));
+			
+			bytes[byteIdx] = (byte) (bytes[byteIdx] | shifted);
+			
+			subIdx++;
+			if (subIdx == 4) {
+				subIdx = 0;
+				byteIdx++;
+			}
 		}
 		return bytes;
+	}
+	
+	private byte getBase(char ch) {
+		switch (Character.toUpperCase(ch)) {
+		case 'A':
+			return 0;
+		case 'T':
+			return 1;
+		case 'C':
+			return 2;
+		case 'G':
+			return 3;
+		default:
+			return randomBase();
+		}
+	}
+	
+	private byte randomBase() {
+		byte val;
+		double rand = random.nextDouble();
+		
+		if (rand < .25) {
+			val = 0;
+		} else if (rand < .5) {
+			val = 1;
+		} else if (rand < .75) {
+			val = 2;
+		} else {
+			val = 3;
+		}
+		
+		return val;
 	}
 	
 	private void loadRefMap() throws IOException {
@@ -276,6 +324,31 @@ public class CompareToReference2 {
 		System.out.println("Done loading ref map.  Elapsed secs: " + (e-s)/1000);
 	}
 	
+	private char getRefBase(int idx, String ref) {
+		return getBaseAsChar(idx, refMap.get(ref.trim()));
+	}
+	
+	private char getBaseAsChar(int idx, byte[] ref) {
+		int byteIdx = idx / 4;
+		int bitShift = (3-(idx % 4)) * 2;
+		byte b = ref[byteIdx];
+		byte shifted = (byte) (b >>> bitShift);
+		byte val = (byte) (shifted & 3);
+		
+		switch (val) {
+			case 0:
+				return 'A';
+			case 1:
+				return 'T';
+			case 2:
+				return 'C';
+			case 3:
+				return 'G';
+			default:
+				throw new IllegalArgumentException("Invalid base value");
+		}
+	}
+	
 	public String getSequence(String chromosome, int position, int length) {
 		byte[] ref = refMap.get(chromosome);
 		
@@ -285,10 +358,16 @@ public class CompareToReference2 {
 		
 		position -= 1;
 		
-		byte[] sub = Arrays.copyOfRange(ref, Math.max(position,0), Math.min(position+length, ref.length));
+		StringBuffer buf = new StringBuffer(length);
+		int start = Math.max(position, 0);
+		int stop = Math.min(position+length, ref.length*4+1);
 		
-		return new String(sub);
-	}	
+		for (int i=start; i<stop; i++) {
+			buf.append(getBaseAsChar(i, ref));
+		}
+	
+		return buf.toString();
+	}
 	
 	/*
 	public static void main(String[] args) {
@@ -303,12 +382,30 @@ public class CompareToReference2 {
 	}
 	*/
 	
+	/*
+	public static void main(String[] args) throws Exception {
+		CompareToReference2 c2r = new CompareToReference2();
+		
+		StringBuffer sb = new StringBuffer();
+		sb.append("ATCGGCT");
+		
+		byte[] bytes = c2r.getBytes(sb);
+		
+		System.out.println("len: " + bytes.length);
+		for (byte b : bytes) {
+			System.out.println(b);
+		}
+	}
+	*/
+	
 	public static void main(String[] args) throws Exception {
 		CompareToReference2 c2r = new CompareToReference2(); 
-//		c2r.init("/home/lmose/reference/chr3/chr3.fa");
-		c2r.init("/home/lmose/reference/test/test.fa");
+		c2r.init("/home/lmose/reference/chr3/chr3.fa");
+//		c2r.init("/home/lmose/reference/test/test.fa");
 		System.out.println(c2r.getSequence("chr3", 178948013, 100));
 
+//		c2r.init("/home/lmose/reference/t2/t2.fa");
+//		System.out.println(c2r.getSequence("x1", 1, 12));
 	}
 	
 	/*

@@ -36,6 +36,7 @@ public class ReAlignerOptions extends Options {
 	private static final String FAVOR_GAP_EXTENSIONS = "fgap";
 	private static final String FILTER_SNP_CLUSTERS = "fsc";
 	private static final String PAD_REGIONS = "pad";
+	private static final String MIN_READ_CANDIDATE_FRACTION = "rcf";
 	
 	private OptionParser parser;
 	private boolean isValid;
@@ -70,6 +71,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(FAVOR_GAP_EXTENSIONS, "Reduce penalty for gap extensions");
             parser.accepts(FILTER_SNP_CLUSTERS, "Filter high numbers of nearby mismatches");
             parser.accepts(PAD_REGIONS, "Expand target regions by read length");
+            parser.accepts(MIN_READ_CANDIDATE_FRACTION, "Minimum read candidate fraction for triggering assembly").withRequiredArg().ofType(Double.class);
     	}
     	
     	return parser;
@@ -223,6 +225,10 @@ public class ReAlignerOptions extends Options {
 	
 	public boolean isPadRegions() {
 		return getOptions().has(PAD_REGIONS);
+	}
+	
+	public double getMinReadCandidateFraction() {
+		return (Double) getOptions().valueOf(MIN_READ_CANDIDATE_FRACTION);
 	}
 	
 	public boolean isValid() {

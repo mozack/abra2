@@ -1,10 +1,7 @@
 /* Copyright 2013 University of North Carolina at Chapel Hill.  All rights reserved. */
 package abra;
 
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -23,6 +20,8 @@ import net.sf.samtools.SAMFileReader.ValidationStringency;
  */
 public class NativeAssembler implements Assembler {
 	
+	private static final int MIN_AVG_DEPTH_FOR_DOWNSAMPLING = 100;
+	
 	private boolean truncateOnRepeat;
 	private int maxContigs;
 	private int maxPathsFromRoot;
@@ -30,6 +29,7 @@ public class NativeAssembler implements Assembler {
 	private int[] kmers;
 	private int minKmerFrequency;
 	private int minBaseQuality;
+	private double minReadCandidateFraction;
 	private Set<String> readIds;
 
 	private native String assemble(String input, String output, String prefix, int truncateOnRepeat, int maxContigs, int maxPathsFromRoot, int readLength, int kmerSize, int minKmerFreq, int minBaseQuality);
@@ -57,16 +57,35 @@ public class NativeAssembler implements Assembler {
 		}
 	}
 	
+	//
+	//  Require at lest <fraction> number of candidate reads per average region depth
+	//  inclusive of overlapping reads.
+	private int minCandidateCount(int numReads, Feature region) {
+		double fraction = minReadCandidateFraction;
+		
+		int minCount = (int) ((double) numReads / readLengthsPerRegion(region) * fraction);
+		
+		// Always require at least 2 candidate reads.
+		return Math.max(minCount, 2);
+	}
+	
+	// Calc number of read lengths per region, padding by 2 to account for reads overlapping region ends.
+	private double readLengthsPerRegion(Feature region) {
+		return (double) region.getLength() / (double) readLength + 2;
+	}
+	
+	//
+	//  Calc desired number of reads per file.
+	private int desiredNumberOfReads(Feature region) {
+		return (int) (readLengthsPerRegion(region) * (double) MIN_AVG_DEPTH_FOR_DOWNSAMPLING); 
+	}
+	
 	public String assembleContigs(List<String> inputFiles, String output, String tempDir, Feature region, String prefix,
 			boolean checkForDupes, ReAligner realigner, CompareToReference2 c2r) {
 		
 		String contigs = "";
 		
 		long start = System.currentTimeMillis();
-		
-		List<String> outputFiles = new ArrayList<String>();
-		
-		int count = 0;
 		
 		int readCount = 0;
 		
@@ -75,7 +94,6 @@ public class NativeAssembler implements Assembler {
 			// if c2r is null, this is the unaligned region.
 			boolean isAssemblyCandidate = c2r == null ? true : false;
 			
-//			int indelReadCount = 0;
 			List<List<SAMRecord>> readsList = new ArrayList<List<SAMRecord>>();
 
 			for (String input : inputFiles) {
@@ -114,12 +132,10 @@ public class NativeAssembler implements Assembler {
 						 //(Sam2Fastq.isPrimary(read)) &&
 						 (!isHardClipped(read)) &&
 						 ((!checkForDupes) || (!readIds.contains(getIdentifier(read))))) {
-	//					boolean hasAmbiguousBases = read.getReadString().contains("N");
+
 						Integer numBestHits = (Integer) read.getIntegerAttribute("X0");
 						boolean hasAmbiguousInitialAlignment = numBestHits != null && numBestHits > 1;
-						//TODO: Stampy ambiguous read (mapq < 4)
 						
-	//					if (!hasAmbiguousBases && !hasAmbiguousInitialAlignment && !hasLowQualityBase(read)) {
 						if (!hasAmbiguousInitialAlignment) {
 							if (!checkForDupes) {
 								readIds.add(getIdentifier(read));
@@ -139,7 +155,6 @@ public class NativeAssembler implements Assembler {
 							}
 							
 							// Increment candidate count if read contains at least 3 high quality mismatches
-							// TODO: # mismatches should be function of read length
 							if (!isAssemblyCandidate && (SAMRecordUtils.getIntAttribute(read, "NM") >= 3)) {
 								if (c2r.numHighQualityMismatches(read, minBaseQuality) > 3) {
 									candidateReadCount++;
@@ -154,8 +169,7 @@ public class NativeAssembler implements Assembler {
 				
 				reader.close();
 				
-				//TODO: Calc read fraction based upon read length & region size
-				if ((candidateReadCount > reads.size() * .01 / 4.0) && (candidateReadCount >= 2)) {
+				if (candidateReadCount > minCandidateCount(reads.size(), region)) {
 					isAssemblyCandidate = true;
 				}
 			}
@@ -166,13 +180,14 @@ public class NativeAssembler implements Assembler {
 			
 			if (isAssemblyCandidate) {
 				
+				int downsampleTarget = desiredNumberOfReads(region);
+				
 				for (List<SAMRecord> reads : readsList) {
 					// Default to always keep
 					double keepProbability = 1.1;
 					
-					//TODO : Change constant to be a function of read length & region size.
-					if (reads.size() > 600) {
-						keepProbability = (double) 600 / (double) reads.size();
+					if (reads.size() > downsampleTarget) {
+						keepProbability = (double) downsampleTarget / (double) reads.size();
 					}
 					
 					Random random = new Random(1);
@@ -296,6 +311,10 @@ public class NativeAssembler implements Assembler {
 	
 	public void setMinBaseQuality(int minBaseQuality) {
 		this.minBaseQuality = minBaseQuality;
+	}
+	
+	public void setMinReadCandidateFraction(double minReadCandidateFraction) {
+		this.minReadCandidateFraction = minReadCandidateFraction;
 	}
 	
 	public static void main(String[] args) throws Exception {

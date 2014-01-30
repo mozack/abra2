@@ -15,7 +15,16 @@ public class AssemblerSettings {
 	private int maxPotentialContigs;
 	private double minContigRatio;
 	private int minBaseQuality;
+	private double minReadCandidateFraction;
 		
+	public double getMinReadCandidateFraction() {
+		return minReadCandidateFraction;
+	}
+
+	public void setMinReadCandidateFraction(double minReadCandidateFraction) {
+		this.minReadCandidateFraction = minReadCandidateFraction;
+	}
+
 	public int getMinBaseQuality() {
 		return minBaseQuality;
 	}
@@ -92,6 +101,7 @@ public class AssemblerSettings {
 		appendSetting(str, "maxPotentialContigs", maxPotentialContigs);
 		appendSetting(str, "minContigRatio", minContigRatio);
 		appendSetting(str, "minBaseQuality", minBaseQuality);
+		appendSetting(str, "minReadCandidateFraction", minReadCandidateFraction);
 		
 		return str.toString();
 	}

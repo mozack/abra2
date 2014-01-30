@@ -1190,6 +1190,7 @@ public class ReAligner {
 		assem.setKmer(assemblerSettings.getKmerSize());
 		assem.setMinKmerFrequency(assemblerSettings.getMinNodeFrequncy());
 		assem.setMinBaseQuality(assemblerSettings.getMinBaseQuality());
+		assem.setMinReadCandidateFraction(assemblerSettings.getMinReadCandidateFraction());
 
 		return assem;
 	}
@@ -1315,6 +1316,7 @@ public class ReAligner {
 			assemblerSettings.setMinContigRatio(options.getMinContigRatio());
 			assemblerSettings.setMinUnalignedNodeFrequency(options.getMinUnalignedNodeFrequency());
 			assemblerSettings.setMinBaseQuality(options.getMinBaseQuality());
+			assemblerSettings.setMinReadCandidateFraction(options.getMinReadCandidateFraction());
 
 			ReAligner realigner = new ReAligner();
 			realigner.setReference(options.getReference());

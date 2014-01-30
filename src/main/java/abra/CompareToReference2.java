@@ -2,7 +2,6 @@
 package abra;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
@@ -16,7 +15,6 @@ import java.util.Map;
 import net.sf.samtools.Cigar;
 import net.sf.samtools.CigarElement;
 import net.sf.samtools.CigarOperator;
-import net.sf.samtools.SAMFileReader;
 import net.sf.samtools.SAMRecord;
 
 /**
@@ -27,8 +25,6 @@ import net.sf.samtools.SAMRecord;
 public class CompareToReference2 {
 	
 	private String refFileName;
-	private String currSeqName = "";
-	private String cachedRefLine = null;
 	private BufferedReader refReader;
 	private Map<String, byte[]> refMap;
 	
@@ -292,21 +288,7 @@ public class CompareToReference2 {
 		byte[] sub = Arrays.copyOfRange(ref, Math.max(position,0), Math.min(position+length, ref.length));
 		
 		return new String(sub);
-		
-//		return ref.substring(Math.max(position, 0), Math.min(position + length, ref.length()));
 	}	
-		
-	private String getRefLine() throws IOException {
-		String line = null;
-		if (cachedRefLine != null) {
-			line = cachedRefLine;
-			cachedRefLine = null;
-		} else {
-			line = refReader.readLine();
-		}
-		
-		return line;
-	}
 	
 	/*
 	public static void main(String[] args) {

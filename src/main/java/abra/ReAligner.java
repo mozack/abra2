@@ -3,10 +3,8 @@ package abra;
 
 import static abra.Logger.log;
 
-import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.net.InetAddress;
@@ -14,8 +12,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
-
-//import abra.Assembler.TooManyPotentialContigsException;
 
 import net.sf.picard.sam.BuildBamIndex;
 import net.sf.picard.sam.SortSam;
@@ -53,8 +49,6 @@ public class ReAligner {
 	private SAMFileHeader samHeader;
 	private SAMFileHeader samHeader2;
 	private SAMFileHeader samHeader3;
-
-	private long startMillis;
 
 	private List<Feature> regions;
 
@@ -104,8 +98,6 @@ public class ReAligner {
 	private ReadAdjuster readAdjuster;
 	
 	public void reAlign(String inputSam, String inputSam2, String inputSam3, String outputSam, String outputSam2, String outputSam3) throws Exception {
-
-		startMillis = System.currentTimeMillis();
 
 		this.inputSam1 = inputSam;
 		this.inputSam2 = inputSam2;
@@ -694,7 +686,6 @@ public class ReAligner {
 		addThread(thread);
 		new Thread(thread).start();
 	}
-	
 	private void downsampleSam(String sam, String downsampledSam, double keepProbability) {
 		System.out.println("keepProbability: " + keepProbability);
 		
@@ -736,6 +727,7 @@ public class ReAligner {
 		return shouldInclude;
 	}
 	
+	/*
 	private String getUnalignedReads(String unalignedBam) throws InterruptedException, IOException {
 		
 		int numUnalignedReads = 0;
@@ -796,24 +788,10 @@ public class ReAligner {
 		
 		return unalignedBam;		
 	}
+	*/
 	
 	private synchronized void appendContigs(String contigs) throws IOException {
 		contigWriter.write(contigs);
-	}
-	
-	private synchronized void appendContigs(BufferedReader reader) throws IOException {
-		long start = System.currentTimeMillis();
-		
-		String line = reader.readLine();
-		while (line != null) {
-			contigWriter.write(line);
-			contigWriter.write('\n');
-			line = reader.readLine();
-		}
-		
-		long end = System.currentTimeMillis();
-		
-		System.out.println("Elapsed msecs in appendConting: " + (end-start));
 	}
 	
 	public void processRegion(Feature region) throws Exception {

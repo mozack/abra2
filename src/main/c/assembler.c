@@ -738,15 +738,11 @@ char* assemble(const char* input,
 	printf("Assembling: -> %s\n", output);
 	nodes->set_deleted_key(NULL);
 
-	printf("Building graph\n");
 	build_graph2(input, nodes, pool);
-	printf("Pruning graph\n");
 
 	//TODO: Set this explicitly
 	char isUnalignedRegion = !truncate_on_repeat;
 	prune_graph(nodes, isUnalignedRegion);
-
-	printf("Pruning graph done\n");
 
 	struct linked_node* root_nodes = identify_root_nodes(nodes);
 
@@ -834,7 +830,7 @@ extern "C"
 	min_node_freq = j_min_node_freq;
 	min_base_quality = j_min_base_quality;
 
-	printf("Abra JNI entry point v0.69\n");
+	printf("Abra JNI entry point v0.70\n");
 
 	printf("input len: %s : %d\n", prefix, strlen(input));
 	printf("output: %s\n", output);
@@ -855,6 +851,8 @@ extern "C"
     env->ReleaseStringUTFChars(j_output, output);
     env->ReleaseStringUTFChars(j_prefix, prefix);
     free(contig_str);
+
+    fflush(stdout);
 
     return ret;
  }

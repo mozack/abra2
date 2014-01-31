@@ -10,20 +10,21 @@ import net.sf.samtools.SAMFileWriter;
  * 
  * @author Lisle E. Mose (lmose at unc dot edu)
  */
-public class AlignReadsRunnable implements Runnable {
+public class AlignReadsRunnable extends AbraRunnable {
 		
-	private ReAligner realigner;
 	private String tempDir;
 	private String inputSam;
 	private String cleanContigsFasta;
 	private CompareToReference2 c2r;
 	private SAMFileWriter finalOutputSam;
 	private String alignedToContigSam;
+	private ReAligner reAligner;
 	
-	public AlignReadsRunnable(ReAligner realigner, String tempDir, String inputSam, String cleanContigsFasta,
+	public AlignReadsRunnable(ThreadManager threadManager, ReAligner realigner, String tempDir, String inputSam, String cleanContigsFasta,
 			CompareToReference2 c2r, SAMFileWriter finalOutputSam, String alignedToContigSam) {
 
-		this.realigner = realigner;
+		super(threadManager);
+		this.reAligner = realigner;
 		this.tempDir = tempDir;
 		this.inputSam = inputSam;
 		this.cleanContigsFasta = cleanContigsFasta;
@@ -33,15 +34,7 @@ public class AlignReadsRunnable implements Runnable {
 	}
 
 	@Override
-	public void run() {
-		try {
-			realigner.alignReads(tempDir, inputSam, cleanContigsFasta, c2r, finalOutputSam, alignedToContigSam);
-		} catch (IOException e) {
-			e.printStackTrace();
-			throw new RuntimeException(e);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-			throw new RuntimeException(e);
-		}
+	public void go() throws Exception{
+		reAligner.alignReads(tempDir, inputSam, cleanContigsFasta, c2r, finalOutputSam, alignedToContigSam);
 	}
 }

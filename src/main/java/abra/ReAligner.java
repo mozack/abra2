@@ -9,6 +9,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
@@ -23,7 +24,6 @@ import net.sf.samtools.SAMFileReader;
 import net.sf.samtools.SAMFileWriter;
 import net.sf.samtools.SAMFileWriterFactory;
 import net.sf.samtools.SAMRecord;
-import net.sf.samtools.SAMFileHeader.SortOrder;
 import net.sf.samtools.SAMFileReader.ValidationStringency;
 
 /**
@@ -46,10 +46,8 @@ public class ReAligner {
 	private static final long RANDOM_SEED = 1;
 	private static final int MAX_POTENTIAL_UNALIGNED_CONTIGS = 2000000;
 	
-	private SAMFileHeader samHeader;
-	private SAMFileHeader samHeader2;
-	private SAMFileHeader samHeader3;
-
+	private SAMFileHeader[] samHeaders;
+	
 	private List<Feature> regions;
 
 	private String regionsGtf;
@@ -70,11 +68,9 @@ public class ReAligner {
 	
 	private boolean shouldReprocessUnaligned = true;
 	
-	private List<Runnable> threads = new ArrayList<Runnable>();
-	
-	private String inputSam1;
-	private String inputSam2;
-	private String inputSam3;
+	private String[] inputSams;
+	private SAMFileWriter[] writers;
+	private String[] tempDirs;
 	
 	private int readLength = -1;
 	private int maxMapq = -1;
@@ -97,44 +93,28 @@ public class ReAligner {
 	
 	private ReadAdjuster readAdjuster;
 	
-	public void reAlign(String inputSam, String inputSam2, String inputSam3, String outputSam, String outputSam2, String outputSam3) throws Exception {
-
-		this.inputSam1 = inputSam;
-		this.inputSam2 = inputSam2;
-		this.inputSam3 = inputSam3;
+	private ThreadManager threadManager;
+	
+	public void reAlign(String[] inputFiles, String[] outputFiles) throws Exception {
 		
-		logStartupInfo(outputSam, outputSam2, outputSam3);
+		this.inputSams = inputFiles;
 		
-		List<String> inputBams = new ArrayList<String>();
-		
-		if (this.inputSam1 != null) {
-			inputBams.add(inputSam1);
-		}
-		
-		if (this.inputSam2 != null) {
-			inputBams.add(inputSam2);
-		}
-		
-		if (this.inputSam3 != null) {
-			inputBams.add(inputSam3);
-		}
-		
+		logStartupInfo(outputFiles);
+				
 		init();
 		
 		c2r = new CompareToReference2();
 		c2r.init(this.reference);
 
 		log("Reading Input SAM Header and identifying read length");
-		getSamHeaderAndReadLength(inputSam, inputSam2, inputSam3);
+		getSamHeaderAndReadLength();
 		
 		log("Read length: " + readLength);
 		
 		log("Loading target regions");
-		loadRegions(inputBams);
+		loadRegions();
 		
 		readAdjuster = new ReadAdjuster(isPairedEnd, this.maxMapq, c2r, minInsertLength, maxInsertLength);
-		
-		samHeader.setSortOrder(SAMFileHeader.SortOrder.unsorted);
 		
 		if (shouldReprocessUnaligned) {
 //			processUnaligned();
@@ -146,44 +126,28 @@ public class ReAligner {
 		String contigFasta = tempDir + "/" + "all_contigs.fasta";
 		contigWriter = new BufferedWriter(new FileWriter(contigFasta, false));
 		
-		
-		// Init temp directories and output BAM writers
-		String tempDir1 = tempDir + "/temp1";
-		String tempDir2 = tempDir + "/temp2";
-		String tempDir3 = tempDir + "/temp3";
-		mkdir(tempDir1);
-		mkdir(tempDir2);
-		mkdir(tempDir3);
+		tempDirs = new String[inputSams.length];
 		
 		SAMFileWriterFactory writerFactory = new SAMFileWriterFactory();
 		writerFactory.setUseAsyncIo(true);
 		
-		SAMFileWriter writer1 = writerFactory.makeSAMOrBAMWriter(
-				samHeader, false, new File(outputSam));
+		writers = new SAMFileWriter[inputSams.length];
 		
-		SAMFileWriter writer2 = null;
-		SAMFileWriter writer3 = null;
-		
-		if (inputSam2 != null) {
-			writer2 = writerFactory.makeSAMOrBAMWriter(
-				samHeader2, false, new File(outputSam2));
-		}
-		
-		if (inputSam3 != null) {
-			writer3 = writerFactory.makeSAMOrBAMWriter(
-				samHeader3, false, new File(outputSam3));
+		for (int i=0; i<inputSams.length; i++) {
+			// init temp dir
+			String temp = tempDir + "/temp" + (i+1);
+			mkdir(temp);
+			tempDirs[i] = temp;
+
+			// init BAM writer
+			writers[i] = writerFactory.makeSAMOrBAMWriter(
+					samHeaders[i], false, new File(outputFiles[i]));
 		}
 		
 		// Start pre-processing reads on separate thread for each input file.
-		// This happens in parallel with assembly.	
-		preProcessReads(inputSam, tempDir1, writer1);
-
-		if (inputSam2 != null) {
-			preProcessReads(inputSam2, tempDir2, writer2);
-		}
-		
-		if (inputSam3 != null) {
-			preProcessReads(inputSam3, tempDir3, writer3);
+		// This happens in parallel with assembly, provided there are enough threads.
+		for (int i=0; i<inputSams.length; i++) {
+			preProcessReads(inputSams[i], tempDirs[i], writers[i]);
 		}
 		
 		log("Iterating over regions");
@@ -194,7 +158,7 @@ public class ReAligner {
 		}
 		
 		log("Waiting for all threads to complete");
-		waitForAllThreadsToComplete();
+		threadManager.waitForAllThreadsToComplete();
 		
 		contigWriter.close();
 		clock.stopAndPrint();
@@ -202,40 +166,21 @@ public class ReAligner {
 		String cleanContigsFasta = alignAndCleanContigs(contigFasta, tempDir, true);
 				
 		if (cleanContigsFasta != null) {		
-			clock = new Clock("Sam2Fastq and Align");
+			clock = new Clock("Align to contigs");
 			clock.start();
 			
-			String[] alignedSams = alignReads(tempDir1, inputSam, cleanContigsFasta, c2r, writer1, 
-					tempDir2, inputSam2, writer2, tempDir3, inputSam3, writer3);
-			
-			String alignedToContigSam1 = alignedSams[0];
-			String alignedToContigSam2 = alignedSams[1];
-			String alignedToContigSam3 = alignedSams[2];
+			String[] alignedSams = alignReads(cleanContigsFasta, c2r);
 			
 			clock.stopAndPrint();
-
-			String alignedToContigBam1 = alignedToContigSam1;
-			String alignedToContigBam2 = alignedToContigSam2;
-			String alignedToContigBam3 = alignedToContigSam3;
 
 			clock = new Clock("Adjust reads");
 			clock.start();
 			log("Adjust reads");
-			// Output sorted by coordinate
-			//samHeader.setSortOrder(SortOrder.coordinate);
-			samHeader.setSortOrder(SortOrder.unsorted);
 			
-			adjustReads(alignedToContigBam1, writer1,
-					alignedToContigBam2, writer2, true, c2r, tempDir1, tempDir2,
-					alignedToContigBam3, writer3, tempDir3);
+			adjustReads(alignedSams, true, c2r);
 			
-			writer1.close();
-			if (writer2 != null) {
-				writer2.close();
-			}
-			
-			if (writer3 != null) {
-				writer3.close();
+			for (SAMFileWriter writer : this.writers) {
+				writer.close();
 			}
 			
 			clock.stopAndPrint();
@@ -246,12 +191,8 @@ public class ReAligner {
 			
 		} else {
 			log("WARNING!  No contigs assembled.  Just making a copy of input converting to/from SAM/BAM as appropriate.");
-			copySam(samHeader, inputSam, outputSam);
-			if (inputSam2 != null) {
-				copySam(samHeader2, inputSam2, outputSam2);
-			}
-			if (inputSam3 != null) {
-				copySam(samHeader3, inputSam3, outputSam3);
+			for (int i=0; i<inputFiles.length; i++) {
+				copySam(inputFiles[i], outputFiles[i]);	
 			}
 		}
 		
@@ -259,11 +200,10 @@ public class ReAligner {
 	}
 	
 	private void preProcessReads(String inputSam, String tempDir, SAMFileWriter writer) throws InterruptedException {
-		waitForAvailableThread();
-		PreprocessReadsRunnable thread = new PreprocessReadsRunnable(
-				this, inputSam, this.getPreprocessedFastq(tempDir), c2r, writer);
-		addThread(thread);
-		new Thread(thread).start();
+		PreprocessReadsRunnable thread = new PreprocessReadsRunnable(threadManager, this,
+				inputSam, this.getPreprocessedFastq(tempDir), c2r, writer);
+		
+		threadManager.spawnThread(thread);
 	}
 	
 	private void processRna() {
@@ -289,13 +229,18 @@ public class ReAligner {
 		*/
 	}
 	
-	private void logStartupInfo(String outputSam, String outputSam2, String outputSam3) {
-		System.out.println("input: " + inputSam1);
-		System.out.println("input2: " + inputSam2);
-		System.out.println("input3: " + inputSam3);
-		System.out.println("output: " + outputSam);
-		System.out.println("output2: " + outputSam2);
-		System.out.println("output3: " + outputSam3);
+	private void logStartupInfo(String[] outputFiles) {
+		
+		int ctr = 0;
+		for (String input : inputSams) {
+			System.out.println("input" + ctr + ": " + input);
+		}
+
+		ctr = 0;
+		for (String output : outputFiles) {
+			System.out.println("output" + ctr + ": " + output);
+		}
+		
 		System.out.println("regions: " + regionsGtf);
 		System.out.println("reference: " + reference);
 		System.out.println("working dir: " + tempDir);
@@ -381,7 +326,7 @@ public class ReAligner {
 	}
 	*/
 	
-	private void copySam(SAMFileHeader header, String input, String output) {
+	private void copySam(String input, String output) {
 		
 		SAMFileWriterFactory writerFactory = new SAMFileWriterFactory();
 		
@@ -389,7 +334,7 @@ public class ReAligner {
 		reader.setValidationStringency(ValidationStringency.SILENT);
 		
 		SAMFileWriter writer = writerFactory.makeSAMOrBAMWriter(
-				header, false, new File(output));
+				reader.getFileHeader(), false, new File(output));
 		
 		for (SAMRecord read : reader) {
 			writer.addAlignment(read);
@@ -399,10 +344,7 @@ public class ReAligner {
 		writer.close();
 	}
 	
-	private String[] alignReads(String tempDir1, String inputSam, 
-			String cleanContigsFasta, CompareToReference2 c2r, SAMFileWriter writer1, 
-			String tempDir2, String inputSam2, SAMFileWriter writer2,
-			String tempDir3, String inputSam3, SAMFileWriter writer3) throws IOException, InterruptedException {
+	private String[] alignReads(String cleanContigsFasta, CompareToReference2 c2r) throws IOException, InterruptedException {
 		
 		// Build contig fasta index
 		log("Indexing contigs");
@@ -410,52 +352,22 @@ public class ReAligner {
 		contigAligner.index();
 		log("Contig indexing done");
 		
-		String alignedToContigSam1 = tempDir1 + "/" + "align_to_contig.sam";
+		String[] alignedToContigsSams = new String[inputSams.length];
+		Thread[] threads = new Thread[inputSams.length];
 		
-		Thread thread1 = null;
-		Thread thread2 = null;
-		Thread thread3 = null;
-		
-		AlignReadsRunnable runnable1 = new AlignReadsRunnable(this, tempDir1, inputSam, cleanContigsFasta,
-				c2r, writer1, alignedToContigSam1);
-		thread1 = new Thread(runnable1);
-		thread1.start();
-		
-//		alignReads(tempDir1, inputSam, cleanContigsFasta, c2r, writer1, alignedToContigSam1);
-		
-		String alignedToContigSam2 = null;
-		
-		if (inputSam2 != null) {
-			alignedToContigSam2 = tempDir2 + "/" + "align_to_contig.sam";
-//			alignReads(tempDir2, inputSam2, cleanContigsFasta, c2r, writer2, alignedToContigSam2);
+		for (int i=0; i<inputSams.length; i++) {
+			alignedToContigsSams[i] = tempDirs[i] + "/" + "align_to_contig.sam";
 			
-			AlignReadsRunnable runnable2 = new AlignReadsRunnable(this, tempDir2, inputSam2, cleanContigsFasta,
-					c2r, writer2, alignedToContigSam2);
-			thread2 = new Thread(runnable2);
-			thread2.start();
+			AlignReadsRunnable runnable = new AlignReadsRunnable(threadManager, this, tempDirs[i], inputSams[i], cleanContigsFasta,
+					c2r, writers[i], alignedToContigsSams[i]);
+			threads[i] = threadManager.spawnThread(runnable);
 		}
 		
-		String alignedToContigSam3 = null;
-		
-		if (inputSam3 != null) {
-			alignedToContigSam3 = tempDir3 + "/" + "align_to_contig.sam";
-//			alignReads(tempDir3, inputSam3, cleanContigsFasta, c2r, writer3, alignedToContigSam3);
-			
-			AlignReadsRunnable runnable3 = new AlignReadsRunnable(this, tempDir3, inputSam3, cleanContigsFasta,
-					c2r, writer3, alignedToContigSam3);
-			thread3 = new Thread(runnable3);
-			thread3.start();
+		for (Thread thread : threads) {
+			thread.join();
 		}
 		
-		thread1.join();
-		if (thread2 != null) {
-			thread2.join();
-		}
-		if (thread3 != null) {
-			thread3.join();
-		}
-
-		return new String[] { alignedToContigSam1, alignedToContigSam2, alignedToContigSam3 };
+		return alignedToContigsSams;
 	}
 	
 	public static int getNumIndelBases2(SAMRecord read) {
@@ -472,52 +384,18 @@ public class ReAligner {
 		return numIndelBases;
 	}
 
-	private void adjustReads(String sortedAlignedToContig1, SAMFileWriter outputSam1, 
-			String sortedAlignedToContig2, SAMFileWriter outputSam2, boolean isTightAlignment,
-			CompareToReference2 c2r, String tempDir1, String tempDir2,
-			String sortedAlignedToContig3, SAMFileWriter outputSam3, String tempDir3) throws InterruptedException, IOException {
+	private void adjustReads(String[] sortedAlignedToContig, 
+			boolean isTightAlignment, CompareToReference2 c2r) throws InterruptedException, IOException {
 		
-		if (this.numThreads > 1) {
-			
-			System.out.println("Adjusting reads in parallel");
-			AdjustReadsRunnable runnable1 = new AdjustReadsRunnable(readAdjuster, sortedAlignedToContig1, outputSam1, isTightAlignment, tempDir1, samHeader);
-			Thread thread1 = new Thread(runnable1);
-			thread1.start();
-			
-			Thread thread2 = null;
-			if (inputSam2 != null) {
-				AdjustReadsRunnable runnable2 = new AdjustReadsRunnable(readAdjuster, sortedAlignedToContig2, outputSam2, isTightAlignment, tempDir2, samHeader2);
-				thread2 = new Thread(runnable2);
-				thread2.start();
-			}
-			
-			Thread thread3 = null;
-			if (inputSam3 != null) {
-				AdjustReadsRunnable runnable3 = new AdjustReadsRunnable(readAdjuster, sortedAlignedToContig3, outputSam3, isTightAlignment, tempDir3, samHeader3);
-				thread3 = new Thread(runnable3);
-				thread3.start();
-			}
-			
-			thread1.join();
-			
-			if (inputSam2 != null) {
-				thread2.join();
-			}
-			
-			if (inputSam3 != null) {
-				thread3.join();
-			}
-			
-		} else {
-			System.out.println("Adjusting reads sequentially");
-			
-			readAdjuster.adjustReads(sortedAlignedToContig1, outputSam1, isTightAlignment, tempDir1, samHeader);
-			if (inputSam2 != null) {
-				readAdjuster.adjustReads(sortedAlignedToContig2, outputSam2, isTightAlignment, tempDir2, samHeader2);
-			}
-			if (inputSam3 != null) {
-				readAdjuster.adjustReads(sortedAlignedToContig3, outputSam3, isTightAlignment, tempDir3, samHeader3);
-			}
+		Thread[] threads = new Thread[inputSams.length];
+		for (int i=0; i<inputSams.length; i++) {
+			AdjustReadsRunnable runnable = new AdjustReadsRunnable(threadManager, readAdjuster, 
+					sortedAlignedToContig[i], writers[i], isTightAlignment, tempDirs[i], samHeaders[i]);
+			threads[i] = threadManager.spawnThread(runnable);
+		}
+		
+		for (Thread thread : threads) {
+			thread.join();
 		}
 	}
 	
@@ -526,7 +404,7 @@ public class ReAligner {
 		reader.setValidationStringency(ValidationStringency.SILENT);
 		
 		SAMFileWriter outputReadsBam = new SAMFileWriterFactory().makeSAMOrBAMWriter(
-				samHeader, true, new File(outputSam));
+				samHeaders[0], true, new File(outputSam));
 
 		for (SAMRecord contig : reader) {
 			String[] fields = contig.getReadName().split("_");
@@ -651,41 +529,11 @@ public class ReAligner {
 		}
 	}
 	
-	public synchronized void addThread(Runnable thread) {
-		threads.add(thread);
-	}
-	
-	public synchronized void removeThread(Runnable thread) {
-		threads.remove(thread);
-	}
-	
-	private synchronized int activeThreads() {
-		return threads.size();
-	}
-	
-	private void waitForAvailableThread() throws InterruptedException {
-		while (activeThreads() == numThreads) {
-			Thread.sleep(50);
-		}
-	}
-	
-	private void waitForAllThreadsToComplete() throws InterruptedException, IOException {
-		long start = System.currentTimeMillis();
-		while (activeThreads() > 0) {
-			long elapsedSecs = (System.currentTimeMillis() - start) / 1000;
-			if ((elapsedSecs % 60) == 0) {
-				log("Waiting on " + threads.size() + " threads.");
-			}
-			Thread.sleep(500);
-		}
-	}
-	
 	private void spawnRegionThread(Feature region, String inputSam) throws InterruptedException {
-		waitForAvailableThread();
-		ReAlignerRunnable thread = new ReAlignerRunnable(this, region);
-		addThread(thread);
-		new Thread(thread).start();
+		ReAlignerRunnable thread = new ReAlignerRunnable(threadManager, this, region);
+		threadManager.spawnThread(thread);
 	}
+	
 	private void downsampleSam(String sam, String downsampledSam, double keepProbability) {
 		System.out.println("keepProbability: " + keepProbability);
 		
@@ -693,7 +541,7 @@ public class ReAligner {
 		reader.setValidationStringency(ValidationStringency.SILENT);
 		
 		SAMFileWriter downsampleOutput = new SAMFileWriterFactory().makeSAMOrBAMWriter(
-				samHeader, true, new File(downsampledSam));
+				samHeaders[0], true, new File(downsampledSam));
 
 		Random random = new Random(RANDOM_SEED);
 		int downsampleCount = 0;
@@ -799,14 +647,7 @@ public class ReAligner {
 		try {
 			String contigsFasta = tempDir + "/" + region.getDescriptor() + "_contigs.fasta";
 			
-			List<String> bams = new ArrayList<String>();
-			bams.add(inputSam1);
-			if (inputSam2 != null) {
-				bams.add(inputSam2);
-			}
-			if (inputSam3 != null) {
-				bams.add(inputSam3);
-			}
+			List<String> bams = new ArrayList<String>(Arrays.asList(this.inputSams));
 			if (shouldReprocessUnaligned) {
 				bams.add(unalignedRegionSam);
 			}
@@ -817,15 +658,6 @@ public class ReAligner {
 			if (!contigs.equals("<ERROR>") && !contigs.equals("<REPEAT>") && !contigs.isEmpty()) {
 				appendContigs(contigs);
 			}
-			
-//			for (String assemblyFile : assemblyFiles) {
-//				BufferedReader reader = new BufferedReader(new FileReader(assemblyFile));
-//				appendContigs(reader);
-//				reader.close();
-//				
-//				File localAssembledContigs = new File(assemblyFile);
-//				localAssembledContigs.delete();
-//			}
 		}
 		catch (Exception e) {
 			e.printStackTrace();
@@ -833,7 +665,7 @@ public class ReAligner {
 		}
 	}
 		
-	private void loadRegions(List<String> inputBams) throws IOException {
+	private void loadRegions() throws IOException {
 		GtfLoader loader = new GtfLoader();
 		regions = loader.load(regionsGtf);
 		if (isPadRegions) {
@@ -856,16 +688,19 @@ public class ReAligner {
 		this.regionsGtf = gtfFile;
 	}
 
-	private void getSamHeaderAndReadLength(String inputSam, String inputSam2, String inputSam3) {
+	private void getSamHeaderAndReadLength() {
 		
 		log("Identifying header and determining read length");
-		SAMFileReader reader = new SAMFileReader(new File(inputSam));
+		
+		this.samHeaders = new SAMFileHeader[this.inputSams.length];
+		
+		SAMFileReader reader = new SAMFileReader(new File(inputSams[0]));
 		try {
 			reader.setValidationStringency(ValidationStringency.SILENT);
 	
 			//ASSUMPTION!: All samples have same read length & insert len!
-			samHeader = reader.getFileHeader();
-			samHeader.setSortOrder(SAMFileHeader.SortOrder.unsorted);
+			samHeaders[0] = reader.getFileHeader();
+			samHeaders[0].setSortOrder(SAMFileHeader.SortOrder.unsorted);
 			
 			Iterator<SAMRecord> iter = reader.iterator();
 			
@@ -893,22 +728,14 @@ public class ReAligner {
 			reader.close();
 		}
 		
-		if(inputSam2 != null) {
-			SAMFileReader reader2 = new SAMFileReader(new File(inputSam2));
+		for (int i=1; i<this.inputSams.length; i++) {
+			SAMFileReader reader2 = new SAMFileReader(new File(inputSams[i]));
 			reader2.setValidationStringency(ValidationStringency.SILENT);
-			samHeader2 = reader2.getFileHeader();
-			samHeader2.setSortOrder(SAMFileHeader.SortOrder.unsorted);
-			reader2.close();
+			samHeaders[i] = reader2.getFileHeader();
+			samHeaders[i].setSortOrder(SAMFileHeader.SortOrder.unsorted);
+			reader2.close();			
 		}
-		
-		if(inputSam3 != null) {
-			SAMFileReader reader3 = new SAMFileReader(new File(inputSam3));
-			reader3.setValidationStringency(ValidationStringency.SILENT);
-			samHeader3 = reader3.getFileHeader();
-			samHeader3.setSortOrder(SAMFileHeader.SortOrder.unsorted);
-			reader3.close();
-		}
-		
+				
 		log("Max read length is: " + readLength);
 	}
 	
@@ -940,7 +767,7 @@ public class ReAligner {
 	void sam2Fastq(String bam, String fastq, CompareToReference2 c2r, SAMFileWriter finalOutputSam) throws IOException {
 		log("Preprocessing: " + bam);
 		Sam2Fastq sam2Fastq = new Sam2Fastq();
-		sam2Fastq.convert(bam, fastq, c2r, samHeader, finalOutputSam, isPairedEnd, regions);
+		sam2Fastq.convert(bam, fastq, c2r, finalOutputSam, isPairedEnd, regions);
 		log("Done Preprocessing: " + bam);
 	}
 			
@@ -1210,6 +1037,8 @@ public class ReAligner {
 		}
 		
 		new NativeLibraryLoader().load(tempDir);
+		
+		threadManager = new ThreadManager(numThreads);
 	}
 	
 	private void mkdir(String dir) {
@@ -1241,10 +1070,6 @@ public class ReAligner {
 	
 	public void setShouldReprocessUnaligned(boolean shouldReprocessUnaligned) {
 		this.shouldReprocessUnaligned = shouldReprocessUnaligned;
-	}
-	
-	public SAMFileHeader getHeader() {
-		return this.samHeader;
 	}
 	
 	public void setMaxUnalignedReads(int maxUnalignedReads) {
@@ -1313,9 +1138,8 @@ public class ReAligner {
 			realigner.isPadRegions = options.isPadRegions();
 
 			long s = System.currentTimeMillis();
-
-			realigner.reAlign(options.getInputFile(), options.getInputFile2(), options.getInputFile3(),
-					options.getOutputFile(), options.getOutputFile2(), options.getOutputFile3());
+			
+			realigner.reAlign(options.getInputFiles(), options.getOutputFiles());
 
 			long e = System.currentTimeMillis();
 
@@ -1324,7 +1148,7 @@ public class ReAligner {
 	}
 	
 	public static void main(String[] args) throws Exception {
-		String inp = "--in /home/lmose/dev/ayc/opt/mem/test_tumor.bam --kmer 43 --mc-mapq 25 --mcl 101 --mcr -1.0 --mnf 2 --umnf 2 --mpc 50000 --out /home/lmose/dev/ayc/opt/mem/test_tumor.abra.bam --ref /home/lmose/reference/test/test.fa --targets /home/lmose/dev/ayc/opt/mem/test.gtf --threads 2 --working /home/lmose/dev/ayc/opt/mem/work1 --mur 50000000 --no-unalign --mbq 20";
+		String inp = "--in /home/lmose/dev/ayc/opt/mem/test_tumor.bam --kmer 43 --mc-mapq 25 --mcl 101 --mcr -1.0 --mnf 2 --umnf 2 --mpc 50000 --out /home/lmose/dev/ayc/opt/mem/test_tumor.abra.bam --ref /home/lmose/reference/test/test.fa --targets /home/lmose/dev/ayc/opt/mem/test.gtf --threads 2 --working /home/lmose/dev/ayc/opt/mem/work1 --mur 50000000 --no-unalign --mbq 20 --rcf .02";
 		run(inp.split("\\s+"));
 	}
 	/*

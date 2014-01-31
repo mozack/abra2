@@ -2,8 +2,6 @@ package abra;
 
 import static abra.Logger.log;
 
-import java.io.IOException;
-
 import net.sf.samtools.SAMFileWriter;
 
 /**
@@ -11,33 +9,27 @@ import net.sf.samtools.SAMFileWriter;
  * 
  * @author Lisle E. Mose (lmose at unc dot edu)
  */
-public class PreprocessReadsRunnable implements Runnable {
+public class PreprocessReadsRunnable extends AbraRunnable {
 	
-	private ReAligner realigner;
 	private String inputSam;
 	private String fastq;
 	private CompareToReference2 c2r;
 	private SAMFileWriter finalOutputSam;
+	private ReAligner reAligner;
 	
-	public PreprocessReadsRunnable(ReAligner realigner, String inputSam, String fastq, CompareToReference2 c2r, SAMFileWriter finalOutputSam) {
-		this.realigner = realigner;
+	public PreprocessReadsRunnable(ThreadManager threadManager, ReAligner reAligner, String inputSam, String fastq, CompareToReference2 c2r, SAMFileWriter finalOutputSam) {
+		super(threadManager);
 		this.inputSam = inputSam;
 		this.fastq = fastq;
 		this.c2r = c2r;
 		this.finalOutputSam = finalOutputSam;
+		this.reAligner = reAligner;
 	}
 
 	@Override
-	public void run() {
+	public void go() throws Exception {
 		log("Preprocessing original reads for alignment: " + inputSam);
-		try {
-			realigner.sam2Fastq(inputSam, fastq, c2r, finalOutputSam);
-		} catch (IOException e) {
-			e.printStackTrace();
-			throw new RuntimeException(e);
-		} finally {
-			realigner.removeThread(this);
-		}
+		reAligner.sam2Fastq(inputSam, fastq, c2r, finalOutputSam);
 		log("Done preprocessing original reads for alignment: " + inputSam);
 	}
 }

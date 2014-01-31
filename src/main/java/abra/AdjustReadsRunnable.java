@@ -11,7 +11,7 @@ import net.sf.samtools.SAMFileWriter;
  * 
  * @author Lisle E. Mose (lmose at unc dot edu)
  */
-public class AdjustReadsRunnable implements Runnable {
+public class AdjustReadsRunnable extends AbraRunnable {
 	
 	private ReadAdjuster readAdjuster;
 	private String sortedAlignedToContig;
@@ -20,9 +20,10 @@ public class AdjustReadsRunnable implements Runnable {
 	private String tempDir;
 	private SAMFileHeader samHeader;
 	
-	public AdjustReadsRunnable(ReadAdjuster readAdjuster, String sortedAlignedToContig, SAMFileWriter outputSam,
+	public AdjustReadsRunnable(ThreadManager threadManager, ReadAdjuster readAdjuster, String sortedAlignedToContig, SAMFileWriter outputSam,
 			boolean isTightAlignment, String tempDir, SAMFileHeader samHeader) {
 
+		super(threadManager);
 		this.readAdjuster = readAdjuster;
 		this.sortedAlignedToContig = sortedAlignedToContig;
 		this.outputSam = outputSam;
@@ -32,12 +33,7 @@ public class AdjustReadsRunnable implements Runnable {
 	}
 
 	@Override
-	public void run() {
-		try {
-			readAdjuster.adjustReads(sortedAlignedToContig, outputSam, isTightAlignment, tempDir, samHeader);
-		} catch (IOException e) {
-			e.printStackTrace();
-			throw new RuntimeException(e);
-		}
+	public void go() throws Exception {
+		readAdjuster.adjustReads(sortedAlignedToContig, outputSam, isTightAlignment, tempDir, samHeader);
 	}
 }

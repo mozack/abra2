@@ -3,7 +3,6 @@ package abra;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Iterator;
 import java.util.List;
 
 
@@ -39,7 +38,7 @@ public class Sam2Fastq {
 	 * Input SAM files that contain multiple mappings should be sorted by read name.
 	 */
 	public void convert(String inputSam, String outputFastq, CompareToReference2 c2r,
-			SAMFileHeader header, SAMFileWriter writer, boolean isPairedEnd,
+			SAMFileWriter writer, boolean isPairedEnd,
 			List<Feature> regions) throws IOException {
 		
 		System.out.println("sam: " + inputSam);
@@ -47,24 +46,17 @@ public class Sam2Fastq {
         SAMFileReader reader = new SAMFileReader(new File(inputSam));
         reader.setValidationStringency(ValidationStringency.SILENT);
         
-        header.getSequenceIndex("2");
-        
         output1 = new FastqOutputFile();
         output1.init(outputFastq);
         int lineCnt = 0;
         
-        this.regionTracker = new RegionTracker(regions, header);
+        this.regionTracker = new RegionTracker(regions, reader.getFileHeader());
         
         for (SAMRecord read : reader) {
     		if (SAMRecordUtils.isPrimary(read) && (!SAMRecordUtils.isFiltered(isPairedEnd, read))) {
     			
     			// These tags can be lengthy, so remove them.
-//    			String oldQualities = (String) read.getAttribute("OQ");
-//    			
-//    			if (oldQualities != null) {
-//    				read.setBaseQualityString(oldQualities);
-//    			}
-    			
+    			// TODO: Improve the way this is handled
     			read.setAttribute("XA", null);
     			read.setAttribute("OQ", null);
     			read.setAttribute("MD", null);
@@ -220,7 +212,49 @@ public class Sam2Fastq {
 		run(argz.split(" "));
 	}
 */
-	
+
+	public static void main(String[] args) throws Exception {
+		
+		String inputSam = "/home/lmose/dev/ayc/opt/opt2/s2f/t1.bam";
+		SAMFileReader reader = new SAMFileReader(new File(inputSam));
+		SAMFileHeader header = reader.getFileHeader();
+		reader.close();
+				
+		CompareToReference2 c2r = new CompareToReference2();
+		c2r.init("/home/lmose/reference/chr1/chr1.fa");
+		
+		SAMFileWriterFactory writerFactory = new SAMFileWriterFactory();
+//		writerFactory.setUseAsyncIo(true);
+		
+		header.setSortOrder(SortOrder.unsorted);
+		
+		SAMFileWriter writer = writerFactory.makeSAMOrBAMWriter(
+				header, false, new File("/home/lmose/dev/ayc/opt/opt2/s2f/output_t1.bam"));
+		
+		Sam2Fastq s2f = new Sam2Fastq();
+		
+		
+		GtfLoader loader = new GtfLoader();
+		List<Feature> regions = loader.load("/home/lmose/dev/ayc/regions/clinseq5/uncseq5.gtf");
+		
+		regions = ReAligner.collapseRegions(regions, 100);
+		
+		regions = ReAligner.splitRegions(regions);		
+		
+		long s = System.currentTimeMillis();
+		s2f.convert(inputSam, "/home/lmose/dev/ayc/opt/opt2/s2f/t2.fastq.gz", c2r, writer, false, 
+				regions);
+		long e = System.currentTimeMillis();
+		
+		
+		writer.close();
+		
+		System.out.println("Elapsed: " + (e-s)/1000);
+		
+		
+//		s2f.convert("/home/lmose/dev/abra_wxs/21_1071/small_tumor.abra.bam", "/home/lmose/dev/abra_wxs/21_1071/t.fastq", c2r);
+	}
+	/*
 	public static void main(String[] args) throws Exception {
 		
 		String inputSam = "/home/lmose/dev/ayc/opt/t7.bam";
@@ -269,4 +303,5 @@ public class Sam2Fastq {
 		
 //		s2f.convert("/home/lmose/dev/abra_wxs/21_1071/small_tumor.abra.bam", "/home/lmose/dev/abra_wxs/21_1071/t.fastq", c2r);
 	}
+	*/
 }

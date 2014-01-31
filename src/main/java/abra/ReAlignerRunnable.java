@@ -6,26 +6,18 @@ package abra;
  * 
  * @author Lisle E. Mose (lmose at unc dot edu)
  */
-public class ReAlignerRunnable implements Runnable {
-
-	private ReAligner reAligner;
+public class ReAlignerRunnable extends AbraRunnable {
 	private Feature region;
+	private ReAligner reAligner;
 	
-	public ReAlignerRunnable(ReAligner reAligner, Feature region) {
-		this.reAligner = reAligner;
+	public ReAlignerRunnable(ThreadManager threadManager, ReAligner reAligner, Feature region) {
+		super(threadManager);
 		this.region = region;
+		this.reAligner = reAligner;
 	}
 	
 	@Override
-	public void run() {
-		
-		try {
-			reAligner.processRegion(region);
-		} catch (Exception e) {
-			e.printStackTrace();
-			throw new RuntimeException(e);
-		} finally {
-			reAligner.removeThread(this);
-		}
+	public void go() throws Exception {
+		reAligner.processRegion(region);		
 	}
 }

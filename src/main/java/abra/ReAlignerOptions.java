@@ -1,6 +1,8 @@
 /* Copyright 2013 University of North Carolina at Chapel Hill.  All rights reserved. */
 package abra;
 
+import java.util.List;
+
 import joptsimple.OptionParser;
 
 /**
@@ -11,11 +13,7 @@ import joptsimple.OptionParser;
 public class ReAlignerOptions extends Options {
 	
 	private static final String INPUT_SAM = "in";
-	private static final String INPUT_SAM2 = "in2";
-	private static final String INPUT_SAM3 = "in3";
 	private static final String OUTPUT_SAM = "out";
-	private static final String OUTPUT_SAM2 = "out2";
-	private static final String OUTPUT_SAM3 = "out3";
 	private static final String REFERENCE = "ref";
 	private static final String TARGET_REGIONS = "targets";
 	private static final String WORKING_DIR = "working";
@@ -45,12 +43,8 @@ public class ReAlignerOptions extends Options {
 	protected OptionParser getOptionParser() {
     	if (parser == null) {
             parser = new OptionParser();
-            parser.accepts(INPUT_SAM, "Required input sam or bam file").withRequiredArg().ofType(String.class);
-            parser.accepts(INPUT_SAM2, "Optional input sam or bam file").withRequiredArg().ofType(String.class);
-            parser.accepts(INPUT_SAM3, "Optional input sam or bam file").withRequiredArg().ofType(String.class);
-            parser.accepts(OUTPUT_SAM, "Required output sam or bam file").withRequiredArg().ofType(String.class);
-            parser.accepts(OUTPUT_SAM2, "Optional output sam or bam file").withRequiredArg().ofType(String.class);
-            parser.accepts(OUTPUT_SAM3, "Optional output sam or bam file").withRequiredArg().ofType(String.class);
+            parser.accepts(INPUT_SAM, "Required list of input sam or bam file(s) separated by comma").withRequiredArg().ofType(String.class);
+            parser.accepts(OUTPUT_SAM, "Required list of output sam or bam file(s) separated by comma").withRequiredArg().ofType(String.class);
             parser.accepts(REFERENCE, "Genome reference location").withRequiredArg().ofType(String.class);
             parser.accepts(TARGET_REGIONS, "GTF containing target regions").withRequiredArg().ofType(String.class);
             parser.accepts(WORKING_DIR, "Working directory for intermediate output").withRequiredArg().ofType(String.class);
@@ -91,6 +85,10 @@ public class ReAlignerOptions extends Options {
 			System.out.println("Missing required input SAM/BAM file");
 		}
 		
+		if (getInputFiles().length != getOutputFiles().length) {
+			System.out.println("Number of input files must equal number of output files");
+		}
+		
 		if (!getOptions().hasArgument(REFERENCE)) {
 			isValid = false;
 			System.out.println("Missing required reference");
@@ -116,30 +114,14 @@ public class ReAlignerOptions extends Options {
         }
 	}
 	
-	public String getInputFile() {
-		return (String) getOptions().valueOf(INPUT_SAM);
+	public String[] getInputFiles() {
+		return ((String) getOptions().valueOf(INPUT_SAM)).split(",");
 	}
 	
-	public String getOutputFile() {
-		return (String) getOptions().valueOf(OUTPUT_SAM);
+	public String[] getOutputFiles() {
+		return ((String) getOptions().valueOf(OUTPUT_SAM)).split(",");
 	}
-	
-	public String getInputFile2() {
-		return (String) getOptions().valueOf(INPUT_SAM2);
-	}
-	
-	public String getOutputFile2() {
-		return (String) getOptions().valueOf(OUTPUT_SAM2);
-	}
-	
-	public String getInputFile3() {
-		return (String) getOptions().valueOf(INPUT_SAM3);
-	}
-	
-	public String getOutputFile3() {
-		return (String) getOptions().valueOf(OUTPUT_SAM3);
-	}
-	
+		
 	public String getReference() {
 		return (String) getOptions().valueOf(REFERENCE);
 	}

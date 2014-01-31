@@ -69,7 +69,7 @@ public class CompareToReference2 {
 	}
 	
 	private long getRefLength(String refName) {
-		return refMap.get(refName.trim()).length * 4 + 1;
+		return refMap.get(refName.trim()).length * 4;
 	}
 	
 	public String getAlternateReference(SAMRecord read, Cigar cigar) {

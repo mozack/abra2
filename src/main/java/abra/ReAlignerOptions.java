@@ -1,8 +1,6 @@
 /* Copyright 2013 University of North Carolina at Chapel Hill.  All rights reserved. */
 package abra;
 
-import java.util.List;
-
 import joptsimple.OptionParser;
 
 /**
@@ -115,11 +113,21 @@ public class ReAlignerOptions extends Options {
 	}
 	
 	public String[] getInputFiles() {
-		return ((String) getOptions().valueOf(INPUT_SAM)).split(",");
+		String[] files = new String[0];
+		String sams = (String) getOptions().valueOf(INPUT_SAM);
+		if (sams != null) {
+			files = sams.split(",");
+		}
+		return files;
 	}
 	
 	public String[] getOutputFiles() {
-		return ((String) getOptions().valueOf(OUTPUT_SAM)).split(",");
+		String[] files = new String[0];
+		String sams = (String) getOptions().valueOf(OUTPUT_SAM);
+		if (sams != null) {
+			files = sams.split(",");
+		}
+		return files;
 	}
 		
 	public String getReference() {

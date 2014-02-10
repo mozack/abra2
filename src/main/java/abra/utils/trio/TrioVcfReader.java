@@ -16,7 +16,7 @@ import java.util.Map;
 import java.util.zip.GZIPInputStream;
 
 import abra.Feature;
-import abra.GtfLoader;
+import abra.RegionLoader;
 import abra.utils.trio.LocusGenotype.Genotype;
 
 import net.sf.samtools.SAMFileHeader;

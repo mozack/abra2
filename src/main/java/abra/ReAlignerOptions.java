@@ -20,18 +20,14 @@ public class ReAlignerOptions extends Options {
 	private static final String MIN_UNALIGNED_NODE_FREQUENCY = "umnf";
 	private static final String MIN_CONTIG_LENGTH = "mcl";
 	private static final String MAX_POTENTIAL_CONTIGS = "mpc";
-	private static final String MIN_CONTIG_RATIO = "mcr";
 	private static final String MIN_CONTIG_MAPQ = "mc-mapq";
 	private static final String NUM_THREADS = "threads";
-	private static final String SKIP_UNALIGNED_ASSEMBLY = "no-unalign";
+	private static final String UNALIGNED_ASSEMBLY = "aur";
 	private static final String MAX_UNALIGNED_READS = "mur";
-	private static final String PAIRED_END = "paired";
+	private static final String SINGLE_END = "single";
 	private static final String RNA = "rna";
 	private static final String RNA_OUTPUT = "rna-out";
 	private static final String MIN_BASE_QUALITY = "mbq";
-	private static final String FAVOR_GAP_EXTENSIONS = "fgap";
-	private static final String FILTER_SNP_CLUSTERS = "fsc";
-	private static final String PAD_REGIONS = "pad";
 	private static final String MIN_READ_CANDIDATE_FRACTION = "rcf";
 	
 	private OptionParser parser;
@@ -45,25 +41,21 @@ public class ReAlignerOptions extends Options {
             parser.accepts(OUTPUT_SAM, "Required list of output sam or bam file(s) separated by comma").withRequiredArg().ofType(String.class);
             parser.accepts(REFERENCE, "Genome reference location").withRequiredArg().ofType(String.class);
             parser.accepts(TARGET_REGIONS, "GTF containing target regions").withRequiredArg().ofType(String.class);
-            parser.accepts(WORKING_DIR, "Working directory for intermediate output").withRequiredArg().ofType(String.class);
-            parser.accepts(KMER_SIZE, "Assembly kmer size(delimit by commas if more than 1").withRequiredArg().ofType(String.class);
-            parser.accepts(MIN_NODE_FREQUENCY, "Assembly minimum node frequency").withRequiredArg().ofType(Integer.class);
-            parser.accepts(MIN_UNALIGNED_NODE_FREQUENCY, "Assembly minimum unaligned node frequency").withRequiredArg().ofType(Integer.class);
-            parser.accepts(MIN_CONTIG_LENGTH, "Assembly minimum contig length").withRequiredArg().ofType(Integer.class);
-            parser.accepts(MAX_POTENTIAL_CONTIGS, "Maximum number of potential contigs for a region").withRequiredArg().ofType(Integer.class);
-            parser.accepts(MIN_CONTIG_RATIO, "Minimum contig length as percentage of observed region length").withRequiredArg().ofType(Double.class);
-            parser.accepts(NUM_THREADS, "Number of threads (default: 2)").withRequiredArg().ofType(Integer.class);
-            parser.accepts(MIN_CONTIG_MAPQ, "Minimum contig mapping quality").withRequiredArg().ofType(Integer.class);
-            parser.accepts(SKIP_UNALIGNED_ASSEMBLY, "Skip assembly of reads that did not initially align.");
-            parser.accepts(MAX_UNALIGNED_READS, "Maximum number of unaligned reads to assemble").withRequiredArg().ofType(Integer.class);
-            parser.accepts(PAIRED_END, "Paired end");
-            parser.accepts(RNA, "Input RNA sam or bam file (optional)").withRequiredArg().ofType(String.class);
+            parser.accepts(WORKING_DIR, "Working directory for intermediate output.  Must not already exist").withRequiredArg().ofType(String.class);
+            parser.accepts(KMER_SIZE, "Assembly kmer size(delimit with commas if multiple sizes specified)").withRequiredArg().ofType(String.class);
+            parser.accepts(MIN_NODE_FREQUENCY, "Assembly minimum node frequency").withRequiredArg().ofType(Integer.class).defaultsTo(2);
+            parser.accepts(MIN_UNALIGNED_NODE_FREQUENCY, "Assembly minimum unaligned node frequency").withOptionalArg().ofType(Integer.class).defaultsTo(2);
+            parser.accepts(MIN_CONTIG_LENGTH, "Assembly minimum contig length").withOptionalArg().ofType(Integer.class).defaultsTo(-1);
+            parser.accepts(MAX_POTENTIAL_CONTIGS, "Maximum number of potential contigs for a region").withOptionalArg().ofType(Integer.class).defaultsTo(5000);
+            parser.accepts(NUM_THREADS, "Number of threads").withRequiredArg().ofType(Integer.class).defaultsTo(2);
+            parser.accepts(MIN_CONTIG_MAPQ, "Minimum contig mapping quality").withOptionalArg().ofType(Integer.class).defaultsTo(25);
+            parser.accepts(UNALIGNED_ASSEMBLY, "Assemble unaligned reads (currently disabled).");
+            parser.accepts(MAX_UNALIGNED_READS, "Maximum number of unaligned reads to assemble").withOptionalArg().ofType(Integer.class).defaultsTo(50000000);
+            parser.accepts(SINGLE_END, "Input is single end");
+            parser.accepts(RNA, "Input RNA sam or bam file (currently disabled)").withOptionalArg().ofType(String.class);
             parser.accepts(RNA_OUTPUT, "Output RNA sam or bam file (required if RNA input file specified)").withRequiredArg().ofType(String.class);
-            parser.accepts(MIN_BASE_QUALITY, "Minimum base quality for inclusion in assembly").withRequiredArg().ofType(Integer.class);
-            parser.accepts(FAVOR_GAP_EXTENSIONS, "Reduce penalty for gap extensions");
-            parser.accepts(FILTER_SNP_CLUSTERS, "Filter high numbers of nearby mismatches");
-            parser.accepts(PAD_REGIONS, "Expand target regions by read length");
-            parser.accepts(MIN_READ_CANDIDATE_FRACTION, "Minimum read candidate fraction for triggering assembly").withRequiredArg().ofType(Double.class);
+            parser.accepts(MIN_BASE_QUALITY, "Minimum base quality for inclusion in assembly").withOptionalArg().ofType(Integer.class).defaultsTo(20);
+            parser.accepts(MIN_READ_CANDIDATE_FRACTION, "Minimum read candidate fraction for triggering assembly").withRequiredArg().ofType(Double.class).defaultsTo(.02);
     	}
     	
     	return parser;
@@ -169,10 +161,6 @@ public class ReAlignerOptions extends Options {
 		return (Integer) getOptions().valueOf(MAX_POTENTIAL_CONTIGS);
 	}
 	
-	public double getMinContigRatio() {
-		return (Double) getOptions().valueOf(MIN_CONTIG_RATIO);
-	}
-	
 	public int getNumThreads() {
 		return getOptions().hasArgument(NUM_THREADS) ? (Integer) getOptions().valueOf(NUM_THREADS) : 2;
 	}
@@ -182,7 +170,7 @@ public class ReAlignerOptions extends Options {
 	}
 	
 	public boolean isSkipUnalignedAssembly() {
-		return getOptions().has(SKIP_UNALIGNED_ASSEMBLY);
+		return !getOptions().has(UNALIGNED_ASSEMBLY);
 	}
 	
 	public int getMaxUnalignedReads() {
@@ -190,7 +178,7 @@ public class ReAlignerOptions extends Options {
 	}
 	
 	public boolean isPairedEnd() {
-		return getOptions().has(PAIRED_END);
+		return !getOptions().has(SINGLE_END);
 	}
 	
 	public String getRnaSam() {
@@ -203,18 +191,6 @@ public class ReAlignerOptions extends Options {
 	
 	public int getMinBaseQuality() {
 		return (Integer) getOptions().valueOf(MIN_BASE_QUALITY);
-	}
-	
-	public boolean isGapExtensionFavored() {
-		return getOptions().has(FAVOR_GAP_EXTENSIONS);
-	}
-	
-	public boolean isFilterSnpClusters() {
-		return getOptions().has(FILTER_SNP_CLUSTERS);
-	}
-	
-	public boolean isPadRegions() {
-		return getOptions().has(PAD_REGIONS);
 	}
 	
 	public double getMinReadCandidateFraction() {

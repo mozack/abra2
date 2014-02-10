@@ -78,9 +78,6 @@ public class ReAligner {
 	private int maxInsertLength = -1;
 	
 	private boolean isPairedEnd = false;
-	private boolean isGapExtensionFavored = false;
-	private boolean isFilterSnpClusters = false;
-	private boolean isPadRegions = false;
 	
 	private String rnaSam = null;
 	private String rnaOutputSam = null;
@@ -250,9 +247,6 @@ public class ReAligner {
 		System.out.println("rna: " + rnaSam);
 		System.out.println("rna output: " + rnaOutputSam);
 		System.out.println("paired end: " + isPairedEnd);
-		System.out.println("isGapExtensionFavored: " + isGapExtensionFavored);
-		System.out.println("isFilterSnpClusters: " + isFilterSnpClusters);
-		System.out.println("isPadRegions: " + isPadRegions);
 		
 		System.out.println("Java version: " + System.getProperty("java.version"));
 		
@@ -451,7 +445,7 @@ public class ReAligner {
 		log("Aligning contigs");
 		Aligner aligner = new Aligner(reference, numThreads);
 		String contigsSam = tempDir + "/" + "all_contigs.sam";
-		aligner.align(contigFasta, contigsSam, isGapExtensionFavored);
+		aligner.align(contigFasta, contigsSam, false);
 		
 		if (isTightAlignment) {
 			log("Discarding contigs aligned outside of region");
@@ -477,7 +471,6 @@ public class ReAligner {
 			ContigChopper chopper = new ContigChopper();
 			chopper.setC2R(c2r);
 			chopper.setReadLength(this.readLength);
-			chopper.setFilterSnpClusters(this.isFilterSnpClusters);
 			
 			String contigsWithChimChopped = tempDir + "/" + "all_contigs_chim_chopped.bam";
 			chopper.chopClopDrop(this.regions, contigsWithChimSorted, contigsWithChimChopped);
@@ -668,9 +661,6 @@ public class ReAligner {
 	private void loadRegions() throws IOException {
 		GtfLoader loader = new GtfLoader();
 		regions = loader.load(regionsGtf);
-		if (isPadRegions) {
-			padRegions(regions, readLength);
-		}
 		
 //		RegionTracker regionTracker = new RegionTracker(regions, null);
 //		regions = regionTracker.identifyTargetRegions(inputBams, this.assemblerSettings.getMinBaseQuality(), readLength, c2r);
@@ -907,13 +897,6 @@ public class ReAligner {
 		return splitRegions;
 	}
 	
-	private void padRegions(List<Feature> regions, int readLength) {
-		System.out.println("Padding regions...");
-		for (Feature region : regions) {
-			region.pad(readLength);
-		}
-	}
-	
 	public static List<Feature> collapseRegions(List<Feature> regions, int readLength) {
 		List<Feature> collapsedRegions = new ArrayList<Feature>();
 		
@@ -1116,7 +1099,6 @@ public class ReAligner {
 			assemblerSettings.setMinNodeFrequncy(options.getMinNodeFrequency());
 			assemblerSettings.setMaxPotentialContigs(options
 					.getMaxPotentialContigs());
-			assemblerSettings.setMinContigRatio(options.getMinContigRatio());
 			assemblerSettings.setMinUnalignedNodeFrequency(options.getMinUnalignedNodeFrequency());
 			assemblerSettings.setMinBaseQuality(options.getMinBaseQuality());
 			assemblerSettings.setMinReadCandidateFraction(options.getMinReadCandidateFraction());
@@ -1133,9 +1115,6 @@ public class ReAligner {
 			realigner.isPairedEnd = options.isPairedEnd();
 			realigner.rnaSam = options.getRnaSam();
 			realigner.rnaOutputSam = options.getRnaSamOutput();
-			realigner.isGapExtensionFavored = options.isGapExtensionFavored();
-			realigner.isFilterSnpClusters = options.isFilterSnpClusters();
-			realigner.isPadRegions = options.isPadRegions();
 
 			long s = System.currentTimeMillis();
 			

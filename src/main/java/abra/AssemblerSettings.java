@@ -13,7 +13,6 @@ public class AssemblerSettings {
 	private int minUnalignedNodeFrequency;
 	private int minContigLength;
 	private int maxPotentialContigs;
-	private double minContigRatio;
 	private int minBaseQuality;
 	private double minReadCandidateFraction;
 		
@@ -80,15 +79,7 @@ public class AssemblerSettings {
 	public void setMaxPotentialContigs(int maxPotentialContigs) {
 		this.maxPotentialContigs = maxPotentialContigs;
 	}
-	
-	public double getMinContigRatio() {
-		return minContigRatio;
-	}
-	
-	public void setMinContigRatio(double minContigRatio) {
-		this.minContigRatio = minContigRatio;
-	}
-	
+		
 	public String getDescription() {
 		StringBuffer str = new StringBuffer();
 		
@@ -99,7 +90,6 @@ public class AssemblerSettings {
 		appendSetting(str, "minNodeFrequncy", minNodeFrequncy);
 		appendSetting(str, "minContigLength", minContigLength);
 		appendSetting(str, "maxPotentialContigs", maxPotentialContigs);
-		appendSetting(str, "minContigRatio", minContigRatio);
 		appendSetting(str, "minBaseQuality", minBaseQuality);
 		appendSetting(str, "minReadCandidateFraction", minReadCandidateFraction);
 		

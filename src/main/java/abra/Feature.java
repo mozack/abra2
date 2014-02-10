@@ -31,11 +31,6 @@ public class Feature {
 		return end;
 	}
 	
-	public void pad(long padding) {
-		start -= padding;
-		end += padding;
-	}
-	
 	public void setEnd(long end) {
 		this.end = end;
 	}

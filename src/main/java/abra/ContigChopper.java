@@ -31,7 +31,6 @@ public class ContigChopper {
 	
 	private int readLength;
 	private CompareToReference2 c2r;
-	private boolean isFilterSnpClusters;
 
 	private static int chunkIdx = 0;
 	
@@ -93,34 +92,17 @@ public class ContigChopper {
 			int numMismatches = c2r.numMismatches(chunk); 
 			
 			if (chunk.getCigarLength() != 1) {
-				if (isSnpClusterTestPassed(numMismatches)) {
-					filtered.put(chunk.getReadString(), chunk);
-				} else {
-					System.out.println("Filtering SNP cluster for chunk: " + chunk.getReadName());
-				}
+				filtered.put(chunk.getReadString(), chunk);
 			} else if (chunk.getCigar().getCigarElement(0).getOperator() != CigarOperator.M) {
-				if (isSnpClusterTestPassed(numMismatches)) {
-					filtered.put(chunk.getReadString(), chunk);
-				} else {
-					System.out.println("Filtering SNP cluster for chunk: " + chunk.getReadName());
-				}
+				filtered.put(chunk.getReadString(), chunk);
 			} else {
-				
 				if (numMismatches > 0) { 
-					if (isSnpClusterTestPassed(numMismatches)) {
-						filtered.put(chunk.getReadString(), chunk);
-					} else {
-						System.out.println("Filtering SNP cluster for chunk: " + chunk.getReadName());
-					}
+					filtered.put(chunk.getReadString(), chunk);
 				}
 			}
 		}
 		
 		return filtered;
-	}
-	
-	private boolean isSnpClusterTestPassed(int numMismatches) {
-		return ((!isFilterSnpClusters) || (numMismatches <= readLength/20));
 	}
 	
 	// Drop reads that are wholly contained within other reads
@@ -243,10 +225,6 @@ public class ContigChopper {
 	
 	public void setC2R(CompareToReference2 c2r) {
 		this.c2r = c2r;
-	}
-	
-	public void setFilterSnpClusters(boolean isFilterSnpClusters) {
-		this.isFilterSnpClusters = isFilterSnpClusters;
 	}
 	
 	private SAMRecord cloneRead(SAMRecord read) {

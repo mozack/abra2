@@ -47,7 +47,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(MIN_UNALIGNED_NODE_FREQUENCY, "Assembly minimum unaligned node frequency").withOptionalArg().ofType(Integer.class).defaultsTo(2);
             parser.accepts(MIN_CONTIG_LENGTH, "Assembly minimum contig length").withOptionalArg().ofType(Integer.class).defaultsTo(-1);
             parser.accepts(MAX_POTENTIAL_CONTIGS, "Maximum number of potential contigs for a region").withOptionalArg().ofType(Integer.class).defaultsTo(5000);
-            parser.accepts(NUM_THREADS, "Number of threads").withRequiredArg().ofType(Integer.class).defaultsTo(2);
+            parser.accepts(NUM_THREADS, "Number of threads").withRequiredArg().ofType(Integer.class).defaultsTo(4);
             parser.accepts(MIN_CONTIG_MAPQ, "Minimum contig mapping quality").withOptionalArg().ofType(Integer.class).defaultsTo(25);
             parser.accepts(UNALIGNED_ASSEMBLY, "Assemble unaligned reads (currently disabled).");
             parser.accepts(MAX_UNALIGNED_READS, "Maximum number of unaligned reads to assemble").withOptionalArg().ofType(Integer.class).defaultsTo(50000000);

@@ -46,6 +46,9 @@ public class ReAligner {
 	private static final long RANDOM_SEED = 1;
 	private static final int MAX_POTENTIAL_UNALIGNED_CONTIGS = 2000000;
 	
+	// Minimum sequence length recommended for use with bwa mem
+	private static final int MIN_CONTIG_LENGTH = 70;
+	
 	private SAMFileHeader[] samHeaders;
 	
 	private List<Feature> regions;
@@ -727,6 +730,10 @@ public class ReAligner {
 		}
 				
 		log("Max read length is: " + readLength);
+		if (assemblerSettings.getMinContigLength() < 1) {
+			assemblerSettings.setMinContigLength(Math.max(readLength+1, MIN_CONTIG_LENGTH));
+		}
+		log("Min contig length: " + assemblerSettings.getMinContigLength());
 	}
 	
 	//TODO: Dedup with getSamHeaderAndReadLength

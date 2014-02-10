@@ -659,7 +659,7 @@ public class ReAligner {
 	}
 		
 	private void loadRegions() throws IOException {
-		GtfLoader loader = new GtfLoader();
+		RegionLoader loader = new RegionLoader();
 		regions = loader.load(regionsGtf);
 		
 //		RegionTracker regionTracker = new RegionTracker(regions, null);

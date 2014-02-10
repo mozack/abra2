@@ -47,7 +47,7 @@ public class ReAlignerStats {
 	public void getOtherReads(String outputSam) throws IOException {
 		
 		
-		GtfLoader loader = new GtfLoader();
+		RegionLoader loader = new RegionLoader();
 		regions = loader.load(regionsGtf);
 		
 //		printRegionHeader();
@@ -76,7 +76,7 @@ public class ReAlignerStats {
 	}
 	
 	public void run() throws IOException {
-		GtfLoader loader = new GtfLoader();
+		RegionLoader loader = new RegionLoader();
 		regions = loader.load(regionsGtf);
 		
 		printRegionHeader();

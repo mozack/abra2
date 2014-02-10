@@ -6,7 +6,7 @@ import java.io.IOException;
 import java.util.List;
 
 import abra.Feature;
-import abra.GtfLoader;
+import abra.RegionLoader;
 import abra.ReAligner;
 
 import net.sf.samtools.SAMFileReader;
@@ -25,7 +25,7 @@ public class BaseQualityByRegion {
 		
 		SAMFileReader reader = new SAMFileReader(new File(input));
 		
-		GtfLoader loader = new GtfLoader();
+		RegionLoader loader = new RegionLoader();
 		List<Feature> regions = loader.load(regionsGtf);
 		
 		regions = ReAligner.splitRegions(regions);

@@ -242,7 +242,7 @@ public class ContigChopper {
 //		c2r.init("/home/lmose/reference/chr6/chr6.fa");
 		c2r.init("/home/lmose/reference/chr1/chr1.fa");
 		
-		GtfLoader loader = new GtfLoader();
+		RegionLoader loader = new RegionLoader();
 //		List<Feature> regions = loader.load("/home/lmose/dev/abra_wxs/3/sim83.gtf");
 //		List<Feature> regions = loader.load("/home/lmose/dev/ayc/regions/clinseq5/setd2.gtf");
 		List<Feature> regions = loader.load("/home/lmose/dev/ayc/regions/clinseq5/chop3.gtf");

@@ -234,7 +234,7 @@ public class Sam2Fastq {
 		Sam2Fastq s2f = new Sam2Fastq();
 		
 		
-		GtfLoader loader = new GtfLoader();
+		RegionLoader loader = new RegionLoader();
 		List<Feature> regions = loader.load("/home/lmose/dev/ayc/regions/clinseq5/uncseq5.gtf");
 		
 		regions = ReAligner.collapseRegions(regions, 100);

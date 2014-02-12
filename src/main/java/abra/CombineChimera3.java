@@ -1,8 +1,6 @@
 /* Copyright 2013 University of North Carolina at Chapel Hill.  All rights reserved. */
 package abra;
 
-import static abra.ReAligner.MAX_REGION_LENGTH;
-
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -24,6 +22,10 @@ import net.sf.samtools.SAMFileHeader.SortOrder;
  * @author Lisle E. Mose (lmose at unc dot edu)
  */
 public class CombineChimera3 {
+	
+	// TODO: Revisit this requirement. Consider removing when
+	// introducing dynamic complex region identification
+	private static final int MAX_GAP_LENGTH = 2000;
 	
 	// Minimum number of non clipped bases that must be between an identified indel and
 	// the beginning/end of the contig
@@ -76,7 +78,7 @@ public class CombineChimera3 {
 				(read1.getReadNegativeStrandFlag() == read2.getReadNegativeStrandFlag()) &&
 				(read1.getCigarLength() >= 2) &&
 				(read2.getCigarLength() >= 2) &&
-				(Math.abs(read1.getAlignmentStart()-read2.getAlignmentStart()) < MAX_REGION_LENGTH*2)) {
+				(Math.abs(read1.getAlignmentStart()-read2.getAlignmentStart()) < MAX_GAP_LENGTH)) {
 				
 				SAMRecord combinedRead = combineChimericReads(read1, read2);
 				if (combinedRead != null) {

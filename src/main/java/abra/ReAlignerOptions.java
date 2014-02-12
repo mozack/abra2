@@ -162,7 +162,7 @@ public class ReAlignerOptions extends Options {
 	}
 	
 	public int getNumThreads() {
-		return getOptions().hasArgument(NUM_THREADS) ? (Integer) getOptions().valueOf(NUM_THREADS) : 2;
+		return getOptions().hasArgument(NUM_THREADS) ? (Integer) getOptions().valueOf(NUM_THREADS) : 4;
 	}
 	
 	public int getMinContigMapq() {

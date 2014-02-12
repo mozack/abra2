@@ -153,7 +153,7 @@ public class ReAligner {
 		log("Iterating over regions");
 		
 		for (Feature region : regions) {
-			log("Spawning thread for: " + region.getDescriptor());
+			log("Processing region: " + region.getDescriptor());
 			spawnRegionThread(region, null);
 		}
 		

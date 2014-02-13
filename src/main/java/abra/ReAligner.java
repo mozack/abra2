@@ -986,6 +986,7 @@ public class ReAligner {
 		assem.setMinKmerFrequency(assemblerSettings.getMinNodeFrequncy());
 		assem.setMinBaseQuality(assemblerSettings.getMinBaseQuality());
 		assem.setMinReadCandidateFraction(assemblerSettings.getMinReadCandidateFraction());
+		assem.setMaxAverageDepth(assemblerSettings.getMaxAverageDepth());
 
 		return assem;
 	}

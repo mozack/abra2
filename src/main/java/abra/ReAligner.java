@@ -649,10 +649,17 @@ public class ReAligner {
 			}
 			
 			// Assemble contigs
-			Assembler assem = newAssembler();
-			String contigs = assem.assembleContigs(bams, contigsFasta, tempDir, region, region.getDescriptor(), true, this, c2r);
+			NativeAssembler assem = (NativeAssembler) newAssembler();
+			List<Feature> regions = new ArrayList<Feature>();
+			regions.add(region);
+			String contigs = assem.assembleContigs(bams, contigsFasta, tempDir, regions, region.getDescriptor(), true, this, c2r);
 			if (!contigs.equals("<ERROR>") && !contigs.equals("<REPEAT>") && !contigs.isEmpty()) {
 				appendContigs(contigs);
+			}
+			
+			List<Feature> svCandidates = assem.getSvCandidateRegions();
+			for (Feature svCandidate : svCandidates) {
+				System.out.println("SV: " + region.getDescriptor() + "-->" + svCandidate.getDescriptor());
 			}
 		}
 		catch (Exception e) {
@@ -973,7 +980,7 @@ public class ReAligner {
 		return regions;
 	}
 		
-	private Assembler newAssembler() {
+	private NativeAssembler newAssembler() {
 		NativeAssembler assem = new NativeAssembler();
 
 		assem.setTruncateOutputOnRepeat(true);
@@ -991,7 +998,7 @@ public class ReAligner {
 		return assem;
 	}
 	
-	private Assembler newUnalignedAssembler(int mnfMultiplier) {
+	private NativeAssembler newUnalignedAssembler(int mnfMultiplier) {
 		//Assembler assem = new JavaAssembler();
 		NativeAssembler assem = new NativeAssembler();
 

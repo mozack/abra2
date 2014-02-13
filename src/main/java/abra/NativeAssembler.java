@@ -3,6 +3,7 @@ package abra;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -18,7 +19,7 @@ import net.sf.samtools.SAMFileReader.ValidationStringency;
  * 
  * @author Lisle E. Mose (lmose at unc dot edu)
  */
-public class NativeAssembler implements Assembler {
+public class NativeAssembler {
 	
 	private boolean truncateOnRepeat;
 	private int maxContigs;
@@ -30,6 +31,8 @@ public class NativeAssembler implements Assembler {
 	private double minReadCandidateFraction;
 	private Set<String> readIds;
 	private int maxAverageDepth;
+	List<Position> svCandidates = new ArrayList<Position>();
+	List<Feature> svCandidateRegions = new ArrayList<Feature>();
 
 	private native String assemble(String input, String output, String prefix, int truncateOnRepeat, int maxContigs, int maxPathsFromRoot, int readLength, int kmerSize, int minKmerFreq, int minBaseQuality);
 	
@@ -73,13 +76,21 @@ public class NativeAssembler implements Assembler {
 		return (double) region.getLength() / (double) readLength + 2;
 	}
 	
-	//
-	//  Calc desired number of reads per file.
-	private int desiredNumberOfReads(Feature region) {
-		return (int) (readLengthsPerRegion(region) * (double) maxAverageDepth); 
+	private double readLengthsForAllRegions(List<Feature> regions) {
+		double lengths = 0;
+		for (Feature region : regions) {
+			lengths += readLengthsPerRegion(region);
+		}
+		return lengths;
 	}
 	
-	public String assembleContigs(List<String> inputFiles, String output, String tempDir, Feature region, String prefix,
+	//
+	//  Calc desired number of reads per file.
+	private int desiredNumberOfReads(List<Feature> regions) {
+		return (int) (readLengthsForAllRegions(regions) * (double) maxAverageDepth); 
+	}
+	
+	public String assembleContigs(List<String> inputFiles, String output, String tempDir, List<Feature> regions, String prefix,
 			boolean checkForDupes, ReAligner realigner, CompareToReference2 c2r) {
 		
 		String contigs = "";
@@ -100,76 +111,82 @@ public class NativeAssembler implements Assembler {
 				List<SAMRecord> reads = new ArrayList<SAMRecord>();
 				readsList.add(reads);
 				
-				SAMFileReader reader = new SAMFileReader(new File(input));
-				reader.setValidationStringency(ValidationStringency.SILENT);
-	
-				Iterator<SAMRecord> iter;
-				if (region != null) {
-					iter = reader.queryOverlapping(region.getSeqname(), (int) region.getStart(), (int) region.getEnd());
-				} else {
-					iter = reader.iterator();
-				}
 				
-				int candidateReadCount = 0;
-				
-				while (iter.hasNext()) {
+				for (Feature region : regions) {
+					SAMFileReader reader = new SAMFileReader(new File(input));
+					reader.setValidationStringency(ValidationStringency.SILENT);
 					
-					SAMRecord read = iter.next();
-					readCount++;
-					
-					if (read.getReadLength() > readLength) {
-						reader.close();
-						throw new IllegalArgumentException(
-								"Read length exceeds expected value of: " + readLength + " for read [" +
-								read.getSAMString() + "]");
+					Iterator<SAMRecord> iter;
+					if (region != null) {
+						iter = reader.queryOverlapping(region.getSeqname(), (int) region.getStart(), (int) region.getEnd());
+					} else {
+						iter = reader.iterator();
 					}
 					
-					// Don't allow same read to be counted twice.
-					if ( (!realigner.isFiltered(read)) && 
-						 (!read.getDuplicateReadFlag()) && 
-						 (!read.getReadFailsVendorQualityCheckFlag()) &&
-						 //(Sam2Fastq.isPrimary(read)) &&
-						 (!isHardClipped(read)) &&
-						 ((!checkForDupes) || (!readIds.contains(getIdentifier(read))))) {
-
-						Integer numBestHits = (Integer) read.getIntegerAttribute("X0");
-						boolean hasAmbiguousInitialAlignment = numBestHits != null && numBestHits > 1;
+					int candidateReadCount = 0;
+					
+					while (iter.hasNext()) {
 						
-						if (!hasAmbiguousInitialAlignment) {
-							if (!checkForDupes) {
-								readIds.add(getIdentifier(read));
-							}
+						SAMRecord read = iter.next();
+						readCount++;
+						
+						if (read.getReadLength() > readLength) {
+							reader.close();
+							throw new IllegalArgumentException(
+									"Read length exceeds expected value of: " + readLength + " for read [" +
+									read.getSAMString() + "]");
+						}
+						
+						// Don't allow same read to be counted twice.
+						if ( (!realigner.isFiltered(read)) && 
+							 (!read.getDuplicateReadFlag()) && 
+							 (!read.getReadFailsVendorQualityCheckFlag()) &&
+							 //(Sam2Fastq.isPrimary(read)) &&
+							 (!isHardClipped(read)) &&
+							 ((!checkForDupes) || (!readIds.contains(getIdentifier(read))))) {
+	
+							Integer numBestHits = (Integer) read.getIntegerAttribute("X0");
+							boolean hasAmbiguousInitialAlignment = numBestHits != null && numBestHits > 1;
 							
-							// Increment candidate count for indels
-							if (!isAssemblyCandidate && read.getCigarString().contains("I") || read.getCigarString().contains("D")) {
-								candidateReadCount++;
-							}
-
-							// Increment candidate count for substantial high quality soft clipping
-							// TODO: Check for chimera directly?
-							if (!isAssemblyCandidate && (read.getCigarString().contains("S"))) {
-								if (c2r.numHighQualityMismatches(read, minBaseQuality) > (readLength/10)) {
+							if (!hasAmbiguousInitialAlignment) {
+								if (!checkForDupes) {
+									readIds.add(getIdentifier(read));
+								}
+								
+								// Increment candidate count for indels
+								if (!isAssemblyCandidate && read.getCigarString().contains("I") || read.getCigarString().contains("D")) {
 									candidateReadCount++;
 								}
-							}
-							
-							// Increment candidate count if read contains at least 3 high quality mismatches
-							if (!isAssemblyCandidate && (SAMRecordUtils.getIntAttribute(read, "NM") >= 3)) {
-								if (c2r.numHighQualityMismatches(read, minBaseQuality) > 3) {
-									candidateReadCount++;
+	
+								// Increment candidate count for substantial high quality soft clipping
+								// TODO: Check for chimera directly?
+								if (!isAssemblyCandidate && (read.getCigarString().contains("S"))) {
+									if (c2r.numHighQualityMismatches(read, minBaseQuality) > (readLength/10)) {
+										candidateReadCount++;
+									}
+								}
+								
+								// Increment candidate count if read contains at least 3 high quality mismatches
+								if (!isAssemblyCandidate && (SAMRecordUtils.getIntAttribute(read, "NM") >= 3)) {
+									if (c2r.numHighQualityMismatches(read, minBaseQuality) > 3) {
+										candidateReadCount++;
+									}
+								}
+								
+								reads.add(read);
+								
+								if (isSvCandidate(read, region)) {
+									svCandidates.add(new Position(read.getMateReferenceName(), read.getMateAlignmentStart()));
 								}
 							}
-							
-							reads.add(read);
-							
 						}
 					}
-				}
-				
-				reader.close();
-				
-				if (candidateReadCount > minCandidateCount(reads.size(), region)) {
-					isAssemblyCandidate = true;
+					
+					reader.close();
+					
+					if (candidateReadCount > minCandidateCount(reads.size(), region)) {
+						isAssemblyCandidate = true;
+					}
 				}
 			}
 			
@@ -179,7 +196,7 @@ public class NativeAssembler implements Assembler {
 			
 			if (isAssemblyCandidate) {
 				
-				int downsampleTarget = desiredNumberOfReads(region);
+				int downsampleTarget = desiredNumberOfReads(regions);
 				
 				for (List<SAMRecord> reads : readsList) {
 					// Default to always keep
@@ -254,11 +271,53 @@ public class NativeAssembler implements Assembler {
 			throw new RuntimeException(e);
 		}
 		
+		Collections.sort(this.svCandidates);
+		Position last = null;
+		String currentFeatureChr = null;
+		int currentFeatureStart = -1;
+		int currentFeatureStop = -1;
+		for (Position pos : this.svCandidates) {
+			if ((last != null) && pos.getChromosome().equals(last.getChromosome()) && 
+				 Math.abs(pos.getPosition()-last.getPosition()) < readLength) {
+				
+				if (currentFeatureChr == null) {
+					currentFeatureChr = pos.getChromosome();
+					currentFeatureStart = last.getPosition();
+					currentFeatureStop = pos.getPosition() + readLength;
+				} else {
+					currentFeatureStop = pos.getPosition() + readLength;
+				}
+			} else {
+				if (currentFeatureChr != null) {
+					this.svCandidateRegions.add(new Feature(currentFeatureChr, currentFeatureStart-readLength, currentFeatureStop+readLength));
+					currentFeatureChr = null;
+					currentFeatureStart = -1;
+					currentFeatureStop = -1;
+				}
+			}
+		}
+		
 		long end = System.currentTimeMillis();
 		
-		System.out.println("Elapsed_msecs_in_NativeAssembler\tRegion:\t" + region.getDescriptor() + "\tLength:\t" + region.getLength() + "\tReadCount:\t" + readCount + "\tElapsed\t" + (end-start));
+		System.out.println("Elapsed_msecs_in_NativeAssembler\tRegion:\t" + regions.get(0).getDescriptor() + "\tLength:\t" + regions.get(0).getLength() + "\tReadCount:\t" + readCount + "\tElapsed\t" + (end-start));
 		
 		return contigs;
+	}
+	
+	private boolean isSvCandidate(SAMRecord read, Feature region) {
+		boolean isCandidate = false;
+		if (!read.getProperPairFlag() && !read.getMateUnmappedFlag() && (read.getInferredInsertSize() > 400)) {
+			if (!read.getReferenceName().equals(read.getMateReferenceName())) {
+				isCandidate = true;
+			} else if (!region.overlaps(read.getMateReferenceName(), read.getMateAlignmentStart()-(int)region.getLength(), read.getMateAlignmentStart()+read.getReadLength()+(int)region.getLength())) {
+				isCandidate = true;
+			}
+		}
+		return isCandidate;
+	}
+	
+	public List<Feature> getSvCandidateRegions() {
+		return this.svCandidateRegions;
 	}
 	
 	private boolean hasLowQualityBase(SAMRecord read) {
@@ -320,6 +379,33 @@ public class NativeAssembler implements Assembler {
 		this.minReadCandidateFraction = minReadCandidateFraction;
 	}
 	
+	static class Position implements Comparable<Position> {
+		private String chromosome;
+		private int position;
+		
+		Position(String chromosome, int position) {
+			this.chromosome = chromosome;
+			this.position = position;
+		}
+		
+		String getChromosome() {
+			return chromosome;
+		}
+		
+		int getPosition() {
+			return position;
+		}
+
+		@Override
+		public int compareTo(Position that) {
+			int compare = this.chromosome.compareTo(that.chromosome);
+			if (compare == 0) {
+				compare = this.position - that.position;
+			}
+			return compare;
+		}
+	}
+	
 	public static void main(String[] args) throws Exception {
 		NativeAssembler assem = new NativeAssembler();
 		assem.setTruncateOutputOnRepeat(true);
@@ -344,7 +430,9 @@ public class NativeAssembler implements Assembler {
 		CompareToReference2 c2r = new CompareToReference2();
 		c2r.init(args[3]);
 		
-		assem.assembleContigs(inputFiles, output, "asm_temp", region, prefix, checkForDupes, realigner, c2r);
+		List<Feature> regions = new ArrayList<Feature>();
+		regions.add(region);
+		assem.assembleContigs(inputFiles, output, "asm_temp", regions, prefix, checkForDupes, realigner, c2r);
 		
 //		assem.assembleContigs(args[0], args[1], "contig");
 		

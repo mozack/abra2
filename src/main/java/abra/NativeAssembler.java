@@ -20,8 +20,6 @@ import net.sf.samtools.SAMFileReader.ValidationStringency;
  */
 public class NativeAssembler implements Assembler {
 	
-	private static final int MIN_AVG_DEPTH_FOR_DOWNSAMPLING = 100;
-	
 	private boolean truncateOnRepeat;
 	private int maxContigs;
 	private int maxPathsFromRoot;
@@ -31,6 +29,7 @@ public class NativeAssembler implements Assembler {
 	private int minBaseQuality;
 	private double minReadCandidateFraction;
 	private Set<String> readIds;
+	private int maxAverageDepth;
 
 	private native String assemble(String input, String output, String prefix, int truncateOnRepeat, int maxContigs, int maxPathsFromRoot, int readLength, int kmerSize, int minKmerFreq, int minBaseQuality);
 	
@@ -77,7 +76,7 @@ public class NativeAssembler implements Assembler {
 	//
 	//  Calc desired number of reads per file.
 	private int desiredNumberOfReads(Feature region) {
-		return (int) (readLengthsPerRegion(region) * (double) MIN_AVG_DEPTH_FOR_DOWNSAMPLING); 
+		return (int) (readLengthsPerRegion(region) * (double) maxAverageDepth); 
 	}
 	
 	public String assembleContigs(List<String> inputFiles, String output, String tempDir, Feature region, String prefix,
@@ -311,6 +310,10 @@ public class NativeAssembler implements Assembler {
 	
 	public void setMinBaseQuality(int minBaseQuality) {
 		this.minBaseQuality = minBaseQuality;
+	}
+	
+	public void setMaxAverageDepth(int maxAverageDepth) {
+		this.maxAverageDepth = maxAverageDepth;
 	}
 	
 	public void setMinReadCandidateFraction(double minReadCandidateFraction) {

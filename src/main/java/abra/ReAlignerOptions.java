@@ -29,6 +29,7 @@ public class ReAlignerOptions extends Options {
 	private static final String RNA_OUTPUT = "rna-out";
 	private static final String MIN_BASE_QUALITY = "mbq";
 	private static final String MIN_READ_CANDIDATE_FRACTION = "rcf";
+	private static final String MAX_AVERAGE_REGION_DEPTH = "mad";
 	
 	private OptionParser parser;
 	private boolean isValid;
@@ -55,7 +56,8 @@ public class ReAlignerOptions extends Options {
             parser.accepts(RNA, "Input RNA sam or bam file (currently disabled)").withOptionalArg().ofType(String.class);
             parser.accepts(RNA_OUTPUT, "Output RNA sam or bam file (required if RNA input file specified)").withRequiredArg().ofType(String.class);
             parser.accepts(MIN_BASE_QUALITY, "Minimum base quality for inclusion in assembly").withOptionalArg().ofType(Integer.class).defaultsTo(20);
-            parser.accepts(MIN_READ_CANDIDATE_FRACTION, "Minimum read candidate fraction for triggering assembly").withRequiredArg().ofType(Double.class).defaultsTo(.02);
+            parser.accepts(MIN_READ_CANDIDATE_FRACTION, "Minimum read candidate fraction for triggering assembly").withRequiredArg().ofType(Double.class).defaultsTo(.01);
+            parser.accepts(MAX_AVERAGE_REGION_DEPTH, "Regions with average depth exceeding this value will be downsampled").withRequiredArg().ofType(Integer.class).defaultsTo(400);
     	}
     	
     	return parser;
@@ -195,6 +197,10 @@ public class ReAlignerOptions extends Options {
 	
 	public double getMinReadCandidateFraction() {
 		return (Double) getOptions().valueOf(MIN_READ_CANDIDATE_FRACTION);
+	}
+	
+	public int getMaxAverageRegionDepth() {
+		return (Integer) getOptions().valueOf(MAX_AVERAGE_REGION_DEPTH);
 	}
 	
 	public boolean isValid() {

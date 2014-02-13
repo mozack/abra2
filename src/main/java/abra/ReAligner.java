@@ -1109,6 +1109,7 @@ public class ReAligner {
 			assemblerSettings.setMinUnalignedNodeFrequency(options.getMinUnalignedNodeFrequency());
 			assemblerSettings.setMinBaseQuality(options.getMinBaseQuality());
 			assemblerSettings.setMinReadCandidateFraction(options.getMinReadCandidateFraction());
+			assemblerSettings.setMaxAverageDepth(options.getMaxAverageRegionDepth());
 
 			ReAligner realigner = new ReAligner();
 			realigner.setReference(options.getReference());

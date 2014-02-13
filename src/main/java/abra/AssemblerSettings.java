@@ -15,7 +15,16 @@ public class AssemblerSettings {
 	private int maxPotentialContigs;
 	private int minBaseQuality;
 	private double minReadCandidateFraction;
+	private int maxAverageDepth;
 		
+	public int getMaxAverageDepth() {
+		return maxAverageDepth;
+	}
+
+	public void setMaxAverageDepth(int maxAverageDepth) {
+		this.maxAverageDepth = maxAverageDepth;
+	}
+
 	public double getMinReadCandidateFraction() {
 		return minReadCandidateFraction;
 	}
@@ -92,6 +101,7 @@ public class AssemblerSettings {
 		appendSetting(str, "maxPotentialContigs", maxPotentialContigs);
 		appendSetting(str, "minBaseQuality", minBaseQuality);
 		appendSetting(str, "minReadCandidateFraction", minReadCandidateFraction);
+		appendSetting(str, "maxAverageRegionDepth", maxAverageDepth);
 		
 		return str.toString();
 	}

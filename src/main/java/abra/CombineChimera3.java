@@ -25,7 +25,7 @@ public class CombineChimera3 {
 	
 	// TODO: Revisit this requirement. Consider removing when
 	// introducing dynamic complex region identification
-	private static final int MAX_GAP_LENGTH = 2000;
+	public static final int MAX_GAP_LENGTH = 2000;
 	
 	// Minimum number of non clipped bases that must be between an identified indel and
 	// the beginning/end of the contig

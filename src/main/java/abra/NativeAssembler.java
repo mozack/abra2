@@ -33,6 +33,7 @@ public class NativeAssembler {
 	private int maxAverageDepth;
 	List<Position> svCandidates = new ArrayList<Position>();
 	List<Feature> svCandidateRegions = new ArrayList<Feature>();
+	private boolean shouldSearchForSv = false;
 
 	private native String assemble(String input, String output, String prefix, int truncateOnRepeat, int maxContigs, int maxPathsFromRoot, int readLength, int kmerSize, int minKmerFreq, int minBaseQuality);
 	
@@ -98,6 +99,8 @@ public class NativeAssembler {
 		long start = System.currentTimeMillis();
 		
 		int readCount = 0;
+		
+		int minReadCount = Integer.MAX_VALUE;
 		
 		try {
 			
@@ -175,7 +178,7 @@ public class NativeAssembler {
 								
 								reads.add(read);
 								
-								if (isSvCandidate(read, region)) {
+								if (shouldSearchForSv && isSvCandidate(read, region)) {
 									svCandidates.add(new Position(read.getMateReferenceName(), read.getMateAlignmentStart()));
 								}
 							}
@@ -187,6 +190,10 @@ public class NativeAssembler {
 					if (candidateReadCount > minCandidateCount(reads.size(), region)) {
 						isAssemblyCandidate = true;
 					}
+				}
+				
+				if (reads.size() < minReadCount) {
+					minReadCount = reads.size();
 				}
 			}
 			
@@ -276,25 +283,41 @@ public class NativeAssembler {
 		String currentFeatureChr = null;
 		int currentFeatureStart = -1;
 		int currentFeatureStop = -1;
+		int currentFeatureCount = 0;
+		
+		// TODO: Calc this dynamically
+		int fragLen = 500;
+		
 		for (Position pos : this.svCandidates) {
 			if ((last != null) && pos.getChromosome().equals(last.getChromosome()) && 
-				 Math.abs(pos.getPosition()-last.getPosition()) < readLength) {
+				 Math.abs(pos.getPosition()-last.getPosition()) < fragLen) {
 				
 				if (currentFeatureChr == null) {
 					currentFeatureChr = pos.getChromosome();
 					currentFeatureStart = last.getPosition();
 					currentFeatureStop = pos.getPosition() + readLength;
+					currentFeatureCount = 1;
 				} else {
 					currentFeatureStop = pos.getPosition() + readLength;
+					currentFeatureCount++;
 				}
 			} else {
 				if (currentFeatureChr != null) {
-					this.svCandidateRegions.add(new Feature(currentFeatureChr, currentFeatureStart-readLength, currentFeatureStop+readLength));
+					if (currentFeatureCount > minReadCount * .02) {
+						this.svCandidateRegions.add(new Feature(currentFeatureChr, currentFeatureStart-readLength, currentFeatureStop+readLength));
+					}
 					currentFeatureChr = null;
 					currentFeatureStart = -1;
 					currentFeatureStop = -1;
+					currentFeatureCount = 0;
+				} else {
+					currentFeatureChr = pos.getChromosome();
+					currentFeatureStart = pos.getPosition();
+					currentFeatureStop = pos.getPosition() + readLength;
+					currentFeatureCount = 1;
 				}
 			}
+			last = pos;
 		}
 		
 		long end = System.currentTimeMillis();
@@ -306,14 +329,23 @@ public class NativeAssembler {
 	
 	private boolean isSvCandidate(SAMRecord read, Feature region) {
 		boolean isCandidate = false;
-		if (!read.getProperPairFlag() && !read.getMateUnmappedFlag() && (read.getInferredInsertSize() > 400)) {
+		if (!read.getProperPairFlag() && !read.getMateUnmappedFlag()) {
 			if (!read.getReferenceName().equals(read.getMateReferenceName())) {
 				isCandidate = true;
-			} else if (!region.overlaps(read.getMateReferenceName(), read.getMateAlignmentStart()-(int)region.getLength(), read.getMateAlignmentStart()+read.getReadLength()+(int)region.getLength())) {
+			} else if (Math.abs(read.getAlignmentStart() - read.getMateAlignmentStart()) > CombineChimera3.MAX_GAP_LENGTH &&
+					!region.overlaps(read.getMateReferenceName(), read.getMateAlignmentStart()-(int)region.getLength(), read.getMateAlignmentStart()+read.getReadLength()+(int)region.getLength())) {
 				isCandidate = true;
 			}
 		}
 		return isCandidate;
+	}
+	
+	public boolean shouldSearchForSv() {
+		return shouldSearchForSv;
+	}
+
+	public void setShouldSearchForSv(boolean shouldSearchForSv) {
+		this.shouldSearchForSv = shouldSearchForSv;
 	}
 	
 	public List<Feature> getSvCandidateRegions() {
@@ -395,6 +427,10 @@ public class NativeAssembler {
 		int getPosition() {
 			return position;
 		}
+		
+		public String toString() {
+			return chromosome + ":" + position;
+		}
 
 		@Override
 		public int compareTo(Position that) {
@@ -407,32 +443,46 @@ public class NativeAssembler {
 	}
 	
 	public static void main(String[] args) throws Exception {
+		
+		NativeLibraryLoader l = new NativeLibraryLoader();
+		l.load("/home/lmose/code/abra/target");
+		
 		NativeAssembler assem = new NativeAssembler();
 		assem.setTruncateOutputOnRepeat(true);
-		assem.setMaxContigs(50000);
-		assem.setMaxPathsFromRoot(100000);
+		assem.setMaxContigs(5000);
+		assem.setMaxPathsFromRoot(5000);
 		assem.setKmer(new int[] { 43 });
 		assem.setReadLength(100);
 		assem.setMinKmerFrequency(2);
+		assem.setMaxAverageDepth(400);
 		
-		String bam1 = args[0];
-		String bam2 = args[1];
+//		String bam1 = args[0];
+		String bam1 = "/home/lmose/dev/abra/sv/test.bam";
 		List<String> inputFiles = new ArrayList<String>();
 		inputFiles.add(bam1);
-		inputFiles.add(bam2);
 		
-		String output = args[2];
-		
-		Feature region = new Feature("chr1", 6162053, 6162453);
+		//String output = args[2];
+		String output = "/home/lmose/dev/abra/sv/output.txt";
+		//chr18:60,793,358-60,793,758
+		Feature region = new Feature("chr18", 60793358, 60793758);
 		String prefix = "pre";
 		boolean checkForDupes = true;
 		ReAligner realigner = new ReAligner();
 		CompareToReference2 c2r = new CompareToReference2();
-		c2r.init(args[3]);
+		//c2r.init(args[3]);
+		c2r.init("/home/lmose/reference/chr18/chr18.fa");
 		
 		List<Feature> regions = new ArrayList<Feature>();
 		regions.add(region);
-		assem.assembleContigs(inputFiles, output, "asm_temp", regions, prefix, checkForDupes, realigner, c2r);
+		String contigs = assem.assembleContigs(inputFiles, output, "asm_temp", regions, prefix, checkForDupes, realigner, c2r);
+		System.out.println(contigs);
+		
+		System.out.println("-------------------------");
+		
+		List<Feature> svCandidates = assem.getSvCandidateRegions();
+		for (Feature svCandidate : svCandidates) {
+			System.out.println("SV: " + region.getDescriptor() + "-->" + svCandidate.getDescriptor());
+		}
 		
 //		assem.assembleContigs(args[0], args[1], "contig");
 		

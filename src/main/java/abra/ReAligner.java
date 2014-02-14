@@ -994,6 +994,7 @@ public class ReAligner {
 		assem.setMinBaseQuality(assemblerSettings.getMinBaseQuality());
 		assem.setMinReadCandidateFraction(assemblerSettings.getMinReadCandidateFraction());
 		assem.setMaxAverageDepth(assemblerSettings.getMaxAverageDepth());
+		assem.setShouldSearchForSv(this.isPairedEnd);
 
 		return assem;
 	}

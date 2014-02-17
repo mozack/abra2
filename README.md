@@ -3,23 +3,20 @@ abra
 
 Assembly Based ReAligner
 
-Running ABRA currently requires bwa 0.7.5a in the command path
+Running ABRA currently requires bwa 0.7.5a (or similar) in the command path
 
-Sample command line for v0.69:
+Sample command line for v0.75:
 
 ```
-java -Xss8M -Xmx20G -XX:MaxPermSize=256M  -jar $JAR --in $BAM --kmer 43,53,63,73,83 --mc-mapq 25 --mcl 102 --mcr -1.0 --mnf 2 --umnf 2 --mpc 50000 --out $ABRA_BAM --ref $REF --targets wxs.gtf --threads 8 --working $WORK --mur 50000000 --paired --no-unalign --mbq 5
+java -Xmx4G -jar $JAR --in normal.bam,tumor.bam --kmer 43,53,63,73,83 --out normal.abra.bam,tumor.abra.bam --ref $REF --targets wxs.bed --threads 8 --working abra.work > abra.log 2>&1
 ```
 
-Pre-packaged jars are available for 64 bit linux: https://github.com/mozack/abra/releases
+Pre-packaged jars are available for 64 bit linux here: https://github.com/mozack/abra/releases
 
-The jar does contain native code, so it may be necessary to re-compile for your platform.  We have tested on:
-64 bit CentOS 5.8<br/>
-64 bit CentOS 6.2<br/>
-64 bit Red Hat 5.5<br/>
+The jar does contain native code.  While we have tested on a variety of platforms, it may be necessary to re-compile for your own.
 
-Building ABRA requires JDK 7, Maven and g++
-Just run make
+Building ABRA requires JDK 7, Maven and g++<br/>
+Just run make.  An executable jar will be generated under the target directory.  i.e. target/abra-0.75-SNAPSHOT-jar-with-dependencies.jar
 
 More details to come...
 

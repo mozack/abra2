@@ -350,19 +350,20 @@ public class ReAligner {
 		log("Contig indexing done");
 		
 		String[] alignedToContigsSams = new String[inputSams.length];
-		Thread[] threads = new Thread[inputSams.length];
+//		Thread[] threads = new Thread[inputSams.length];
 		
 		for (int i=0; i<inputSams.length; i++) {
 			alignedToContigsSams[i] = tempDirs[i] + "/" + "align_to_contig.sam";
+			alignReads(tempDirs[i], inputSams[i], cleanContigsFasta, c2r, writers[i], alignedToContigsSams[i]);
 			
-			AlignReadsRunnable runnable = new AlignReadsRunnable(threadManager, this, tempDirs[i], inputSams[i], cleanContigsFasta,
-					c2r, writers[i], alignedToContigsSams[i]);
-			threads[i] = threadManager.spawnThread(runnable);
+//			AlignReadsRunnable runnable = new AlignReadsRunnable(threadManager, this, tempDirs[i], inputSams[i], cleanContigsFasta,
+//					c2r, writers[i], alignedToContigsSams[i]);
+//			threads[i] = threadManager.spawnThread(runnable);
 		}
 		
-		for (Thread thread : threads) {
-			thread.join();
-		}
+//		for (Thread thread : threads) {
+//			thread.join();
+//		}
 		
 		return alignedToContigsSams;
 	}
@@ -872,7 +873,7 @@ public class ReAligner {
 		String fastq = getPreprocessedFastq(tempDir);
 		
 		//TODO: Manage threads more intelligently based upon number of samples being processed.
-		Aligner contigAligner = new Aligner(contigFasta, numThreads/2);
+		Aligner contigAligner = new Aligner(contigFasta, numThreads);
 		
 		// Align region fastq against assembled contigs
 		contigAligner.shortAlign(fastq, alignedToContigSam);

@@ -994,7 +994,7 @@ public class ReAligner {
 		assem.setMinBaseQuality(assemblerSettings.getMinBaseQuality());
 		assem.setMinReadCandidateFraction(assemblerSettings.getMinReadCandidateFraction());
 		assem.setMaxAverageDepth(assemblerSettings.getMaxAverageDepth());
-		assem.setShouldSearchForSv(this.isPairedEnd);
+		assem.setShouldSearchForSv(this.isPairedEnd && assemblerSettings.searchForStructuralVariation());
 
 		return assem;
 	}
@@ -1119,6 +1119,7 @@ public class ReAligner {
 			assemblerSettings.setMinBaseQuality(options.getMinBaseQuality());
 			assemblerSettings.setMinReadCandidateFraction(options.getMinReadCandidateFraction());
 			assemblerSettings.setMaxAverageDepth(options.getMaxAverageRegionDepth());
+			assemblerSettings.setSearchForStructuralVariation(options.shouldSearchForStructuralVariation());
 
 			ReAligner realigner = new ReAligner();
 			realigner.setReference(options.getReference());

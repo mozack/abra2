@@ -16,7 +16,16 @@ public class AssemblerSettings {
 	private int minBaseQuality;
 	private double minReadCandidateFraction;
 	private int maxAverageDepth;
+	private boolean searchForStructuralVariation;
 		
+	public boolean searchForStructuralVariation() {
+		return searchForStructuralVariation;
+	}
+
+	public void setSearchForStructuralVariation(boolean searchForStructuralVariation) {
+		this.searchForStructuralVariation = searchForStructuralVariation;
+	}
+
 	public int getMaxAverageDepth() {
 		return maxAverageDepth;
 	}

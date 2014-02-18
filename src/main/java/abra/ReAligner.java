@@ -88,6 +88,7 @@ public class ReAligner {
 	private int rnaReadLength = -1;
 	
 	private BufferedWriter contigWriter;
+	private BufferedWriter svContigWriter;
 	
 	private CompareToReference2 c2r;
 	
@@ -126,6 +127,9 @@ public class ReAligner {
 		String contigFasta = tempDir + "/" + "all_contigs.fasta";
 		contigWriter = new BufferedWriter(new FileWriter(contigFasta, false));
 		
+		String svContigFasta = tempDir + "/" + "sv_contigs.fasta";
+		svContigWriter = new BufferedWriter(new FileWriter(svContigFasta, false));
+		
 		tempDirs = new String[inputSams.length];
 		
 		SAMFileWriterFactory writerFactory = new SAMFileWriterFactory();
@@ -161,6 +165,7 @@ public class ReAligner {
 		threadManager.waitForAllThreadsToComplete();
 		
 		contigWriter.close();
+		svContigWriter.close();
 		clock.stopAndPrint();
 		
 		String cleanContigsFasta = alignAndCleanContigs(contigFasta, tempDir, true);
@@ -194,6 +199,10 @@ public class ReAligner {
 			for (int i=0; i<inputFiles.length; i++) {
 				copySam(inputFiles[i], outputFiles[i]);	
 			}
+		}
+		
+		if (this.assemblerSettings.searchForStructuralVariation() && this.isPairedEnd) {
+			alignStructuralVariantCandidates(svContigFasta, tempDir);	
 		}
 		
 		System.out.println("Done.");
@@ -445,6 +454,12 @@ public class ReAligner {
 		reader.close();
 	}
 	
+	private void alignStructuralVariantCandidates(String svContigFasta, String tempDir) throws InterruptedException, IOException {
+		Aligner aligner = new Aligner(reference, numThreads);
+		String contigsSam = tempDir + "/" + "sv_contigs.sam";
+		aligner.align(svContigFasta, contigsSam, false);
+	}
+	
 	private String alignAndCleanContigs(String contigFasta, String tempDir, boolean isTightAlignment) throws InterruptedException, IOException {
 		log("Aligning contigs");
 		Aligner aligner = new Aligner(reference, numThreads);
@@ -661,6 +676,11 @@ public class ReAligner {
 			List<Feature> svCandidates = assem.getSvCandidateRegions();
 			for (Feature svCandidate : svCandidates) {
 				System.out.println("SV: " + region.getDescriptor() + "-->" + svCandidate.getDescriptor());
+				List<Feature> svRegions = new ArrayList<Feature>();
+				svRegions.add(region);
+				svRegions.add(svCandidate);
+				String svContigs = assem.assembleContigs(bams, contigsFasta, tempDir, svRegions, region.getDescriptor() + "__" + svCandidate.getDescriptor(), true, this, c2r);
+				svContigWriter.write(svContigs);
 			}
 		}
 		catch (Exception e) {

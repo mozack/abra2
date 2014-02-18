@@ -678,7 +678,8 @@ public class ReAligner {
 					List<Feature> svRegions = new ArrayList<Feature>();
 					svRegions.add(region);
 					svRegions.add(svCandidate);
-					String svContigs = assem.assembleContigs(bams, contigsFasta, tempDir, svRegions, region.getDescriptor() + "__" + svCandidate.getDescriptor(), true, this, c2r);
+					NativeAssembler svAssem = (NativeAssembler) newAssembler();
+					String svContigs = svAssem.assembleContigs(bams, contigsFasta, tempDir, svRegions, region.getDescriptor() + "__" + svCandidate.getDescriptor(), true, this, c2r);
 					
 					if (!svContigs.equals("<ERROR>") && !svContigs.equals("<REPEAT>") && !svContigs.isEmpty()) {
 						svContigWriter.write(svContigs);

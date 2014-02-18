@@ -671,16 +671,19 @@ public class ReAligner {
 			String contigs = assem.assembleContigs(bams, contigsFasta, tempDir, regions, region.getDescriptor(), true, this, c2r);
 			if (!contigs.equals("<ERROR>") && !contigs.equals("<REPEAT>") && !contigs.isEmpty()) {
 				appendContigs(contigs);
-			}
 			
-			List<Feature> svCandidates = assem.getSvCandidateRegions();
-			for (Feature svCandidate : svCandidates) {
-				System.out.println("SV: " + region.getDescriptor() + "-->" + svCandidate.getDescriptor());
-				List<Feature> svRegions = new ArrayList<Feature>();
-				svRegions.add(region);
-				svRegions.add(svCandidate);
-				String svContigs = assem.assembleContigs(bams, contigsFasta, tempDir, svRegions, region.getDescriptor() + "__" + svCandidate.getDescriptor(), true, this, c2r);
-				svContigWriter.write(svContigs);
+				List<Feature> svCandidates = assem.getSvCandidateRegions();
+				for (Feature svCandidate : svCandidates) {
+					System.out.println("SV: " + region.getDescriptor() + "-->" + svCandidate.getDescriptor());
+					List<Feature> svRegions = new ArrayList<Feature>();
+					svRegions.add(region);
+					svRegions.add(svCandidate);
+					String svContigs = assem.assembleContigs(bams, contigsFasta, tempDir, svRegions, region.getDescriptor() + "__" + svCandidate.getDescriptor(), true, this, c2r);
+					
+					if (!svContigs.equals("<ERROR>") && !svContigs.equals("<REPEAT>") && !svContigs.isEmpty()) {
+						svContigWriter.write(svContigs);
+					}
+				}
 			}
 		}
 		catch (Exception e) {

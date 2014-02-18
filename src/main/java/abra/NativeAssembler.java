@@ -278,46 +278,49 @@ public class NativeAssembler {
 			throw new RuntimeException(e);
 		}
 		
-		Collections.sort(this.svCandidates);
-		Position last = null;
-		String currentFeatureChr = null;
-		int currentFeatureStart = -1;
-		int currentFeatureStop = -1;
-		int currentFeatureCount = 0;
-		
-		// TODO: Calc this dynamically
-		int fragLen = 500;
-		
-		for (Position pos : this.svCandidates) {
-			if ((last != null) && pos.getChromosome().equals(last.getChromosome()) && 
-				 Math.abs(pos.getPosition()-last.getPosition()) < fragLen) {
-				
-				if (currentFeatureChr == null) {
-					currentFeatureChr = pos.getChromosome();
-					currentFeatureStart = last.getPosition();
-					currentFeatureStop = pos.getPosition() + readLength;
-					currentFeatureCount = 1;
-				} else {
-					currentFeatureStop = pos.getPosition() + readLength;
-					currentFeatureCount++;
-				}
-			} else {
-				if (currentFeatureChr != null) {
-					if (currentFeatureCount > minReadCount * .02) {
-						this.svCandidateRegions.add(new Feature(currentFeatureChr, currentFeatureStart-readLength, currentFeatureStop+readLength));
+		if (this.shouldSearchForSv) {
+			
+			Collections.sort(this.svCandidates);
+			Position last = null;
+			String currentFeatureChr = null;
+			int currentFeatureStart = -1;
+			int currentFeatureStop = -1;
+			int currentFeatureCount = 0;
+			
+			// TODO: Calc this dynamically
+			int windowSize = 500;
+			
+			for (Position pos : this.svCandidates) {
+				if ((last != null) && pos.getChromosome().equals(last.getChromosome()) && 
+					 Math.abs(pos.getPosition()-last.getPosition()) < windowSize) {
+					
+					if (currentFeatureChr == null) {
+						currentFeatureChr = pos.getChromosome();
+						currentFeatureStart = last.getPosition();
+						currentFeatureStop = pos.getPosition() + readLength;
+						currentFeatureCount = 1;
+					} else {
+						currentFeatureStop = pos.getPosition() + readLength;
+						currentFeatureCount++;
 					}
-					currentFeatureChr = null;
-					currentFeatureStart = -1;
-					currentFeatureStop = -1;
-					currentFeatureCount = 0;
 				} else {
-					currentFeatureChr = pos.getChromosome();
-					currentFeatureStart = pos.getPosition();
-					currentFeatureStop = pos.getPosition() + readLength;
-					currentFeatureCount = 1;
+					if (currentFeatureChr != null) {
+						if (currentFeatureCount > minReadCount * .02) {
+							this.svCandidateRegions.add(new Feature(currentFeatureChr, currentFeatureStart-readLength, currentFeatureStop+readLength));
+						}
+						currentFeatureChr = null;
+						currentFeatureStart = -1;
+						currentFeatureStop = -1;
+						currentFeatureCount = 0;
+					} else {
+						currentFeatureChr = pos.getChromosome();
+						currentFeatureStart = pos.getPosition();
+						currentFeatureStop = pos.getPosition() + readLength;
+						currentFeatureCount = 1;
+					}
 				}
+				last = pos;
 			}
-			last = pos;
 		}
 		
 		long end = System.currentTimeMillis();
@@ -455,6 +458,7 @@ public class NativeAssembler {
 		assem.setReadLength(100);
 		assem.setMinKmerFrequency(2);
 		assem.setMaxAverageDepth(400);
+		assem.setShouldSearchForSv(true);
 		
 //		String bam1 = args[0];
 		String bam1 = "/home/lmose/dev/abra/sv/test.bam";

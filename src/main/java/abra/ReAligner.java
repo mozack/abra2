@@ -202,7 +202,21 @@ public class ReAligner {
 		}
 		
 		if (this.assemblerSettings.searchForStructuralVariation() && this.isPairedEnd) {
-			alignStructuralVariantCandidates(svContigFasta, tempDir);	
+			String svContigsSam = tempDir + "/" + "sv_contigs.sam";
+			alignStructuralVariantCandidates(svContigFasta, svContigsSam);
+			
+			// Extract Breakpoint candidates
+			SVHandler svHandler = new SVHandler(readLength);
+			String svCandidates = tempDir + "/" + "sv_candidates.fa";
+			svHandler.identifySVCandidates(svContigsSam, svCandidates);
+			
+			String[] svSams = new String[inputSams.length];
+			
+			for (int i=0; i<inputSams.length; i++) {
+				svSams[i] = tempDirs[i] + "/" + "sv_aligned_to_contig.sam";
+				
+				alignToContigs(tempDirs[i], svSams[i], svCandidates);			
+			}
 		}
 		
 		System.out.println("Done.");
@@ -454,10 +468,9 @@ public class ReAligner {
 		reader.close();
 	}
 	
-	private void alignStructuralVariantCandidates(String svContigFasta, String tempDir) throws InterruptedException, IOException {
+	private void alignStructuralVariantCandidates(String svContigFasta, String svContigsSam) throws InterruptedException, IOException {
 		Aligner aligner = new Aligner(reference, numThreads);
-		String contigsSam = tempDir + "/" + "sv_contigs.sam";
-		aligner.align(svContigFasta, contigsSam, false);
+		aligner.align(svContigFasta, svContigsSam, false);
 	}
 	
 	private String alignAndCleanContigs(String contigFasta, String tempDir, boolean isTightAlignment) throws InterruptedException, IOException {
@@ -510,7 +523,7 @@ public class ReAligner {
 	String alignReads(String tempDir, String inputSam, String cleanContigsFasta,
 			CompareToReference2 c2r, SAMFileWriter finalOutputSam, String alignedToContigSam) throws InterruptedException, IOException {
 		log("Aligning original reads to contigs");
-		alignToContigs(tempDir, inputSam, alignedToContigSam, cleanContigsFasta, c2r, finalOutputSam);
+		alignToContigs(tempDir, alignedToContigSam, cleanContigsFasta);
 		return alignedToContigSam;
 	}
 	
@@ -889,8 +902,8 @@ public class ReAligner {
 		return tempDir + "/" + "original_reads.fastq.gz";
 	}
 	
-	private void alignToContigs(String tempDir, String inputSam, String alignedToContigSam,
-			String contigFasta, CompareToReference2 c2r, SAMFileWriter finalOutputSam) throws IOException, InterruptedException {
+	private void alignToContigs(String tempDir, String alignedToContigSam,
+			String contigFasta) throws IOException, InterruptedException {
 		
 		// Convert original bam to fastq
 //		String fastq = tempDir + "/" + "original_reads.fastq.gz";

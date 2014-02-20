@@ -10,9 +10,12 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 
 import net.sf.picard.sam.BuildBamIndex;
 import net.sf.picard.sam.SortSam;
@@ -70,6 +73,8 @@ public class ReAligner {
 	private int maxUnalignedReads = DEFAULT_MAX_UNALIGNED_READS;
 	
 	private boolean shouldReprocessUnaligned = true;
+	
+	private String structuralVariantFile;
 	
 	private String[] inputSams;
 	private SAMFileWriter[] writers;
@@ -219,8 +224,33 @@ public class ReAligner {
 				for (int i=0; i<inputSams.length; i++) {
 					svSams[i] = tempDirs[i] + "/" + "sv_aligned_to_contig.sam";
 					
-					alignToContigs(tempDirs[i], svSams[i], svCandidates);			
+					alignToContigs(tempDirs[i], svSams[i], svCandidates);
 				}
+				
+				SVReadCounter svReadCounter = new SVReadCounter();
+				
+				List<Map<String, Integer>> svCounts = new ArrayList<Map<String, Integer>>();
+				Set<String> breakpointIds = new HashSet<String>();
+				
+				for (int i=0; i<svSams.length; i++) {
+					Map<String, Integer> counts = svReadCounter.countReadsSupportingBreakpoints(svSams[i], readLength, this.samHeaders[i]);
+					svCounts.add(counts);
+					breakpointIds.addAll(counts.keySet());
+				}
+				
+				BufferedWriter writer = new BufferedWriter(new FileWriter(this.structuralVariantFile, false));
+				for (String breakpointId : breakpointIds) {
+					writer.append(breakpointId);
+					for (Map<String, Integer> counts : svCounts) {
+						writer.append('\t');
+						if (counts.containsKey(breakpointId)) {
+							writer.append(String.valueOf(counts.get(breakpointId)));
+						}
+					}
+					writer.append('\n');
+				}
+				
+				writer.close();
 			}
 		}
 		
@@ -1176,6 +1206,7 @@ public class ReAligner {
 			realigner.isPairedEnd = options.isPairedEnd();
 			realigner.rnaSam = options.getRnaSam();
 			realigner.rnaOutputSam = options.getRnaSamOutput();
+			realigner.structuralVariantFile = options.getStructuralVariantFile();
 
 			long s = System.currentTimeMillis();
 			

@@ -59,7 +59,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(MIN_BASE_QUALITY, "Minimum base quality for inclusion in assembly").withOptionalArg().ofType(Integer.class).defaultsTo(20);
             parser.accepts(MIN_READ_CANDIDATE_FRACTION, "Minimum read candidate fraction for triggering assembly").withRequiredArg().ofType(Double.class).defaultsTo(.01);
             parser.accepts(MAX_AVERAGE_REGION_DEPTH, "Regions with average depth exceeding this value will be downsampled").withRequiredArg().ofType(Integer.class).defaultsTo(400);
-            parser.accepts(SEARCH_FOR_STRUCTURAL_VARIATION, "Enable Structural Variation searching (experimental, only supported for paired end)");
+            parser.accepts(SEARCH_FOR_STRUCTURAL_VARIATION, "Enable Structural Variation searching (experimental, only supported for paired end)").withRequiredArg().ofType(String.class);
     	}
     	
     	return parser;
@@ -207,6 +207,10 @@ public class ReAlignerOptions extends Options {
 	
 	public boolean shouldSearchForStructuralVariation() {
 		return getOptions().has(SEARCH_FOR_STRUCTURAL_VARIATION);
+	}
+	
+	public String getStructuralVariantFile() {
+		return (String) getOptions().valueOf(SEARCH_FOR_STRUCTURAL_VARIATION);
 	}
 	
 	public boolean isValid() {

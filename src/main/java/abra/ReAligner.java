@@ -207,51 +207,8 @@ public class ReAligner {
 		}
 		
 		if (this.assemblerSettings.searchForStructuralVariation() && this.isPairedEnd) {
-			String svContigsSam = tempDir + "/" + "sv_contigs.sam";
-			alignStructuralVariantCandidates(svContigFasta, svContigsSam);
 			
-			// Extract Breakpoint candidates
-			SVHandler svHandler = new SVHandler(readLength);
-			String svCandidates = tempDir + "/" + "sv_candidates.fa";
-			boolean hasCandidates = svHandler.identifySVCandidates(svContigsSam, svCandidates);
-			
-			if (hasCandidates) {
-				Aligner aligner = new Aligner(svCandidates, 1);
-				aligner.index();
-				
-				String[] svSams = new String[inputSams.length];
-				
-				for (int i=0; i<inputSams.length; i++) {
-					svSams[i] = tempDirs[i] + "/" + "sv_aligned_to_contig.sam";
-					
-					alignToContigs(tempDirs[i], svSams[i], svCandidates);
-				}
-				
-				SVReadCounter svReadCounter = new SVReadCounter();
-				
-				List<Map<String, Integer>> svCounts = new ArrayList<Map<String, Integer>>();
-				Set<String> breakpointIds = new HashSet<String>();
-				
-				for (int i=0; i<svSams.length; i++) {
-					Map<String, Integer> counts = svReadCounter.countReadsSupportingBreakpoints(svSams[i], readLength, this.samHeaders[i]);
-					svCounts.add(counts);
-					breakpointIds.addAll(counts.keySet());
-				}
-				
-				BufferedWriter writer = new BufferedWriter(new FileWriter(this.structuralVariantFile, false));
-				for (String breakpointId : breakpointIds) {
-					writer.append(breakpointId);
-					for (Map<String, Integer> counts : svCounts) {
-						writer.append('\t');
-						if (counts.containsKey(breakpointId)) {
-							writer.append(String.valueOf(counts.get(breakpointId)));
-						}
-					}
-					writer.append('\n');
-				}
-				
-				writer.close();
-			}
+			new SVEvaluator().evaluateAndOutput(svContigFasta, this, svContigFasta, readLength, inputFiles, tempDirs, samHeaders, structuralVariantFile);
 		}
 		
 		System.out.println("Done.");
@@ -503,7 +460,7 @@ public class ReAligner {
 		reader.close();
 	}
 	
-	private void alignStructuralVariantCandidates(String svContigFasta, String svContigsSam) throws InterruptedException, IOException {
+	void alignStructuralVariantCandidates(String svContigFasta, String svContigsSam) throws InterruptedException, IOException {
 		Aligner aligner = new Aligner(reference, numThreads);
 		aligner.align(svContigFasta, svContigsSam, false);
 	}
@@ -937,7 +894,7 @@ public class ReAligner {
 		return tempDir + "/" + "original_reads.fastq.gz";
 	}
 	
-	private void alignToContigs(String tempDir, String alignedToContigSam,
+	void alignToContigs(String tempDir, String alignedToContigSam,
 			String contigFasta) throws IOException, InterruptedException {
 		
 		// Convert original bam to fastq

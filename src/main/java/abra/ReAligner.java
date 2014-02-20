@@ -207,8 +207,10 @@ public class ReAligner {
 		}
 		
 		if (this.assemblerSettings.searchForStructuralVariation() && this.isPairedEnd) {
-			
-			new SVEvaluator().evaluateAndOutput(svContigFasta, this, svContigFasta, readLength, inputFiles, tempDirs, samHeaders, structuralVariantFile);
+			clock = new Clock("Structural Variant search");
+			clock.start();
+			new SVEvaluator().evaluateAndOutput(svContigFasta, this, tempDir, readLength, inputFiles, tempDirs, samHeaders, structuralVariantFile);
+			clock.stopAndPrint();
 		}
 		
 		System.out.println("Done.");

@@ -30,7 +30,8 @@ public class SVHandler {
 		this.readLength = readLength;
 	}
 
-	public void identifySVCandidates(String input, String output) throws IOException {
+	public boolean identifySVCandidates(String input, String output) throws IOException {
+		boolean hasCandidates = false;
 		SamMultiMappingReader reader = new SamMultiMappingReader(input);
 		
 		BufferedWriter writer = new BufferedWriter(new FileWriter(output, false));
@@ -52,13 +53,16 @@ public class SVHandler {
 				String desc = ">BP_" + group.getGroupId() + "_" + breakpoint.getLabel();
 				writer.write(desc + "\n");
 				writer.write(breakpoint.getBases() + "\n");
-				System.out.println(desc);
-				System.out.println(breakpoint.getBases());
+//				System.out.println(desc);
+//				System.out.println(breakpoint.getBases());
+				hasCandidates = true;
 			}
 		}
 		
 		reader.close();
 		writer.close();
+		
+		return hasCandidates;
 	}
 	
 	private List<BreakpointGroup> getBreakpointGroups(List<Breakpoint> breakpoints) {

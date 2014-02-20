@@ -208,14 +208,19 @@ public class ReAligner {
 			// Extract Breakpoint candidates
 			SVHandler svHandler = new SVHandler(readLength);
 			String svCandidates = tempDir + "/" + "sv_candidates.fa";
-			svHandler.identifySVCandidates(svContigsSam, svCandidates);
+			boolean hasCandidates = svHandler.identifySVCandidates(svContigsSam, svCandidates);
 			
-			String[] svSams = new String[inputSams.length];
-			
-			for (int i=0; i<inputSams.length; i++) {
-				svSams[i] = tempDirs[i] + "/" + "sv_aligned_to_contig.sam";
+			if (hasCandidates) {
+				Aligner aligner = new Aligner(svCandidates, 1);
+				aligner.index();
 				
-				alignToContigs(tempDirs[i], svSams[i], svCandidates);			
+				String[] svSams = new String[inputSams.length];
+				
+				for (int i=0; i<inputSams.length; i++) {
+					svSams[i] = tempDirs[i] + "/" + "sv_aligned_to_contig.sam";
+					
+					alignToContigs(tempDirs[i], svSams[i], svCandidates);			
+				}
 			}
 		}
 		

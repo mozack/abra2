@@ -21,6 +21,9 @@ import net.sf.samtools.SAMFileReader.ValidationStringency;
  */
 public class NativeAssembler {
 	
+	//TODO: Calc dynamically
+	private static final int MAX_READ_LENGTHS_PER_REGION = 6;
+	
 	private boolean truncateOnRepeat;
 	private int maxContigs;
 	private int maxPathsFromRoot;
@@ -305,7 +308,7 @@ public class NativeAssembler {
 					}
 				} else {
 					if (currentFeatureChr != null) {
-						if (currentFeatureCount > minReadCount * .02) {
+						if (currentFeatureCount > (minReadCount/MAX_READ_LENGTHS_PER_REGION) * minReadCandidateFraction) {
 							this.svCandidateRegions.add(new Feature(currentFeatureChr, currentFeatureStart-readLength, currentFeatureStop+readLength));
 						}
 						currentFeatureChr = null;

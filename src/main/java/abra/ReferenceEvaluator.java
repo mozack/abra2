@@ -45,6 +45,7 @@ public class ReferenceEvaluator {
 	}
 	
 	public void run() throws IOException, InterruptedException {
+		new NativeLibraryLoader().load(".");
 		CompareToReference2 c2r = new CompareToReference2();
 		c2r.init8bit(reference);
 		

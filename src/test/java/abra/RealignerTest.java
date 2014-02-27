@@ -30,6 +30,7 @@ public class RealignerTest {
 	}
 	*/
 	
+	// TODO: Move to RegionLoaderTest
 	@Test (groups = "unit")
 	public void testCollapseRegions() {
 		List<Feature> input = new ArrayList<Feature>();
@@ -39,7 +40,7 @@ public class RealignerTest {
 		input.add(new Feature("chr20", 20100, 20200));
 		input.add(new Feature("chr21", 20201, 20300));
 		
-		List<Feature> features = ReAligner.collapseRegions(input, 70);
+		List<Feature> features = RegionLoader.collapseRegions(input, 70);
 		assertEquals(features.size(), 3);
 		validateFeature(features.get(0), 1, 20000);
 		validateFeature(features.get(1), 20100, 20200);

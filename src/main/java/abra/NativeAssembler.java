@@ -35,7 +35,7 @@ public class NativeAssembler {
 	private Set<String> readIds;
 	private int maxAverageDepth;
 	List<Position> svCandidates = new ArrayList<Position>();
-	List<Feature> svCandidateRegions = new ArrayList<Feature>();
+	List<BreakpointCandidate> svCandidateRegions = new ArrayList<BreakpointCandidate>();
 	private boolean shouldSearchForSv = false;
 
 	private native String assemble(String input, String output, String prefix, int truncateOnRepeat, int maxContigs, int maxPathsFromRoot, int readLength, int kmerSize, int minKmerFreq, int minBaseQuality);
@@ -182,7 +182,7 @@ public class NativeAssembler {
 								reads.add(read);
 								
 								if (shouldSearchForSv && isSvCandidate(read, region)) {
-									svCandidates.add(new Position(read.getMateReferenceName(), read.getMateAlignmentStart()));
+									svCandidates.add(new Position(read.getMateReferenceName(), read.getMateAlignmentStart(), input));
 								}
 							}
 						}
@@ -309,7 +309,9 @@ public class NativeAssembler {
 				} else {
 					if (currentFeatureChr != null) {
 						if (currentFeatureCount > (minReadCount/MAX_READ_LENGTHS_PER_REGION) * minReadCandidateFraction) {
-							this.svCandidateRegions.add(new Feature(currentFeatureChr, currentFeatureStart-readLength, currentFeatureStop+readLength));
+							Feature region = new Feature(currentFeatureChr, currentFeatureStart-readLength, currentFeatureStop+readLength);
+							BreakpointCandidate candidate = new BreakpointCandidate(region, currentFeatureCount);
+							this.svCandidateRegions.add(candidate);
 						}
 						currentFeatureChr = null;
 						currentFeatureStart = -1;
@@ -333,6 +335,17 @@ public class NativeAssembler {
 		return contigs;
 	}
 	
+	String nativeAssemble(String input, String output, String prefix, int truncateOnRepeat, int maxContigs, int maxPathsFromRoot, int readLength, int[] kmers, int minKmerFreq, int minBaseQuality) {
+		String result = "";
+		for (int kmer : kmers) {
+			result = assemble(input, output, prefix, truncateOnRepeat, maxContigs, maxPathsFromRoot, readLength, kmer, minKmerFreq, minBaseQuality);
+			if (!result.equals("<REPEAT>")) {
+				break;
+			}
+		}
+		return result;
+	}
+	
 	private boolean isSvCandidate(SAMRecord read, Feature region) {
 		boolean isCandidate = false;
 		if (!read.getProperPairFlag() && !read.getMateUnmappedFlag()) {
@@ -354,7 +367,7 @@ public class NativeAssembler {
 		this.shouldSearchForSv = shouldSearchForSv;
 	}
 	
-	public List<Feature> getSvCandidateRegions() {
+	public List<BreakpointCandidate> getSvCandidateRegions() {
 		return this.svCandidateRegions;
 	}
 	
@@ -420,10 +433,12 @@ public class NativeAssembler {
 	static class Position implements Comparable<Position> {
 		private String chromosome;
 		private int position;
+		private String inputFile;
 		
-		Position(String chromosome, int position) {
+		Position(String chromosome, int position, String inputFile) {
 			this.chromosome = chromosome;
 			this.position = position;
+			this.inputFile = inputFile;
 		}
 		
 		String getChromosome() {
@@ -486,9 +501,9 @@ public class NativeAssembler {
 		
 		System.out.println("-------------------------");
 		
-		List<Feature> svCandidates = assem.getSvCandidateRegions();
-		for (Feature svCandidate : svCandidates) {
-			System.out.println("SV: " + region.getDescriptor() + "-->" + svCandidate.getDescriptor());
+		List<BreakpointCandidate> svCandidates = assem.getSvCandidateRegions();
+		for (BreakpointCandidate svCandidate : svCandidates) { 
+			System.out.println("SV: " + region.getDescriptor() + "-->" + svCandidate.getRegion().getDescriptor());
 		}
 		
 //		assem.assembleContigs(args[0], args[1], "contig");

@@ -111,7 +111,7 @@ public class RegionTracker {
 			}
 		}
 		
-		regions = ReAligner.collapseRegions(regions, readLength);
+		regions = RegionLoader.collapseRegions(regions, readLength);
 		regions = ReAligner.splitRegions(regions);
 		
 		return regions;

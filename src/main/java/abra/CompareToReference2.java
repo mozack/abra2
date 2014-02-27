@@ -6,6 +6,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -28,10 +29,29 @@ public class CompareToReference2 {
 	private String refFileName;
 	private BufferedReader refReader;
 	private Map<String, byte[]> refMap;
-	
+	private boolean is2Bit = true;
+
+	/**
+	 * Memory efficient reference storage using 2 bits per base.
+	 * N's are converted to random bases.
+	 */
 	public void init(String reference) throws FileNotFoundException, IOException {
 		this.refFileName = reference;
 		loadRefMap();
+	}
+	
+	/**
+	 * Reference storage using the exact content of the reference file.  i.e. N's are stored explicitly.
+	 * Non 2-bit storage is not fully tested!
+	 */
+	public void init8bit(String reference) throws FileNotFoundException, IOException {
+		is2Bit = false;
+		this.refFileName = reference;
+		loadRefMap();
+	}
+	
+	public List<String> getChromosomes() {
+		return new ArrayList<String>(refMap.keySet());
 	}
 	
 	public void cleanup() throws IOException {
@@ -222,28 +242,36 @@ public class CompareToReference2 {
 	
 	// Convert input StringBuffer to 2 bit representation.
 	private byte[] getBytes(StringBuffer buf) {
-		int numBytes = buf.length()/4;
-		if (buf.length() % 4 > 0) {
-			numBytes += 1;
-		}
-		byte[] bytes = new byte[numBytes];
-		
-		int subIdx = 0;
-		int byteIdx = 0;
-		for (int i=0; i<buf.length(); i++) {
-			
-			byte base = getBase(buf.charAt(i));
-			byte shifted = (byte) (base << (6-subIdx*2));
-			
-			bytes[byteIdx] = (byte) (bytes[byteIdx] | shifted);
-			
-			subIdx++;
-			if (subIdx == 4) {
-				subIdx = 0;
-				byteIdx++;
+		if (is2Bit) {
+			int numBytes = buf.length()/4;
+			if (buf.length() % 4 > 0) {
+				numBytes += 1;
 			}
+			byte[] bytes = new byte[numBytes];
+			
+			int subIdx = 0;
+			int byteIdx = 0;
+			for (int i=0; i<buf.length(); i++) {
+				
+				byte base = getBase(buf.charAt(i));
+				byte shifted = (byte) (base << (6-subIdx*2));
+				
+				bytes[byteIdx] = (byte) (bytes[byteIdx] | shifted);
+				
+				subIdx++;
+				if (subIdx == 4) {
+					subIdx = 0;
+					byteIdx++;
+				}
+			}
+			return bytes;
+		} else {
+			byte[] bytes = new byte[buf.length()];
+			for (int i=0; i<buf.length(); i++) {
+				bytes[i] = (byte) Character.toUpperCase(buf.charAt(i));
+			}
+			return bytes;
 		}
-		return bytes;
 	}
 	
 	private byte getBase(char ch) {
@@ -358,15 +386,32 @@ public class CompareToReference2 {
 		
 		position -= 1;
 		
-		StringBuffer buf = new StringBuffer(length);
-		int start = Math.max(position, 0);
-		int stop = Math.min(position+length, ref.length*4+1);
-		
-		for (int i=start; i<stop; i++) {
-			buf.append(getBaseAsChar(i, ref));
+		if (is2Bit) {
+			StringBuffer buf = new StringBuffer(length);
+			int start = Math.max(position, 0);
+			int stop = Math.min(position+length, ref.length*4+1);
+			
+			for (int i=start; i<stop; i++) {
+				buf.append(getBaseAsChar(i, ref));
+			}
+			return buf.toString();
+		} else {
+			byte[] sub = Arrays.copyOfRange(ref, Math.max(position,0), Math.min(position+length, ref.length));
+			
+			return new String(sub);
 		}
+	}
 	
-		return buf.toString();
+	/**
+	 * Returns length of reference for input chromosome (give or take a few bases)
+	 */
+	public int getReferenceLength(String chromosome) {
+		byte[] ref = refMap.get(chromosome);
+		if (is2Bit) {
+			return ref.length * 4;
+		} else {
+			return ref.length;
+		}
 	}
 	
 	/*

@@ -44,7 +44,7 @@ public class ReAligner {
 	
 	public static final int MAX_REGION_LENGTH = 400;
 	private static final int MIN_REGION_REMAINDER = 200;
-	private static final int REGION_OVERLAP = 200;
+	public static final int REGION_OVERLAP = 200;
 
 	private static final long RANDOM_SEED = 1;
 	private static final int MAX_POTENTIAL_UNALIGNED_CONTIGS = 2000000;
@@ -679,14 +679,14 @@ public class ReAligner {
 			if (!contigs.equals("<ERROR>") && !contigs.equals("<REPEAT>") && !contigs.isEmpty()) {
 				appendContigs(contigs);
 			
-				List<Feature> svCandidates = assem.getSvCandidateRegions();
-				for (Feature svCandidate : svCandidates) {
-					System.out.println("SV: " + region.getDescriptor() + "-->" + svCandidate.getDescriptor());
+				List<BreakpointCandidate> svCandidates = assem.getSvCandidateRegions();
+				for (BreakpointCandidate svCandidate : svCandidates) {
+					System.out.println("SV: " + region.getDescriptor() + "-->" + svCandidate.getRegion().getDescriptor());
 					List<Feature> svRegions = new ArrayList<Feature>();
 					svRegions.add(region);
-					svRegions.add(svCandidate);
+					svRegions.add(svCandidate.getRegion());
 					NativeAssembler svAssem = (NativeAssembler) newAssembler();
-					String svContigs = svAssem.assembleContigs(bams, contigsFasta, tempDir, svRegions, region.getDescriptor() + "__" + svCandidate.getDescriptor(), true, this, c2r);
+					String svContigs = svAssem.assembleContigs(bams, contigsFasta, tempDir, svRegions, region.getDescriptor() + "__" + svCandidate.getRegion().getDescriptor() + "_" + svCandidate.getSpanningReadPairCount(), true, this, c2r);
 					
 					if (!svContigs.equals("<ERROR>") && !svContigs.equals("<REPEAT>") && !svContigs.isEmpty()) {
 						svContigWriter.write(svContigs);
@@ -707,7 +707,7 @@ public class ReAligner {
 //		RegionTracker regionTracker = new RegionTracker(regions, null);
 //		regions = regionTracker.identifyTargetRegions(inputBams, this.assemblerSettings.getMinBaseQuality(), readLength, c2r);
 		
-		regions = collapseRegions(regions, readLength);
+		regions = RegionLoader.collapseRegions(regions, readLength);
 		regions = splitRegions(regions);
 		
 		System.out.println("Num regions: " + regions.size());
@@ -941,35 +941,6 @@ public class ReAligner {
 		}
 		
 		return splitRegions;
-	}
-	
-	public static List<Feature> collapseRegions(List<Feature> regions, int readLength) {
-		List<Feature> collapsedRegions = new ArrayList<Feature>();
-		
-		Feature currentRegion = null;
-		
-		for (Feature region : regions) {
-			if (currentRegion != null) {
-				if ((currentRegion.getSeqname().equals(region.getSeqname())) && 
-					(currentRegion.getEnd() + (readLength) >= region.getStart())) {
-					
-					currentRegion.setEnd(region.getEnd());
-				} else {
-					collapsedRegions.add(currentRegion);
-					currentRegion = region;
-				}
-			} else {
-				currentRegion = region;
-			}
-		}
-		
-		if (currentRegion != null) {
-			collapsedRegions.add(currentRegion);
-		}
-		
-		System.out.println("Collapsed regions from " + regions.size() + " to " + collapsedRegions.size());
-		
-		return collapsedRegions;
 	}
 	
 	/**

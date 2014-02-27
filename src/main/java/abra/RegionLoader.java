@@ -6,6 +6,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -47,5 +48,34 @@ public class RegionLoader {
 		reader.close();
 		
 		return features;
+	}
+	
+	public static List<Feature> collapseRegions(Collection<Feature> regions, int maxGap) {
+		List<Feature> collapsedRegions = new ArrayList<Feature>();
+		
+		Feature currentRegion = null;
+		
+		for (Feature region : regions) {
+			if (currentRegion != null) {
+				if ((currentRegion.getSeqname().equals(region.getSeqname())) && 
+					(currentRegion.getEnd() + (maxGap) >= region.getStart())) {
+					
+					currentRegion.setEnd(region.getEnd());
+				} else {
+					collapsedRegions.add(currentRegion);
+					currentRegion = region;
+				}
+			} else {
+				currentRegion = region;
+			}
+		}
+		
+		if (currentRegion != null) {
+			collapsedRegions.add(currentRegion);
+		}
+		
+		System.out.println("Collapsed regions from " + regions.size() + " to " + collapsedRegions.size());
+		
+		return collapsedRegions;
 	}
 }

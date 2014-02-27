@@ -237,7 +237,7 @@ public class Sam2Fastq {
 		RegionLoader loader = new RegionLoader();
 		List<Feature> regions = loader.load("/home/lmose/dev/ayc/regions/clinseq5/uncseq5.gtf");
 		
-		regions = ReAligner.collapseRegions(regions, 100);
+		regions = RegionLoader.collapseRegions(regions, 100);
 		
 		regions = ReAligner.splitRegions(regions);		
 		

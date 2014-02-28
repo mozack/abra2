@@ -147,6 +147,11 @@ public class CombineChimera3 {
 				rightElements.add(rightCigar.getCigarElement(i));
 			}
 			
+			// Encountered in dream test data at: chr20	22137016.  Not clear how to interpret.
+			if (rightElements.get(0).getOperator() == CigarOperator.INSERTION) {
+				return null;
+			}
+			
 			// If total element length is longer than the read, then trim first element
 			// on the left side of the indel (this is likely a deletion??)
 //			if (totalLength > read1.getReadLength()) {
@@ -406,61 +411,10 @@ public class CombineChimera3 {
 		String in;
 		String out;
 		
-//		in = "/home/lmose/dev/ayc/long_indels/next2/50I.sam";
-//		out = "/home/lmose/dev/ayc/long_indels/next2/50I_c.sam";
 
-		in = "/home/lmose/dev/abra_wxs/refidx/chim.sam";
-		out = "/home/lmose/dev/abra_wxs/refidx/out.bam";
-		
-		/*
-		in = "/home/lmose/dev/ayc/long_indels/next2/50I.sam";
-		out = "/home/lmose/dev/ayc/long_indels/next2/50I_c.sam";
-		cc3.combine(in, out);
-		
-		in = "/home/lmose/dev/ayc/long_indels/next2/50I_2.sam";
-		out = "/home/lmose/dev/ayc/long_indels/next2/50I_c_2.sam";
-		cc3.combine(in, out);
-		
-		in = "/home/lmose/dev/ayc/long_indels/next2/50D.sam";
-		out = "/home/lmose/dev/ayc/long_indels/next2/50D_c.sam";
-		cc3.combine(in, out);
-				
-		in = "/home/lmose/dev/ayc/long_indels/next2/25D.sam";
-		out = "/home/lmose/dev/ayc/long_indels/next2/25D_c.sam";
-		cc3.combine(in, out);
-				
-		in = "/home/lmose/dev/ayc/long_indels/next2/40D.sam";
-		out = "/home/lmose/dev/ayc/long_indels/next2/40D_c.sam";
-		cc3.combine(in, out);
-		
-		in = "/home/lmose/dev/ayc/long_indels/next2/100I.sam";
-		out = "/home/lmose/dev/ayc/long_indels/next2/100I_c.sam";
-		cc3.combine(in, out);
-				
-		in = "/home/lmose/dev/ayc/long_indels/next2/100I_2.sam";
-		out = "/home/lmose/dev/ayc/long_indels/next2/100I_2_c.sam";
-		cc3.combine(in, out);
-		*/
-		
-		//in = "/home/lmose/dev/ayc/long_indels/next2/fail0.sam";
-		//out = "/home/lmose/dev/ayc/long_indels/next2/fail0_c.sam";
-		
-//		in = "/home/lmose/dev/ayc/long_indels/s204/all_contigs.sam";
-//		out = "/home/lmose/dev/ayc/long_indels/s204/all_contigs_chim.sam";
-		
-//		in = "/home/lmose/dev/ayc/long_indels/s204/test.sam";
-//		out = "/home/lmose/dev/ayc/long_indels/s204/test_chim.sam";
-
-//		in = "/home/lmose/dev/ayc/long_indels/s529/test2.sam";
-//		out = "/home/lmose/dev/ayc/long_indels/s529/test2_chim.sam";
-
-//		in = "/home/lmose/dev/ayc/long_indels/s529/next2/1126.sam";
-//		out = "/home/lmose/dev/ayc/long_indels/s529/next2/1126_chim.sam";
-
-//		in = "/home/lmose/dev/ayc/sim/s526/8489.sam";
-//		out = "/home/lmose/dev/ayc/sim/s526/8489_chim.sam";
-
-		cc3.combine(in, out, 0);
+		in = "/home/lmose/dev/abra/chim_insert_bug/t2.bam";
+		out = "/home/lmose/dev/abra/chim_insert_bug/t2_out.bam";
+		cc3.combine(in, out, 33);
 
 	}
 }

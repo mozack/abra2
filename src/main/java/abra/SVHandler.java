@@ -138,7 +138,7 @@ public class SVHandler {
 		
 		//TODO: Handle underscore in chromosome name.
 		String[] fields = primary.getReadName().split("_");
-		if (fields.length == 8) {
+		if (fields.length == 9) {
 			String chr1 = fields[0];
 			int start1 = Integer.parseInt(fields[1]);
 			int stop1 = Integer.parseInt(fields[2]);
@@ -322,6 +322,7 @@ public class SVHandler {
 	
 	public static void main(String[] args) throws Exception {
 		SVHandler svh = new SVHandler(100);
-		svh.identifySVCandidates("/home/lmose/dev/abra/sv/sv_contigs.sam", "/home/lmose/dev/abra/sv/sv_candidates.fa");
+//		svh.identifySVCandidates("/home/lmose/dev/abra/sv/sv_contigs.sam", "/home/lmose/dev/abra/sv/sv_candidates.fa");
+		svh.identifySVCandidates("/home/lmose/dev/abra/sv/dream/sv_contigs.bam", "/home/lmose/dev/abra/sv/dream/sv_candidates.fa");
 	}
 }

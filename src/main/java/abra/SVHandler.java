@@ -138,23 +138,24 @@ public class SVHandler {
 		
 		//TODO: Handle underscore in chromosome name.
 		String[] fields = primary.getReadName().split("_");
-		String chr1 = fields[0];
-		int start1 = Integer.parseInt(fields[1]);
-		int stop1 = Integer.parseInt(fields[2]);
-		
-		String chr2 = fields[4];
-		int start2 = Integer.parseInt(fields[5]);
-		int stop2 = Integer.parseInt(fields[6]);
-		
-		Feature region1 = new Feature(chr1, start1, stop1);
-		Feature region2 = new Feature(chr2, start2, stop2);
-		
-		if (region1.overlapsRead(primary) || region1.overlapsRead(secondary)) {
-			if (region2.overlapsRead(primary) || region2.overlapsRead(secondary)) {
-				isInTargetRegions = true;
+		if (fields.length == 8) {
+			String chr1 = fields[0];
+			int start1 = Integer.parseInt(fields[1]);
+			int stop1 = Integer.parseInt(fields[2]);
+			
+			String chr2 = fields[4];
+			int start2 = Integer.parseInt(fields[5]);
+			int stop2 = Integer.parseInt(fields[6]);
+			
+			Feature region1 = new Feature(chr1, start1, stop1);
+			Feature region2 = new Feature(chr2, start2, stop2);
+			
+			if (region1.overlapsRead(primary) || region1.overlapsRead(secondary)) {
+				if (region2.overlapsRead(primary) || region2.overlapsRead(secondary)) {
+					isInTargetRegions = true;
+				}
 			}
 		}
-		
 		return isInTargetRegions;
 	}
 	

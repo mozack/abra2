@@ -18,6 +18,6 @@ The jar does contain native code.  While we have tested on a variety of platform
 Building ABRA requires JDK 7, Maven and g++<br/>
 Just run make.  An executable jar will be generated under the target directory.  i.e. target/abra-0.75-SNAPSHOT-jar-with-dependencies.jar
 
-More details to come...
+More details to come....
 
 Copyright 2013 University of North Carolina at Chapel Hill.  All rights reserved.

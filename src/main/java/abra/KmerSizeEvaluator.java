@@ -168,12 +168,23 @@ public class KmerSizeEvaluator {
 				kmer += 2;
 			}
 		}
-
-		if (shouldInclude) {
-			region.setAdditionalInfo(String.valueOf(kmer) + "\tINCLUDE");
-		} else {
-			excludeRegion(region);
+		
+		boolean isEditDistanceOK = false;
+		int distKmer = MIN_KMER;
+		while (!isEditDistanceOK && distKmer < readLength) {
+			isEditDistanceOK = isHammingDistanceAtLeast2(regionBases, distKmer);
+			if (!isEditDistanceOK) {
+				distKmer += 2;
+			}
 		}
+
+		region.setAdditionalInfo(String.valueOf(kmer) + "\t" + String.valueOf(distKmer));
+		
+//		if (shouldInclude) {
+//			region.setAdditionalInfo(String.valueOf(kmer) + "\tINCLUDE");
+//		} else {
+//			excludeRegion(region);
+//		}
 		
 		outputRegions.add(region);
 	}
@@ -243,6 +254,39 @@ public class KmerSizeEvaluator {
 		new NativeLibraryLoader().load(tempDir);
 	}
 
+	// Is the hamming distance between all bases in this region at least 2
+	private boolean isHammingDistanceAtLeast2(String bases, int k) {
+		
+		List<String> kmers = new ArrayList<String>();
+		for (int i=0; i<=bases.length()-k; i++) {
+			String kmer = bases.substring(i, i+k);
+			
+			for (String kmer2 : kmers) {
+				if (!isHammingDistanceAtLeast2(kmer, kmer2)) {
+					return false;
+				}
+			}
+			
+			kmers.add(kmer);
+		}
+		
+		return true;
+	}
+	
+	private boolean isHammingDistanceAtLeast2(String kmer1, String kmer2) {
+		int dist = 0;
+		for (int i=0; i<kmer1.length(); i++) {
+			if (kmer1.charAt(i) != kmer2.charAt(i)) {
+				dist += 1;
+				
+				if (dist >=2) {
+					return true;
+				}
+			}
+		}
+		
+		return false;
+	}
 	
 	public static void main(String[] args) throws Exception {
 		

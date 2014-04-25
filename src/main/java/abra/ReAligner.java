@@ -699,14 +699,10 @@ public class ReAligner {
 			throw e;
 		}
 	}
-		
-	private void loadRegions() throws IOException {
+	
+	static List<Feature> getRegions(String regionsBedOrGtf, int readLength) throws IOException {
 		RegionLoader loader = new RegionLoader();
-		regions = loader.load(regionsGtf);
-		
-//		RegionTracker regionTracker = new RegionTracker(regions, null);
-//		regions = regionTracker.identifyTargetRegions(inputBams, this.assemblerSettings.getMinBaseQuality(), readLength, c2r);
-		
+		List<Feature> regions = loader.load(regionsBedOrGtf);		
 		regions = RegionLoader.collapseRegions(regions, readLength);
 		regions = splitRegions(regions);
 		
@@ -714,6 +710,16 @@ public class ReAligner {
 		for (Feature region : regions) {
 			System.out.println(region.getSeqname() + "\t" + region.getStart() + "\t" + region.getEnd());
 		}
+
+		return regions;
+	}
+		
+	private void loadRegions() throws IOException {
+		
+//		RegionTracker regionTracker = new RegionTracker(regions, null);
+//		regions = regionTracker.identifyTargetRegions(inputBams, this.assemblerSettings.getMinBaseQuality(), readLength, c2r);
+		
+		this.regions = getRegions(regionsGtf, readLength);
 	}
 
 	public void setRegionsGtf(String gtfFile) {

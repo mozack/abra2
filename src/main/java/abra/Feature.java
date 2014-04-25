@@ -12,6 +12,7 @@ public class Feature {
 	private String seqname;
 	private long start;  // 1 based
 	private long end;    // inclusive
+	private String additionalInfo;
 	
 	public Feature(String seqname, long start, long end) {
 		this.seqname      = seqname;
@@ -45,6 +46,14 @@ public class Feature {
 	
 	public String toString() {
 		return getDescriptor();
+	}
+	
+	public void setAdditionalInfo(String info) {
+		this.additionalInfo = info;
+	}
+	
+	public String getAdditionalInfo() {
+		return additionalInfo;
 	}
 	
 	private boolean spansCoordinate(int coord) {

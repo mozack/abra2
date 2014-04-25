@@ -23,23 +23,17 @@ public class KmerSizeEvaluator {
 
 	private int readLength;
 	private String reference;
-	private int[] kmers;
-	private String in;
-	private String out;
+	private String outputFile;
 	private String qualities;
-	private BufferedWriter include;
-	private BufferedWriter exclude;
-	private Set<Feature> includeRegions;
-	private Set<Feature> excludeRegions;
+	private BufferedWriter output;
+	private Set<Feature> outputRegions;
 	private ThreadManager threadManager;
 	private String regionsBed;
 	
-	public KmerSizeEvaluator(int readLength, String reference, int[] kmers, String in, String out, int numThreads, String regionsBed) {
+	public KmerSizeEvaluator(int readLength, String reference, String outputFile, int numThreads, String regionsBed) {
 		this.readLength = readLength;
 		this.reference = reference;
-		this.kmers = kmers;
-		this.in = in;
-		this.out = out;
+		this.outputFile = outputFile;
 		this.regionsBed = regionsBed;
 		
 		this.qualities = new String();
@@ -105,13 +99,9 @@ public class KmerSizeEvaluator {
 		
 		List<Feature> regions = ReAligner.getRegions(regionsBed, readLength);
 		
-		include = new BufferedWriter(new FileWriter(in, false));
-		exclude = new BufferedWriter(new FileWriter(out, false));
+		output = new BufferedWriter(new FileWriter(outputFile, false));
 		
-		//TODO: Reinitialize for each chromosome
-		includeRegions = Collections.synchronizedSortedSet(new TreeSet<Feature>(new RegionComparator()));
-		excludeRegions = Collections.synchronizedSortedSet(new TreeSet<Feature>(new RegionComparator()));
-		
+		outputRegions = Collections.synchronizedSortedSet(new TreeSet<Feature>(new RegionComparator()));
 		
 		String lastChromosome = "";
 		for (Feature region : regions) {
@@ -119,19 +109,18 @@ public class KmerSizeEvaluator {
 			if (!region.getSeqname().equals(lastChromosome)) {
 				// Write all entries for this chromosome before moving on to the next
 				threadManager.waitForAllThreadsToComplete();
-				outputRegions(include, includeRegions);
-				outputRegions(exclude, excludeRegions);
-				includeRegions.clear();
-				excludeRegions.clear();
+				outputRegions(output, outputRegions);
+				outputRegions.clear();
 			}
 			
-			String regionBases = c2r.getSequence(region.getSeqname(), (int) region.getStart()+1, (int) region.getLength());
+			String regionBases = c2r.getSequence(region.getSeqname(), (int) region.getStart()+1-(readLength-1), (int) region.getLength() + (readLength-1));
 			
 			//TODO: Handle other ambiguous bases
 			if (!regionBases.contains("N")) {
 				threadManager.spawnThread(new EvalRunnable(threadManager, this, region, regionBases));
 			} else {
-				excludeRegions.add(region);
+				excludeRegion(region);
+				outputRegions.add(region);
 			}
 			
 			lastChromosome = region.getSeqname();
@@ -140,13 +129,15 @@ public class KmerSizeEvaluator {
 		threadManager.waitForAllThreadsToComplete();
 		
 		// Because assembly regions are overlapped, there is overlap between final include/exclude output
-		outputRegions(include, includeRegions);
-		outputRegions(exclude, excludeRegions);
+		outputRegions(output, outputRegions);
 		
-		include.close();
-		exclude.close();
+		output.close();
 		
 		System.out.println("Done.");
+	}
+	
+	private void excludeRegion(Feature region) {
+		region.setAdditionalInfo("" + (readLength+1) + "\tEXCLUDE");
 	}
 	
 	private void evalRegion(Feature region, String regionBases) {
@@ -179,11 +170,12 @@ public class KmerSizeEvaluator {
 		}
 
 		if (shouldInclude) {
-			region.setAdditionalInfo(String.valueOf(kmer));
-			includeRegions.add(region);
+			region.setAdditionalInfo(String.valueOf(kmer) + "\tINCLUDE");
 		} else {
-			excludeRegions.add(region);
+			excludeRegion(region);
 		}
+		
+		outputRegions.add(region);
 	}
 	
 	private void outputRegions(BufferedWriter writer, Collection<Feature> regions) throws IOException {
@@ -267,20 +259,18 @@ public class KmerSizeEvaluator {
 //		int threads = 1;
 //		String regionsBed = "/home/lmose/dev/abra/dream/round2/20.orig.bed";
 		
-		if (args.length != 8) {
-			System.out.println("ReferenceEvaluator <readLength> <reference> <kmers> <include_bed> <exclude_bed> <num_threads>");
+		if (args.length != 6) {
+			System.out.println("KmerSizeEvaluator <readLength> <reference> <output_bed> <num_threads> <input_bed> <temp_dir>");
 		}
 		
 		int readLength = Integer.parseInt(args[0]);
 		String reference = args[1];
-		int kmers[] = getKmers(args[2]);
-		String includeBed = args[3];
-		String excludeBed = args[4];
-		int threads = Integer.parseInt(args[5]);
-		String regionsBed = args[6];
-		String tempDir = args[7];
+		String outputBed = args[2];
+		int threads = Integer.parseInt(args[3]);
+		String regionsBed = args[4];
+		String tempDir = args[5];
 
-		KmerSizeEvaluator re = new KmerSizeEvaluator(readLength, reference, kmers, includeBed, excludeBed, threads, regionsBed);
+		KmerSizeEvaluator re = new KmerSizeEvaluator(readLength, reference, outputBed, threads, regionsBed);
 		re.init(tempDir);
 		re.run2();
 	}

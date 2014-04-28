@@ -29,14 +29,14 @@ java -Xmx4G -jar $JAR --in input.bam --kmer 43,53,63,73,83 --out output.bam --re
 ```
 
 ### Parameters
-header | header2
+param | value
 ------ | -------
---in <input BAM(s)>	| (Multiple BAMs may be specified, separated by comma)
---out <output BAM(s)> | (The number of output BAMs must match the number of input BAMs)
---ref <reference fasta> | (Must be indexed by BWA)
---kmer <comma delimited list of kmers for assembly> | (Smallest kmer is used by default, larger kmers are used when necessary)
---targets <BED file describing target assembly regions> | (Usually corresponds to capture targets)
---working | <temp directory>
+--in | One or more input BAMs delimited by comma
+--out | One or more output BAM's corresponding to the set of input BAMs
+--ref  | BWA indexed reference genome.
+--kmer | Comma delimited list of kmers used for assembly.  Smallest value is used by default, larger values are used if necessary.
+--targets | BED file describing target assembly regions (Usually corresponds to capture targets)
+--working | Temp working directory
 
 ### Somatic  mode
 

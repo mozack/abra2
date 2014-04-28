@@ -29,14 +29,14 @@ java -Xmx4G -jar $JAR --in input.bam --kmer 43,53,63,73,83 --out output.bam --re
 ```
 
 ### Parameters
-param | value
+parameter | value
 ------ | -------
 --in | One or more input BAMs delimited by comma
 --out | One or more output BAM's corresponding to the set of input BAMs
 --ref  | BWA indexed reference genome.
 --kmer | Comma delimited list of kmers used for assembly.  Smallest value is used by default, larger values are used if necessary.
 --targets | BED file describing target assembly regions (Usually corresponds to capture targets)
-"--working" | Temp working directory
+--working | Temp working directory
 
 ### Somatic  mode
 

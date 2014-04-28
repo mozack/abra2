@@ -4,7 +4,7 @@
 
 ABRA is a realigner for next generation sequencing data.  It uses localized assembly and global realignment to align reads more accurately, thus improving downstream analysis (detection of indels and complex variants in particular).
 
-Example of a ABRA realigned reads (original reads on top, ABRA realigned reads on bottom):
+Here is an example of ABRA realigned reads (original reads on top, ABRA realigned reads on bottom):
 
 ![ABRA Example](https://raw.githubusercontent.com/mozack/abra/master/misc/example.png)
 
@@ -29,12 +29,12 @@ java -Xmx4G -jar $JAR --in input.bam --kmer 43,53,63,73,83 --out output.bam --re
 ```
 
 ### Parameters
---in <input BAM(s)>										(Multiple BAMs may be specified, separated by comma)
---out <output BAM(s)>									(The number of output BAMs must match the number of input BAMs)
---ref <reference fasta>   								(Must be indexed by BWA)
---kmer <comma delimited list of kmers for assembly>		(Smallest kmer is used by default, larger kmers are used when necessary)
---targets <BED file describing target assembly regions>	(Usually corresponds to capture targets)
---working <temp directory>
+--in <input BAM(s)>	| (Multiple BAMs may be specified, separated by comma)
+--out <output BAM(s)> | (The number of output BAMs must match the number of input BAMs)
+--ref <reference fasta> | (Must be indexed by BWA)
+--kmer <comma delimited list of kmers for assembly> | (Smallest kmer is used by default, larger kmers are used when necessary)
+--targets <BED file describing target assembly regions> | (Usually corresponds to capture targets)
+--working | <temp directory>
 
 ### Somatic  mode
 

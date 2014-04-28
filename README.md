@@ -36,7 +36,7 @@ param | value
 --ref  | BWA indexed reference genome.
 --kmer | Comma delimited list of kmers used for assembly.  Smallest value is used by default, larger values are used if necessary.
 --targets | BED file describing target assembly regions (Usually corresponds to capture targets)
---working | Temp working directory
+"--working" | Temp working directory
 
 ### Somatic  mode
 

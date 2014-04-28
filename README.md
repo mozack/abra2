@@ -4,7 +4,7 @@
 
 ABRA is a realigner for next generation sequencing data.  It uses localized assembly and global realignment to align reads more accurately, thus improving downstream analysis (detection of indels and complex variants in particular).
 
-Here is an example of ABRA realigned reads (original reads on top, ABRA realigned reads on bottom):
+Here is an ABRA realigned region (original reads on top, ABRA realigned reads on bottom):
 
 ![ABRA Example](https://raw.githubusercontent.com/mozack/abra/master/misc/example.png)
 
@@ -48,3 +48,6 @@ ABRA produces 1 or more realigned BAMs.  It is currently necessary to sort and i
 Reads that have been realigned will contain a YO tag indicating their original alignment position.  Reads that were originally unaligned will have a YO value of N/A.
 
 After the output BAM file is sorted and indexed it can be passed into a variant caller such as [FreeBayes](https://github.com/ekg/freebayes)
+
+### Demo / test data
+A test data set and example script is available under the demo directory.  Edit demo.bash to specify your hg19 reference location (indexed by a recent version of bwa) and run demo.bash.

@@ -137,7 +137,7 @@ public class KmerSizeEvaluator {
 	}
 	
 	private void excludeRegion(Feature region) {
-		region.setAdditionalInfo("" + (readLength+1) + "\tEXCLUDE");
+		region.setAdditionalInfo("" + (readLength+1) + "\t" + (readLength+1) + "\tN");
 	}
 	
 	private void evalRegion(Feature region, String regionBases) {
@@ -178,7 +178,7 @@ public class KmerSizeEvaluator {
 			}
 		}
 
-		region.setAdditionalInfo(String.valueOf(kmer) + "\t" + String.valueOf(distKmer));
+		region.setAdditionalInfo(String.valueOf(kmer) + "\t" + String.valueOf(distKmer) + "\t.");
 		
 //		if (shouldInclude) {
 //			region.setAdditionalInfo(String.valueOf(kmer) + "\tINCLUDE");
@@ -314,8 +314,14 @@ public class KmerSizeEvaluator {
 		String regionsBed = args[4];
 		String tempDir = args[5];
 
+		double s = System.currentTimeMillis();
 		KmerSizeEvaluator re = new KmerSizeEvaluator(readLength, reference, outputBed, threads, regionsBed);
 		re.init(tempDir);
 		re.run2();
+		double e = System.currentTimeMillis();
+		
+		double elapsed = (e-s)/1000;
+		elapsed /= 60;
+		System.out.println("Elapsed mins: " + elapsed);
 	}
 }

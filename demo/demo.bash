@@ -7,4 +7,4 @@ JAR=../target/abra-0.75-SNAPSHOT-jar-with-dependencies.jar
 #REF=/datastore/rclbg/nextgenout3/MOSE_TEST/abra/brca/ref/GRCh37-lite.fa
 REF=<path to hg19 reference>
 
-java -Xmx4G -jar $JAR --ref $REF --in abra.demo.bam --out abra.demo.realigned.bam --kmer 43,53,63,73,83 --working abra_temp_dir --targets demo.bed
+java -Xmx4G -jar $JAR --ref $REF --in abra_demo.bam --out abra_demo_realigned.bam --kmer 43,53,63,73,83 --working abra_temp_dir --targets demo.bed

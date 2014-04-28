@@ -29,6 +29,8 @@ java -Xmx4G -jar $JAR --in input.bam --kmer 43,53,63,73,83 --out output.bam --re
 ```
 
 ### Parameters
+header | header2
+------ | -------
 --in <input BAM(s)>	| (Multiple BAMs may be specified, separated by comma)
 --out <output BAM(s)> | (The number of output BAMs must match the number of input BAMs)
 --ref <reference fasta> | (Must be indexed by BWA)

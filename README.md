@@ -36,8 +36,13 @@ java -Xmx4G -jar $JAR --in input.bam --kmer 43,53,63,73,83 --out output.bam --re
 --targets <BED file describing target assembly regions>	(Usually corresponds to capture targets)
 --working <temp directory>
 
+### Somatic  mode
+
+If working with tumor/normal pairs, it is highly recommended to assemble your samples together.  To do this, simply specify multiple input and output BAM files on the command line. 
+
 ### Output
 ABRA produces 1 or more realigned BAMs.  It is currently necessary to sort and index the output.  At present, the mate information may not bee 100% accurate.  Samtools fixmate or Picard Tools FixMateInformation may be used to correct this.
 
 Reads that have been realigned will contain a YO tag indicating their original alignment position.  Reads that were originally unaligned will have a YO value of N/A.
 
+After the output BAM file is sorted and indexed it can be passed into a variant caller such as [FreeBayes](https://github.com/ekg/freebayes)

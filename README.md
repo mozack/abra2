@@ -1,7 +1,17 @@
 abra
 ====
 
-Assembly Based ReAligner
+# ABRA : Assembly Based ReAligner
+
+## Introduction
+
+ABRA is a realigner for next generation sequencing data.  It uses localized assembly and global realignment to align reads more accurately, thus improving downstream analysis (detection of indels and complex variants in particular).
+
+Example of an ABRA realigned region (original reads on top, ABRA realigned reads on bottom):
+
+![ABRA Example](https://raw.githubusercontent.com/mozack/abra/master/misc/example.png)
+
+## Running
 
 Running ABRA currently requires bwa 0.7.5a (or similar) in the command path
 

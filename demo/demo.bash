@@ -11,4 +11,8 @@ JAR=../target/abra-0.75-SNAPSHOT-jar-with-dependencies.jar
 #REF=/datastore/rclbg/nextgenout3/MOSE_TEST/abra/brca/ref/GRCh37-lite.fa
 REF=<path to hg19 reference>
 
+echo "ABRA demo starting..."
+
 java -Xmx4G -jar $JAR --ref $REF --in abra_demo.bam --out abra_demo_realigned.bam --kmer 43,53,63,73,83 --working abra_temp_dir --targets demo.bed > abra_demo.log 2>&1
+
+echo "ABRA demo done.  Realigned BAM: abra_demo_realigned.bam.  Sort and index the realigned BAM if you'd like to view it."

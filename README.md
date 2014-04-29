@@ -28,7 +28,7 @@ Sample command line for v0.75:
 java -Xmx4G -jar $JAR --in input.bam --kmer 43,53,63,73,83 --out output.bam --ref hg19.fasta --targets targets.bed --threads 8 --working abra_temp_dir > abra.log 2>&1
 ```
 
-The above command allocates 4GB for the java heap.  ABRA includes native code that runs outside of the JVM.  We have found that for typical exome processing using 8 threads, 16GB is more than sufficient.
+The above command allocates 4GB for the java heap.  ABRA includes native code that runs outside of the JVM.  We have found that for typical exome processing using 8 threads, 16GB total is more than sufficient.
 
 
 ### Parameters

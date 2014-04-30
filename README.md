@@ -16,7 +16,7 @@ Just run make.  An executable jar will be generated under the target directory. 
 
 Pre-built jars are available for 64 bit linux here: https://github.com/mozack/abra/releases
 
-Note, that the jar does contain native code.  While we have tested on a variety of platforms, we cannot guarantee that the pre-build jar will work everywhere.  In some cases, it may be necessary to compile for your specific platform.
+Note, that the jar does contain native code.  While we have tested on a variety of platforms, we cannot guarantee that the pre-built jar will work everywhere.  In some cases, it may be necessary to compile for your specific platform.
 
 ## Running
 

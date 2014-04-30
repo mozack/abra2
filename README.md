@@ -4,7 +4,7 @@
 
 ABRA is a realigner for next generation sequencing data.  It uses localized assembly and global realignment to align reads more accurately, thus improving downstream analysis (detection of indels and complex variants in particular).
 
-Here is an ABRA realigned region (original reads on top, ABRA realigned reads on bottom):
+Here is an ABRA realigned region (original reads on top, ABRA realigned reads on bottom).  The original set of reads have rather "noisy" alignments with several variations from the reference and a fair bit of high quality soft clipping.  The ABRA realignments present a more parsimonious representation of the reads including a previously unobserved large deletion. 
 
 ![ABRA Example](https://raw.githubusercontent.com/mozack/abra/master/misc/example.png)
 

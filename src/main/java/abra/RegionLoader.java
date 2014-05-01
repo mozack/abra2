@@ -39,8 +39,15 @@ public class RegionLoader {
 		String line = reader.readLine();
 		
 		while (line != null) {
-			String[] fields = line.split("\t");			
-			features.add(new Feature(fields[SEQNAME_IDX], Long.valueOf(fields[start]), Long.valueOf(fields[end])));
+			String[] fields = line.split("\t");
+			Feature feature = new Feature(fields[SEQNAME_IDX], Long.valueOf(fields[start]), Long.valueOf(fields[end])); 
+			
+			if (fields.length >= 5) {
+				int kmerSize = Integer.parseInt(fields[4]);
+				feature.setKmer(kmerSize);
+			}
+			
+			features.add(feature);
 			
 			line = reader.readLine();
 		}

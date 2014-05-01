@@ -10,12 +10,9 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
-import java.util.Set;
 
 import net.sf.picard.sam.BuildBamIndex;
 import net.sf.picard.sam.SortSam;
@@ -672,7 +669,7 @@ public class ReAligner {
 			}
 			
 			// Assemble contigs
-			NativeAssembler assem = (NativeAssembler) newAssembler();
+			NativeAssembler assem = (NativeAssembler) newAssembler(region);
 			List<Feature> regions = new ArrayList<Feature>();
 			regions.add(region);
 			String contigs = assem.assembleContigs(bams, contigsFasta, tempDir, regions, region.getDescriptor(), true, this, c2r);
@@ -685,7 +682,9 @@ public class ReAligner {
 					List<Feature> svRegions = new ArrayList<Feature>();
 					svRegions.add(region);
 					svRegions.add(svCandidate.getRegion());
-					NativeAssembler svAssem = (NativeAssembler) newAssembler();
+					
+					//TODO: Determine optimal kmer size in SV area dynamically here.
+					NativeAssembler svAssem = (NativeAssembler) newAssembler(region);
 					String svContigs = svAssem.assembleContigs(bams, contigsFasta, tempDir, svRegions, region.getDescriptor() + "__" + svCandidate.getRegion().getDescriptor() + "_" + svCandidate.getSpanningReadPairCount(), true, this, c2r);
 					
 					if (!svContigs.equals("<ERROR>") && !svContigs.equals("<REPEAT>") && !svContigs.isEmpty()) {
@@ -715,11 +714,11 @@ public class ReAligner {
 	}
 		
 	private void loadRegions() throws IOException {
+		//this.regions = getRegions(regionsGtf, readLength);
 		
-//		RegionTracker regionTracker = new RegionTracker(regions, null);
-//		regions = regionTracker.identifyTargetRegions(inputBams, this.assemblerSettings.getMinBaseQuality(), readLength, c2r);
-		
-		this.regions = getRegions(regionsGtf, readLength);
+		// Using previously collapsed and split regions with kmers here.
+		RegionLoader loader = new RegionLoader();
+		this.regions = loader.load(regionsGtf);
 	}
 
 	public void setRegionsGtf(String gtfFile) {
@@ -988,8 +987,36 @@ public class ReAligner {
 		
 		return regions;
 	}
+	
+	private int[] getKmers(Feature region) {
+		int[] kmerSizes = null;
 		
-	private NativeAssembler newAssembler() {
+		int kmerSize = region.getKmer();
+		
+		int maxKmerSize = this.readLength-15; 
+		
+		if (kmerSize > 0) {
+			List<Integer> kmers = new ArrayList<Integer>();
+			
+			while (kmerSize < maxKmerSize) {
+				kmers.add(kmerSize);
+				kmerSize += 10;
+			}
+			
+			kmerSizes = new int[kmers.size()];
+			
+			int i=0;
+			for (int kmer : kmers) {
+				kmerSizes[i++] = kmer;
+			}
+		} else {
+			kmerSizes = assemblerSettings.getKmerSize();
+		}
+		
+		return kmerSizes;
+	}
+		
+	private NativeAssembler newAssembler(Feature region) {
 		NativeAssembler assem = new NativeAssembler();
 
 		assem.setTruncateOutputOnRepeat(true);
@@ -998,7 +1025,8 @@ public class ReAligner {
 
 		assem.setMaxPathsFromRoot(100000);
 		assem.setReadLength(readLength);
-		assem.setKmer(assemblerSettings.getKmerSize());
+		//assem.setKmer(assemblerSettings.getKmerSize());
+		assem.setKmer(getKmers(region));
 		assem.setMinKmerFrequency(assemblerSettings.getMinNodeFrequncy());
 		assem.setMinBaseQuality(assemblerSettings.getMinBaseQuality());
 		assem.setMinReadCandidateFraction(assemblerSettings.getMinReadCandidateFraction());

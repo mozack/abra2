@@ -704,11 +704,6 @@ public class ReAligner {
 		List<Feature> regions = loader.load(regionsBedOrGtf);		
 		regions = RegionLoader.collapseRegions(regions, readLength);
 		regions = splitRegions(regions);
-		
-		System.out.println("Num regions: " + regions.size());
-		for (Feature region : regions) {
-			System.out.println(region.getSeqname() + "\t" + region.getStart() + "\t" + region.getEnd());
-		}
 
 		return regions;
 	}
@@ -719,6 +714,11 @@ public class ReAligner {
 		// Using previously collapsed and split regions with kmers here.
 		RegionLoader loader = new RegionLoader();
 		this.regions = loader.load(regionsGtf);
+		
+		System.out.println("Num regions: " + regions.size());
+		for (Feature region : regions) {
+			System.out.println(region.getSeqname() + "\t" + region.getStart() + "\t" + region.getEnd() + "\t" + region.getKmer());
+		}
 	}
 
 	public void setRegionsGtf(String gtfFile) {
@@ -1183,7 +1183,8 @@ public class ReAligner {
 	}
 	
 	public static void main(String[] args) throws Exception {
-		String inp = "--in /home/lmose/dev/ayc/opt/mem/test_tumor.bam --kmer 43 --mc-mapq 25 --mcl 101 --mcr -1.0 --mnf 2 --umnf 2 --mpc 50000 --out /home/lmose/dev/ayc/opt/mem/test_tumor.abra.bam --ref /home/lmose/reference/test/test.fa --targets /home/lmose/dev/ayc/opt/mem/test.gtf --threads 2 --working /home/lmose/dev/ayc/opt/mem/work1 --mur 50000000 --no-unalign --mbq 20 --rcf .02";
+//		String inp = "--in /home/lmose/dev/ayc/opt/mem/test_tumor.bam --kmer 43 --mc-mapq 25 --mcl 101 --mcr -1.0 --mnf 2 --umnf 2 --mpc 50000 --out /home/lmose/dev/ayc/opt/mem/test_tumor.abra.bam --ref /home/lmose/reference/test/test.fa --targets /home/lmose/dev/ayc/opt/mem/test.gtf --threads 2 --working /home/lmose/dev/ayc/opt/mem/work1 --mur 50000000 --no-unalign --mbq 20 --rcf .02";
+		String inp = "--in /home/lmose/dev/ayc/opt/mem/test_tumor.bam --kmer 43 --out /home/lmose/dev/ayc/opt/mem/test_tumor.abra3.bam --ref /home/lmose/reference/test/test.fa --targets /home/lmose/dev/ayc/opt/mem/test2.bed --threads 2 --working /home/lmose/dev/ayc/opt/mem/work3";
 		run(inp.split("\\s+"));
 	}
 	/*

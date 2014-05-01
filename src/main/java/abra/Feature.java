@@ -14,6 +14,9 @@ public class Feature {
 	private long end;    // inclusive
 	private String additionalInfo;
 	
+	// Optional kmerSize value specific to ABRA assembly.
+	private int kmerSize;
+
 	public Feature(String seqname, long start, long end) {
 		this.seqname      = seqname;
 		this.start        = start;
@@ -72,5 +75,13 @@ public class Feature {
 	public boolean overlaps(String chromosome, int startPos, int stopPos) {
 		return ((this.seqname.equals(chromosome)) &&
 				(spansEitherCoordinate(startPos, stopPos)));
+	}
+	
+	public int getKmer() {
+		return kmerSize;
+	}
+
+	public void setKmer(int kmer) {
+		this.kmerSize = kmer;
 	}
 }

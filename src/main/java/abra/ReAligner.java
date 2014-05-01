@@ -669,26 +669,30 @@ public class ReAligner {
 			}
 			
 			// Assemble contigs
-			NativeAssembler assem = (NativeAssembler) newAssembler(region);
-			List<Feature> regions = new ArrayList<Feature>();
-			regions.add(region);
-			String contigs = assem.assembleContigs(bams, contigsFasta, tempDir, regions, region.getDescriptor(), true, this, c2r);
-			if (!contigs.equals("<ERROR>") && !contigs.equals("<REPEAT>") && !contigs.isEmpty()) {
-				appendContigs(contigs);
-			
-				List<BreakpointCandidate> svCandidates = assem.getSvCandidateRegions();
-				for (BreakpointCandidate svCandidate : svCandidates) {
-					System.out.println("SV: " + region.getDescriptor() + "-->" + svCandidate.getRegion().getDescriptor());
-					List<Feature> svRegions = new ArrayList<Feature>();
-					svRegions.add(region);
-					svRegions.add(svCandidate.getRegion());
-					
-					//TODO: Determine optimal kmer size in SV area dynamically here.
-					NativeAssembler svAssem = (NativeAssembler) newAssembler(region);
-					String svContigs = svAssem.assembleContigs(bams, contigsFasta, tempDir, svRegions, region.getDescriptor() + "__" + svCandidate.getRegion().getDescriptor() + "_" + svCandidate.getSpanningReadPairCount(), true, this, c2r);
-					
-					if (!svContigs.equals("<ERROR>") && !svContigs.equals("<REPEAT>") && !svContigs.isEmpty()) {
-						svContigWriter.write(svContigs);
+			if (region.getKmer() > this.readLength-15) {
+				System.out.println("Skipping assembly of region: " + region.getDescriptor() + " - " + region.getKmer());
+			} else {
+				NativeAssembler assem = (NativeAssembler) newAssembler(region);
+				List<Feature> regions = new ArrayList<Feature>();
+				regions.add(region);
+				String contigs = assem.assembleContigs(bams, contigsFasta, tempDir, regions, region.getDescriptor(), true, this, c2r);
+				if (!contigs.equals("<ERROR>") && !contigs.equals("<REPEAT>") && !contigs.isEmpty()) {
+					appendContigs(contigs);
+				
+					List<BreakpointCandidate> svCandidates = assem.getSvCandidateRegions();
+					for (BreakpointCandidate svCandidate : svCandidates) {
+						System.out.println("SV: " + region.getDescriptor() + "-->" + svCandidate.getRegion().getDescriptor());
+						List<Feature> svRegions = new ArrayList<Feature>();
+						svRegions.add(region);
+						svRegions.add(svCandidate.getRegion());
+						
+						//TODO: Determine optimal kmer size in SV area dynamically here.
+						NativeAssembler svAssem = (NativeAssembler) newAssembler(region);
+						String svContigs = svAssem.assembleContigs(bams, contigsFasta, tempDir, svRegions, region.getDescriptor() + "__" + svCandidate.getRegion().getDescriptor() + "_" + svCandidate.getSpanningReadPairCount(), true, this, c2r);
+						
+						if (!svContigs.equals("<ERROR>") && !svContigs.equals("<REPEAT>") && !svContigs.isEmpty()) {
+							svContigWriter.write(svContigs);
+						}
 					}
 				}
 			}

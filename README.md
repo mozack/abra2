@@ -50,7 +50,7 @@ ABRA produces one or more realigned BAMs.  It is currently necessary to sort and
 
 Reads that have been realigned will contain a YO tag indicating their original alignment position.  Reads that were originally unaligned will have a YO value of N/A.
 
-After the output BAM file is sorted and indexed it can be passed into a variant caller such as [FreeBayes](https://github.com/ekg/freebayes) , [Strelka](https://sites.google.com/site/strelkasomaticvariantcaller) , or [UNCeqr](http://lbg.med.unc.edu/~mwilkers/unceqr_dist)
+After the output BAM file is sorted and indexed it can be passed into a variant caller such as [FreeBayes](https://github.com/ekg/freebayes), [Strelka](https://sites.google.com/site/strelkasomaticvariantcaller) and [UNCeqr](http://lbg.med.unc.edu/~mwilkers/unceqr_dist)
 
 ### Demo / test data
 A test data set and example command line is available under the demo directory.  Edit demo.bash to specify your hg19 reference location (indexed by a recent version of bwa) and run demo.bash.

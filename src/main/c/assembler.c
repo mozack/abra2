@@ -472,6 +472,8 @@ void prune_graph(sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nod
 			}
 		}
 	}
+
+	printf("Remaining nodes after pruning: %d\n", nodes->size());
 }
 
 struct linked_node* identify_root_nodes(sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes) {

@@ -19,7 +19,7 @@ java -Xss8M -Xmx32G -XX:MaxPermSize=256M  -jar $JAR --in $BAM --kmer 43,53,63,73
 
 FreeBayes command line:
 freebayes -t <target_regions> -= -f <ref> <bam_file>
-vcfallelicprimitives from vcflib is used to decompose complex variants
+Complex variants are decomposed into primitives using the CIGAR string recorded in the FreeBayes produced VCF.
 FreeBayes was run against ABRA output and without realignment
 
 UnifiedGenotyper command line:

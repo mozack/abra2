@@ -30,6 +30,7 @@ java -Xmx4G -jar $JAR --in input.bam --kmer 43,53,63,73,83 --out output.bam --re
 
 The above command allocates 4GB for the java heap.  ABRA includes native code that runs outside of the JVM.  We have found that for typical exome processing using 8 threads, 16GB total is more than sufficient.
 
+Note: The code at the HEAD may occasionally be unstable.  It is recommended to work from a release.
 
 ### Parameters
 parameter | value

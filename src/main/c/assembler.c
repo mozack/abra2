@@ -629,7 +629,10 @@ int build_contigs(
 				memset(kmer, 0, 1024);
 				strncpy(kmer, contig->curr_node->kmer, kmer_size);
 				printf("Max contig size exceeded at node: %s\n", kmer);
-				exit(-1);
+
+				//TODO: Provide different status
+				status = TOO_MANY_CONTIGS;
+				break;
 			}
 
 			contig->visited_nodes->insert(contig->curr_node->kmer);

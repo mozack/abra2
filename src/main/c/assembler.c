@@ -333,6 +333,7 @@ void build_graph2(const char* input, sparse_hash_map<const char*, struct node*, 
 		} else if (ptr[0] == '1') {
 			strand = 1;
 		} else {
+			printf("Initial char in input invalid: %c\n", ptr[0]);
 			printf("ERROR!  INVALID INPUT:\n===========================%s\n===========================\n", input);
 			exit(-1);
 		}

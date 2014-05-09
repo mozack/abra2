@@ -31,6 +31,7 @@ public class ReAlignerOptions extends Options {
 	private static final String MIN_READ_CANDIDATE_FRACTION = "rcf";
 	private static final String MAX_AVERAGE_REGION_DEPTH = "mad";
 	private static final String SEARCH_FOR_STRUCTURAL_VARIATION = "sv";
+	private static final String SEARCH_FOR_LOCAL_REPEATS = "lr";
 	
 	private OptionParser parser;
 	private boolean isValid;
@@ -60,6 +61,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(MIN_READ_CANDIDATE_FRACTION, "Minimum read candidate fraction for triggering assembly").withRequiredArg().ofType(Double.class).defaultsTo(.01);
             parser.accepts(MAX_AVERAGE_REGION_DEPTH, "Regions with average depth exceeding this value will be downsampled").withRequiredArg().ofType(Integer.class).defaultsTo(400);
             parser.accepts(SEARCH_FOR_STRUCTURAL_VARIATION, "Enable Structural Variation searching (experimental, only supported for paired end)").withRequiredArg().ofType(String.class);
+            parser.accepts(SEARCH_FOR_LOCAL_REPEATS, "Search for potential larger local repeats and output to specified file (only for multiple samples)").withRequiredArg().ofType(String.class);
     	}
     	
     	return parser;
@@ -211,6 +213,10 @@ public class ReAlignerOptions extends Options {
 	
 	public String getStructuralVariantFile() {
 		return (String) getOptions().valueOf(SEARCH_FOR_STRUCTURAL_VARIATION);
+	}
+	
+	public String getLocalRepeatFile() {
+		return (String) getOptions().valueOf(SEARCH_FOR_LOCAL_REPEATS);
 	}
 	
 	public boolean isValid() {

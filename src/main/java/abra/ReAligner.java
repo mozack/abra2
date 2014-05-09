@@ -72,6 +72,8 @@ public class ReAligner {
 	private boolean shouldReprocessUnaligned = true;
 	
 	private String structuralVariantFile;
+	private String localRepeatFile;
+	private BufferedWriter localRepeatWriter;
 	
 	private String[] inputSams;
 	private SAMFileWriter[] writers;
@@ -168,6 +170,11 @@ public class ReAligner {
 		
 		contigWriter.close();
 		svContigWriter.close();
+		
+		if (localRepeatWriter != null) {
+			localRepeatWriter.close();
+		}
+		
 		clock.stopAndPrint();
 		
 		String cleanContigsFasta = alignAndCleanContigs(contigFasta, tempDir, true);
@@ -695,12 +702,62 @@ public class ReAligner {
 						}
 					}
 				}
+				
+				if (assem.isCycleExceedingThresholdDetected() && (bams.size() > 1)) {
+					// Assemble each region separately looking for cycles
+					
+					List<String> cycleStatus = new ArrayList<String>();
+					
+					for (String bam : bams) {
+						List<String> bamInput = new ArrayList<String>();
+						bamInput.add(bam);
+						NativeAssembler cycleAssem = (NativeAssembler) newAssembler(region);
+						
+						int kmer = readLength / 2;
+						if (kmer % 2 == 1) {
+							kmer -= 1;
+						}
+						kmer = Math.min(kmer, NativeAssembler.CYCLE_KMER_LENGTH_THRESHOLD);
+						cycleAssem.setKmer(new int[] { kmer });
+						cycleAssem.setShouldSearchForSv(false);
+						
+						String cycleContigs = assem.assembleContigs(bams, contigsFasta, tempDir, regions, region.getDescriptor(), true, this, c2r);
+						
+						if (!cycleContigs.equals("<ERROR>") && !cycleContigs.equals("<REPEAT>")) {
+							cycleContigs = "";
+						}
+						
+						cycleStatus.add(cycleContigs);
+					}
+					
+					if (isAnyElementDifferent(cycleStatus)) {
+						for (String status : cycleStatus) {
+							localRepeatWriter.write(status);
+							localRepeatWriter.write('\t');
+						}
+						localRepeatWriter.write('\n');
+					}
+				}
 			}
 		}
 		catch (Exception e) {
 			e.printStackTrace();
 			throw e;
 		}
+	}
+	
+	private boolean isAnyElementDifferent(List<String> elems) {
+		String last = null;
+		
+		for (String elem : elems) {
+			if (last != null && !elem.equals(last)) {
+				return true;
+			}
+			
+			last = elem;
+		}
+		
+		return false;
 	}
 	
 	static List<Feature> getRegions(String regionsBedOrGtf, int readLength) throws IOException {
@@ -1079,6 +1136,10 @@ public class ReAligner {
 		new NativeLibraryLoader().load(tempDir);
 		
 		threadManager = new ThreadManager(numThreads);
+		
+		if (this.localRepeatFile != null) {
+			localRepeatWriter = new BufferedWriter(new FileWriter(localRepeatFile, false));
+		}
 	}
 	
 	private void mkdir(String dir) {
@@ -1175,6 +1236,7 @@ public class ReAligner {
 			realigner.rnaSam = options.getRnaSam();
 			realigner.rnaOutputSam = options.getRnaSamOutput();
 			realigner.structuralVariantFile = options.getStructuralVariantFile();
+			realigner.localRepeatFile = options.getLocalRepeatFile();
 
 			long s = System.currentTimeMillis();
 			

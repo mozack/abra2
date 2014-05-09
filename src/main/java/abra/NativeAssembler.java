@@ -24,6 +24,8 @@ public class NativeAssembler {
 	//TODO: Calc dynamically
 	private static final int MAX_READ_LENGTHS_PER_REGION = 6;
 	
+	public static final int CYCLE_KMER_LENGTH_THRESHOLD = 43;
+	
 	private boolean truncateOnRepeat;
 	private int maxContigs;
 	private int maxPathsFromRoot;
@@ -37,6 +39,7 @@ public class NativeAssembler {
 	List<Position> svCandidates = new ArrayList<Position>();
 	List<BreakpointCandidate> svCandidateRegions = new ArrayList<BreakpointCandidate>();
 	private boolean shouldSearchForSv = false;
+	private boolean isCycleExceedingThresholdDetected = false;
 
 	private native String assemble(String input, String output, String prefix, int truncateOnRepeat, int maxContigs, int maxPathsFromRoot, int readLength, int kmerSize, int minKmerFreq, int minBaseQuality);
 	
@@ -270,6 +273,10 @@ public class NativeAssembler {
 					
 					if (!contigs.equals("<REPEAT>")) {
 						break;
+					} else {
+						if (kmer >= readLength/2 || kmer >= CYCLE_KMER_LENGTH_THRESHOLD) {
+							isCycleExceedingThresholdDetected = true;
+						}
 					}
 				}
 			} else {
@@ -428,6 +435,10 @@ public class NativeAssembler {
 	
 	public void setMinReadCandidateFraction(double minReadCandidateFraction) {
 		this.minReadCandidateFraction = minReadCandidateFraction;
+	}
+	
+	public boolean isCycleExceedingThresholdDetected() {
+		return isCycleExceedingThresholdDetected;
 	}
 	
 	static class Position implements Comparable<Position> {

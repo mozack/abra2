@@ -724,7 +724,7 @@ public class ReAligner {
 						cycleAssem.setKmer(new int[] { kmer });
 						cycleAssem.setShouldSearchForSv(false);
 						
-						String cycleContigs = assem.assembleContigs(bams, contigsFasta, tempDir, regions, region.getDescriptor(), true, this, c2r);
+						String cycleContigs = cycleAssem.assembleContigs(bams, contigsFasta, tempDir, regions, region.getDescriptor(), true, this, c2r);
 						
 						if (!cycleContigs.equals("<ERROR>") && !cycleContigs.equals("<REPEAT>")) {
 							cycleContigs = "";
@@ -738,7 +738,7 @@ public class ReAligner {
 						buf.append(status + "\t");
 					}
 					
-					System.out.println("Cycle detection for region: " + region + ".  Result: " + buf.toString());
+					System.out.println("Cycle detection for region: " + region + ".  Result: [" + buf.toString() + "]");
 					
 					
 					if (isAnyElementDifferent(cycleStatus)) {

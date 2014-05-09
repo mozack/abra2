@@ -709,25 +709,25 @@ public class ReAligner {
 					// Assemble each region separately looking for cycles
 					List<String> cycleStatus = new ArrayList<String>();
 					
+					int kmer = readLength / 2;
+					if (kmer % 2 == 1) {
+						kmer -= 1;
+					}
+					kmer = Math.min(kmer, NativeAssembler.CYCLE_KMER_LENGTH_THRESHOLD);
+					kmer = Math.max(kmer, region.getKmer());
+					
 					for (String bam : bams) {
 						List<String> bamInput = new ArrayList<String>();
 						bamInput.add(bam);
 						NativeAssembler cycleAssem = (NativeAssembler) newAssembler(region);
-						
-						int kmer = readLength / 2;
-						if (kmer % 2 == 1) {
-							kmer -= 1;
-						}
-						kmer = Math.min(kmer, NativeAssembler.CYCLE_KMER_LENGTH_THRESHOLD);
-						kmer = Math.max(kmer, region.getKmer());
-						
+												
 						cycleAssem.setKmer(new int[] { kmer });
 						cycleAssem.setShouldSearchForSv(false);
 						
 						String cycleContigs = cycleAssem.assembleContigs(bamInput, contigsFasta, tempDir, regions, region.getDescriptor(), true, this, c2r);
 						
 						if (!cycleContigs.equals("<ERROR>") && !cycleContigs.equals("<REPEAT>")) {
-							cycleContigs = "";
+							cycleContigs = ".";
 						}
 						
 						cycleStatus.add(cycleContigs);
@@ -740,13 +740,20 @@ public class ReAligner {
 					
 					System.out.println("Cycle detection for region: " + region + ".  Result: [" + buf.toString() + "]");
 					
-					
 					if (isAnyElementDifferent(cycleStatus)) {
+						StringBuffer out = new StringBuffer();
+						out.append(region.getDescriptor() + "\t");
+						
 						for (String status : cycleStatus) {
-							localRepeatWriter.write(status);
-							localRepeatWriter.write('\t');
+							out.append(status + "\t");							
 						}
-						localRepeatWriter.write('\n');
+						
+						out.append(kmer);
+						out.append('\n');
+						
+						synchronized (localRepeatWriter) {
+							localRepeatWriter.write(out.toString());
+						}
 					}
 				}
 			}
@@ -756,7 +763,7 @@ public class ReAligner {
 			throw e;
 		}
 	}
-	
+		
 	private boolean isAnyElementDifferent(List<String> elems) {
 		String last = null;
 		

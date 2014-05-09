@@ -703,9 +703,10 @@ public class ReAligner {
 					}
 				}
 				
-				if (assem.isCycleExceedingThresholdDetected() && (bams.size() > 1)) {
-					// Assemble each region separately looking for cycles
+				if (assem.isCycleExceedingThresholdDetected() && (bams.size() > 1) && this.localRepeatWriter != null) {
+					System.out.println("Attempting cycle detection for: " + region.getDescriptor());
 					
+					// Assemble each region separately looking for cycles
 					List<String> cycleStatus = new ArrayList<String>();
 					
 					for (String bam : bams) {
@@ -718,6 +719,8 @@ public class ReAligner {
 							kmer -= 1;
 						}
 						kmer = Math.min(kmer, NativeAssembler.CYCLE_KMER_LENGTH_THRESHOLD);
+						kmer = Math.max(kmer, region.getKmer());
+						
 						cycleAssem.setKmer(new int[] { kmer });
 						cycleAssem.setShouldSearchForSv(false);
 						
@@ -729,6 +732,14 @@ public class ReAligner {
 						
 						cycleStatus.add(cycleContigs);
 					}
+					
+					StringBuffer buf = new StringBuffer("Cycle detection result");
+					for (String status : cycleStatus) {
+						buf.append(status + "\t");
+					}
+					
+					System.out.println("Cycle detection for region: " + region + ".  Result: " + buf.toString());
+					
 					
 					if (isAnyElementDifferent(cycleStatus)) {
 						for (String status : cycleStatus) {

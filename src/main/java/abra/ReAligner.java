@@ -724,7 +724,7 @@ public class ReAligner {
 						cycleAssem.setKmer(new int[] { kmer });
 						cycleAssem.setShouldSearchForSv(false);
 						
-						String cycleContigs = cycleAssem.assembleContigs(bams, contigsFasta, tempDir, regions, region.getDescriptor(), true, this, c2r);
+						String cycleContigs = cycleAssem.assembleContigs(bamInput, contigsFasta, tempDir, regions, region.getDescriptor(), true, this, c2r);
 						
 						if (!cycleContigs.equals("<ERROR>") && !cycleContigs.equals("<REPEAT>")) {
 							cycleContigs = "";

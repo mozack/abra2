@@ -138,14 +138,7 @@ public class NativeAssembler {
 						
 						SAMRecord read = iter.next();
 						readCount++;
-						
-						if (read.getReadLength() != readLength) {
-							reader.close();
-							throw new IllegalArgumentException(
-									"Variable read lengths not yet supported.  Expected read length: " + readLength +
-									"Actual read length: " + read.getReadLength() + " read: " + read.getSAMString());
-						}
-						
+												
 						// Don't allow same read to be counted twice.
 						if ( (!realigner.isFiltered(read)) && 
 							 (!read.getDuplicateReadFlag()) && 
@@ -153,6 +146,14 @@ public class NativeAssembler {
 							 //(Sam2Fastq.isPrimary(read)) &&
 							 (!isHardClipped(read)) &&
 							 ((!checkForDupes) || (!readIds.contains(getIdentifier(read))))) {
+							
+							
+							if (read.getReadString().length() != readLength) {
+								reader.close();
+								throw new IllegalArgumentException(
+										"Variable read lengths not yet supported.  Expected read length: " + readLength +
+										"Actual read length: " + read.getReadLength() + " read: " + read.getSAMString());
+							}
 	
 							Integer numBestHits = (Integer) read.getIntegerAttribute("X0");
 							boolean hasAmbiguousInitialAlignment = numBestHits != null && numBestHits > 1;

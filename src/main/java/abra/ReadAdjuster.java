@@ -32,6 +32,11 @@ public class ReadAdjuster {
 	private int minInsertLen;
 	private int maxInsertLen;
 	
+	private static final String ORIGINAL_ALIGNMENT_TAG = "YO";
+	private static final String MISMATCHES_TO_CONTIG_TAG = "YM";
+	private static final String CONTIG_QUALITY_TAG = "YQ";
+	private static final String CONTIG_ALIGNMENT_TAG = "YA";
+	
 	public ReadAdjuster(boolean isPairedEnd, int maxMapq, CompareToReference2 c2r, int minInsertLen, int maxInsertLen) {
 		this.isPairedEnd = isPairedEnd;
 		this.maxMapq = maxMapq;
@@ -130,7 +135,7 @@ public class ReadAdjuster {
 				// This must happen prior to updateMismatchAndEditDistance
 				adjustForStrand(read.getReadNegativeStrandFlag(), readToOutput);
 				
-				if (readToOutput.getAttribute("YO") != null) {
+				if (readToOutput.getAttribute(ORIGINAL_ALIGNMENT_TAG) != null) {
 					// HACK: Only add X0 for final alignment.  Assembler skips X0 > 1
 					if (isTightAlignment) {
 						readToOutput.setAttribute("X0", outputReadAlignmentInfo.size());
@@ -201,18 +206,22 @@ public class ReadAdjuster {
 						}
 						
 						// Read's original alignment position
-						updatedRead.setAttribute("YO", originalAlignment);
+						updatedRead.setAttribute(ORIGINAL_ALIGNMENT_TAG, originalAlignment);
 					}
 				}
 				
 				// Mismatches to the contig
-				updatedRead.setAttribute("YM", hitInfo.getNumMismatches());
+				updatedRead.setAttribute(MISMATCHES_TO_CONTIG_TAG, hitInfo.getNumMismatches());
 				
 				// Contig's mapping quality
-				updatedRead.setAttribute("YQ", hitInfo.getRecord().getMappingQuality());
+				updatedRead.setAttribute(CONTIG_QUALITY_TAG, hitInfo.getRecord().getMappingQuality());
 				
 				// Contig's length
-				updatedRead.setAttribute("YL", hitInfo.getRecord().getCigar().getReadLength());
+//				updatedRead.setAttribute("YL", hitInfo.getRecord().getCigar().getReadLength());
+				
+				// Contig Position + CIGAR
+				updatedRead.setAttribute(CONTIG_ALIGNMENT_TAG, contigRead.getReferenceName() + ":" + contigRead.getAlignmentStart() +
+						":" + contigRead.getCigarString());
 				
 				//TODO: Check strand!!!
 				String readAlignmentInfo = updatedRead.getReferenceName() + "_" + updatedRead.getAlignmentStart() + "_" +
@@ -296,7 +305,7 @@ public class ReadAdjuster {
 	}
 
 	private void updateMismatchAndEditDistance(SAMRecord read, CompareToReference2 c2r, SAMRecord origRead) {
-		if (read.getAttribute("YO") != null) {
+		if (read.getAttribute(ORIGINAL_ALIGNMENT_TAG) != null) {
 			int numMismatches = c2r.numMismatches(read);				
 			int numIndelBases = SAMRecordUtils.getNumIndelBases(read);
 			read.setAttribute("XM", numMismatches);
@@ -311,9 +320,9 @@ public class ReadAdjuster {
 		// Need original read here because updated read has already had 0x04 flag unset.
 		
 		if ((origRead.getReadUnmappedFlag()) || (read.getMappingQuality() > 0)) {
-			int contigQuality = (Integer) read.getAttribute("YQ");
+			int contigQuality = (Integer) read.getAttribute("CONTIG_QUALITY_TAG");
 			int quality = Math.min(contigQuality, this.maxMapq);
-			int mismatchesToContig = (Integer) read.getAttribute("YM");
+			int mismatchesToContig = (Integer) read.getAttribute(MISMATCHES_TO_CONTIG_TAG);
 			quality -= mismatchesToContig * 5;
 			mapq = Math.max(quality, 1);
 		}

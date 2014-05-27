@@ -141,6 +141,7 @@ public class KmerSizeEvaluator {
 	}
 	
 	private void evalRegion(Feature region, String regionBases) {
+		/*
 		boolean shouldInclude = false;
 		NativeAssembler assembler = new NativeAssembler();
 		StringBuffer readBuf = new StringBuffer((ReAligner.MAX_REGION_LENGTH + 2*readLength) * readLength);
@@ -168,6 +169,7 @@ public class KmerSizeEvaluator {
 				kmer += 2;
 			}
 		}
+		*/
 		
 		boolean isEditDistanceOK = false;
 		int distKmer = MIN_KMER;
@@ -178,7 +180,8 @@ public class KmerSizeEvaluator {
 			}
 		}
 
-		region.setAdditionalInfo(String.valueOf(kmer) + "\t" + String.valueOf(distKmer) + "\t.");
+//		region.setAdditionalInfo(String.valueOf(kmer) + "\t" + String.valueOf(distKmer) + "\t.");
+		region.setAdditionalInfo(".\t" + String.valueOf(distKmer) + "\t.");
 		
 //		if (shouldInclude) {
 //			region.setAdditionalInfo(String.valueOf(kmer) + "\tINCLUDE");

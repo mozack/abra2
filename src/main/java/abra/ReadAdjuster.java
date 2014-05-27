@@ -320,7 +320,7 @@ public class ReadAdjuster {
 		// Need original read here because updated read has already had 0x04 flag unset.
 		
 		if ((origRead.getReadUnmappedFlag()) || (read.getMappingQuality() > 0)) {
-			int contigQuality = (Integer) read.getAttribute("CONTIG_QUALITY_TAG");
+			int contigQuality = (Integer) read.getAttribute(CONTIG_QUALITY_TAG);
 			int quality = Math.min(contigQuality, this.maxMapq);
 			int mismatchesToContig = (Integer) read.getAttribute(MISMATCHES_TO_CONTIG_TAG);
 			quality -= mismatchesToContig * 5;

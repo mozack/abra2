@@ -38,6 +38,8 @@ public class RegionLoader {
 		
 		String line = reader.readLine();
 		
+		int cnt = 0;
+		
 		while (line != null) {
 			String[] fields = line.split("\t");
 			Feature feature = new Feature(fields[SEQNAME_IDX], Long.valueOf(fields[start]), Long.valueOf(fields[end])); 
@@ -50,6 +52,11 @@ public class RegionLoader {
 			features.add(feature);
 			
 			line = reader.readLine();
+			cnt++;
+			if ((cnt % 100000) == 0) {
+				System.out.println("Loaded " + cnt + " regions");
+				System.out.flush();
+			}
 		}
 		
 		reader.close();

@@ -148,11 +148,10 @@ public class NativeAssembler {
 							 ((!checkForDupes) || (!readIds.contains(getIdentifier(read))))) {
 							
 							
-							if (read.getReadString().length() != readLength) {
+							if (read.getReadString().length() > readLength) {
 								reader.close();
-								throw new IllegalArgumentException(
-										"Variable read lengths not yet supported.  Expected read length: " + readLength +
-										"Actual read length: " + read.getReadLength() + " read: " + read.getSAMString());
+								throw new IllegalArgumentException("Maximum read length of: " + readLength +
+										" exceeded for: " + read.getSAMString());
 							}
 	
 							Integer numBestHits = (Integer) read.getIntegerAttribute("X0");
@@ -226,14 +225,14 @@ public class NativeAssembler {
 						if (random.nextDouble() < keepProbability) {
 							readBuffer.append(read.getReadNegativeStrandFlag() ? "1" : "0");
 							
-							if (read.getReadLength() == readLength) {
+							if (read.getReadString().length() == readLength) {
 								readBuffer.append(read.getReadString());
 								readBuffer.append(read.getBaseQualityString());
 							} else {
 								StringBuffer basePadding = new StringBuffer();
 								StringBuffer qualPadding = new StringBuffer();
 								
-								for (int i=0; i<readLength-read.getReadLength(); i++) {
+								for (int i=0; i<readLength-read.getReadString().length(); i++) {
 									basePadding.append('N');
 									qualPadding.append('!');
 								}

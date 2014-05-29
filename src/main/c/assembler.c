@@ -36,7 +36,7 @@ using google::sparse_hash_set;
 #define MAX_FREQUENCY 32766
 
 // This makes sense for small assembly windows, but should be parameterized for larger assemblies
-#define MAX_NODES = 9000
+#define MAX_NODES 9000
 
 //TODO: Better variable localization
 __thread int read_length;
@@ -328,7 +328,7 @@ void build_graph2(const char* input, sparse_hash_map<const char*, struct node*, 
 	const char* ptr = input;
 	int num_reads = 0;
 
-	while (record < num_records && nodes->size < MAX_NODES) {
+	while ((record < num_records) && (nodes->size() < MAX_NODES)) {
 		ptr = &(input[record*record_len]);
 		int strand = 0;
 

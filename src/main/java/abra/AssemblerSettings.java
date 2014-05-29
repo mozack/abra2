@@ -17,7 +17,16 @@ public class AssemblerSettings {
 	private double minReadCandidateFraction;
 	private int maxAverageDepth;
 	private boolean searchForStructuralVariation;
+	private int averageDepthCeiling;
 		
+	public int getAverageDepthCeiling() {
+		return averageDepthCeiling;
+	}
+
+	public void setAverageDepthCeiling(int averageDepthCeiling) {
+		this.averageDepthCeiling = averageDepthCeiling;
+	}
+
 	public boolean searchForStructuralVariation() {
 		return searchForStructuralVariation;
 	}

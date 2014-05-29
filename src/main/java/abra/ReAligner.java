@@ -441,13 +441,7 @@ public class ReAligner {
 			
 			int regionStart = Integer.parseInt(fields[fields.length-3]) - 1000;
 			int regionStop = Integer.parseInt(fields[fields.length-2]) + 1000;
-			
-//			System.out.println("chr: " + regionChromosome + " start: " + regionStart + "stop: " + regionStop);
-			
-//			String regionChromosome = fields[0];
-//			int regionStart = Integer.parseInt(fields[1]) - 1000;
-//			int regionStop = Integer.parseInt(fields[2]) + 1000;
-			
+						
 			if ((contig.getReferenceName().equals(regionChromosome)) &&
 				(contig.getAlignmentStart() >= regionStart) &&
 				(contig.getAlignmentEnd() <= regionStop)) {
@@ -1111,6 +1105,7 @@ public class ReAligner {
 		assem.setMinReadCandidateFraction(assemblerSettings.getMinReadCandidateFraction());
 		assem.setMaxAverageDepth(assemblerSettings.getMaxAverageDepth());
 		assem.setShouldSearchForSv(this.isPairedEnd && assemblerSettings.searchForStructuralVariation());
+		assem.setAverageDepthCeiling(assemblerSettings.getAverageDepthCeiling());
 
 		return assem;
 	}
@@ -1240,6 +1235,7 @@ public class ReAligner {
 			assemblerSettings.setMinReadCandidateFraction(options.getMinReadCandidateFraction());
 			assemblerSettings.setMaxAverageDepth(options.getMaxAverageRegionDepth());
 			assemblerSettings.setSearchForStructuralVariation(options.shouldSearchForStructuralVariation());
+			assemblerSettings.setAverageDepthCeiling(options.getAverageDepthCeiling());
 
 			ReAligner realigner = new ReAligner();
 			realigner.setReference(options.getReference());

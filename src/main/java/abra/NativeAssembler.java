@@ -40,6 +40,7 @@ public class NativeAssembler {
 	List<BreakpointCandidate> svCandidateRegions = new ArrayList<BreakpointCandidate>();
 	private boolean shouldSearchForSv = false;
 	private boolean isCycleExceedingThresholdDetected = false;
+	private int averageDepthCeiling;
 
 	private native String assemble(String input, String output, String prefix, int truncateOnRepeat, int maxContigs, int maxPathsFromRoot, int readLength, int kmerSize, int minKmerFreq, int minBaseQuality);
 	
@@ -97,6 +98,36 @@ public class NativeAssembler {
 		return (int) (readLengthsForAllRegions(regions) * (double) maxAverageDepth); 
 	}
 	
+	private int maxNumberOfReadsPerSample(List<Feature> regions) {
+		return (int) (readLengthsForAllRegions(regions) * (double) averageDepthCeiling);
+	}
+	
+	private boolean isAssemblyTriggerCandidate(SAMRecord read, CompareToReference2 c2r) {
+		boolean isCandidate = false;
+		
+		// Increment candidate count for indels
+		if (read.getCigarString().contains("I") || read.getCigarString().contains("D")) {
+			isCandidate = true;
+		}
+
+		// Increment candidate count for substantial high quality soft clipping
+		// TODO: Check for chimera directly?
+		if (read.getCigarString().contains("S")) {
+			if (c2r.numHighQualityMismatches(read, minBaseQuality) > (readLength/10)) {
+				isCandidate = true;
+			}
+		}
+		
+		// Increment candidate count if read contains at least 3 high quality mismatches
+		if (SAMRecordUtils.getIntAttribute(read, "NM") >= 3) {
+			if (c2r.numHighQualityMismatches(read, minBaseQuality) > 3) {
+				isCandidate = true;
+			}
+		}
+
+		return isCandidate;
+	}
+	
 	public String assembleContigs(List<String> inputFiles, String output, String tempDir, List<Feature> regions, String prefix,
 			boolean checkForDupes, ReAligner realigner, CompareToReference2 c2r) {
 		
@@ -108,10 +139,14 @@ public class NativeAssembler {
 		
 		int minReadCount = Integer.MAX_VALUE;
 		
+		int maxReadsPerSample = maxNumberOfReadsPerSample(regions);
+		
+		boolean isMaxReadsForRegionExceeded = false;
+
+		// if c2r is null, this is the unaligned region.
+		boolean isAssemblyCandidate = c2r == null ? true : false;
+		
 		try {
-			
-			// if c2r is null, this is the unaligned region.
-			boolean isAssemblyCandidate = c2r == null ? true : false;
 			
 			List<List<SAMRecord>> readsList = new ArrayList<List<SAMRecord>>();
 
@@ -119,7 +154,6 @@ public class NativeAssembler {
 				readIds = new HashSet<String>();
 				List<SAMRecord> reads = new ArrayList<SAMRecord>();
 				readsList.add(reads);
-				
 				
 				for (Feature region : regions) {
 					SAMFileReader reader = new SAMFileReader(new File(input));
@@ -134,7 +168,7 @@ public class NativeAssembler {
 					
 					int candidateReadCount = 0;
 					
-					while (iter.hasNext()) {
+					while (iter.hasNext() && !isMaxReadsForRegionExceeded) {
 						
 						SAMRecord read = iter.next();
 						readCount++;
@@ -162,30 +196,19 @@ public class NativeAssembler {
 									readIds.add(getIdentifier(read));
 								}
 								
-								// Increment candidate count for indels
-								if (!isAssemblyCandidate && read.getCigarString().contains("I") || read.getCigarString().contains("D")) {
+								if (!isAssemblyCandidate && isAssemblyTriggerCandidate(read, c2r)) {
 									candidateReadCount++;
-								}
-	
-								// Increment candidate count for substantial high quality soft clipping
-								// TODO: Check for chimera directly?
-								if (!isAssemblyCandidate && (read.getCigarString().contains("S"))) {
-									if (c2r.numHighQualityMismatches(read, minBaseQuality) > (readLength/10)) {
-										candidateReadCount++;
-									}
-								}
-								
-								// Increment candidate count if read contains at least 3 high quality mismatches
-								if (!isAssemblyCandidate && (SAMRecordUtils.getIntAttribute(read, "NM") >= 3)) {
-									if (c2r.numHighQualityMismatches(read, minBaseQuality) > 3) {
-										candidateReadCount++;
-									}
 								}
 								
 								reads.add(read);
 								
 								if (shouldSearchForSv && isSvCandidate(read, region)) {
 									svCandidates.add(new Position(read.getMateReferenceName(), read.getMateAlignmentStart(), input));
+								}
+								
+								if (reads.size() > maxReadsPerSample) {
+									isMaxReadsForRegionExceeded = true;
+									break;
 								}
 							}
 						}
@@ -201,6 +224,12 @@ public class NativeAssembler {
 				if (reads.size() < minReadCount) {
 					minReadCount = reads.size();
 				}
+			}
+			
+			if (isMaxReadsForRegionExceeded) {
+				isAssemblyCandidate = false;
+				shouldSearchForSv = false;
+				System.out.println("Max reads exceeded for region: " + prefix);
 			}
 			
 			readIds = null;
@@ -337,7 +366,7 @@ public class NativeAssembler {
 		
 		long end = System.currentTimeMillis();
 		
-		System.out.println("Elapsed_msecs_in_NativeAssembler\tRegion:\t" + regions.get(0).getDescriptor() + "\tLength:\t" + regions.get(0).getLength() + "\tReadCount:\t" + readCount + "\tElapsed\t" + (end-start));
+		System.out.println("Elapsed_msecs_in_NativeAssembler\tRegion:\t" + regions.get(0).getDescriptor() + "\tLength:\t" + regions.get(0).getLength() + "\tReadCount:\t" + readCount + "\tElapsed\t" + (end-start) + "\tAssembled\t" + isAssemblyCandidate);
 		
 		return contigs;
 	}
@@ -435,6 +464,10 @@ public class NativeAssembler {
 	
 	public void setMinReadCandidateFraction(double minReadCandidateFraction) {
 		this.minReadCandidateFraction = minReadCandidateFraction;
+	}
+	
+	public void setAverageDepthCeiling(int averageDepthCeiling) {
+		this.averageDepthCeiling = averageDepthCeiling;
 	}
 	
 	public boolean isCycleExceedingThresholdDetected() {

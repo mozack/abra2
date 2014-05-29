@@ -32,6 +32,7 @@ public class ReAlignerOptions extends Options {
 	private static final String MAX_AVERAGE_REGION_DEPTH = "mad";
 	private static final String SEARCH_FOR_STRUCTURAL_VARIATION = "sv";
 	private static final String SEARCH_FOR_LOCAL_REPEATS = "lr";
+	private static final String AVERAGE_DEPTH_CEILING = "adc";
 	
 	private OptionParser parser;
 	private boolean isValid;
@@ -62,6 +63,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(MAX_AVERAGE_REGION_DEPTH, "Regions with average depth exceeding this value will be downsampled").withRequiredArg().ofType(Integer.class).defaultsTo(400);
             parser.accepts(SEARCH_FOR_STRUCTURAL_VARIATION, "Enable Structural Variation searching (experimental, only supported for paired end)").withRequiredArg().ofType(String.class);
             parser.accepts(SEARCH_FOR_LOCAL_REPEATS, "Search for potential larger local repeats and output to specified file (only for multiple samples)").withRequiredArg().ofType(String.class);
+            parser.accepts(AVERAGE_DEPTH_CEILING, "Skip regions with average depth greater than this value").withOptionalArg().ofType(Integer.class).defaultsTo(100000);
     	}
     	
     	return parser;
@@ -217,6 +219,10 @@ public class ReAlignerOptions extends Options {
 	
 	public String getLocalRepeatFile() {
 		return (String) getOptions().valueOf(SEARCH_FOR_LOCAL_REPEATS);
+	}
+	
+	public int getAverageDepthCeiling() {
+		return (Integer) getOptions().valueOf(AVERAGE_DEPTH_CEILING);
 	}
 	
 	public boolean isValid() {

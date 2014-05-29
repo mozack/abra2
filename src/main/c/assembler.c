@@ -31,8 +31,12 @@ using google::sparse_hash_set;
 #define TOO_MANY_PATHS_FROM_ROOT -1
 #define TOO_MANY_CONTIGS -2
 #define STOPPED_ON_REPEAT -3
+#define TOO_MANY_NODES -4
 
 #define MAX_FREQUENCY 32766
+
+// This makes sense for small assembly windows, but should be parameterized for larger assemblies
+#define MAX_NODES = 9000
 
 //TODO: Better variable localization
 __thread int read_length;
@@ -324,7 +328,7 @@ void build_graph2(const char* input, sparse_hash_map<const char*, struct node*, 
 	const char* ptr = input;
 	int num_reads = 0;
 
-	while (record < num_records) {
+	while (record < num_records && nodes->size < MAX_NODES) {
 		ptr = &(input[record*record_len]);
 		int strand = 0;
 
@@ -748,16 +752,25 @@ char* assemble(const char* input,
 
 	build_graph2(input, nodes, pool);
 
+	int status = -1;
+
+	if (nodes->size() >= MAX_NODES) {
+		status = TOO_MANY_NODES;
+		printf("Graph too complex for region: %s\n", prefix);
+	}
+
 	//TODO: Set this explicitly
 	char isUnalignedRegion = !truncate_on_repeat;
 	prune_graph(nodes, isUnalignedRegion);
 
-	struct linked_node* root_nodes = identify_root_nodes(nodes);
+	struct linked_node* root_nodes = NULL;
+
+	if (status != TOO_MANY_NODES) {
+		root_nodes = identify_root_nodes(nodes);
+	}
 
 	int contig_count = 0;
 	char truncate_output = 0;
-
-	int status = -1;
 
 	char* contig_str = (char*) malloc(MAX_TOTAL_CONTIG_LEN);
 	memset(contig_str, 0, MAX_TOTAL_CONTIG_LEN);

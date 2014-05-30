@@ -585,6 +585,7 @@ int build_contigs(
 	int status = OK;
 	stack<contig*> contigs;
 	stack<contig*> contigs_to_output;
+	stack<contig*> popped_contigs;
 	struct contig* root_contig = new_contig();
 	root_contig->curr_node = root;
 	contigs.push(root_contig);
@@ -605,6 +606,8 @@ int build_contigs(
 				all_contigs_len += strlen(contig->seq) + 100;
 				contigs_to_output.push(contig);
 //				output_contig(contig, contig_count, fp, prefix);
+			} else {
+				popped_contigs.push(contig);
 			}
 			contigs.pop();
 			if (stop_on_repeat) {
@@ -621,6 +624,8 @@ int build_contigs(
 				all_contigs_len += strlen(contig->seq) + 100;
 				contigs_to_output.push(contig);
 //				output_contig(contig, contig_count, fp, prefix);
+			} else {
+				popped_contigs.push(contig);
 			}
 			contigs.pop();
 //			free_contig(contig);
@@ -679,10 +684,24 @@ int build_contigs(
 		}
 	}
 
+
 	// Cleanup stranded contigs in case processing stopped.
+	while (contigs_to_output.size() > 0) {
+		struct contig* contig = contigs_to_output.top();
+
+		contigs_to_output.pop();
+		free_contig(contig);
+	}
+
 	while (contigs.size() > 0) {
 		struct contig* contig = contigs.top();
 		contigs.pop();
+		free_contig(contig);
+	}
+
+	while (popped_contigs.size() > 0) {
+		struct contig* contig = popped_contigs.top();
+		popped_contigs.pop();
 		free_contig(contig);
 	}
 

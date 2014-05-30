@@ -48,9 +48,11 @@ public class Cadabra {
 					tumorReads = tumorIter.next();
 				}
 				
-				if ((count % 1000) == 0) {
+				if ((count % 1000000) == 0) {
 					System.err.println("Position: " + normalReads.getChromosome() + ":" + normalReads.getPosition());
 				}
+				
+				count += 1;
 			} else {
 				normalReads = normalIter.next();
 				tumorReads = tumorIter.next();
@@ -115,7 +117,7 @@ public class Cadabra {
 		String type = "";
 		if (indel.getOperator() == CigarOperator.D) {
 			type = "D";
-		} else if (indel.getOperator() == CigarOperator.D) {
+		} else if (indel.getOperator() == CigarOperator.I) {
 			type = "I";
 		}
 		buf.append(type);
@@ -198,11 +200,15 @@ public class Cadabra {
 	}
 	
 	public static void main(String[] args) {
-//		String normal = "/home/lmose/dev/abra/cadabra/normal.test.bam";
-//		String tumor = "/home/lmose/dev/abra/cadabra/tumor.test.bam";
+//		String normal = "/home/lmose/dev/abra/cadabra/normal_test2.bam";
+//		String tumor = "/home/lmose/dev/abra/cadabra/tumor_test2.bam";
 		
-		String normal = args[0];
-		String tumor = args[1];
+		String normal = "/home/lmose/dev/abra/cadabra/normal.abra4.sort.bam";
+		String tumor = "/home/lmose/dev/abra/cadabra/tumor.abra4.sort.bam";
+
+		
+//		String normal = args[0];
+//		String tumor = args[1];
 		
 		new Cadabra().callSomatic(normal, tumor);
 	}

@@ -137,7 +137,8 @@ public class ReAligner {
 		tempDirs = new String[inputSams.length];
 		
 		SAMFileWriterFactory writerFactory = new SAMFileWriterFactory();
-		writerFactory.setUseAsyncIo(true);
+//		writerFactory.setUseAsyncIo(true);
+		writerFactory.setUseAsyncIo(false);
 		
 		writers = new SAMFileWriter[inputSams.length];
 		

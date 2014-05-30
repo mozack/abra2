@@ -32,6 +32,8 @@ public class Cadabra {
 		ReadsAtLocus normalReads = null;
 		ReadsAtLocus tumorReads = null;
 		
+		int count = 0;
+		
 		while (normalIter.hasNext() && tumorIter.hasNext()) {
 			if (normalReads != null && tumorReads != null) {
 				int compare = normalReads.compareLoci(tumorReads, normal.getSamHeader().getSequenceDictionary());
@@ -44,6 +46,10 @@ public class Cadabra {
 					processLocus(normalReads, tumorReads);
 					normalReads = normalIter.next();
 					tumorReads = tumorIter.next();
+				}
+				
+				if ((count % 1000) == 0) {
+					System.err.println("Position: " + normalReads.getChromosome() + ":" + normalReads.getPosition());
 				}
 			} else {
 				normalReads = normalIter.next();

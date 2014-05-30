@@ -732,8 +732,6 @@ char* assemble(const char* input,
 
 //	min_contig_length = read_length + 1;
 
-	min_contig_length = 400;
-
 	//TODO: Parameterize mcl - shorter for unaligned region?
 /*
 	if (truncate_on_repeat) {

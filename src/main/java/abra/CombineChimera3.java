@@ -31,7 +31,9 @@ public class CombineChimera3 {
 	// the beginning/end of the contig
 	int minIndelBuffer;
 	
-	public void combine(String input, String output, int minIndelBuffer) {
+	public void combine(String input, String output, int minIndelBuffer, CompareToReference2 c2r) {
+		IndelShifter indelShifter = new IndelShifter();
+		
 		this.minIndelBuffer = minIndelBuffer;
 		SamMultiMappingReader reader = new SamMultiMappingReader(input);
 		
@@ -45,7 +47,7 @@ public class CombineChimera3 {
 			List<SAMRecord> processedReads = processRead(readList);
 			
 			for (SAMRecord read : processedReads) {
-				outputReadsBam.addAlignment(read);
+				outputReadsBam.addAlignment(indelShifter.shiftIndelsLeft(read, c2r));
 			}
 		}
 		
@@ -404,6 +406,7 @@ public class CombineChimera3 {
 		return -1;
 	}
 	
+	/*
 	public static void main(String[] args) {
 		
 		CombineChimera3 cc3 = new CombineChimera3();
@@ -417,4 +420,5 @@ public class CombineChimera3 {
 		cc3.combine(in, out, 33);
 
 	}
+	*/
 }

@@ -40,11 +40,12 @@ public class SimpleRealignmentWriter implements RealignmentWriter {
 	}
 	
 	private void addAlignment(SAMRecord read) {
-		if (isTightAlignment) {
-			writer.addAlignment(indelShifter.shiftIndelsLeft(read, c2r));
-		} else {
-			writer.addAlignment(read);
-		}
+		writer.addAlignment(read);
+//		if (isTightAlignment) {
+//			writer.addAlignment(indelShifter.shiftIndelsLeft(read, c2r));
+//		} else {
+//			writer.addAlignment(read);
+//		}
 	}
 
 	@Override

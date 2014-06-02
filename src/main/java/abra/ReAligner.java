@@ -483,7 +483,7 @@ public class ReAligner {
 		CombineChimera3 cc = new CombineChimera3();
 		String contigsWithChim = tempDir + "/" + "all_contigs_chim.bam";
 		int slack = this.readLength / 3;
-		cc.combine(contigsSam, contigsWithChim, isTightAlignment ? slack : 0);
+		cc.combine(contigsSam, contigsWithChim, isTightAlignment ? slack : 0, c2r);
 		
 		if (isTightAlignment) {
 			// Chop and clop...

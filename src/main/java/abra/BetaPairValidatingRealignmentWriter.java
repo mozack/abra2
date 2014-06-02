@@ -254,7 +254,8 @@ public class BetaPairValidatingRealignmentWriter implements RealignmentWriter {
 	}
 	
 	private void addAlignment(SAMRecord read) {
-		writer.addAlignment(indelShifter.shiftIndelsLeft(read, c2r));
+//		writer.addAlignment(indelShifter.shiftIndelsLeft(read, c2r));
+		writer.addAlignment(read);
 	}
 	
 	private void processCandidates() {

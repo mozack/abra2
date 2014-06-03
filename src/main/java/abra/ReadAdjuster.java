@@ -220,8 +220,10 @@ public class ReadAdjuster {
 //				updatedRead.setAttribute("YL", hitInfo.getRecord().getCigar().getReadLength());
 				
 				// Contig Position + CIGAR
-				updatedRead.setAttribute(CONTIG_ALIGNMENT_TAG, contigRead.getReferenceName() + ":" + contigRead.getAlignmentStart() +
-						":" + contigRead.getCigarString());
+//				updatedRead.setAttribute(CONTIG_ALIGNMENT_TAG, contigRead.getReferenceName() + ":" + contigRead.getAlignmentStart() +
+//						":" + contigRead.getCigarString());
+				
+				updatedRead.setAttribute(CONTIG_ALIGNMENT_TAG, contigRead.getStringAttribute("ZZ"));
 				
 				//TODO: Check strand!!!
 				String readAlignmentInfo = updatedRead.getReferenceName() + "_" + updatedRead.getAlignmentStart() + "_" +

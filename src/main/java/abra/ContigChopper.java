@@ -173,7 +173,10 @@ public class ContigChopper {
 			chunk.setCigar(cigar);
 			chunk.setReadString(bases);
 			chunk.clearAttributes();
-			chunk.setAttribute("ZZ", contig.getCigarString());
+//			chunk.setAttribute("ZZ", contig.getCigarString());
+			
+			chunk.setAttribute("ZZ", contig.getReferenceName() + ":" + contig.getAlignmentStart() +
+					":" + contig.getCigarString()); 
 			
 			chunks.add(chunk);
 			

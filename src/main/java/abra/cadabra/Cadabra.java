@@ -226,11 +226,11 @@ public class Cadabra {
 //		String normal = "/home/lmose/dev/abra/cadabra/normal.abra4.sort.bam";
 //		String tumor = "/home/lmose/dev/abra/cadabra/tumor.abra4.sort.bam";
 
-		String normal = "/home/lmose/dev/abra/cadabra/t2/ntest.bam";
-		String tumor = "/home/lmose/dev/abra/cadabra/t2/ttest.bam";
+//		String normal = "/home/lmose/dev/abra/cadabra/t2/ntest.bam";
+//		String tumor = "/home/lmose/dev/abra/cadabra/t2/ttest.bam";
 		
-//		String normal = args[0];
-//		String tumor = args[1];
+		String normal = args[0];
+		String tumor = args[1];
 		
 		new Cadabra().callSomatic(normal, tumor);
 	}

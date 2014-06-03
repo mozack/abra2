@@ -15,6 +15,8 @@ public class Cadabra {
 
 	private static final int MIN_SUPPORTING_READS = 2;
 	
+	private static final int MIN_DISTANCE_FROM_READ_END = 3;
+	
 	private ReadLocusReader normal;
 	private ReadLocusReader tumor;
 
@@ -66,14 +68,15 @@ public class Cadabra {
 		
 		CigarElement tumorIndel = null;
 		int tumorCount = 0;
+		boolean hasSufficientDistanceFromReadEnd = false;
 		
 		for (SAMRecord read : tumorReads.getReads()) {
-			CigarElement readElement = checkForIndelAtLocus(read, position);
+			IndelInfo readElement = checkForIndelAtLocus(read, position);
 			if (tumorIndel == null && readElement != null) {
-				tumorIndel = readElement;
+				tumorIndel = readElement.getCigarElement();
 				tumorCount = 1;
 			} else if (tumorIndel != null && readElement != null) {
-				if (tumorIndel.equals(readElement)) {
+				if (tumorIndel.equals(readElement.getCigarElement())) {
 					// Increment tumor indel support count
 					tumorCount += 1;
 				} else {
@@ -83,13 +86,17 @@ public class Cadabra {
 					break;
 				}
 			}
+			
+			if (!hasSufficientDistanceFromReadEnd && tumorIndel != null && readElement != null && readElement.getCigarElement().equals(tumorIndel)) {
+				hasSufficientDistanceFromReadEnd = sufficientDistanceFromReadEnd(read, readElement.getReadIndex());
+			}
 		}
 		
-		if (tumorCount >= MIN_SUPPORTING_READS) {
+		if (tumorCount >= MIN_SUPPORTING_READS && hasSufficientDistanceFromReadEnd) {
 			for (SAMRecord read : normalReads.getReads()) {
-				CigarElement normalElem = checkForIndelAtLocus(read.getAlignmentStart(), read.getCigar(), position);
+				IndelInfo normalInfo = checkForIndelAtLocus(read.getAlignmentStart(), read.getCigar(), position);
 				
-				if (normalElem != null) {
+				if (normalInfo != null && sufficientDistanceFromReadEnd(read, normalInfo.getReadIndex())) {
 					// Don't allow call if any normal indel exists at this position.
 					tumorIndel = null;
 					tumorCount = 0;
@@ -98,9 +105,20 @@ public class Cadabra {
 			}
 		}
 		
-		if (tumorCount >= MIN_SUPPORTING_READS) {
+		if (tumorCount >= MIN_SUPPORTING_READS && hasSufficientDistanceFromReadEnd) {
 			outputRecord(chromosome, position, normalReads, tumorReads, tumorIndel, tumorCount);
 		}
+	}
+	
+	private boolean sufficientDistanceFromReadEnd(SAMRecord read, int readIdx) {
+		boolean ret = false;
+		
+		if (readIdx >= MIN_DISTANCE_FROM_READ_END &&
+			readIdx <= read.getReadLength()-MIN_DISTANCE_FROM_READ_END-1) {
+				ret = true;
+		}
+		
+		return ret;
 	}
 	
 	private void outputRecord(String chromosome, int position,
@@ -133,9 +151,9 @@ public class Cadabra {
 		System.out.println(buf.toString());
 	}
 	
-	private CigarElement checkForIndelAtLocus(SAMRecord read, int refPos) {
+	private IndelInfo checkForIndelAtLocus(SAMRecord read, int refPos) {
 
-		CigarElement elem = null;
+		IndelInfo elem = null;
 		
 		String contigInfo = read.getStringAttribute("YA");
 		if (contigInfo != null) {
@@ -149,12 +167,12 @@ public class Cadabra {
 			
 			if (elem != null) {
 				// Now check to see if this read supports the indel
-				CigarElement readElem = checkForIndelAtLocus(read.getAlignmentStart(),
+				IndelInfo readElem = checkForIndelAtLocus(read.getAlignmentStart(),
 						read.getCigar(), refPos);
 				
 				// Allow partially overlapping indels to support contig
 				// (Should only matter for inserts)
-				if (readElem == null || readElem.getOperator() != elem.getOperator()) {
+				if (readElem == null || readElem.getCigarElement().getOperator() != elem.getCigarElement().getOperator()) {
 					// Read element doesn't match contig indel
 					elem = null;
 				}
@@ -165,9 +183,9 @@ public class Cadabra {
 	}
 	
 	
-	private CigarElement checkForIndelAtLocus(int alignmentStart, Cigar cigar, int refPos) {
+	private IndelInfo checkForIndelAtLocus(int alignmentStart, Cigar cigar, int refPos) {
 		
-		CigarElement ret = null;
+		IndelInfo ret = null;
 		
 		int readIdx = 0;
 		int currRefPos = alignmentStart;
@@ -177,13 +195,13 @@ public class Cadabra {
 				currRefPos += element.getLength();
 			} else if (element.getOperator() == CigarOperator.I) {
 				if (currRefPos == refPos+1) {
-					ret = element;
+					ret = new IndelInfo(element, readIdx);
 					break;
 				}
 				readIdx += element.getLength();
 			} else if (element.getOperator() == CigarOperator.D) {
 				if (currRefPos == refPos+1) {
-					ret = element;
+					ret = new IndelInfo(element, readIdx);
 					break;
 				}				
 				currRefPos += element.getLength();

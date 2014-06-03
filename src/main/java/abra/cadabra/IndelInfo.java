@@ -1,0 +1,22 @@
+package abra.cadabra;
+
+import net.sf.samtools.CigarElement;
+
+public class IndelInfo {
+
+	private CigarElement cigarElement;
+	private int readIndex;
+	
+	public IndelInfo(CigarElement cigarElement, int readIndex) {
+		this.cigarElement = cigarElement;
+		this.readIndex = readIndex;
+	}
+
+	public CigarElement getCigarElement() {
+		return cigarElement;
+	}
+
+	public int getReadIndex() {
+		return readIndex;
+	}
+}

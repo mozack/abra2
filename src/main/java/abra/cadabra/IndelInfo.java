@@ -5,7 +5,7 @@ import net.sf.samtools.CigarElement;
 public class IndelInfo {
 
 	private CigarElement cigarElement;
-	private int readIndex;
+	private int readIndex = -1;
 	
 	public IndelInfo(CigarElement cigarElement, int readIndex) {
 		this.cigarElement = cigarElement;
@@ -18,5 +18,9 @@ public class IndelInfo {
 
 	public int getReadIndex() {
 		return readIndex;
+	}
+	
+	public void setReadIndex(int readIndex) {
+		this.readIndex = readIndex;
 	}
 }

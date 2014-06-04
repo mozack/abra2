@@ -259,7 +259,7 @@ public class Cadabra {
 					if (elem.getCigarElement().getOperator() == CigarOperator.I && 
 						elem.getCigarElement().getLength() == readElem.getCigarElement().getLength()) {
 					
-						String insertBases = read.getReadString().substring(readElem.getReadIndex(), readElem.getCigarElement().getLength());
+						String insertBases = read.getReadString().substring(readElem.getReadIndex(), readElem.getReadIndex()+readElem.getCigarElement().getLength());
 						elem.setInsertBases(insertBases);
 					}
 				}

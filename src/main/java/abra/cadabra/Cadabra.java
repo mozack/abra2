@@ -1,9 +1,11 @@
 package abra.cadabra;
 
-import java.util.ArrayList;
-import java.util.Collections;
+import java.io.IOException;
+import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
+import java.util.Map;
+
+import abra.CompareToReference2;
 
 import net.sf.samtools.Cigar;
 import net.sf.samtools.CigarElement;
@@ -14,13 +16,16 @@ import net.sf.samtools.TextCigarCodec;
 public class Cadabra {
 
 	private static final int MIN_SUPPORTING_READS = 2;
-	
 	private static final int MIN_DISTANCE_FROM_READ_END = 3;
 	
 	private ReadLocusReader normal;
 	private ReadLocusReader tumor;
+	private CompareToReference2 c2r;
 
-	public void callSomatic(String normal, String tumor) {
+	public void callSomatic(String reference, String normal, String tumor) throws IOException {
+		c2r = new CompareToReference2();
+		c2r.init(reference);
+		
 		this.normal = new ReadLocusReader(normal);
 		this.tumor = new ReadLocusReader(tumor);
 		
@@ -70,11 +75,16 @@ public class Cadabra {
 		int tumorCount = 0;
 		boolean hasSufficientDistanceFromReadEnd = false;
 		
+		Map<String, Integer> insertBasesMap = new HashMap<String, Integer>();
+		
 		for (SAMRecord read : tumorReads.getReads()) {
 			IndelInfo readElement = checkForIndelAtLocus(read, position);
 			if (tumorIndel == null && readElement != null) {
 				tumorIndel = readElement.getCigarElement();
 				tumorCount = 1;
+				if (readElement.getInsertBases() != null) {
+					updateInsertBases(insertBasesMap, readElement.getInsertBases());
+				}
 			} else if (tumorIndel != null && readElement != null) {
 				if (tumorIndel.equals(readElement.getCigarElement())) {
 					// Increment tumor indel support count
@@ -93,21 +103,73 @@ public class Cadabra {
 		}
 		
 		if (tumorCount >= MIN_SUPPORTING_READS && hasSufficientDistanceFromReadEnd) {
+			int normalCount = 0;
+			
 			for (SAMRecord read : normalReads.getReads()) {
 				IndelInfo normalInfo = checkForIndelAtLocus(read.getAlignmentStart(), read.getCigar(), position);
 				
 				if (normalInfo != null && sufficientDistanceFromReadEnd(read, normalInfo.getReadIndex())) {
-					// Don't allow call if any normal indel exists at this position.
-					tumorIndel = null;
-					tumorCount = 0;
-					break;
+					normalCount += 1;
+					
+					if (normalCount >= MIN_SUPPORTING_READS) {
+						// Don't allow call if normal indels exists at this position.
+						tumorIndel = null;
+						tumorCount = 0;
+						break;
+					}
 				}
 			}
+			
+			if (tumorIndel != null && !isNormalCountOK(normalCount, normalReads.getReads().size(), tumorCount)) {
+				tumorIndel = null;
+				tumorCount = 0;
+			}			
 		}
 		
 		if (tumorCount >= MIN_SUPPORTING_READS && hasSufficientDistanceFromReadEnd) {
-			outputRecord(chromosome, position, normalReads, tumorReads, tumorIndel, tumorCount);
+			String insertBases = null;
+			if (tumorIndel.getOperator() == CigarOperator.I) {
+				insertBases = getInsertBaseConsensus(insertBasesMap, tumorIndel.getLength());
+			}
+			outputRecord(chromosome, position, normalReads, tumorReads, tumorIndel, tumorCount, insertBases);
 		}
+	}
+	
+	private void updateInsertBases(Map<String, Integer> insertBases, String bases) {
+		if (insertBases.containsKey(bases)) {
+			insertBases.put(bases, insertBases.get(bases) + 1);
+		} else {
+			insertBases.put(bases, 1);
+		}
+	}
+	
+	private String getInsertBaseConsensus(Map<String, Integer> insertBases, int length) {
+		int maxCount = -1;
+		String maxBases = null;
+		
+		for (String bases : insertBases.keySet()) {
+			int count = insertBases.get(bases);
+			if (count > maxCount) {
+				maxCount = count;
+				maxBases = bases;
+			}
+		}
+		
+		if (maxBases == null) {
+			StringBuffer buf = new StringBuffer(length);
+			for (int i=0; i<length; i++) {
+				buf.append('N');
+			}
+			maxBases = buf.toString();
+		}
+		
+		return maxBases;
+	}
+	
+	private boolean isNormalCountOK(int normalObs, int numNormalReads, int tumorObs) {
+		// Magic numbers here.
+		// Allow a single normal observation if >= 20 tumor observations and >= 20 normal reads
+		return normalObs == 0 || (tumorObs >= 20 && numNormalReads >= 20);		
 	}
 	
 	private boolean sufficientDistanceFromReadEnd(SAMRecord read, int readIdx) {
@@ -121,9 +183,17 @@ public class Cadabra {
 		return ret;
 	}
 	
+	private String getDelRefField(String chromosome, int position, int length) {
+		return c2r.getSequence(chromosome, position, length+1);
+	}
+	
+	private String getInsRefField(String chromosome, int position) {
+		return c2r.getSequence(chromosome, position, 1);
+	}
+	
 	private void outputRecord(String chromosome, int position,
 			ReadsAtLocus normalReads, ReadsAtLocus tumorReads, CigarElement indel,
-			int tumorObs) {
+			int tumorObs, String insertBases) {
 		int normalDepth = normalReads.getReads().size();
 		int tumorDepth = tumorReads.getReads().size();
 		
@@ -131,21 +201,28 @@ public class Cadabra {
 		buf.append(chromosome);
 		buf.append('\t');
 		buf.append(position);
-		buf.append('\t');
-		String type = "";
+		buf.append("\t.\t");
+		
+		String ref = ".";
+		String alt = ".";
 		if (indel.getOperator() == CigarOperator.D) {
-			type = "D";
+			ref = getDelRefField(chromosome, position, indel.getLength());
+			alt = ref.substring(0, 1);
 		} else if (indel.getOperator() == CigarOperator.I) {
-			type = "I";
+			ref = getInsRefField(chromosome, position);
+			alt = ref + insertBases;
 		}
-		buf.append(type);
+		
+		buf.append(ref);
 		buf.append('\t');
-		buf.append(indel.getLength());
-		buf.append('\t');
+		buf.append(alt);
+		buf.append("\t.\tPASS\t.\t");
+		buf.append("DP:OBS\t");
 		buf.append(normalDepth);
+		buf.append(":0");
 		buf.append('\t');
 		buf.append(tumorDepth);
-		buf.append('\t');
+		buf.append(':');
 		buf.append(tumorObs);
 		
 		System.out.println(buf.toString());
@@ -177,6 +254,14 @@ public class Cadabra {
 					elem = null;
 				} else {
 					elem.setReadIndex(readElem.getReadIndex());
+					
+					// If this read overlaps the entire insert, capture the bases.
+					if (elem.getCigarElement().getOperator() == CigarOperator.I && 
+						elem.getCigarElement().getLength() == readElem.getCigarElement().getLength()) {
+					
+						String insertBases = read.getReadString().substring(readElem.getReadIndex(), readElem.getCigarElement().getLength());
+						elem.setInsertBases(insertBases);
+					}
 				}
 			}
 		}
@@ -219,19 +304,21 @@ public class Cadabra {
 		return (char) read.getReadBases()[index];
 	}
 	
-	public static void main(String[] args) {
+	public static void main(String[] args) throws Exception {
 //		String normal = "/home/lmose/dev/abra/cadabra/normal_test2.bam";
 //		String tumor = "/home/lmose/dev/abra/cadabra/tumor_test2.bam";
 		
 //		String normal = "/home/lmose/dev/abra/cadabra/normal.abra4.sort.bam";
 //		String tumor = "/home/lmose/dev/abra/cadabra/tumor.abra4.sort.bam";
 
+//		String reference = "/home/lmose/reference/chr1/chr1.fa";
 //		String normal = "/home/lmose/dev/abra/cadabra/t2/ntest.bam";
 //		String tumor = "/home/lmose/dev/abra/cadabra/t2/ttest.bam";
 		
-		String normal = args[0];
-		String tumor = args[1];
+		String reference = args[0];
+		String normal = args[1];
+		String tumor = args[2];
 		
-		new Cadabra().callSomatic(normal, tumor);
+		new Cadabra().callSomatic(reference, normal, tumor);
 	}
 }

@@ -307,7 +307,7 @@ public class CompareToReference2 {
 	}
 	
 	private void loadRefMap() throws IOException {
-		System.out.println("Loading reference map:  " + this.refFileName);
+		System.err.println("Loading reference map:  " + this.refFileName);
 		long s = System.currentTimeMillis();
 		this.refMap = new HashMap<String, byte[]>();
 		
@@ -349,7 +349,7 @@ public class CompareToReference2 {
 		reader.close();
 		
 		long e = System.currentTimeMillis();
-		System.out.println("Done loading ref map.  Elapsed secs: " + (e-s)/1000);
+		System.err.println("Done loading ref map.  Elapsed secs: " + (e-s)/1000);
 	}
 	
 	private char getRefBase(int idx, String ref) {
@@ -381,7 +381,7 @@ public class CompareToReference2 {
 		byte[] ref = refMap.get(chromosome);
 		
 		if (ref == null) {
-			System.out.println("No ref for chromosome: " + chromosome);
+			System.err.println("No ref for chromosome: " + chromosome);
 		}
 		
 		position -= 1;

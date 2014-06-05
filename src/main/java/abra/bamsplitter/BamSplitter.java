@@ -70,13 +70,13 @@ public class BamSplitter {
 	}
 	
 	public static void main(String[] args) throws Exception {
-//		int numThreads = Integer.parseInt(args[0]);
-//		String inputFile = args[1];
-//		String outputDir = args[2];
+		int numThreads = Integer.parseInt(args[0]);
+		String inputFile = args[1];
+		String outputDir = args[2];
 
-		int numThreads = 2;
-		String inputFile = "/home/lmose/dev/abra/splitter/tumor.sort.bam";
-		String outputDir = "/home/lmose/dev/abra/splitter/split";
+//		int numThreads = 2;
+//		String inputFile = "/home/lmose/dev/abra/splitter/tumor.sort.bam";
+//		String outputDir = "/home/lmose/dev/abra/splitter/split";
 		
 		new BamSplitter().split(inputFile, numThreads, outputDir);
 	}

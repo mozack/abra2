@@ -89,6 +89,10 @@ public class Cadabra {
 				if (tumorIndel.equals(readElement.getCigarElement())) {
 					// Increment tumor indel support count
 					tumorCount += 1;
+					if (readElement.getInsertBases() != null) {
+						updateInsertBases(insertBasesMap, readElement.getInsertBases());
+					}
+
 				} else {
 					// We will not deal with multiple indels at a single locus for now.
 					tumorIndel = null;
@@ -314,10 +318,15 @@ public class Cadabra {
 //		String reference = "/home/lmose/reference/chr1/chr1.fa";
 //		String normal = "/home/lmose/dev/abra/cadabra/t2/ntest.bam";
 //		String tumor = "/home/lmose/dev/abra/cadabra/t2/ttest.bam";
+
 		
-		String reference = args[0];
-		String normal = args[1];
-		String tumor = args[2];
+		String reference = "/home/lmose/reference/chr1/chr1.fa";
+		String normal = "/home/lmose/dev/abra/cadabra/ins/ntest.bam";
+		String tumor = "/home/lmose/dev/abra/cadabra/ins/ttest.bam";
+		
+//		String reference = args[0];
+//		String normal = args[1];
+//		String tumor = args[2];
 		
 		new Cadabra().callSomatic(reference, normal, tumor);
 	}

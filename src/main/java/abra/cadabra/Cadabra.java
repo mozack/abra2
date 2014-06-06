@@ -6,6 +6,7 @@ import java.util.Iterator;
 import java.util.Map;
 
 import abra.CompareToReference2;
+import abra.ReadAdjuster;
 
 import net.sf.samtools.Cigar;
 import net.sf.samtools.CigarElement;
@@ -29,7 +30,13 @@ public class Cadabra {
 		this.normal = new ReadLocusReader(normal);
 		this.tumor = new ReadLocusReader(tumor);
 		
+		outputHeader();
 		process();
+	}
+	
+	private void outputHeader() {
+		System.out.println("##fileformat=VCFv4.1");
+		System.out.println("#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NORMAL	TUMOR");
 	}
 	
 	private void process() {
@@ -74,6 +81,7 @@ public class Cadabra {
 		CigarElement tumorIndel = null;
 		int tumorCount = 0;
 		boolean hasSufficientDistanceFromReadEnd = false;
+		int maxContigMapq = 0;
 		
 		Map<String, Integer> insertBasesMap = new HashMap<String, Integer>();
 		
@@ -82,6 +90,7 @@ public class Cadabra {
 			if (tumorIndel == null && readElement != null) {
 				tumorIndel = readElement.getCigarElement();
 				tumorCount = 1;
+				maxContigMapq = Math.max(maxContigMapq, read.getIntegerAttribute(ReadAdjuster.CONTIG_QUALITY_TAG));
 				if (readElement.getInsertBases() != null) {
 					updateInsertBases(insertBasesMap, readElement.getInsertBases());
 				}
@@ -89,6 +98,7 @@ public class Cadabra {
 				if (tumorIndel.equals(readElement.getCigarElement())) {
 					// Increment tumor indel support count
 					tumorCount += 1;
+					maxContigMapq = Math.max(maxContigMapq, read.getIntegerAttribute(ReadAdjuster.CONTIG_QUALITY_TAG));
 					if (readElement.getInsertBases() != null) {
 						updateInsertBases(insertBasesMap, readElement.getInsertBases());
 					}
@@ -135,7 +145,7 @@ public class Cadabra {
 			if (tumorIndel.getOperator() == CigarOperator.I) {
 				insertBases = getInsertBaseConsensus(insertBasesMap, tumorIndel.getLength());
 			}
-			outputRecord(chromosome, position, normalReads, tumorReads, tumorIndel, tumorCount, insertBases);
+			outputRecord(chromosome, position, normalReads, tumorReads, tumorIndel, tumorCount, insertBases, maxContigMapq);
 		}
 	}
 	
@@ -197,7 +207,7 @@ public class Cadabra {
 	
 	private void outputRecord(String chromosome, int position,
 			ReadsAtLocus normalReads, ReadsAtLocus tumorReads, CigarElement indel,
-			int tumorObs, String insertBases) {
+			int tumorObs, String insertBases, int maxContigMapq) {
 		int normalDepth = normalReads.getReads().size();
 		int tumorDepth = tumorReads.getReads().size();
 		
@@ -220,8 +230,9 @@ public class Cadabra {
 		buf.append(ref);
 		buf.append('\t');
 		buf.append(alt);
-		buf.append("\t.\tPASS\t.\t");
-		buf.append("DP:OBS\t");
+		buf.append("\t.\tPASS\t");
+		buf.append("SOMATIC;CMQ=" + maxContigMapq);
+		buf.append("\tDP:OBS\t");
 		buf.append(normalDepth);
 		buf.append(":0");
 		buf.append('\t');

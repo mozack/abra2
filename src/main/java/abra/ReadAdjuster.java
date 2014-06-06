@@ -34,7 +34,7 @@ public class ReadAdjuster {
 	
 	private static final String ORIGINAL_ALIGNMENT_TAG = "YO";
 	private static final String MISMATCHES_TO_CONTIG_TAG = "YM";
-	private static final String CONTIG_QUALITY_TAG = "YQ";
+	public static final String CONTIG_QUALITY_TAG = "YQ";
 	private static final String CONTIG_ALIGNMENT_TAG = "YA";
 	
 	public ReadAdjuster(boolean isPairedEnd, int maxMapq, CompareToReference2 c2r, int minInsertLen, int maxInsertLen) {

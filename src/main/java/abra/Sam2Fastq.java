@@ -79,9 +79,9 @@ public class Sam2Fastq {
     			
     			if (yx > 0) {
     				
-	    			if ((!read.getReadUnmappedFlag()) && (!regionTracker.isInRegion(read))) {
-	    				read.setAttribute("YR", 1);
-	    			}
+//	    			if ((!read.getReadUnmappedFlag()) && (!regionTracker.isInRegion(read))) {
+//	    				read.setAttribute("YR", 1);
+//	    			}
     				
     				// Does not exactly match reference, output FASTQ record
 	    			output1.write(samReadToFastqRecord(read, c2r));

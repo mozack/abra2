@@ -17,23 +17,16 @@ import java.util.List;
 public class RegionLoader {
 	
 	private static final int SEQNAME_IDX = 0;
-	private static final int GTF_START_IDX   = 3;
-	private static final int GTF_END_IDX     = 4;
 	private static final int BED_START_IDX = 1;
 	private static final int BED_END_IDX = 2;
+	private static final int KMER_SIZE_IDX = 3;
 
 	public List<Feature> load(String regionFile) throws FileNotFoundException, IOException {
 		List<Feature> features = new ArrayList<Feature>();
 		
-		// Assume BED format unless extension is .gtf
 		int start = BED_START_IDX;
 		int end = BED_END_IDX;
-		
-		if (regionFile.endsWith(".gtf")) {
-			start = GTF_START_IDX;
-			end = GTF_END_IDX;
-		}
-		
+				
 		BufferedReader reader = new BufferedReader(new FileReader(regionFile));
 		
 		String line = reader.readLine();
@@ -44,8 +37,8 @@ public class RegionLoader {
 			String[] fields = line.split("\t");
 			Feature feature = new Feature(fields[SEQNAME_IDX], Long.valueOf(fields[start]), Long.valueOf(fields[end])); 
 			
-			if (fields.length >= 5) {
-				int kmerSize = Integer.parseInt(fields[4]);
+			if (fields.length >= KMER_SIZE_IDX+1) {
+				int kmerSize = Integer.parseInt(fields[KMER_SIZE_IDX]);
 				feature.setKmer(kmerSize);
 			}
 			

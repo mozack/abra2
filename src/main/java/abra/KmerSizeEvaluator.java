@@ -13,7 +13,7 @@ import java.util.Set;
 import java.util.TreeSet;
 
 /**
- * Produces BED files indicating genomic windows that lend themselves to assembly.
+ * Produces BED files indicating genomic windows and kmer sizes that lend themselves to assembly.
  *  
  * @author Lisle E. Mose (lmose at unc dot edu)
  */
@@ -24,7 +24,6 @@ public class KmerSizeEvaluator {
 	private int readLength;
 	private String reference;
 	private String outputFile;
-	private String qualities;
 	private BufferedWriter output;
 	private Set<Feature> outputRegions;
 	private ThreadManager threadManager;
@@ -36,62 +35,10 @@ public class KmerSizeEvaluator {
 		this.outputFile = outputFile;
 		this.regionsBed = regionsBed;
 		
-		this.qualities = new String();
-		for (int i=0; i<readLength; i++) {
-			qualities += "H";
-		}
-		
 		this.threadManager = new ThreadManager(numThreads);
 	}
-	
-	/*
+		
 	public void run() throws IOException, InterruptedException {
-//		new NativeLibraryLoader().load(".");
-		CompareToReference2 c2r = new CompareToReference2();
-		c2r.init8bit(reference);
-		
-		include = new BufferedWriter(new FileWriter(in, false));
-		exclude = new BufferedWriter(new FileWriter(out, false));
-		
-		for (String chr : c2r.getChromosomes()) {
-			includeRegions = Collections.synchronizedSortedSet(new TreeSet<Feature>(new RegionComparator()));
-			excludeRegions = Collections.synchronizedSortedSet(new TreeSet<Feature>(new RegionComparator()));
-			int i = 0;
-			int chromosomeLength = c2r.getReferenceLength(chr);
-			while (i < chromosomeLength - ReAligner.MAX_REGION_LENGTH) {
-				int regionStart = i;
-				int regionStop = i + ReAligner.MAX_REGION_LENGTH;
-				int start = Math.max(regionStart - readLength, 0);
-				int stop = Math.min(regionStop + readLength, chromosomeLength-1); 
-				String regionBases = c2r.getSequence(chr, start+1, stop-start);
-				Feature region = new Feature(chr, regionStart, regionStop);
-				
-				//TODO: Handle other ambiguous bases
-				if (!regionBases.contains("N")) {
-					threadManager.spawnThread(new EvalRunnable(threadManager, this, region, regionBases));
-				} else {
-					
-					excludeRegions.add(region);
-				}
-				
-				i += ReAligner.REGION_OVERLAP;
-			}
-			
-			threadManager.waitForAllThreadsToComplete();
-			
-			//TODO: Because assembly regions are overlapped, there is overlap between final include/exclude output
-			outputRegions(include, includeRegions);
-			outputRegions(exclude, excludeRegions);
-		}
-		
-		include.close();
-		exclude.close();
-		
-		System.out.println("Done.");
-	}
-	*/
-	
-	public void run2() throws IOException, InterruptedException {
 				
 //		new NativeLibraryLoader().load(".");
 		CompareToReference2 c2r = new CompareToReference2();
@@ -137,40 +84,10 @@ public class KmerSizeEvaluator {
 	}
 	
 	private void excludeRegion(Feature region) {
-		region.setAdditionalInfo("" + (readLength+1) + "\t" + (readLength+1) + "\tN");
+		region.setAdditionalInfo((readLength+1) + "\tN");
 	}
 	
-	private void evalRegion(Feature region, String regionBases) {
-		/*
-		boolean shouldInclude = false;
-		NativeAssembler assembler = new NativeAssembler();
-		StringBuffer readBuf = new StringBuffer((ReAligner.MAX_REGION_LENGTH + 2*readLength) * readLength);
-		for (int j=0; j<=regionBases.length() - readLength; j++) {
-			readBuf.append("0");  // forward strand only
-			String read = regionBases.substring(j, j+readLength);						
-			readBuf.append(read);
-			readBuf.append(qualities);
-		}
-
-		int kmer = MIN_KMER;
-		while (!shouldInclude && kmer < readLength) {
-		
-			int kmers[] = new int[] { kmer };
-			String contig = assembler.nativeAssemble(readBuf.toString(), region.getDescriptor(), "eval", 0, 1, (ReAligner.MAX_REGION_LENGTH + 2*readLength)*2, readLength, kmers, 1, 0);
-			int basesIdx = contig.indexOf('\n') + 1;
-			if (basesIdx < contig.length()) {
-				String contigBases = contig.substring(basesIdx, contig.length()-1);
-				if (regionBases.equals(contigBases)) {
-					shouldInclude = true;
-				}
-			}
-			
-			if (!shouldInclude) {
-				kmer += 2;
-			}
-		}
-		*/
-		
+	private void evalRegion(Feature region, String regionBases) {	
 		boolean isEditDistanceOK = false;
 		int distKmer = MIN_KMER;
 		while (!isEditDistanceOK && distKmer < readLength) {
@@ -180,20 +97,12 @@ public class KmerSizeEvaluator {
 			}
 		}
 
-//		region.setAdditionalInfo(String.valueOf(kmer) + "\t" + String.valueOf(distKmer) + "\t.");
-		region.setAdditionalInfo(".\t" + String.valueOf(distKmer) + "\t.");
-		
-//		if (shouldInclude) {
-//			region.setAdditionalInfo(String.valueOf(kmer) + "\tINCLUDE");
-//		} else {
-//			excludeRegion(region);
-//		}
-		
+		region.setAdditionalInfo(String.valueOf(distKmer) + "\t.");
+				
 		outputRegions.add(region);
 	}
 	
 	private void outputRegions(BufferedWriter writer, Collection<Feature> regions) throws IOException {
-//		List<Feature> mergedRegions = RegionLoader.collapseRegions(regions, 0);
 		
 		for (Feature region : regions) {
 			String output = region.getSeqname() + "\t" + region.getStart() + "\t" + region.getEnd();
@@ -320,7 +229,7 @@ public class KmerSizeEvaluator {
 		double s = System.currentTimeMillis();
 		KmerSizeEvaluator re = new KmerSizeEvaluator(readLength, reference, outputBed, threads, regionsBed);
 		re.init(tempDir);
-		re.run2();
+		re.run();
 		double e = System.currentTimeMillis();
 		
 		double elapsed = (e-s)/1000;

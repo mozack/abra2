@@ -38,13 +38,30 @@ parameter | value
 --in | One or more input BAMs delimited by comma
 --out | One or more output BAM's corresponding to the set of input BAMs
 --ref  | BWA indexed reference genome.
---kmer | Comma delimited list of kmers used for assembly.  Smallest value is used by default, larger values are used if necessary.
---targets | BED file describing target assembly regions (Usually corresponds to capture targets)
+--kmer | Comma delimited list of kmer lengths used for assembly.  Smallest value is used by default, larger values are used if necessary.  Ignored if kmer sizes are supplied in the target bed file.
+--targets | BED file describing target assembly regions (Usually corresponds to capture targets) with optional kmer lengths for each region
 --working | Temp working directory
+
+### Kmer length selection
+
+As of version 0.77, kmer sizes can by determined based upon the reference content using KmerSizeEvaluator.  We have seen improved results using this method.
+
+Usage:
+java -Xmx4G -cp abra.jar abra.KmerSizeEvaluator <read_length> <reference_fasta> <output_bed> <num_threads> <input_bed> <working_dir>
+
+This will create file <output_bed> which contains the regions specified by <input_bed> with an additional column for kmer size to be used for that region.
+The <output_bed> file can then be passed as input to ABRA via the --targets option.
+
+Example:
+```
+java -Xmx4G -cp abra.jar abra.KmerSizeEvaluator 100 ref/ucsc.hg19.fasta abra_kmers.bed 8 wxs.bed abra_kmer_temp > kmers.log 2>&1
+```
 
 ### Somatic  mode
 
-If working with tumor/normal pairs, it is highly recommended to assemble your samples together.  To do this, simply specify multiple input and output BAM files on the command line. 
+If working with tumor/normal pairs, it is highly recommended to assemble your samples together.  To do this, simply specify multiple input and output BAM files on the command line.
+
+You may also consider using option --lr <repeat_file>.  This option allows for detection of moderate length repeats that could not be resolved at nucleotide precision. 
 
 ### Output
 ABRA produces one or more realigned BAMs.  It is currently necessary to sort and index the output.  At present, the mate information may not be 100% accurate.  Samtools fixmate or Picard Tools FixMateInformation may optionally be used to correct this.

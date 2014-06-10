@@ -63,7 +63,7 @@ java -Xmx4G -cp abra.jar abra.KmerSizeEvaluator 100 ref/ucsc.hg19.fasta abra_kme
 
 If working with tumor/normal pairs, it is highly recommended to assemble your samples together.  To do this, simply specify multiple input and output BAM files on the command line.
 
-In somatic mode, you may also consider using option ```--lr repeat_file```  This option allows for detection of moderate length repeats that could not be resolved at nucleotide precision. 
+In somatic mode, you may also consider using option ```--lr repeat_file```  This option allows for detection of moderate length repeats that could not be resolved at nucleotide precision.  This feature is experimental. 
 
 ### Output
 ABRA produces one or more realigned BAMs.  It is currently necessary to sort and index the output.  At present, the mate information may not be 100% accurate.  Samtools fixmate or Picard Tools FixMateInformation may optionally be used to correct this.
@@ -74,3 +74,4 @@ After the output BAM file is sorted and indexed it can be passed into a variant 
 
 ### Demo / test data
 A test data set and example command line is available under the demo directory.  Edit demo.bash to specify your hg19 reference location (indexed by a recent version of bwa) and run demo.bash.
+

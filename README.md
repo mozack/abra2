@@ -47,10 +47,12 @@ parameter | value
 As of version 0.77, kmer sizes can by determined based upon the reference content using KmerSizeEvaluator.  We have seen improved results using this method.
 
 Usage:
+```
 java -Xmx4G -cp abra.jar abra.KmerSizeEvaluator <read_length> <reference_fasta> <output_bed> <num_threads> <input_bed> <working_dir>
+```
 
-This will create file <output_bed> which contains the regions specified by <input_bed> with an additional column for kmer size to be used for that region.
-The <output_bed> file can then be passed as input to ABRA via the --targets option.
+This will create file "output_bed" which contains the regions specified by "input_bed" with an additional column for kmer size to be used for that region.
+The "output_bed" file can then be passed as input to ABRA via the --targets option.
 
 Example:
 ```

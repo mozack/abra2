@@ -12,7 +12,7 @@ Here is an ABRA realigned region (original reads on top, ABRA realigned reads on
 
 Building ABRA requires JDK 7, Maven and g++
 
-Just run make.  An executable jar will be generated under the target directory.  i.e. target/abra-0.75-SNAPSHOT-jar-with-dependencies.jar
+Just run make.  An executable jar will be generated under the target directory.  i.e. target/abra-0.77-SNAPSHOT-jar-with-dependencies.jar
 
 Pre-built jars are available for 64 bit linux here: https://github.com/mozack/abra/releases
 
@@ -22,7 +22,7 @@ Note, that the jar does contain native code.  While we have tested on a variety 
 
 Running ABRA currently requires bwa 0.7.5a (or similar) in the command path and a recent version of Java.
 
-Sample command line for v0.75:
+Sample command line for v0.77:
 
 ```
 java -Xmx4G -jar $JAR --in input.bam --kmer 43,53,63,73,83 --out output.bam --ref hg19.fasta --targets targets.bed --threads 8 --working abra_temp_dir > abra.log 2>&1

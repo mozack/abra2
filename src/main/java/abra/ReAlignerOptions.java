@@ -44,7 +44,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(INPUT_SAM, "Required list of input sam or bam file(s) separated by comma").withRequiredArg().ofType(String.class);
             parser.accepts(OUTPUT_SAM, "Required list of output sam or bam file(s) separated by comma").withRequiredArg().ofType(String.class);
             parser.accepts(REFERENCE, "Genome reference location").withRequiredArg().ofType(String.class);
-            parser.accepts(TARGET_REGIONS, "BED or GTF file containing target regions").withRequiredArg().ofType(String.class);
+            parser.accepts(TARGET_REGIONS, "BED file containing target regions (with optional kmer size -- see KmerSizeEvaluator)").withRequiredArg().ofType(String.class);
             parser.accepts(WORKING_DIR, "Working directory for intermediate output.  Must not already exist").withRequiredArg().ofType(String.class);
             parser.accepts(KMER_SIZE, "Assembly kmer size(delimit with commas if multiple sizes specified)").withRequiredArg().ofType(String.class);
             parser.accepts(MIN_NODE_FREQUENCY, "Assembly minimum node frequency").withRequiredArg().ofType(Integer.class).defaultsTo(2);

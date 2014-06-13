@@ -116,12 +116,13 @@ public class Sam2Fastq {
 		read.setBaseQualityString("");
 		
 		String readStr = read.getSAMString();
-		
+/*		
 		if (readStr.length() > MAX_SAM_READ_NAME_LENGTH) {
 			String msg = "Warning!  Max SAM Read name length exceeded for: " + readStr;
 			System.out.println(msg);
 //			throw new RuntimeException(msg);
 		}
+*/
 
 		readStr = readStr.replace("\t", FIELD_DELIMITER);
 		

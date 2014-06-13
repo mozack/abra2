@@ -795,7 +795,7 @@ public class ReAligner {
 			RegionLoader loader = new RegionLoader();
 			this.regions = loader.load(regionsBed, true);			
 		} else {
-			getRegions(regionsBed, readLength);
+			this.regions = getRegions(regionsBed, readLength);
 		}
 		
 		System.out.println("Num regions: " + regions.size());

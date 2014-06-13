@@ -22,7 +22,7 @@ Note, that the jar does contain native code.  While we have tested on a variety 
 
 Running ABRA currently requires bwa 0.7.5a (or similar) in the command path and a recent version of Java.
 
-Sample command line for v0.77:
+Sample command line for v0.78:
 
 ```
 java -Xmx4G -jar $JAR --in input.bam --kmer 43,53,63,73,83 --out output.bam --ref hg19.fasta --targets targets.bed --threads 8 --working abra_temp_dir > abra.log 2>&1
@@ -38,7 +38,7 @@ parameter | value
 --in | One or more input BAMs delimited by comma
 --out | One or more output BAM's corresponding to the set of input BAMs
 --ref  | BWA indexed reference genome.
---kmer | Comma delimited list of kmer lengths used for assembly.  Smallest value is used by default, larger values are used if necessary.  Ignored if kmer sizes are supplied in the target bed file.
+--kmer | Comma delimited list of kmer lengths used for assembly.  Smallest value is used by default, larger values are used if necessary.  Omit if kmer sizes are supplied in the target bed file.
 --targets | BED file describing target assembly regions (Usually corresponds to capture targets) with optional kmer lengths for each region
 --working | Temp working directory
 
@@ -52,11 +52,13 @@ java -Xmx4G -cp abra.jar abra.KmerSizeEvaluator <read_length> <reference_fasta> 
 ```
 
 This will create file "output_bed" which contains the regions specified by "input_bed" with an additional column for kmer size to be used for that region.
-The "output_bed" file can then be passed as input to ABRA via the --targets option.
+The "output_bed" file can then be passed as input to ABRA via the --targets option.  Omit the --kmer option when running ABRA using in this mode.
 
 Example:
 ```
-java -Xmx4G -cp abra.jar abra.KmerSizeEvaluator 100 ref/ucsc.hg19.fasta abra_kmers.bed 8 wxs.bed abra_kmer_temp > kmers.log 2>&1
+java -Xmx4G -cp $JAR abra.KmerSizeEvaluator 100 hg19.fasta abra_kmers.bed 8 wxs.bed abra_kmer_temp > kmers.log 2>&1
+
+java -Xmx4G -jar $JAR --in input.bam --out output.bam --ref hg19.fasta --targets abra_kmers.bed --threads 8 --working abra_temp_dir > abra.log 2>&1
 ```
 
 ### Somatic  mode

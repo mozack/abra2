@@ -100,6 +100,8 @@ public class ReAligner {
 	
 	private ThreadManager threadManager;
 	
+	private boolean hasContigs = false;
+	
 	public void reAlign(String[] inputFiles, String[] outputFiles) throws Exception {
 		
 		this.inputSams = inputFiles;
@@ -178,7 +180,11 @@ public class ReAligner {
 		
 		clock.stopAndPrint();
 		
-		String cleanContigsFasta = alignAndCleanContigs(contigFasta, tempDir, true);
+		String cleanContigsFasta = null;
+		
+		if (hasContigs) {
+			cleanContigsFasta = alignAndCleanContigs(contigFasta, tempDir, true);
+		}
 				
 		if (cleanContigsFasta != null) {		
 			clock = new Clock("Align to contigs");
@@ -658,6 +664,7 @@ public class ReAligner {
 	
 	private synchronized void appendContigs(String contigs) throws IOException {
 		contigWriter.write(contigs);
+		hasContigs = true;
 	}
 	
 	public void processRegion(Feature region) throws Exception {

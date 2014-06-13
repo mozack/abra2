@@ -52,7 +52,7 @@ java -Xmx4G -cp abra.jar abra.KmerSizeEvaluator <read_length> <reference_fasta> 
 ```
 
 This will create file "output_bed" which contains the regions specified by "input_bed" with an additional column for kmer size to be used for that region.
-The "output_bed" file can then be passed as input to ABRA via the --targets option.  Omit the --kmer option when running ABRA using in this mode.
+The "output_bed" file can then be passed as input to ABRA via the --targets option.  Omit the --kmer option when running ABRA in this mode.
 
 Example:
 ```

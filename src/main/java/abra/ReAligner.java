@@ -53,7 +53,7 @@ public class ReAligner {
 	
 	private List<Feature> regions;
 
-	private String regionsGtf;
+	private String regionsBed;
 
 	private String tempDir;
 	
@@ -263,7 +263,7 @@ public class ReAligner {
 			System.out.println("output" + ctr + ": " + output);
 		}
 		
-		System.out.println("regions: " + regionsGtf);
+		System.out.println("regions: " + regionsBed);
 		System.out.println("reference: " + reference);
 		System.out.println("working dir: " + tempDir);
 		System.out.println("num threads: " + numThreads);
@@ -773,21 +773,23 @@ public class ReAligner {
 		return false;
 	}
 	
-	static List<Feature> getRegions(String regionsBedOrGtf, int readLength) throws IOException {
+	static List<Feature> getRegions(String regionsBed, int readLength) throws IOException {
 		RegionLoader loader = new RegionLoader();
-		List<Feature> regions = loader.load(regionsBedOrGtf);		
+		List<Feature> regions = loader.load(regionsBed, false);		
 		regions = RegionLoader.collapseRegions(regions, readLength);
 		regions = splitRegions(regions);
 
 		return regions;
 	}
 		
-	private void loadRegions() throws IOException {
-		//this.regions = getRegions(regionsGtf, readLength);
-		
-		// Using previously collapsed and split regions with kmers here.
-		RegionLoader loader = new RegionLoader();
-		this.regions = loader.load(regionsGtf);
+	private void loadRegions() throws IOException {		
+		if (this.assemblerSettings.getKmerSize().length == 0) {
+			// Using previously collapsed and split regions with kmers here.
+			RegionLoader loader = new RegionLoader();
+			this.regions = loader.load(regionsBed, true);			
+		} else {
+			getRegions(regionsBed, readLength);
+		}
 		
 		System.out.println("Num regions: " + regions.size());
 		for (Feature region : regions) {
@@ -795,8 +797,8 @@ public class ReAligner {
 		}
 	}
 
-	public void setRegionsGtf(String gtfFile) {
-		this.regionsGtf = gtfFile;
+	public void setRegionsBed(String bedFile) {
+		this.regionsBed = bedFile;
 	}
 
 	private void getSamHeaderAndReadLength() {
@@ -1240,7 +1242,7 @@ public class ReAligner {
 
 			ReAligner realigner = new ReAligner();
 			realigner.setReference(options.getReference());
-			realigner.setRegionsGtf(options.getTargetRegionFile());
+			realigner.setRegionsBed(options.getTargetRegionFile());
 			realigner.setTempDir(options.getWorkingDir());
 			realigner.setAssemblerSettings(assemblerSettings);
 			realigner.setNumThreads(options.getNumThreads());

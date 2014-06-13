@@ -21,7 +21,7 @@ public class RegionLoader {
 	private static final int BED_END_IDX = 2;
 	private static final int KMER_SIZE_IDX = 3;
 
-	public List<Feature> load(String regionFile) throws FileNotFoundException, IOException {
+	public List<Feature> load(String regionFile, boolean requireKmerSizes) throws FileNotFoundException, IOException {
 		List<Feature> features = new ArrayList<Feature>();
 		
 		int start = BED_START_IDX;
@@ -29,30 +29,35 @@ public class RegionLoader {
 				
 		BufferedReader reader = new BufferedReader(new FileReader(regionFile));
 		
-		String line = reader.readLine();
-		
-		int cnt = 0;
-		
-		while (line != null) {
-			String[] fields = line.split("\t");
-			Feature feature = new Feature(fields[SEQNAME_IDX], Long.valueOf(fields[start]), Long.valueOf(fields[end])); 
+		try {
+			String line = reader.readLine();
 			
-			if (fields.length >= KMER_SIZE_IDX+1) {
-				int kmerSize = Integer.parseInt(fields[KMER_SIZE_IDX]);
-				feature.setKmer(kmerSize);
+			int cnt = 0;
+			
+			while (line != null) {
+				String[] fields = line.split("\t");
+				Feature feature = new Feature(fields[SEQNAME_IDX], Long.valueOf(fields[start]), Long.valueOf(fields[end])); 
+				
+				if (fields.length >= KMER_SIZE_IDX+1) {
+					int kmerSize = Integer.parseInt(fields[KMER_SIZE_IDX]);
+					feature.setKmer(kmerSize);
+				} else if (requireKmerSizes) {
+					throw new IllegalArgumentException("Kmer size missing in bed file.  Region: [" + feature.getDescriptor() + "].  " +
+							"Please use KmerSizeEvaluator to generate kmer sizes for regions or specify kmer sizes using the --kmer option");
+				}
+				
+				features.add(feature);
+				
+				line = reader.readLine();
+				cnt++;
+				if ((cnt % 100000) == 0) {
+					System.out.println("Loaded " + cnt + " regions");
+					System.out.flush();
+				}
 			}
-			
-			features.add(feature);
-			
-			line = reader.readLine();
-			cnt++;
-			if ((cnt % 100000) == 0) {
-				System.out.println("Loaded " + cnt + " regions");
-				System.out.flush();
-			}
+		} finally {
+			reader.close();
 		}
-		
-		reader.close();
 		
 		return features;
 	}

@@ -46,7 +46,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(REFERENCE, "Genome reference location").withRequiredArg().ofType(String.class);
             parser.accepts(TARGET_REGIONS, "BED file containing target regions (with optional kmer size -- see KmerSizeEvaluator)").withRequiredArg().ofType(String.class);
             parser.accepts(WORKING_DIR, "Working directory for intermediate output.  Must not already exist").withRequiredArg().ofType(String.class);
-            parser.accepts(KMER_SIZE, "Assembly kmer size(delimit with commas if multiple sizes specified.  Ignored if kmers specified in bed file)").withRequiredArg().ofType(String.class);
+            parser.accepts(KMER_SIZE, "Assembly kmer size(delimit with commas if multiple sizes specified)").withOptionalArg().ofType(String.class);
             parser.accepts(MIN_NODE_FREQUENCY, "Assembly minimum node frequency").withRequiredArg().ofType(Integer.class).defaultsTo(2);
             parser.accepts(MIN_UNALIGNED_NODE_FREQUENCY, "Assembly minimum unaligned node frequency").withOptionalArg().ofType(Integer.class).defaultsTo(2);
             parser.accepts(MIN_CONTIG_LENGTH, "Assembly minimum contig length").withOptionalArg().ofType(Integer.class).defaultsTo(-1);
@@ -143,11 +143,16 @@ public class ReAlignerOptions extends Options {
 	}
 	
 	public int[] getKmerSizes() {
-		String[] kmerStr = ((String) getOptions().valueOf(KMER_SIZE)).split(",");
-		
-		int[] kmers = new int[kmerStr.length];
-		for (int i=0; i<kmerStr.length; i++) {
-			kmers[i] = Integer.parseInt(kmerStr[i]);
+		int[] kmers;
+		if (getOptions().has(KMER_SIZE)) {
+			String[] kmerStr = ((String) getOptions().valueOf(KMER_SIZE)).split(",");
+			
+			kmers = new int[kmerStr.length];
+			for (int i=0; i<kmerStr.length; i++) {
+				kmers[i] = Integer.parseInt(kmerStr[i]);
+			}
+		} else {
+			kmers = new int[0];
 		}
 		
 		return kmers;

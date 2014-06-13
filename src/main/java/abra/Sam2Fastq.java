@@ -235,7 +235,7 @@ public class Sam2Fastq {
 		
 		
 		RegionLoader loader = new RegionLoader();
-		List<Feature> regions = loader.load("/home/lmose/dev/ayc/regions/clinseq5/uncseq5.gtf");
+		List<Feature> regions = loader.load("/home/lmose/dev/ayc/regions/clinseq5/uncseq5.gtf", false);
 		
 		regions = RegionLoader.collapseRegions(regions, 100);
 		

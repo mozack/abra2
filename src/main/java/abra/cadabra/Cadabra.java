@@ -80,6 +80,9 @@ public class Cadabra {
 		
 		CigarElement tumorIndel = null;
 		int tumorCount = 0;
+		int mismatch0Count = 0;
+		int mismatch1Count = 0;
+		int totalMismatchCount = 0;
 		boolean hasSufficientDistanceFromReadEnd = false;
 		int maxContigMapq = 0;
 		
@@ -87,6 +90,21 @@ public class Cadabra {
 		
 		for (SAMRecord read : tumorReads.getReads()) {
 			IndelInfo readElement = checkForIndelAtLocus(read, position);
+			
+			if (readElement != null) {
+				Integer ymInt = (Integer) read.getAttribute(ReadAdjuster.MISMATCHES_TO_CONTIG_TAG);
+				if (ymInt != null) {
+					int ym = ymInt;
+					if (ym == 0) {
+						mismatch0Count++;
+					}
+					if (ym <= 1) {
+						mismatch1Count++;
+					}
+					totalMismatchCount += ym;
+				}
+			}
+			
 			if (tumorIndel == null && readElement != null) {
 				tumorIndel = readElement.getCigarElement();
 				tumorCount = 1;
@@ -145,7 +163,8 @@ public class Cadabra {
 			if (tumorIndel.getOperator() == CigarOperator.I) {
 				insertBases = getInsertBaseConsensus(insertBasesMap, tumorIndel.getLength());
 			}
-			outputRecord(chromosome, position, normalReads, tumorReads, tumorIndel, tumorCount, insertBases, maxContigMapq);
+			outputRecord(chromosome, position, normalReads, tumorReads, tumorIndel,
+					tumorCount, insertBases, maxContigMapq, mismatch0Count, mismatch1Count, totalMismatchCount);
 		}
 	}
 	
@@ -207,9 +226,11 @@ public class Cadabra {
 	
 	private void outputRecord(String chromosome, int position,
 			ReadsAtLocus normalReads, ReadsAtLocus tumorReads, CigarElement indel,
-			int tumorObs, String insertBases, int maxContigMapq) {
+			int tumorObs, String insertBases, int maxContigMapq, int ym0, int ym1, int totalYm) {
 		int normalDepth = normalReads.getReads().size();
 		int tumorDepth = tumorReads.getReads().size();
+		
+		String context = c2r.getSequence(chromosome, position-10, 20);
 		
 		StringBuffer buf = new StringBuffer();
 		buf.append(chromosome);
@@ -231,13 +252,19 @@ public class Cadabra {
 		buf.append('\t');
 		buf.append(alt);
 		buf.append("\t.\tPASS\t");
-		buf.append("SOMATIC;CMQ=" + maxContigMapq);
-		buf.append("\tDP:OBS\t");
+		buf.append("SOMATIC;CMQ=" + maxContigMapq + ";CTX=" + context);
+		buf.append("\tDP:OBS:YM0:YM1:YM\t");
 		buf.append(normalDepth);
-		buf.append(":0");
+		buf.append(":0:0:0:0");
 		buf.append('\t');
 		buf.append(tumorDepth);
 		buf.append(':');
+		buf.append(ym0);
+		buf.append(':');
+		buf.append(ym1);
+		buf.append(':');
+		buf.append(totalYm);
+		buf.append('\t');
 		buf.append(tumorObs);
 		
 		System.out.println(buf.toString());

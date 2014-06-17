@@ -178,7 +178,7 @@ public class NativeAssembler {
 							 (!read.getDuplicateReadFlag()) && 
 							 (!read.getReadFailsVendorQualityCheckFlag()) &&
 							 //(Sam2Fastq.isPrimary(read)) &&
-							 (!isHardClipped(read)) &&
+//							 (!isHardClipped(read)) &&
 							 ((!checkForDupes) || (!readIds.contains(getIdentifier(read))))) {
 							
 							

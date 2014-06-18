@@ -253,7 +253,7 @@ public class Cadabra {
 		buf.append(alt);
 		buf.append("\t.\tPASS\t");
 		buf.append("SOMATIC;CMQ=" + maxContigMapq + ";CTX=" + context);
-		buf.append("\tDP:OBS:YM0:YM1:YM\t");
+		buf.append("\tDP:YM0:YM1:YM:OBS\t");
 		buf.append(normalDepth);
 		buf.append(":0:0:0:0");
 		buf.append('\t');
@@ -264,7 +264,7 @@ public class Cadabra {
 		buf.append(ym1);
 		buf.append(':');
 		buf.append(totalYm);
-		buf.append('\t');
+		buf.append(':');
 		buf.append(tumorObs);
 		
 		System.out.println(buf.toString());

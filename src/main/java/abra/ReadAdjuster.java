@@ -33,7 +33,7 @@ public class ReadAdjuster {
 	private int maxInsertLen;
 	
 	private static final String ORIGINAL_ALIGNMENT_TAG = "YO";
-	private static final String MISMATCHES_TO_CONTIG_TAG = "YM";
+	public static final String MISMATCHES_TO_CONTIG_TAG = "YM";
 	public static final String CONTIG_QUALITY_TAG = "YQ";
 	private static final String CONTIG_ALIGNMENT_TAG = "YA";
 	

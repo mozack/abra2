@@ -85,6 +85,8 @@ public class Cadabra {
 		int totalMismatchCount = 0;
 		boolean hasSufficientDistanceFromReadEnd = false;
 		int maxContigMapq = 0;
+		int minReadIndex = Integer.MAX_VALUE;
+		int maxReadIndex = Integer.MIN_VALUE;
 		
 		Map<String, Integer> insertBasesMap = new HashMap<String, Integer>();
 		
@@ -112,6 +114,8 @@ public class Cadabra {
 				if (readElement.getInsertBases() != null) {
 					updateInsertBases(insertBasesMap, readElement.getInsertBases());
 				}
+				minReadIndex = readElement.getReadIndex() < minReadIndex ? readElement.getReadIndex() : minReadIndex;
+				maxReadIndex = readElement.getReadIndex() > maxReadIndex ? readElement.getReadIndex() : maxReadIndex;
 			} else if (tumorIndel != null && readElement != null) {
 				if (tumorIndel.equals(readElement.getCigarElement())) {
 					// Increment tumor indel support count
@@ -120,6 +124,8 @@ public class Cadabra {
 					if (readElement.getInsertBases() != null) {
 						updateInsertBases(insertBasesMap, readElement.getInsertBases());
 					}
+					minReadIndex = readElement.getReadIndex() < minReadIndex ? readElement.getReadIndex() : minReadIndex;
+					maxReadIndex = readElement.getReadIndex() > maxReadIndex ? readElement.getReadIndex() : maxReadIndex;
 
 				} else {
 					// We will not deal with multiple indels at a single locus for now.
@@ -164,7 +170,7 @@ public class Cadabra {
 				insertBases = getInsertBaseConsensus(insertBasesMap, tumorIndel.getLength());
 			}
 			outputRecord(chromosome, position, normalReads, tumorReads, tumorIndel,
-					tumorCount, insertBases, maxContigMapq, mismatch0Count, mismatch1Count, totalMismatchCount);
+					tumorCount, insertBases, maxContigMapq, mismatch0Count, mismatch1Count, totalMismatchCount, minReadIndex, maxReadIndex);
 		}
 	}
 	
@@ -226,7 +232,9 @@ public class Cadabra {
 	
 	private void outputRecord(String chromosome, int position,
 			ReadsAtLocus normalReads, ReadsAtLocus tumorReads, CigarElement indel,
-			int tumorObs, String insertBases, int maxContigMapq, int ym0, int ym1, int totalYm) {
+			int tumorObs, String insertBases, int maxContigMapq, int ym0, int ym1, int totalYm,
+			int minReadIndex, int maxReadIndex) {
+		
 		int normalDepth = normalReads.getReads().size();
 		int tumorDepth = tumorReads.getReads().size();
 		
@@ -252,7 +260,7 @@ public class Cadabra {
 		buf.append('\t');
 		buf.append(alt);
 		buf.append("\t.\tPASS\t");
-		buf.append("SOMATIC;CMQ=" + maxContigMapq + ";CTX=" + context);
+		buf.append("SOMATIC;CMQ=" + maxContigMapq + ";CTX=" + context + ";MINRI=" + minReadIndex + ";MAXRI=" + maxReadIndex);
 		buf.append("\tDP:YM0:YM1:YM:OBS\t");
 		buf.append(normalDepth);
 		buf.append(":0:0:0:0");
@@ -270,8 +278,8 @@ public class Cadabra {
 		System.out.println(buf.toString());
 	}
 	
-	private IndelInfo checkForIndelAtLocus(SAMRecord read, int refPos) {
 
+	private IndelInfo checkForIndelAtLocus(SAMRecord read, int refPos) {
 		IndelInfo elem = null;
 		
 		String contigInfo = read.getStringAttribute("YA");

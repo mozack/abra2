@@ -460,8 +460,44 @@ int is_base_quality_good(struct node* node) {
 	return is_good;
 }
 
+void remove_node_and_cleanup(const char* key, struct node* node, sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes) {
+	// Remove node from "from" lists
+	struct linked_node* to_node = node->toNodes;
+	while (to_node != NULL) {
+		to_node->node->fromNodes = remove_node_from_list(node, to_node->node->fromNodes);
+		to_node = to_node->next;
+	}
+
+	// Remove node from "to" lists
+	struct linked_node* from_node = node->fromNodes;
+	while (from_node != NULL) {
+		from_node->node->toNodes = remove_node_from_list(node, from_node->node->toNodes);
+		from_node = from_node->next;
+	}
+
+	// Remove node from map
+	nodes->erase(key);
+	cleanup(node->toNodes);
+	node->toNodes = NULL;
+	cleanup(node->fromNodes);
+	node->fromNodes = NULL;
+}
+
 void prune_graph(sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, char isUnalignedRegion) {
 
+	// First prune kmers that do not reach base quality sum threshold
+	for (sparse_hash_map<const char*, struct node*, my_hash, eqstr>::const_iterator it = nodes->begin();
+				 it != nodes->end(); ++it) {
+
+		const char* key = it->first;
+		struct node* node = it->second;
+
+		if (node != NULL && !is_base_quality_good(node)) {
+			remove_node_and_cleanup(key, node, nodes);
+		}
+	}
+
+	// Now go back through and ensure that each node reaches minimum frequency threshold.
 	int freq = min_node_freq;
 
 	if (freq > 1) {
@@ -480,31 +516,8 @@ void prune_graph(sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nod
 			const char* key = it->first;
 			struct node* node = it->second;
 
-			if ((node != NULL) && ((node->frequency < freq) || (!(node->hasMultipleUniqueReads) || (!is_base_quality_good(node))))) {
-
-				// Remove node from "from" lists
-				struct linked_node* to_node = node->toNodes;
-				while (to_node != NULL) {
-					to_node->node->fromNodes = remove_node_from_list(node, to_node->node->fromNodes);
-					to_node = to_node->next;
-				}
-
-				// Remove node from "to" lists
-				struct linked_node* from_node = node->fromNodes;
-				while (from_node != NULL) {
-					from_node->node->toNodes = remove_node_from_list(node, from_node->node->toNodes);
-					from_node = from_node->next;
-				}
-
-				// Remove node from map
-				nodes->erase(key);
-				cleanup(node->toNodes);
-				node->toNodes = NULL;
-				cleanup(node->fromNodes);
-				node->fromNodes = NULL;
-
-				// Free memory
-	//			free(node);
+			if ((node != NULL) && ((node->frequency < freq) || (!(node->hasMultipleUniqueReads)))) {
+				remove_node_and_cleanup(key, node, nodes);
 			}
 		}
 	}

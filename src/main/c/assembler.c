@@ -497,6 +497,8 @@ void prune_graph(sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nod
 		}
 	}
 
+	printf("Remaining nodes after pruning step 1: %d\n", nodes->size());
+
 	// Now go back through and ensure that each node reaches minimum frequency threshold.
 	int freq = min_node_freq;
 
@@ -522,7 +524,7 @@ void prune_graph(sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nod
 		}
 	}
 
-	printf("Remaining nodes after pruning: %d\n", nodes->size());
+	printf("Remaining nodes after pruning step 2: %d\n", nodes->size());
 }
 
 struct linked_node* identify_root_nodes(sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes) {

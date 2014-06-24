@@ -224,7 +224,9 @@ struct node* new_node(char* seq, char* contributingRead, struct_pool* pool, int 
 	my_node->frequency = 1;
 	my_node->hasMultipleUniqueReads = 0;
 	my_node->contributing_strand = (char) strand;
-	memcpy(my_node->qual_sums, quals, kmer_size);
+	for (int i=0; i<kmer_size; i++) {
+		my_node->qual_sums[i] = phred33(quals[i]);
+	}
 	return my_node;
 }
 
@@ -272,8 +274,9 @@ void increment_node_freq(struct node* node, char* read_seq, int strand, char* km
 	}
 
 	for (int i=0; i<kmer_size; i++) {
-		if ((node->qual_sums[i] + (unsigned char) kmer_qual[i]) < MAX_QUAL_SUM) {
-			node->qual_sums[i] += (unsigned char) kmer_qual[i];
+		unsigned char phred33_qual = phred33(kmer_qual[i]);
+		if ((node->qual_sums[i] + phred33_qual) < MAX_QUAL_SUM) {
+			node->qual_sums[i] += phred33_qual;
 		} else {
 			node->qual_sums[i] = MAX_QUAL_SUM;
 		}
@@ -294,13 +297,17 @@ int include_kmer(char* sequence, char*qual, int idx) {
 		// Discard kmers with low base qualities
 
 //		if (qual[i] - '!' < min_base_quality) {
-		if (qual[i] - '!' < MIN_BASE_QUALITY) {
+		if (phred33(qual[i]) < MIN_BASE_QUALITY) {
 			include = 0;
 			break;
 		}
 	}
 
 	return include;
+}
+
+unsigned char phred33(char ch) {
+	return ch - '!';
 }
 
 void add_to_graph(char* sequence, sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, struct_pool* pool, char* qual, int strand) {

@@ -34,9 +34,16 @@ using google::sparse_hash_set;
 #define TOO_MANY_NODES -4
 
 #define MAX_FREQUENCY 32766
+#define MAX_QUAL_SUM 255
+
+// TODO: This is used to bound qual sum arrays.  Use a memory pool instead for this.
+#define MAX_KMER_LEN 201
 
 // This makes sense for small assembly windows, but should be parameterized for larger assemblies
 #define MAX_NODES 9000
+
+// Kmers containing bases below this threshold are excluded from assembly.
+#define MIN_BASE_QUALITY 5
 
 //TODO: Better variable localization
 __thread int read_length;
@@ -138,6 +145,7 @@ struct node {
 	struct linked_node* toNodes;
 	struct linked_node* fromNodes;
 	char* contributingRead;
+	unsigned char qual_sums[MAX_KMER_LEN];
 	unsigned short frequency;
 	char hasMultipleUniqueReads;
 	char contributing_strand;
@@ -205,7 +213,7 @@ struct node* allocate_node(struct_pool* pool) {
 	return &pool->node_pool->nodes[pool->node_pool->block_idx][pool->node_pool->node_idx++];
 }
 
-struct node* new_node(char* seq, char* contributingRead, struct_pool* pool, int strand) {
+struct node* new_node(char* seq, char* contributingRead, struct_pool* pool, int strand, char* quals) {
 
 //	node* my_node = (node*) malloc(sizeof(node));
 	node* my_node = allocate_node(pool);
@@ -216,10 +224,11 @@ struct node* new_node(char* seq, char* contributingRead, struct_pool* pool, int 
 	my_node->frequency = 1;
 	my_node->hasMultipleUniqueReads = 0;
 	my_node->contributing_strand = (char) strand;
+	memcpy(my_node->qual_sums, quals, kmer_size);
 	return my_node;
 }
 
-char* get_kmer(int idx, char* sequence, struct struct_pool* pool) {
+char* get_kmer(int idx, char* sequence) {
 	return &sequence[idx];
 }
 
@@ -252,7 +261,7 @@ void link_nodes(struct node* from_node, struct node* to_node) {
 	}
 }
 
-void increment_node_freq(struct node* node, char* read_seq, int strand) {
+void increment_node_freq(struct node* node, char* read_seq, int strand, char* kmer_qual) {
 	if (node->frequency < MAX_FREQUENCY-1) {
 		node->frequency++;
 	}
@@ -260,6 +269,14 @@ void increment_node_freq(struct node* node, char* read_seq, int strand) {
 	if (!(node->hasMultipleUniqueReads) &&
 		(!compare(node->contributingRead, read_seq) || node->contributing_strand != (char) strand)) {
 		node->hasMultipleUniqueReads = 1;
+	}
+
+	for (int i=0; i<kmer_size; i++) {
+		if ((node->qual_sums[i] + (unsigned char) kmer_qual[i]) < MAX_QUAL_SUM) {
+			node->qual_sums[i] += (unsigned char) kmer_qual[i];
+		} else {
+			node->qual_sums[i] = MAX_QUAL_SUM;
+		}
 	}
 }
 
@@ -275,7 +292,9 @@ int include_kmer(char* sequence, char*qual, int idx) {
 		}
 
 		// Discard kmers with low base qualities
-		if (qual[i] - '!' < min_base_quality) {
+
+//		if (qual[i] - '!' < min_base_quality) {
+		if (qual[i] - '!' < MIN_BASE_QUALITY) {
 			include = 0;
 			break;
 		}
@@ -291,13 +310,13 @@ void add_to_graph(char* sequence, sparse_hash_map<const char*, struct node*, my_
 	for (int i=0; i<=read_length-kmer_size; i++) {
 
 		if (include_kmer(sequence, qual, i)) {
-			char* kmer = get_kmer(i, sequence, pool);
-	//		printf("\tkmer: %s\n", kmer);
+			char* kmer = get_kmer(i, sequence);
+			char* kmer_qual = get_kmer(i, qual);
 
 			struct node* curr = (*nodes)[kmer];
 
 			if (curr == NULL) {
-				curr = new_node(kmer, sequence, pool, strand);
+				curr = new_node(kmer, sequence, pool, strand, kmer_qual);
 
 				if (curr == NULL) {
 					printf("Null node for kmer: %s\n", kmer);
@@ -306,7 +325,7 @@ void add_to_graph(char* sequence, sparse_hash_map<const char*, struct node*, my_
 
 				(*nodes)[kmer] = curr;
 			} else {
-				increment_node_freq(curr, sequence, strand);
+				increment_node_freq(curr, sequence, strand, kmer_qual);
 			}
 
 			if (prev != NULL) {
@@ -428,6 +447,19 @@ void cleanup(struct linked_node* linked_nodes) {
 	}
 }
 
+int is_base_quality_good(struct node* node) {
+	int is_good = 1;
+
+	for (int i=0; i<kmer_size; i++) {
+		if (!node->qual_sums[i] >= min_base_quality) {
+			is_good = 0;
+			break;
+		}
+	}
+
+	return is_good;
+}
+
 void prune_graph(sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, char isUnalignedRegion) {
 
 	int freq = min_node_freq;
@@ -448,7 +480,7 @@ void prune_graph(sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nod
 			const char* key = it->first;
 			struct node* node = it->second;
 
-			if ((node != NULL) && ((node->frequency < freq) || (!(node->hasMultipleUniqueReads)))) {
+			if ((node != NULL) && ((node->frequency < freq) || (!(node->hasMultipleUniqueReads) || (!is_base_quality_good(node))))) {
 
 				// Remove node from "from" lists
 				struct linked_node* to_node = node->toNodes;

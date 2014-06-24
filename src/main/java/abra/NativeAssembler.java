@@ -26,6 +26,8 @@ public class NativeAssembler {
 	
 	public static final int CYCLE_KMER_LENGTH_THRESHOLD = 43;
 	
+	private static final int MIN_CANDIDATE_BASE_QUALITY = 10;
+	
 	private boolean truncateOnRepeat;
 	private int maxContigs;
 	private int maxPathsFromRoot;
@@ -113,14 +115,14 @@ public class NativeAssembler {
 		// Increment candidate count for substantial high quality soft clipping
 		// TODO: Check for chimera directly?
 		if (read.getCigarString().contains("S")) {
-			if (c2r.numHighQualityMismatches(read, minBaseQuality) > (readLength/10)) {
+			if (c2r.numHighQualityMismatches(read, MIN_CANDIDATE_BASE_QUALITY) > (readLength/10)) {
 				isCandidate = true;
 			}
 		}
 		
 		// Increment candidate count if read contains at least 3 high quality mismatches
 		if (SAMRecordUtils.getIntAttribute(read, "NM") >= 3) {
-			if (c2r.numHighQualityMismatches(read, minBaseQuality) > 3) {
+			if (c2r.numHighQualityMismatches(read, MIN_CANDIDATE_BASE_QUALITY) > 3) {
 				isCandidate = true;
 			}
 		}

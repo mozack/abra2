@@ -451,7 +451,7 @@ int is_base_quality_good(struct node* node) {
 	int is_good = 1;
 
 	for (int i=0; i<kmer_size; i++) {
-		if (!node->qual_sums[i] >= min_base_quality) {
+		if (node->qual_sums[i] < min_base_quality) {
 			is_good = 0;
 			break;
 		}

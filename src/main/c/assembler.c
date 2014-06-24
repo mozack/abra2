@@ -213,6 +213,10 @@ struct node* allocate_node(struct_pool* pool) {
 	return &pool->node_pool->nodes[pool->node_pool->block_idx][pool->node_pool->node_idx++];
 }
 
+unsigned char phred33(char ch) {
+	return ch - '!';
+}
+
 struct node* new_node(char* seq, char* contributingRead, struct_pool* pool, int strand, char* quals) {
 
 //	node* my_node = (node*) malloc(sizeof(node));
@@ -304,10 +308,6 @@ int include_kmer(char* sequence, char*qual, int idx) {
 	}
 
 	return include;
-}
-
-unsigned char phred33(char ch) {
-	return ch - '!';
 }
 
 void add_to_graph(char* sequence, sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, struct_pool* pool, char* qual, int strand) {

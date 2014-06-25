@@ -58,7 +58,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(SINGLE_END, "Input is single end");
             parser.accepts(RNA, "Input RNA sam or bam file (currently disabled)").withOptionalArg().ofType(String.class);
             parser.accepts(RNA_OUTPUT, "Output RNA sam or bam file (required if RNA input file specified)").withRequiredArg().ofType(String.class);
-            parser.accepts(MIN_BASE_QUALITY, "Minimum base quality for inclusion in assembly").withOptionalArg().ofType(Integer.class).defaultsTo(20);
+            parser.accepts(MIN_BASE_QUALITY, "Minimum base quality for inclusion in assembly").withOptionalArg().ofType(Integer.class).defaultsTo(40);
             parser.accepts(MIN_READ_CANDIDATE_FRACTION, "Minimum read candidate fraction for triggering assembly").withRequiredArg().ofType(Double.class).defaultsTo(.01);
             parser.accepts(MAX_AVERAGE_REGION_DEPTH, "Regions with average depth exceeding this value will be downsampled").withRequiredArg().ofType(Integer.class).defaultsTo(400);
             parser.accepts(SEARCH_FOR_STRUCTURAL_VARIATION, "Enable Structural Variation searching (experimental, only supported for paired end)").withRequiredArg().ofType(String.class);

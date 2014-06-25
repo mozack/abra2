@@ -534,6 +534,53 @@ void prune_graph(sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nod
 	printf("Remaining nodes after pruning step 2: %d\n", nodes->size());
 }
 
+void print_kmer(struct node* node) {
+    for (int i=0; i<kmer_size; i++) {
+            printf("%c", node->kmer[i]);
+    }
+}
+
+void print_node(struct node* node) {
+        printf("kmer: ");
+        print_kmer(node);
+        printf("\tfrom: ");
+
+        struct linked_node* from = node->fromNodes;
+        while (from != NULL) {
+        	print_kmer(from->node);
+        	printf(",");
+        	from = from->next;
+        }
+
+        printf("\tto: ");
+        struct linked_node* to = node->toNodes;
+        while (to != NULL) {
+        	print_kmer(to->node);
+        	printf(",");
+        	to = to->next;
+        }
+}
+
+int is_root(struct node* node) {
+	int is_root = 0;
+
+	if (node != NULL) {
+		if (node->fromNodes == NULL) {
+			// No from nodes means this is a root node.
+			is_root = 1;
+		} else {
+			// Identify nodes that point to themselves with no other incoming edges.
+			// This will be cleaned up during contig building.
+			struct linked_node* from = node->fromNodes;
+			if (from->next == NULL && (strncmp(node->kmer, from->node->kmer, kmer_size) == 0)) {
+				is_root = 1;
+			}
+		}
+	}
+
+	return is_root;
+}
+
 struct linked_node* identify_root_nodes(sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes) {
 
 	struct linked_node* root_nodes = NULL;
@@ -542,15 +589,23 @@ struct linked_node* identify_root_nodes(sparse_hash_map<const char*, struct node
 	for (sparse_hash_map<const char*, struct node*, my_hash, eqstr>::const_iterator it = nodes->begin();
 	         it != nodes->end(); ++it) {
 		struct node* node = it->second;
-		if ((node != NULL) && (node->fromNodes == NULL)) {
+
+//		if (node != NULL) {
+//			print_node(node);
+//		}
+
+		if (is_root(node)) {
 			struct linked_node* next = root_nodes;
 			root_nodes = (linked_node*) malloc(sizeof(linked_node));
 			root_nodes->node = node;
 			root_nodes->next = next;
 
-//			printf("Root: %s\n", node->seq);
+//			printf("\tROOT");
+
 			count++;
 		}
+
+//		printf("\n");
 	}
 
 	printf("num root nodes: %d\n", count);
@@ -653,6 +708,9 @@ int build_contigs(
 		struct contig* contig = contigs.top();
 
 		if (is_node_visited(contig, contig->curr_node)) {
+			printf("Repeat node: ");
+			print_kmer(contig->curr_node);
+			printf("\n");
 			// We've encountered a repeat
 			contig->is_repeat = 1;
 			if ((!shadow_mode) && (!stop_on_repeat)) {

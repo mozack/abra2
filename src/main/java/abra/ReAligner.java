@@ -1083,7 +1083,7 @@ public class ReAligner {
 			
 			while (kmerSize < maxKmerSize) {
 				kmers.add(kmerSize);
-				kmerSize += 10;
+				kmerSize += 2;
 			}
 			
 			kmerSizes = new int[kmers.size()];

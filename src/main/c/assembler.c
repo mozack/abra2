@@ -509,16 +509,16 @@ void prune_graph(sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nod
 	// Now go back through and ensure that each node reaches minimum frequency threshold.
 	int freq = min_node_freq;
 
-	if (freq > 1) {
-		if (!isUnalignedRegion) {
-			int increase_freq = nodes->size() / INCREASE_MIN_NODE_FREQ_THRESHOLD;
+	if (!isUnalignedRegion) {
+		int increase_freq = nodes->size() / INCREASE_MIN_NODE_FREQ_THRESHOLD;
 
-			if (increase_freq > 0) {
-				freq = freq + increase_freq;
-				printf("Increased mnf to: %d for nodes size: %d\n", freq, nodes->size());
-			}
+		if (increase_freq > 0) {
+			freq = freq + increase_freq;
+			printf("Increased mnf to: %d for nodes size: %d\n", freq, nodes->size());
 		}
+	}
 
+	if (freq > 1) {
 		for (sparse_hash_map<const char*, struct node*, my_hash, eqstr>::const_iterator it = nodes->begin();
 					 it != nodes->end(); ++it) {
 

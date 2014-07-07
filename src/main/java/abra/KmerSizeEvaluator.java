@@ -39,6 +39,10 @@ public class KmerSizeEvaluator {
 	
 	public KmerSizeEvaluator() {
 	}
+	
+	private String getBases(Feature region) {
+		return c2r.getSequence(region.getSeqname(), (int) region.getStart()+1-(readLength-1), (int) region.getLength() + (readLength-1));
+	}
 		
 	public void run() throws IOException, InterruptedException {
 				
@@ -59,7 +63,8 @@ public class KmerSizeEvaluator {
 				outputRegions.clear();
 			}
 			
-			String regionBases = c2r.getSequence(region.getSeqname(), (int) region.getStart()+1-(readLength-1), (int) region.getLength() + (readLength-1));
+			//BUG -- second param should be length*2
+			String regionBases = getBases(region);
 			
 			//TODO: Handle other ambiguous bases
 			if (!regionBases.contains("N")) {
@@ -90,7 +95,7 @@ public class KmerSizeEvaluator {
 		List<String> regionBases = new ArrayList<String>();
 		
 		for (Feature region : regions) {
-			regionBases.add(c2r.getSequence(region.getSeqname(), (int) region.getStart()+1-(readLength-1), (int) region.getLength() + (readLength-1)));
+			regionBases.add(getBases(region));
 		}
 		
 		boolean isEditDistanceOK = false;
@@ -108,6 +113,7 @@ public class KmerSizeEvaluator {
 	private void evalRegion(Feature region, String regionBases) {	
 
 		List<Feature> regionList = new ArrayList<Feature>();
+		regionList.add(region);
 		int distKmer = identifyMinKmer(readLength, c2r, regionList);
 		
 		region.setAdditionalInfo(String.valueOf(distKmer) + "\t.");
@@ -164,21 +170,6 @@ public class KmerSizeEvaluator {
 		return kmers;
 	}
 	
-	private void init(String tempDir) throws IOException {
-		File workingDir = new File(tempDir);
-		if (workingDir.exists()) {
-			if (!workingDir.delete()) {
-				throw new IllegalStateException("Unable to delete: " + tempDir);
-			}
-		}
-
-		if (!workingDir.mkdir()) {
-			throw new IllegalStateException("Unable to create: " + tempDir);
-		}
-				
-		new NativeLibraryLoader().load(tempDir);
-	}
-
 	// Is the hamming distance between all bases in this region at least 2
 	private boolean isHammingDistanceAtLeast2(List<String> basesList, int k) {
 		
@@ -220,19 +211,18 @@ public class KmerSizeEvaluator {
 		
 //		NativeLibraryLoader l = new NativeLibraryLoader();
 //		l.load("/home/lmose/code/abra/target");
-		
+//		
 //		int readLength = 100;
 //		String reference = "/home/lmose/reference/chr20/20.fa";
-		//String reference = "/home/lmose/dev/abra/dream/test.fa";
-		
-		
-//		String includeBed = "/home/lmose/dev/abra/dream/round2/include.bed";
-//		String excludeBed = "/home/lmose/dev/abra/dream/round2/exclude.bed";
+//		//String reference = "/home/lmose/dev/abra/dream/test.fa";
+//		
+//		
 //		int threads = 1;
+//		String outputBed = "/home/lmose/dev/abra/dream/round2/output.bed";
 //		String regionsBed = "/home/lmose/dev/abra/dream/round2/20.orig.bed";
 		
 		if (args.length != 6) {
-			System.out.println("KmerSizeEvaluator <readLength> <reference> <output_bed> <num_threads> <input_bed> <temp_dir>");
+			System.out.println("KmerSizeEvaluator <readLength> <reference> <output_bed> <num_threads> <input_bed>");
 		}
 		
 		int readLength = Integer.parseInt(args[0]);
@@ -240,14 +230,12 @@ public class KmerSizeEvaluator {
 		String outputBed = args[2];
 		int threads = Integer.parseInt(args[3]);
 		String regionsBed = args[4];
-		String tempDir = args[5];
 
 		double s = System.currentTimeMillis();
 		CompareToReference2 c2r = new CompareToReference2();
 		c2r.init(reference);
 		
 		KmerSizeEvaluator re = new KmerSizeEvaluator(readLength, c2r, outputBed, threads, regionsBed);
-		re.init(tempDir);
 		re.run();
 		double e = System.currentTimeMillis();
 		

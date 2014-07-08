@@ -260,10 +260,10 @@ public class Cadabra {
 		buf.append('\t');
 		buf.append(alt);
 		buf.append("\t.\tPASS\t");
-		buf.append("SOMATIC;CMQ=" + maxContigMapq + ";CTX=" + context + ";MINRI=" + minReadIndex + ";MAXRI=" + maxReadIndex);
-		buf.append("\tDP:YM0:YM1:YM:OBS\t");
+		buf.append("SOMATIC;CMQ=" + maxContigMapq + ";CTX=" + context);
+		buf.append("\tDP:YM0:YM1:YM:OBS:MIRI:MARI\t");
 		buf.append(normalDepth);
-		buf.append(":0:0:0:0");
+		buf.append(":0:0:0:0:0:0");
 		buf.append('\t');
 		buf.append(tumorDepth);
 		buf.append(':');
@@ -274,6 +274,10 @@ public class Cadabra {
 		buf.append(totalYm);
 		buf.append(':');
 		buf.append(tumorObs);
+		buf.append(':');
+		buf.append(minReadIndex);
+		buf.append(':');
+		buf.append(maxReadIndex);
 		
 		System.out.println(buf.toString());
 	}

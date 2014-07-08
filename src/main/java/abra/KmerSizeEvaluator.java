@@ -41,7 +41,7 @@ public class KmerSizeEvaluator {
 	}
 	
 	private String getBases(Feature region) {
-		return c2r.getSequence(region.getSeqname(), (int) region.getStart()+1-(readLength-1), (int) region.getLength() + (readLength-1));
+		return c2r.getSequence(region.getSeqname(), (int) region.getStart()+1-(readLength-1), (int) region.getLength() + (readLength*2-2));
 	}
 		
 	public void run() throws IOException, InterruptedException {
@@ -63,7 +63,6 @@ public class KmerSizeEvaluator {
 				outputRegions.clear();
 			}
 			
-			//BUG -- second param should be length*2
 			String regionBases = getBases(region);
 			
 			//TODO: Handle other ambiguous bases

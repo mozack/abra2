@@ -21,7 +21,7 @@ public class RegionLoader {
 	private static final int BED_END_IDX = 2;
 	private static final int KMER_SIZE_IDX = 3;
 
-	public List<Feature> load(String regionFile, boolean requireKmerSizes) throws FileNotFoundException, IOException {
+	public List<Feature> load(String regionFile) throws FileNotFoundException, IOException {
 		List<Feature> features = new ArrayList<Feature>();
 		
 		int start = BED_START_IDX;
@@ -41,9 +41,6 @@ public class RegionLoader {
 				if (fields.length >= KMER_SIZE_IDX+1) {
 					int kmerSize = Integer.parseInt(fields[KMER_SIZE_IDX]);
 					feature.setKmer(kmerSize);
-				} else if (requireKmerSizes) {
-					throw new IllegalArgumentException("Kmer size missing in bed file.  Region: [" + feature.getDescriptor() + "].  " +
-							"Please use KmerSizeEvaluator to generate kmer sizes for regions or specify kmer sizes using the --kmer option");
 				}
 				
 				features.add(feature);

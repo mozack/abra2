@@ -781,7 +781,7 @@ public class ReAligner {
 	
 	static List<Feature> getRegions(String regionsBed, int readLength) throws IOException {
 		RegionLoader loader = new RegionLoader();
-		List<Feature> regions = loader.load(regionsBed, false);		
+		List<Feature> regions = loader.load(regionsBed);		
 		regions = RegionLoader.collapseRegions(regions, readLength);
 		regions = splitRegions(regions);
 
@@ -792,7 +792,7 @@ public class ReAligner {
 		if (this.assemblerSettings.getKmerSize().length == 0) {
 			// Using previously collapsed and split regions with kmers here.
 			RegionLoader loader = new RegionLoader();
-			this.regions = loader.load(regionsBed, true);			
+			this.regions = loader.load(regionsBed);			
 		} else {
 			this.regions = getRegions(regionsBed, readLength);
 		}

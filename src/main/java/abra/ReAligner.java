@@ -695,7 +695,6 @@ public class ReAligner {
 						svRegions.add(region);
 						svRegions.add(svCandidate.getRegion());
 						
-						//TODO: Determine optimal kmer size in SV area dynamically here.
 						NativeAssembler svAssem = (NativeAssembler) newAssembler(region);
 						String svContigs = svAssem.assembleContigs(bams, contigsFasta, tempDir, svRegions, region.getDescriptor() + "__" + svCandidate.getRegion().getDescriptor() + "_" + svCandidate.getSpanningReadPairCount(), true, this, c2r);
 						
@@ -1071,31 +1070,38 @@ public class ReAligner {
 		return regions;
 	}
 	
-	private int[] getKmers(Feature region) {
+	int[] getKmers(Feature region) {
 		int[] kmerSizes = null;
 		
 		int kmerSize = region.getKmer();
 		
-		int maxKmerSize = this.readLength-15; 
-		
 		if (kmerSize > 0) {
-			List<Integer> kmers = new ArrayList<Integer>();
-			
-			while (kmerSize < maxKmerSize) {
-				kmers.add(kmerSize);
-				kmerSize += 2;
-			}
-			
-			kmerSizes = new int[kmers.size()];
-			
-			int i=0;
-			for (int kmer : kmers) {
-				kmerSizes[i++] = kmer;
-			}
+			kmerSizes = toKmerArray(kmerSize, readLength);
 		} else {
 			kmerSizes = assemblerSettings.getKmerSize();
 		}
 		
+		return kmerSizes;
+	}
+	
+	int[] toKmerArray(int kmerSize, int readLength) {
+		int[] kmerSizes = null;
+		
+		int maxKmerSize = this.readLength-15; 
+		List<Integer> kmers = new ArrayList<Integer>();
+		
+		while (kmerSize < maxKmerSize) {
+			kmers.add(kmerSize);
+			kmerSize += 2;
+		}
+		
+		kmerSizes = new int[kmers.size()];
+		
+		int i=0;
+		for (int kmer : kmers) {
+			kmerSizes[i++] = kmer;
+		}
+
 		return kmerSizes;
 	}
 		

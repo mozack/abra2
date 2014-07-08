@@ -133,6 +133,28 @@ public class NativeAssembler {
 	public String assembleContigs(List<String> inputFiles, String output, String tempDir, List<Feature> regions, String prefix,
 			boolean checkForDupes, ReAligner realigner, CompareToReference2 c2r) {
 		
+		StringBuffer buf = new StringBuffer();
+		
+		if ((kmers.length == 0) || (kmers[0] < KmerSizeEvaluator.MIN_KMER)) {
+			KmerSizeEvaluator kmerEval = new KmerSizeEvaluator();
+			int kmer = kmerEval.identifyMinKmer(readLength, c2r, regions);
+			this.kmers = realigner.toKmerArray(kmer, readLength);
+			buf.append("Dynamic -- ");
+		} else {
+			buf.append("Predefined -- ");
+		}
+		
+		for (Feature region : regions) {
+			buf.append(region.getDescriptor());
+			buf.append(" ");
+		}
+		for (int k : kmers) {
+			buf.append(k);
+			buf.append(',');
+		}
+
+		System.out.println(buf.toString());
+		
 		String contigs = "";
 		
 		long start = System.currentTimeMillis();

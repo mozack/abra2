@@ -40,7 +40,7 @@ public class KmerSizeEvaluator {
 	public KmerSizeEvaluator() {
 	}
 	
-	private String getBases(Feature region) {
+	private String getBases(Feature region, CompareToReference2 c2r) {
 		return c2r.getSequence(region.getSeqname(), (int) region.getStart()+1-(readLength-1), (int) region.getLength() + (readLength*2-2));
 	}
 		
@@ -63,7 +63,7 @@ public class KmerSizeEvaluator {
 				outputRegions.clear();
 			}
 			
-			String regionBases = getBases(region);
+			String regionBases = getBases(region, c2r);
 			
 			//TODO: Handle other ambiguous bases
 			if (!regionBases.contains("N")) {
@@ -94,7 +94,7 @@ public class KmerSizeEvaluator {
 		List<String> regionBases = new ArrayList<String>();
 		
 		for (Feature region : regions) {
-			regionBases.add(getBases(region));
+			regionBases.add(getBases(region, c2r));
 		}
 		
 		boolean isEditDistanceOK = false;

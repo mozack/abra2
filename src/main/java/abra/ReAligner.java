@@ -781,21 +781,25 @@ public class ReAligner {
 	
 	static List<Feature> getRegions(String regionsBed, int readLength) throws IOException {
 		RegionLoader loader = new RegionLoader();
-		List<Feature> regions = loader.load(regionsBed);		
-		regions = RegionLoader.collapseRegions(regions, readLength);
-		regions = splitRegions(regions);
+		List<Feature> regions = loader.load(regionsBed);
+		if (regions.size() > 0 && (regions.get(0).getKmer() > 0)) {
+			regions = RegionLoader.collapseRegions(regions, readLength);
+			regions = splitRegions(regions);
+		}
 
 		return regions;
 	}
 		
-	private void loadRegions() throws IOException {		
-		if (this.assemblerSettings.getKmerSize().length == 0) {
-			// Using previously collapsed and split regions with kmers here.
-			RegionLoader loader = new RegionLoader();
-			this.regions = loader.load(regionsBed);			
-		} else {
-			this.regions = getRegions(regionsBed, readLength);
-		}
+	private void loadRegions() throws IOException {
+		this.regions = getRegions(regionsBed, readLength);
+		
+//		if (this.assemblerSettings.getKmerSize().length == 0) {
+//			// Using previously collapsed and split regions with kmers here.
+//			RegionLoader loader = new RegionLoader();
+//			this.regions = loader.load(regionsBed);			
+//		} else {
+//			this.regions = getRegions(regionsBed, readLength);
+//		}
 		
 		System.out.println("Num regions: " + regions.size());
 		for (Feature region : regions) {

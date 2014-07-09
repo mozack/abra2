@@ -782,7 +782,7 @@ public class ReAligner {
 	static List<Feature> getRegions(String regionsBed, int readLength) throws IOException {
 		RegionLoader loader = new RegionLoader();
 		List<Feature> regions = loader.load(regionsBed);
-		if (regions.size() > 0 && (regions.get(0).getKmer() > 0)) {
+		if (regions.size() > 0 && (regions.get(0).getKmer() == 0)) {
 			regions = RegionLoader.collapseRegions(regions, readLength);
 			regions = splitRegions(regions);
 		}

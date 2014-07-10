@@ -982,7 +982,7 @@ extern "C"
 	min_node_freq = j_min_node_freq;
 	min_base_quality = j_min_base_quality;
 
-	printf("Abra JNI entry point v0.78\n");
+	printf("Abra JNI entry point v0.79\n");
 
 	printf("input len: %s : %d\n", prefix, strlen(input));
 	printf("output: %s\n", output);

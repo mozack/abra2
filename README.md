@@ -47,7 +47,7 @@ If working with tumor/normal pairs, it is highly recommended to assemble your sa
 
 In somatic mode, you may also consider using option ```--lr repeat_file```  This option allows for detection of moderate length repeats that could not be resolved at nucleotide precision.  This feature is experimental.
 
-Additionally, translocations may be detected by using ```-sv translocation_file```  The output file will contain putative breakpoints with the number of reads aligned to each breakpoint in the output file. 
+Additionally, translocations may be detected by using ```-sv translocation_file```  The output file will contain putative breakpoints with the number of reads aligned to each breakpoint in the output file.  This feature is experimental. 
 
 ### Output
 ABRA produces one or more realigned BAMs.  It is currently necessary to sort and index the output.  At present, the mate information may not be 100% accurate.  Samtools fixmate or Picard Tools FixMateInformation may optionally be used to correct this.

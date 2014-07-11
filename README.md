@@ -22,10 +22,10 @@ Note, that the jar does contain native code.  While we have tested on a variety 
 
 Running ABRA currently requires bwa 0.7.5a (or similar) in the command path and a recent version of Java.
 
-Sample command line for v0.78:
+Sample command line for v0.79:
 
 ```
-java -Xmx4G -jar $JAR --in input.bam --kmer 43,53,63,73,83 --out output.bam --ref hg19.fasta --targets targets.bed --threads 8 --working abra_temp_dir > abra.log 2>&1
+java -Xmx4G -jar $JAR --in input.bam --out output.bam --ref hg19.fasta --targets targets.bed --threads 8 --working abra_temp_dir > abra.log 2>&1
 ```
 
 The above command allocates 4GB for the java heap.  ABRA includes native code that runs outside of the JVM.  We have found that for typical exome processing using 8 threads, 16GB total is more than sufficient.
@@ -38,34 +38,16 @@ parameter | value
 --in | One or more input BAMs delimited by comma
 --out | One or more output BAM's corresponding to the set of input BAMs
 --ref  | BWA indexed reference genome.
---kmer | Comma delimited list of kmer lengths used for assembly.  Smallest value is used by default, larger values are used if necessary.  Omit if kmer sizes are supplied in the target bed file.
 --targets | BED file describing target assembly regions (Usually corresponds to capture targets) with optional kmer lengths for each region
 --working | Temp working directory
-
-### Kmer length selection
-
-As of version 0.77, kmer sizes can by determined based upon the reference content using KmerSizeEvaluator.  We have seen improved results using this method.
-
-Usage:
-```
-java -Xmx4G -cp abra.jar abra.KmerSizeEvaluator <read_length> <reference_fasta> <output_bed> <num_threads> <input_bed> <working_dir>
-```
-
-This will create file "output_bed" which contains the regions specified by "input_bed" with an additional column for kmer size to be used for that region.
-The "output_bed" file can then be passed as input to ABRA via the --targets option.  Omit the --kmer option when running ABRA in this mode.
-
-Example:
-```
-java -Xmx4G -cp $JAR abra.KmerSizeEvaluator 100 hg19.fasta abra_kmers.bed 8 wxs.bed abra_kmer_temp > kmers.log 2>&1
-
-java -Xmx4G -jar $JAR --in input.bam --out output.bam --ref hg19.fasta --targets abra_kmers.bed --threads 8 --working abra_temp_dir > abra.log 2>&1
-```
 
 ### Somatic  mode
 
 If working with tumor/normal pairs, it is highly recommended to assemble your samples together.  To do this, simply specify multiple input and output BAM files on the command line.
 
-In somatic mode, you may also consider using option ```--lr repeat_file```  This option allows for detection of moderate length repeats that could not be resolved at nucleotide precision.  This feature is experimental. 
+In somatic mode, you may also consider using option ```--lr repeat_file```  This option allows for detection of moderate length repeats that could not be resolved at nucleotide precision.  This feature is experimental.
+
+Additionally, translocations may be detected by using ```-sv translocation_file```  The output file will contain putative breakpoints with the number of reads aligned to each breakpoint in the output file. 
 
 ### Output
 ABRA produces one or more realigned BAMs.  It is currently necessary to sort and index the output.  At present, the mate information may not be 100% accurate.  Samtools fixmate or Picard Tools FixMateInformation may optionally be used to correct this.

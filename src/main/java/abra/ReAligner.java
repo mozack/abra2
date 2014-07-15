@@ -925,17 +925,22 @@ public class ReAligner {
 					
 					if ((first.getOperator() == CigarOperator.M) &&
 						(last.getOperator() == CigarOperator.M)) {
-
-						// Pull in read length bases from reference to the beginning and end of the contig.
-						String prefix = c2r.getSequence(contigRead.getReferenceName(), 
-								contigRead.getAlignmentStart()-readLength, readLength);
-						String suffix = c2r.getSequence(contigRead.getReferenceName(), contigRead.getAlignmentEnd()+1, readLength);
 						
-						bases = prefix.toUpperCase() + bases + suffix.toUpperCase();
+						String prefix = "";
+						String suffix = "";
+
+						if (!contigRead.getReferenceName().startsWith("uc0")) {
+						
+							// Pull in read length bases from reference to the beginning and end of the contig.
+							prefix = c2r.getSequence(contigRead.getReferenceName(), 
+									contigRead.getAlignmentStart()-readLength, readLength);
+							suffix = c2r.getSequence(contigRead.getReferenceName(), contigRead.getAlignmentEnd()+1, readLength);
+							
+							bases = prefix.toUpperCase() + bases + suffix.toUpperCase();
+						}
 						
 						Cigar cigar = new Cigar();
 						if (contigRead.getCigarLength() == 1) {
-							// TODO: Pad here?
 							CigarElement elem = new CigarElement(first.getLength() + prefix.length() + suffix.length(), first.getOperator());
 							cigar.add(elem);
 						} else {

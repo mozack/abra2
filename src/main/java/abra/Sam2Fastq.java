@@ -64,9 +64,7 @@ public class Sam2Fastq {
     			
     			int yx = 0;
     			
-//    			boolean isAmbiguous = !read.getReadUnmappedFlag() && read.getMappingQuality() == 0;
-    			
-    			boolean isAmbiguous = false;
+    			boolean isAmbiguous = !read.getReadUnmappedFlag() && read.getMappingQuality() == 0;
     			
     			if ((!read.getReadFailsVendorQualityCheckFlag()) && (!isAmbiguous)) {
 	    			// Calculate the number of mismatches to reference for this read.

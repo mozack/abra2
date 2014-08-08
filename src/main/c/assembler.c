@@ -23,7 +23,7 @@ using google::sparse_hash_set;
 #define MAX_CONTIG_SIZE 5000
 #define MAX_READ_LENGTH 1001
 //#define MIN_BASE_QUALITY 20
-#define INCREASE_MIN_NODE_FREQ_THRESHOLD 2500
+#define INCREASE_MIN_NODE_FREQ_THRESHOLD 1600
 
 #define MAX_TOTAL_CONTIG_LEN 10000000
 
@@ -43,7 +43,7 @@ using google::sparse_hash_set;
 #define MAX_NODES 9000
 
 // Kmers containing bases below this threshold are excluded from assembly.
-#define MIN_BASE_QUALITY 5
+#define MIN_BASE_QUALITY 13
 
 //TODO: Better variable localization
 __thread int read_length;

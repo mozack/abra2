@@ -1,4 +1,3 @@
-/* Copyright 2013 University of North Carolina at Chapel Hill.  All rights reserved. */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -982,7 +981,7 @@ extern "C"
 	min_node_freq = j_min_node_freq;
 	min_base_quality = j_min_base_quality;
 
-	printf("Abra JNI entry point v0.79\n");
+	printf("Abra JNI entry point v0.80\n");
 
 	printf("input len: %s : %d\n", prefix, strlen(input));
 	printf("output: %s\n", output);

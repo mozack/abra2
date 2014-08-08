@@ -17,8 +17,8 @@ public abstract class AbraRunnable implements Runnable {
 	public void run() {
 		try {
 			go();
-		} catch (Exception e) {
-			e.printStackTrace();
+		} catch (Throwable t) {
+			t.printStackTrace();
 			System.exit(-1);
 		} finally {
 			threadManager.removeThread(this);

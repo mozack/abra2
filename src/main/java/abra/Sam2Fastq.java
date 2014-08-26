@@ -69,7 +69,12 @@ public class Sam2Fastq {
     			if ((!read.getReadFailsVendorQualityCheckFlag()) && (!isAmbiguous)) {
 	    			// Calculate the number of mismatches to reference for this read.
 	    			if (c2r != null) {
-	    				yx = SAMRecordUtils.getEditDistance(read, c2r);
+	    				try {
+	    					yx = SAMRecordUtils.getEditDistance(read, c2r);
+	    				} catch (ArrayIndexOutOfBoundsException e) {
+	    					System.out.println("Index error for read: " + read.getReadString());
+	    					throw e;
+	    				}
 	    			} else {
 	    				yx = read.getReadLength();
 	    			}

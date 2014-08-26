@@ -279,7 +279,11 @@ public class ReAligner {
 		System.out.println("rna output: " + rnaOutputSam);
 		System.out.println("paired end: " + isPairedEnd);
 		
-		System.out.println("Java version: " + System.getProperty("java.version"));
+		String javaVersion = System.getProperty("java.version");
+		System.out.println("Java version: " + javaVersion);
+		if (javaVersion.startsWith("1.6") || javaVersion.startsWith("1.5") || javaVersion.startsWith("1.4")) {
+			throw new RuntimeException("Please upgrade to Java 7 or later to run ABRA.");
+		}
 		
 		try {
 			InetAddress localhost = java.net.InetAddress.getLocalHost();
@@ -1154,6 +1158,10 @@ public class ReAligner {
 	}
 
 	private void init() throws IOException {
+		
+		String javaVersion = System.getProperty("java.version");
+		
+		
 		File workingDir = new File(tempDir);
 		if (workingDir.exists()) {
 			if (!workingDir.delete()) {
@@ -1241,7 +1249,7 @@ public class ReAligner {
 
 	public static void run(String[] args) throws Exception {
 		
-		System.out.println("Starting 0.80 ...");
+		System.out.println("Starting 0.81 ...");
 		
 		ReAlignerOptions options = new ReAlignerOptions();
 		options.parseOptions(args);

@@ -72,7 +72,7 @@ public class Sam2Fastq {
 	    				try {
 	    					yx = SAMRecordUtils.getEditDistance(read, c2r);
 	    				} catch (ArrayIndexOutOfBoundsException e) {
-	    					System.out.println("Index error for read: " + read.getReadString());
+	    					System.out.println("Index error for read: " + read.getSAMString());
 	    					throw e;
 	    				}
 	    			} else {

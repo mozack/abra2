@@ -319,6 +319,7 @@ public class CompareToReference2 {
 		while (line != null) {
 			if (line.startsWith(">")) {
 				if (currSeqName != null) {
+					System.err.println("\tChromosome: " + currSeqName + " length: " + sequence.length());
 					refMap.put(currSeqName, getBytes(sequence));
 				}
 				
@@ -342,6 +343,7 @@ public class CompareToReference2 {
 			line = reader.readLine();
 		}
 		
+		System.err.println("\tChromosome: " + currSeqName + " length: " + sequence.length());
 		refMap.put(currSeqName, getBytes(sequence));
 		
 		sequence = null;

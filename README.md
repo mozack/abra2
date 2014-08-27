@@ -22,7 +22,7 @@ Note, that the jar does contain native code.  While we have tested on a variety 
 
 Running ABRA currently requires bwa 0.7.9a (or similar) in the command path and a recent version of Java.
 
-Sample command line for v0.79:
+Sample command line for v0.82:
 
 ```
 java -Xmx4G -jar $JAR --in input.bam --out output.bam --ref hg19.fasta --targets targets.bed --threads 8 --working abra_temp_dir > abra.log 2>&1

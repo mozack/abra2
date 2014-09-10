@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import net.sf.samtools.CigarOperator;
 import net.sf.samtools.SAMFileHeader;
 import net.sf.samtools.SAMFileReader;
 import net.sf.samtools.SAMRecord;
@@ -38,7 +39,8 @@ public class ReadLocusReader implements Iterable<ReadsAtLocus> {
 		
 		public ReadLocusIterator(SAMFileReader samReader) {
 	        	  
-	        samIter = samReader.iterator();
+	        samIter = new ForwardShiftInsertIterator(samReader.iterator());
+//	        samIter = samReader.iterator();
 		}
 		
 		@Override
@@ -84,7 +86,7 @@ public class ReadLocusReader implements Iterable<ReadsAtLocus> {
 			}
 			else {
 				SAMRecord last = readCache.get(readCache.size()-1);
-				if (last.getAlignmentStart() <= currentPos && last.getReferenceName().equals(currentChr)) {
+				if (getAlignmentStart(last) <= currentPos && last.getReferenceName().equals(currentChr)) {
 					shouldReadFromFile = true;
 				}
 			}
@@ -94,15 +96,25 @@ public class ReadLocusReader implements Iterable<ReadsAtLocus> {
 				
 				if (readCache.isEmpty() && !read.getReferenceName().equals(currentChr)) {
 					currentChr = read.getReferenceName();
-					currentPos = read.getAlignmentStart();
+					currentPos = getAlignmentStart(read);
 				}
 				
 				readCache.add(read);
 				
-				if (read.getAlignmentStart() > currentPos || !read.getReferenceName().equals(currentChr)) {
+				if (getAlignmentStart(read) > currentPos || !read.getReferenceName().equals(currentChr)) {
 					shouldReadFromFile = false;
 				}
 			}			
+		}
+		
+		private int getAlignmentStart(SAMRecord read) {
+			int start = read.getAlignmentStart();
+			
+			if (read.getCigar().getCigarElement(0).getOperator() == CigarOperator.I) {
+				start = start - 1;
+			}
+			
+			return start;
 		}
 		
 		// Returns true if current position is advanced to new locus
@@ -121,14 +133,14 @@ public class ReadLocusReader implements Iterable<ReadsAtLocus> {
 				if (read.getAlignmentEnd() < currentPos && read.getReferenceName().equals(currentChr)) {
 					// We've gone past the end of this read, so remove from cache.
 					cacheIter.remove();
-				} else if (read.getAlignmentStart() <= currentPos && read.getAlignmentEnd() >= currentPos) {
+				} else if (getAlignmentStart(read) <= currentPos && read.getAlignmentEnd() >= currentPos) {
 					// This read spans the current locus of interest.
 					reads.add(read);
 				} else {
 					// This read is beyond the current locus.
 					if (nextChr == null) {
 						nextChr = read.getReferenceName();
-						nextPos = read.getAlignmentStart();
+						nextPos = getAlignmentStart(read);
 					}
 				}
 			}

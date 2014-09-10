@@ -18,6 +18,8 @@ public class Cadabra {
 
 	private static final int MIN_SUPPORTING_READS = 2;
 	private static final int MIN_DISTANCE_FROM_READ_END = 3;
+	private static final double MAX_NORMAL_OBS_AS_FRACTION_OF_TUMOR_OBS = 0.1;
+	private static final double MIN_TUMOR_FRACTION = 0.01;
 	
 	private ReadLocusReader normal;
 	private ReadLocusReader tumor;
@@ -74,12 +76,37 @@ public class Cadabra {
 		}
 	}
 	
+	private Character getBaseAtPosition(SAMRecord read, int refPos) {
+		Character base = null;
+		//TODO: This is inefficient.  Optimize...
+		for (int i=1; i<=read.getReadLength(); i++) {
+			if (refPos == read.getReferencePositionAtReadPosition(i)) {
+				base = read.getReadString().charAt(i-1);
+			}
+		}
+		
+		return base;
+	}
+	
+	private boolean matchesReference(SAMRecord read, int refPos) {
+		boolean isMatch = false;
+		
+		Character base = getBaseAtPosition(read, refPos);
+		if (base != null) {
+			String seq = c2r.getSequence(read.getReferenceName(), refPos, 1);
+			isMatch = base.charValue() == seq.charAt(0); 
+		}
+		
+		return isMatch;
+	}
+	
 	private void processLocus(ReadsAtLocus normalReads, ReadsAtLocus tumorReads) {
 		String chromosome = normalReads.getChromosome();
 		int position = normalReads.getPosition();
 		
 		CigarElement tumorIndel = null;
 		int tumorCount = 0;
+		int tumorRefCount = 0;
 		int mismatch0Count = 0;
 		int mismatch1Count = 0;
 		int totalMismatchCount = 0;
@@ -87,10 +114,13 @@ public class Cadabra {
 		int maxContigMapq = 0;
 		int minReadIndex = Integer.MAX_VALUE;
 		int maxReadIndex = Integer.MIN_VALUE;
+		int normalCount = 0;
+		int normalRefCount = 0;
 		
 		Map<String, Integer> insertBasesMap = new HashMap<String, Integer>();
 		
 		for (SAMRecord read : tumorReads.getReads()) {
+			
 			IndelInfo readElement = checkForIndelAtLocus(read, position);
 			
 			if (readElement != null) {
@@ -105,6 +135,8 @@ public class Cadabra {
 					}
 					totalMismatchCount += ym;
 				}
+			} else if (matchesReference(read, position)) {
+				tumorRefCount += 1;
 			}
 			
 			if (tumorIndel == null && readElement != null) {
@@ -140,37 +172,34 @@ public class Cadabra {
 			}
 		}
 		
-		if (tumorCount >= MIN_SUPPORTING_READS && hasSufficientDistanceFromReadEnd) {
-			int normalCount = 0;
+		float tumorFraction = (float) tumorCount / (float) tumorReads.getReads().size();
+		
+		if (tumorCount >= MIN_SUPPORTING_READS && hasSufficientDistanceFromReadEnd && tumorFraction >= MIN_TUMOR_FRACTION) {
 			
 			for (SAMRecord read : normalReads.getReads()) {
 				IndelInfo normalInfo = checkForIndelAtLocus(read.getAlignmentStart(), read.getCigar(), position);
 				
 				if (normalInfo != null && sufficientDistanceFromReadEnd(read, normalInfo.getReadIndex())) {
-					normalCount += 1;
-					
-					if (normalCount >= MIN_SUPPORTING_READS && ((float) normalCount / (float) tumorCount > 0.1)) {
-						// Don't allow call if normal indels exists at this position.
-						tumorIndel = null;
-						tumorCount = 0;
-						break;
-					}
+					normalCount += 1;					
+				} else if (normalInfo == null && matchesReference(read, position)) {
+					normalRefCount += 1;
 				}
 			}
-			
-			if (tumorIndel != null && !isNormalCountOK(normalCount, normalReads.getReads().size(), tumorCount)) {
-				tumorIndel = null;
-				tumorCount = 0;
-			}			
 		}
 		
-		if (tumorCount >= MIN_SUPPORTING_READS && hasSufficientDistanceFromReadEnd) {
+		if (tumorIndel != null && !isNormalCountOK(normalCount, normalReads.getReads().size(), tumorCount, tumorReads.getReads().size())) {
+			tumorIndel = null;
+			tumorCount = 0;
+		}
+		
+		if (tumorCount >= MIN_SUPPORTING_READS && hasSufficientDistanceFromReadEnd && tumorFraction >= MIN_TUMOR_FRACTION) {
 			String insertBases = null;
 			if (tumorIndel.getOperator() == CigarOperator.I) {
 				insertBases = getInsertBaseConsensus(insertBasesMap, tumorIndel.getLength());
 			}
 			outputRecord(chromosome, position, normalReads, tumorReads, tumorIndel,
-					tumorCount, insertBases, maxContigMapq, mismatch0Count, mismatch1Count, totalMismatchCount, minReadIndex, maxReadIndex);
+					tumorCount, tumorRefCount, insertBases, maxContigMapq, mismatch0Count, mismatch1Count, totalMismatchCount, minReadIndex, maxReadIndex,
+					normalCount, normalRefCount);
 		}
 	}
 	
@@ -205,10 +234,17 @@ public class Cadabra {
 		return maxBases;
 	}
 	
-	private boolean isNormalCountOK(int normalObs, int numNormalReads, int tumorObs) {
-		// Magic numbers here.
-		// Allow a single normal observation if >= 20 tumor observations and >= 20 normal reads
-		return normalObs == 0 || (tumorObs >= 20 && numNormalReads >= 20);		
+	private boolean isNormalCountOK(int normalObs, int numNormalReads, int tumorObs, int numTumorReads) {
+		if (numNormalReads == 0) {
+			// Just proceed if normal depth is 0.
+			return true;
+		}
+		
+		double scalar = (double) numTumorReads / (double) numNormalReads;
+		double scaledNormalObs = (double) normalObs * scalar;
+		
+		// Require normal observations to be less than 10% of tumor observations (normalized)
+		return scaledNormalObs < tumorObs * MAX_NORMAL_OBS_AS_FRACTION_OF_TUMOR_OBS;
 	}
 	
 	private boolean sufficientDistanceFromReadEnd(SAMRecord read, int readIdx) {
@@ -232,8 +268,8 @@ public class Cadabra {
 	
 	private void outputRecord(String chromosome, int position,
 			ReadsAtLocus normalReads, ReadsAtLocus tumorReads, CigarElement indel,
-			int tumorObs, String insertBases, int maxContigMapq, int ym0, int ym1, int totalYm,
-			int minReadIndex, int maxReadIndex) {
+			int tumorObs, int tumorRefObs, String insertBases, int maxContigMapq, int ym0, int ym1, int totalYm,
+			int minReadIndex, int maxReadIndex, int normalObs, int normalRefObs) {
 		
 		int normalDepth = normalReads.getReads().size();
 		int tumorDepth = tumorReads.getReads().size();
@@ -261,11 +297,19 @@ public class Cadabra {
 		buf.append(alt);
 		buf.append("\t.\tPASS\t");
 		buf.append("SOMATIC;CMQ=" + maxContigMapq + ";CTX=" + context);
-		buf.append("\tDP:YM0:YM1:YM:OBS:MIRI:MARI\t");
+		buf.append("\tDP:AD:YM0:YM1:YM:OBS:MIRI:MARI\t");
 		buf.append(normalDepth);
+		buf.append(':');
+		buf.append(normalRefObs);
+		buf.append(',');
+		buf.append(normalObs);
 		buf.append(":0:0:0:0:0:0");
 		buf.append('\t');
 		buf.append(tumorDepth);
+		buf.append(':');
+		buf.append(tumorRefObs);
+		buf.append(',');
+		buf.append(tumorObs);
 		buf.append(':');
 		buf.append(ym0);
 		buf.append(':');
@@ -370,13 +414,13 @@ public class Cadabra {
 //		String tumor = "/home/lmose/dev/abra/cadabra/t2/ttest.bam";
 
 		
-//		String reference = "/home/lmose/reference/chr1/chr1.fa";
-//		String normal = "/home/lmose/dev/abra/cadabra/ins/ntest.bam";
-//		String tumor = "/home/lmose/dev/abra/cadabra/ins/ttest.bam";
+		String reference = "/home/lmose/reference/chr1/chr1.fa";
+		String normal = "/home/lmose/dev/abra/cadabra/ins/ntest.bam";
+		String tumor = "/home/lmose/dev/abra/cadabra/ins/ttest.bam";
 		
-		String reference = args[0];
-		String normal = args[1];
-		String tumor = args[2];
+//		String reference = args[0];
+//		String normal = args[1];
+//		String tumor = args[2];
 		
 		new Cadabra().callSomatic(reference, normal, tumor);
 	}

@@ -77,15 +77,42 @@ public class Cadabra {
 	}
 	
 	private Character getBaseAtPosition(SAMRecord read, int refPos) {
-		Character base = null;
-		//TODO: This is inefficient.  Optimize...
-		for (int i=1; i<=read.getReadLength(); i++) {
-			if (refPos == read.getReferencePositionAtReadPosition(i)) {
-				base = read.getReadString().charAt(i-1);
+		int readPos = 0;
+		int refPosInRead = read.getAlignmentStart();
+		int cigarElementIdx = 0;
+		
+		while (refPosInRead <= refPos && cigarElementIdx < read.getCigar().numCigarElements() && readPos < read.getReadLength()) {
+			CigarElement elem = read.getCigar().getCigarElement(cigarElementIdx);
+			
+			switch(elem.getOperator()) {
+				case H: //NOOP
+					break;
+				case S:
+				case I:
+					readPos += elem.getLength();
+					break;
+				case D:
+				case N:
+					refPosInRead += elem.getLength();
+					break;
+				case M:
+					if (refPos < (refPosInRead + elem.getLength())) {
+						readPos += refPos - refPosInRead;
+						if (readPos < read.getReadLength()) {
+							// Found the base.  Return it
+							return read.getReadString().charAt(readPos);
+						}
+					} else {
+						readPos += elem.getLength();
+						refPosInRead += elem.getLength();
+					}
+					break;
+				default:
+					throw new IllegalArgumentException("Invalid Cigar Operator: " + elem.getOperator() + " for read: " + read.getSAMString());					
 			}
 		}
 		
-		return base;
+		return null;
 	}
 	
 	private boolean matchesReference(SAMRecord read, int refPos) {
@@ -421,13 +448,13 @@ public class Cadabra {
 //		String tumor = "/home/lmose/dev/abra/cadabra/t2/ttest.bam";
 
 		
-//		String reference = "/home/lmose/reference/chr1/chr1.fa";
-//		String normal = "/home/lmose/dev/abra/cadabra/ins/ntest.bam";
-//		String tumor = "/home/lmose/dev/abra/cadabra/ins/ttest.bam";
+		String reference = "/home/lmose/reference/chr1/chr1.fa";
+		String normal = "/home/lmose/dev/abra/cadabra/ins/ntest.bam";
+		String tumor = "/home/lmose/dev/abra/cadabra/ins/ttest.bam";
 		
-		String reference = args[0];
-		String normal = args[1];
-		String tumor = args[2];
+//		String reference = args[0];
+//		String normal = args[1];
+//		String tumor = args[2];
 		
 		new Cadabra().callSomatic(reference, normal, tumor);
 	}

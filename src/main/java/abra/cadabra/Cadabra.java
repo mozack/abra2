@@ -90,11 +90,13 @@ public class Cadabra {
 	
 	private boolean matchesReference(SAMRecord read, int refPos) {
 		boolean isMatch = false;
-		
-		Character base = getBaseAtPosition(read, refPos);
-		if (base != null) {
-			String seq = c2r.getSequence(read.getReferenceName(), refPos, 1);
-			isMatch = base.charValue() == seq.charAt(0); 
+	
+		if (!read.getReadUnmappedFlag()) {
+			Character base = getBaseAtPosition(read, refPos);
+			if (base != null) {
+				String seq = c2r.getSequence(read.getReferenceName(), refPos, 1);
+				isMatch = base.charValue() == seq.charAt(0); 
+			}
 		}
 		
 		return isMatch;
@@ -406,6 +408,11 @@ public class Cadabra {
 //		String normal = "/home/lmose/dev/abra/cadabra/normal_test2.bam";
 //		String tumor = "/home/lmose/dev/abra/cadabra/tumor_test2.bam";
 		
+//		String reference = "/home/lmose/reference/chr1/1.fa";
+//		String normal = "/home/lmose/dev/abra/cadabra/normal1.bam";
+//		String tumor = "/home/lmose/dev/abra/cadabra/tumor1.bam";
+
+		
 //		String normal = "/home/lmose/dev/abra/cadabra/normal.abra4.sort.bam";
 //		String tumor = "/home/lmose/dev/abra/cadabra/tumor.abra4.sort.bam";
 
@@ -414,13 +421,13 @@ public class Cadabra {
 //		String tumor = "/home/lmose/dev/abra/cadabra/t2/ttest.bam";
 
 		
-		String reference = "/home/lmose/reference/chr1/chr1.fa";
-		String normal = "/home/lmose/dev/abra/cadabra/ins/ntest.bam";
-		String tumor = "/home/lmose/dev/abra/cadabra/ins/ttest.bam";
+//		String reference = "/home/lmose/reference/chr1/chr1.fa";
+//		String normal = "/home/lmose/dev/abra/cadabra/ins/ntest.bam";
+//		String tumor = "/home/lmose/dev/abra/cadabra/ins/ttest.bam";
 		
-//		String reference = args[0];
-//		String normal = args[1];
-//		String tumor = args[2];
+		String reference = args[0];
+		String normal = args[1];
+		String tumor = args[2];
 		
 		new Cadabra().callSomatic(reference, normal, tumor);
 	}

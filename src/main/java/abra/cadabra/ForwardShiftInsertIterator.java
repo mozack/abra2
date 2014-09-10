@@ -69,7 +69,7 @@ public class ForwardShiftInsertIterator implements Iterator<SAMRecord> {
 		public int getAlignmentStart() {
 			int start = read.getAlignmentStart();
 			
-			if (read.getCigar().getCigarElement(0).getOperator() == CigarOperator.I) {
+			if (read.getCigarLength() > 0 && read.getCigar().getCigarElement(0).getOperator() == CigarOperator.I) {
 				start = start - 1;
 			}
 			

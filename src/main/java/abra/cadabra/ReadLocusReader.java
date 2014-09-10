@@ -110,7 +110,7 @@ public class ReadLocusReader implements Iterable<ReadsAtLocus> {
 		private int getAlignmentStart(SAMRecord read) {
 			int start = read.getAlignmentStart();
 			
-			if (read.getCigar().getCigarElement(0).getOperator() == CigarOperator.I) {
+			if (read.getCigarLength() > 0 && read.getCigar().getCigarElement(0).getOperator() == CigarOperator.I) {
 				start = start - 1;
 			}
 			

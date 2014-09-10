@@ -19,7 +19,7 @@ public class Cadabra {
 	private static final int MIN_SUPPORTING_READS = 2;
 	private static final int MIN_DISTANCE_FROM_READ_END = 3;
 	private static final double MAX_NORMAL_OBS_AS_FRACTION_OF_TUMOR_OBS = 0.1;
-	private static final double MIN_TUMOR_FRACTION = 0.01;
+	private static final double MIN_TUMOR_FRACTION = 0.02;
 	
 	private ReadLocusReader normal;
 	private ReadLocusReader tumor;

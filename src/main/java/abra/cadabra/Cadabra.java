@@ -149,7 +149,7 @@ public class Cadabra {
 				if (normalInfo != null && sufficientDistanceFromReadEnd(read, normalInfo.getReadIndex())) {
 					normalCount += 1;
 					
-					if (normalCount >= MIN_SUPPORTING_READS) {
+					if (normalCount >= MIN_SUPPORTING_READS && ((float) normalCount / (float) tumorCount > 0.1)) {
 						// Don't allow call if normal indels exists at this position.
 						tumorIndel = null;
 						tumorCount = 0;

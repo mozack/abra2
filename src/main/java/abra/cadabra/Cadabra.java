@@ -226,10 +226,30 @@ public class Cadabra {
 			if (tumorIndel.getOperator() == CigarOperator.I) {
 				insertBases = getInsertBaseConsensus(insertBasesMap, tumorIndel.getLength());
 			}
+			
+			int repeatPeriod = getRepeatPeriod(chromosome, position, tumorIndel);
+			
 			outputRecord(chromosome, position, normalReads, tumorReads, tumorIndel,
 					tumorCount, tumorRefCount, insertBases, maxContigMapq, mismatch0Count, mismatch1Count, totalMismatchCount, minReadIndex, maxReadIndex,
-					normalCount, normalRefCount);
+					normalCount, normalRefCount, repeatPeriod);
 		}
+	}
+	
+	private int getRepeatPeriod(String chromosome, int position, CigarElement indel) {
+		int chromosomeEnd = c2r.getReferenceLength(chromosome);
+		int length = Math.min(indel.getLength() * 20, chromosomeEnd-position-2);
+		String sequence = c2r.getSequence(chromosome, position+1, length);
+		
+		String bases = sequence.substring(0, indel.getLength());
+		
+		int period = 0;
+		int index = 0;
+		while ((index+bases.length() < length) && (bases.equals(sequence.substring(index, index+bases.length())))) {
+			period += 1;
+			index += bases.length();
+		}
+		
+		return period;
 	}
 	
 	private void updateInsertBases(Map<String, Integer> insertBases, String bases) {
@@ -298,7 +318,7 @@ public class Cadabra {
 	private void outputRecord(String chromosome, int position,
 			ReadsAtLocus normalReads, ReadsAtLocus tumorReads, CigarElement indel,
 			int tumorObs, int tumorRefObs, String insertBases, int maxContigMapq, int ym0, int ym1, int totalYm,
-			int minReadIndex, int maxReadIndex, int normalObs, int normalRefObs) {
+			int minReadIndex, int maxReadIndex, int normalObs, int normalRefObs, int repeatPeriod) {
 		
 		int normalDepth = normalReads.getReads().size();
 		int tumorDepth = tumorReads.getReads().size();
@@ -325,7 +345,7 @@ public class Cadabra {
 		buf.append('\t');
 		buf.append(alt);
 		buf.append("\t.\tPASS\t");
-		buf.append("SOMATIC;CMQ=" + maxContigMapq + ";CTX=" + context);
+		buf.append("SOMATIC;CMQ=" + maxContigMapq + ";CTX=" + context + ";REPEAT_PERIOD=" + repeatPeriod);
 		buf.append("\tDP:AD:YM0:YM1:YM:OBS:MIRI:MARI\t");
 		buf.append(normalDepth);
 		buf.append(':');

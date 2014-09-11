@@ -227,7 +227,7 @@ public class Cadabra {
 				insertBases = getInsertBaseConsensus(insertBasesMap, tumorIndel.getLength());
 			}
 			
-			int repeatPeriod = getRepeatPeriod(chromosome, position, tumorIndel);
+			int repeatPeriod = getRepeatPeriod(chromosome, position, tumorIndel, insertBases);
 			
 			outputRecord(chromosome, position, normalReads, tumorReads, tumorIndel,
 					tumorCount, tumorRefCount, insertBases, maxContigMapq, mismatch0Count, mismatch1Count, totalMismatchCount, minReadIndex, maxReadIndex,
@@ -235,12 +235,17 @@ public class Cadabra {
 		}
 	}
 	
-	private int getRepeatPeriod(String chromosome, int position, CigarElement indel) {
+	private int getRepeatPeriod(String chromosome, int position, CigarElement indel, String insertBases) {
 		int chromosomeEnd = c2r.getReferenceLength(chromosome);
 		int length = Math.min(indel.getLength() * 20, chromosomeEnd-position-2);
 		String sequence = c2r.getSequence(chromosome, position+1, length);
 		
-		String bases = sequence.substring(0, indel.getLength());
+		String bases;
+		if (indel.getOperator() == CigarOperator.D) {
+			bases = sequence.substring(0, indel.getLength());
+		} else {
+			bases = insertBases;
+		}
 		
 		int period = 0;
 		int index = 0;

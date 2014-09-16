@@ -66,7 +66,8 @@ public class FishersExactTest {
 			}
 		}
 		
-		return pValue;
+		// Cap p-value at 1 to guard against rounding errors
+		return Math.min(pValue, 1.0);
 	}
 	
 	private double getPForTable(int r1c1, int r1c2, int r2c1, int r2c2, int n, double numerator) {

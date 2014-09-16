@@ -229,10 +229,27 @@ public class Cadabra {
 			
 			int repeatPeriod = getRepeatPeriod(chromosome, position, tumorIndel, insertBases);
 			
+			double qual = calcPhredScaledQuality(normalRefCount, normalCount, tumorRefCount, tumorCount);
+			
 			outputRecord(chromosome, position, normalReads, tumorReads, tumorIndel,
 					tumorCount, tumorRefCount, insertBases, maxContigMapq, mismatch0Count, mismatch1Count, totalMismatchCount, minReadIndex, maxReadIndex,
-					normalCount, normalRefCount, repeatPeriod);
+					normalCount, normalRefCount, repeatPeriod, qual);
 		}
+	}
+	
+	double calcPhredScaledQuality(int normalRefObs, int normalAltObs, int tumorRefObs, int tumorAltObs) {
+		FishersExactTest test = new FishersExactTest();
+		// Calc p-value
+		double p = test.oneTailedTest(normalRefObs, normalAltObs, tumorRefObs, tumorAltObs);
+		
+		// Convert to phred scale
+		double qual = -10 * Math.log10(p);
+		
+		// Round to tenths
+		qual = (int) (qual * 10);
+		qual = qual / 10.0;
+		
+		return qual;
 	}
 	
 	private int getRepeatPeriod(String chromosome, int position, CigarElement indel, String insertBases) {
@@ -323,7 +340,8 @@ public class Cadabra {
 	private void outputRecord(String chromosome, int position,
 			ReadsAtLocus normalReads, ReadsAtLocus tumorReads, CigarElement indel,
 			int tumorObs, int tumorRefObs, String insertBases, int maxContigMapq, int ym0, int ym1, int totalYm,
-			int minReadIndex, int maxReadIndex, int normalObs, int normalRefObs, int repeatPeriod) {
+			int minReadIndex, int maxReadIndex, int normalObs, int normalRefObs, int repeatPeriod,
+			double qual) {
 		
 		int normalDepth = normalReads.getReads().size();
 		int tumorDepth = tumorReads.getReads().size();
@@ -349,7 +367,9 @@ public class Cadabra {
 		buf.append(ref);
 		buf.append('\t');
 		buf.append(alt);
-		buf.append("\t.\tPASS\t");
+		buf.append("\t");
+		buf.append(qual);
+		buf.append("\tPASS\t");
 		buf.append("SOMATIC;CMQ=" + maxContigMapq + ";CTX=" + context + ";REPEAT_PERIOD=" + repeatPeriod);
 		buf.append("\tDP:AD:YM0:YM1:YM:OBS:MIRI:MARI\t");
 		buf.append(normalDepth);
@@ -473,13 +493,13 @@ public class Cadabra {
 //		String tumor = "/home/lmose/dev/abra/cadabra/t2/ttest.bam";
 
 		
-//		String reference = "/home/lmose/reference/chr1/chr1.fa";
-//		String normal = "/home/lmose/dev/abra/cadabra/ins/ntest.bam";
-//		String tumor = "/home/lmose/dev/abra/cadabra/ins/ttest.bam";
+		String reference = "/home/lmose/reference/chr1/chr1.fa";
+		String normal = "/home/lmose/dev/abra/cadabra/ins/ntest.bam";
+		String tumor = "/home/lmose/dev/abra/cadabra/ins/ttest.bam";
 		
-		String reference = args[0];
-		String normal = args[1];
-		String tumor = args[2];
+//		String reference = args[0];
+//		String normal = args[1];
+//		String tumor = args[2];
 		
 		new Cadabra().callSomatic(reference, normal, tumor);
 	}

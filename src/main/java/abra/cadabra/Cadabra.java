@@ -237,7 +237,7 @@ public class Cadabra {
 		}
 	}
 	
-	double calcPhredScaledQuality(int normalRefObs, int normalAltObs, int tumorRefObs, int tumorAltObs) {
+	static double calcPhredScaledQuality(int normalRefObs, int normalAltObs, int tumorRefObs, int tumorAltObs) {
 		FishersExactTest test = new FishersExactTest();
 		// Calc p-value
 		double p = test.oneTailedTest(normalRefObs, normalAltObs, tumorRefObs, tumorAltObs);
@@ -493,13 +493,13 @@ public class Cadabra {
 //		String tumor = "/home/lmose/dev/abra/cadabra/t2/ttest.bam";
 
 		
-		String reference = "/home/lmose/reference/chr1/chr1.fa";
-		String normal = "/home/lmose/dev/abra/cadabra/ins/ntest.bam";
-		String tumor = "/home/lmose/dev/abra/cadabra/ins/ttest.bam";
+//		String reference = "/home/lmose/reference/chr1/chr1.fa";
+//		String normal = "/home/lmose/dev/abra/cadabra/ins/ntest.bam";
+//		String tumor = "/home/lmose/dev/abra/cadabra/ins/ttest.bam";
 		
-//		String reference = args[0];
-//		String normal = args[1];
-//		String tumor = args[2];
+		String reference = args[0];
+		String normal = args[1];
+		String tumor = args[2];
 		
 		new Cadabra().callSomatic(reference, normal, tumor);
 	}

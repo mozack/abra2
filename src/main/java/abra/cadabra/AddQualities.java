@@ -19,8 +19,9 @@ public class AddQualities {
 		while (line != null) {
 			if (!line.startsWith("#") && (line.contains("CADABRA") || !isMerged)) {
 				line = addQual(line);
-				System.out.println(line);
 			}
+			
+			System.out.println(line);
 			
 			line = reader.readLine();
 		}
@@ -44,7 +45,11 @@ public class AddQualities {
 		StringBuffer updatedLine = new StringBuffer();
 		for (String field : fields) {
 			updatedLine.append(field);
+			updatedLine.append('\t');
 		}
+		
+		// remove trailing tab
+		updatedLine.deleteCharAt(updatedLine.length()-1);
 		
 		return updatedLine.toString();
 	}

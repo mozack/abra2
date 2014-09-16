@@ -30,8 +30,8 @@ public class AddQualities {
 	
 	private String addQual(String line) {
 		String[] fields = line.split("\t");
-		String[] normalAd = fields[8].split(":")[1].split(",");
-		String[] tumorAd = fields[9].split(":")[1].split(",");
+		String[] normalAd = fields[9].split(":")[1].split(",");
+		String[] tumorAd = fields[10].split(":")[1].split(",");
 		
 		int normalRef = Integer.parseInt(normalAd[0]);
 		int normalAlt = Integer.parseInt(normalAd[1]);

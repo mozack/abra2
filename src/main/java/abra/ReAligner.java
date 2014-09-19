@@ -729,6 +729,10 @@ public class ReAligner {
 						cycleAssem.setKmer(new int[] { kmer });
 						cycleAssem.setShouldSearchForSv(false);
 						
+						// Double pruning thresholds for repeat discovery
+						cycleAssem.setMinBaseQuality(assemblerSettings.getMinBaseQuality() * 2);
+						cycleAssem.setMinKmerFrequency(assemblerSettings.getMinNodeFrequncy() * 2);
+						
 						String cycleContigs = cycleAssem.assembleContigs(bamInput, contigsFasta, tempDir, regions, region.getDescriptor(), true, this, c2r);
 						
 						if (!cycleContigs.equals("<ERROR>") && !cycleContigs.equals("<REPEAT>")) {

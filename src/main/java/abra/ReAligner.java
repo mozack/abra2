@@ -694,10 +694,15 @@ public class ReAligner {
 				
 					List<BreakpointCandidate> svCandidates = assem.getSvCandidateRegions();
 					for (BreakpointCandidate svCandidate : svCandidates) {
+						
 						System.out.println("SV: " + region.getDescriptor() + "-->" + svCandidate.getRegion().getDescriptor());
 						List<Feature> svRegions = new ArrayList<Feature>();
 						svRegions.add(region);
-						svRegions.add(svCandidate.getRegion());
+						Feature svCandidateRegion = new Feature(svCandidate.getRegion().getSeqname(), svCandidate.getRegion().getStart(), 
+								Math.min(svCandidate.getRegion().getEnd(), c2r.getReferenceLength(svCandidate.getRegion().getSeqname())-1));
+						
+						//svRegions.add(svCandidate.getRegion());
+						svRegions.add(svCandidateRegion);
 						
 						NativeAssembler svAssem = (NativeAssembler) newAssembler(region);
 						String svContigs = svAssem.assembleContigs(bams, contigsFasta, tempDir, svRegions, region.getDescriptor() + "__" + svCandidate.getRegion().getDescriptor() + "_" + svCandidate.getSpanningReadPairCount(), true, this, c2r);

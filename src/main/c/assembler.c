@@ -5,6 +5,7 @@
 #include <iostream>
 #include <stack>
 #include <list>
+#include <vector>
 #include <sparsehash/sparse_hash_map>
 #include <sparsehash/sparse_hash_set>
 #include <stdexcept>
@@ -492,7 +493,6 @@ void remove_node_and_cleanup(const char* key, struct node* node, sparse_hash_map
 	node->fromNodes = NULL;
 }
 
-
 void prune_low_frequency_edges(sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes) {
 
 	long removed_edge_count = 0;
@@ -501,12 +501,14 @@ void prune_low_frequency_edges(sparse_hash_map<const char*, struct node*, my_has
 				 it != nodes->end(); ++it) {
 
 		const char* key = it->first;
-		struct node* node = it->second;
+		node* curr_node = it->second;
 
-		if (node != NULL) {
-
+		if (curr_node != NULL) {
+			////////////////////////////////////////////////
 			// Check to node list for low frequency edges
-			struct linked_node* to_node = node->toNodes;
+			struct linked_node* to_node = curr_node->toNodes;
+
+			// Calculate total outgoing "edge" frequency
 			int to_node_total_freq = 0;
 
 			while (to_node != NULL) {
@@ -515,24 +517,31 @@ void prune_low_frequency_edges(sparse_hash_map<const char*, struct node*, my_has
 				to_node = to_node->next;
 			}
 
-			to_node = node->toNodes;
-			while (to_node != NULL) {
-				if ( ((double) to_node->node->frequency / (double) to_node_total_freq) > MIN_EDGE_FREQUENCY ) {
-					// Remove edges in each direction
-					node->toNodes = remove_node_from_list(to_node->node, node->toNodes);
-					to_node->node->fromNodes = remove_node_from_list(node, to_node->node->fromNodes);
-					removed_edge_count += 1;
+			// Identify edges to prune
+			to_node = curr_node->toNodes;
+			vector<node*> to_nodes_to_remove;
 
-					// Check to see if the to_node is no longer connected to any other node and remove if applicable
-					if (to_node->node->toNodes == NULL && to_node->node->fromNodes == NULL) {
-						remove_node_and_cleanup(key, to_node->node, nodes);
-					}
+			while (to_node != NULL) {
+				if ( ((double) to_node->node->frequency / (double) to_node_total_freq) < MIN_EDGE_FREQUENCY ) {
+					to_nodes_to_remove.push_back(to_node->node);
 				}
 				to_node = to_node->next;
 			}
 
+			// Remove edges
+			for (vector<node*>::const_iterator iter = to_nodes_to_remove.begin(); iter != to_nodes_to_remove.end(); ++iter ) {
+				// Remove edges in each direction
+				node* node_to_remove = *(iter);
+				node_to_remove->fromNodes = remove_node_from_list(curr_node, node_to_remove->fromNodes);
+				curr_node->toNodes = remove_node_from_list(node_to_remove, curr_node->toNodes);
+				removed_edge_count += 1;
+			}
+
+			////////////////////////////////////////////////
 			// Check from node list for low frequency edges
-			struct linked_node* from_node = node->fromNodes;
+			struct linked_node* from_node = curr_node->fromNodes;
+
+			// Calculate total outgoing "edge" frequency
 			int from_node_total_freq = 0;
 
 			while (from_node != NULL) {
@@ -541,26 +550,29 @@ void prune_low_frequency_edges(sparse_hash_map<const char*, struct node*, my_has
 				from_node = from_node->next;
 			}
 
-			from_node = node->fromNodes;
+			// Identify edges to prune
+			from_node = curr_node->fromNodes;
+			vector<node*> from_nodes_to_remove;
+
 			while (from_node != NULL) {
-				if ( ((double) from_node->node->frequency / (double) from_node_total_freq) > MIN_EDGE_FREQUENCY ) {
-					// Remove edges in each direction
-					node->fromNodes = remove_node_from_list(from_node->node, node->fromNodes);
-					from_node->node->fromNodes = remove_node_from_list(node, from_node->node->toNodes);
-					removed_edge_count += 1;
-
-					// Check to see if the from_node is no longer connected to any other node and remove if applicable
-					if (from_node->node->toNodes == NULL && from_node->node->fromNodes == NULL) {
-						remove_node_and_cleanup(key, from_node->node, nodes);
-					}
-
+				if ( ((double) from_node->node->frequency / (double) from_node_total_freq) < MIN_EDGE_FREQUENCY ) {
+					from_nodes_to_remove.push_back(from_node->node);
 				}
 				from_node = from_node->next;
+			}
+
+			// Remove edges
+			for (vector<node*>::const_iterator iter = from_nodes_to_remove.begin(); iter != from_nodes_to_remove.end(); ++iter ) {
+				// Remove edges in each direction
+				node* node_to_remove = *(iter);
+				node_to_remove->toNodes = remove_node_from_list(curr_node, node_to_remove->toNodes);
+				curr_node->fromNodes = remove_node_from_list(node_to_remove, curr_node->fromNodes);
+				removed_edge_count += 1;
 			}
 		}
 	}
 
-	printf("Pruned %ld edges from graph.\n", removed_edge_count);
+	printf("Pruned %ld edges\n", removed_edge_count);
 }
 
 
@@ -608,6 +620,18 @@ void prune_graph(sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nod
 	printf("Remaining nodes after pruning step 2: %d\n", nodes->size());
 
 	prune_low_frequency_edges(nodes);
+
+	// Final pass through cleaning up nodes that are unreachable
+	for (sparse_hash_map<const char*, struct node*, my_hash, eqstr>::const_iterator it = nodes->begin();
+				 it != nodes->end(); ++it) {
+
+		const char* key = it->first;
+		struct node* node = it->second;
+
+		if (node != NULL && node->toNodes == NULL && node->fromNodes == NULL) {
+			remove_node_and_cleanup(key, node, nodes);
+		}
+	}
 
 	printf("Remaining nodes after edge pruning: %d\n", nodes->size());
 }

@@ -36,6 +36,14 @@ public class RegionLoader {
 			
 			while (line != null) {
 				String[] fields = line.split("\t");
+				
+				long startPos = Long.valueOf(fields[start]);
+				long endPos = Long.valueOf(fields[end]);
+				
+				if (startPos >= endPos) {
+					throw new IllegalArgumentException("Region end must be greater than region start: " + line);
+				}
+				
 				Feature feature = new Feature(fields[SEQNAME_IDX], Long.valueOf(fields[start]), Long.valueOf(fields[end])); 
 				
 				if (fields.length >= KMER_SIZE_IDX+1) {

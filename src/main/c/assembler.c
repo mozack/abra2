@@ -492,53 +492,6 @@ void remove_node_and_cleanup(const char* key, struct node* node, sparse_hash_map
 	node->fromNodes = NULL;
 }
 
-void prune_graph(sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, char isUnalignedRegion) {
-
-	// First prune kmers that do not reach base quality sum threshold
-	for (sparse_hash_map<const char*, struct node*, my_hash, eqstr>::const_iterator it = nodes->begin();
-				 it != nodes->end(); ++it) {
-
-		const char* key = it->first;
-		struct node* node = it->second;
-
-		if (node != NULL && !is_base_quality_good(node)) {
-			remove_node_and_cleanup(key, node, nodes);
-		}
-	}
-
-	printf("Remaining nodes after pruning step 1: %d\n", nodes->size());
-
-	// Now go back through and ensure that each node reaches minimum frequency threshold.
-	int freq = min_node_freq;
-
-	if (!isUnalignedRegion) {
-		int increase_freq = nodes->size() / INCREASE_MIN_NODE_FREQ_THRESHOLD;
-
-		if (increase_freq > 0) {
-			freq = freq + increase_freq;
-			printf("Increased mnf to: %d for nodes size: %d\n", freq, nodes->size());
-		}
-	}
-
-	if (freq > 1) {
-		for (sparse_hash_map<const char*, struct node*, my_hash, eqstr>::const_iterator it = nodes->begin();
-					 it != nodes->end(); ++it) {
-
-			const char* key = it->first;
-			struct node* node = it->second;
-
-			if ((node != NULL) && ((node->frequency < freq) || (!(node->hasMultipleUniqueReads)))) {
-				remove_node_and_cleanup(key, node, nodes);
-			}
-		}
-	}
-
-	printf("Remaining nodes after pruning step 2: %d\n", nodes->size());
-
-	prune_low_frequency_edges(nodes);
-
-	printf("Remaining nodes after edge pruning: %d\n", nodes->size());
-}
 
 void prune_low_frequency_edges(sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes) {
 
@@ -608,6 +561,55 @@ void prune_low_frequency_edges(sparse_hash_map<const char*, struct node*, my_has
 	}
 
 	printf("Pruned %ld edges from graph.\n", removed_edge_count);
+}
+
+
+void prune_graph(sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, char isUnalignedRegion) {
+
+	// First prune kmers that do not reach base quality sum threshold
+	for (sparse_hash_map<const char*, struct node*, my_hash, eqstr>::const_iterator it = nodes->begin();
+				 it != nodes->end(); ++it) {
+
+		const char* key = it->first;
+		struct node* node = it->second;
+
+		if (node != NULL && !is_base_quality_good(node)) {
+			remove_node_and_cleanup(key, node, nodes);
+		}
+	}
+
+	printf("Remaining nodes after pruning step 1: %d\n", nodes->size());
+
+	// Now go back through and ensure that each node reaches minimum frequency threshold.
+	int freq = min_node_freq;
+
+	if (!isUnalignedRegion) {
+		int increase_freq = nodes->size() / INCREASE_MIN_NODE_FREQ_THRESHOLD;
+
+		if (increase_freq > 0) {
+			freq = freq + increase_freq;
+			printf("Increased mnf to: %d for nodes size: %d\n", freq, nodes->size());
+		}
+	}
+
+	if (freq > 1) {
+		for (sparse_hash_map<const char*, struct node*, my_hash, eqstr>::const_iterator it = nodes->begin();
+					 it != nodes->end(); ++it) {
+
+			const char* key = it->first;
+			struct node* node = it->second;
+
+			if ((node != NULL) && ((node->frequency < freq) || (!(node->hasMultipleUniqueReads)))) {
+				remove_node_and_cleanup(key, node, nodes);
+			}
+		}
+	}
+
+	printf("Remaining nodes after pruning step 2: %d\n", nodes->size());
+
+	prune_low_frequency_edges(nodes);
+
+	printf("Remaining nodes after edge pruning: %d\n", nodes->size());
 }
 
 void print_kmer(struct node* node) {

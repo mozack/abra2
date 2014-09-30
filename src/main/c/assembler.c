@@ -44,6 +44,9 @@ using google::sparse_hash_set;
 // Kmers containing bases below this threshold are excluded from assembly.
 #define MIN_BASE_QUALITY 13
 
+// Minimum edge frequency as percent
+#define MIN_EDGE_FREQUENCY .01
+
 //TODO: Better variable localization
 __thread int read_length;
 __thread int min_contig_length;
@@ -531,6 +534,80 @@ void prune_graph(sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nod
 	}
 
 	printf("Remaining nodes after pruning step 2: %d\n", nodes->size());
+
+	prune_low_frequency_edges(nodes);
+
+	printf("Remaining nodes after edge pruning: %d\n", nodes->size());
+}
+
+void prune_low_frequency_edges(sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes) {
+
+	long removed_edge_count = 0;
+
+	for (sparse_hash_map<const char*, struct node*, my_hash, eqstr>::const_iterator it = nodes->begin();
+				 it != nodes->end(); ++it) {
+
+		const char* key = it->first;
+		struct node* node = it->second;
+
+		if (node != NULL) {
+
+			// Check to node list for low frequency edges
+			struct linked_node* to_node = node->toNodes;
+			int to_node_total_freq = 0;
+
+			while (to_node != NULL) {
+				// Using node frequency as proxy for edge frequency here...
+				to_node_total_freq = to_node_total_freq + to_node->node->frequency;
+				to_node = to_node->next;
+			}
+
+			to_node = node->toNodes;
+			while (to_node != NULL) {
+				if ( ((double) to_node->node->frequency / (double) to_node_total_freq) > MIN_EDGE_FREQUENCY ) {
+					// Remove edges in each direction
+					node->toNodes = remove_node_from_list(to_node->node, node->toNodes);
+					to_node->node->fromNodes = remove_node_from_list(node, to_node->node->fromNodes);
+					removed_edge_count += 1;
+
+					// Check to see if the to_node is no longer connected to any other node and remove if applicable
+					if (to_node->node->toNodes == NULL && to_node->node->fromNodes == NULL) {
+						remove_node_and_cleanup(key, to_node->node, nodes);
+					}
+				}
+				to_node = to_node->next;
+			}
+
+			// Check from node list for low frequency edges
+			struct linked_node* from_node = node->fromNodes;
+			int from_node_total_freq = 0;
+
+			while (from_node != NULL) {
+				// Using node frequency as proxy for edge frequency here...
+				from_node_total_freq = from_node_total_freq + from_node->node->frequency;
+				from_node = from_node->next;
+			}
+
+			from_node = node->fromNodes;
+			while (from_node != NULL) {
+				if ( ((double) from_node->node->frequency / (double) from_node_total_freq) > MIN_EDGE_FREQUENCY ) {
+					// Remove edges in each direction
+					node->fromNodes = remove_node_from_list(from_node->node, node->fromNodes);
+					from_node->node->fromNodes = remove_node_from_list(node, from_node->node->toNodes);
+					removed_edge_count += 1;
+
+					// Check to see if the from_node is no longer connected to any other node and remove if applicable
+					if (from_node->node->toNodes == NULL && from_node->node->fromNodes == NULL) {
+						remove_node_and_cleanup(key, from_node->node, nodes);
+					}
+
+				}
+				from_node = from_node->next;
+			}
+		}
+	}
+
+	printf("Pruned %ld edges from graph.\n", removed_edge_count);
 }
 
 void print_kmer(struct node* node) {

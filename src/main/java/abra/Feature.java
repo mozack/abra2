@@ -59,22 +59,25 @@ public class Feature {
 		return additionalInfo;
 	}
 	
-	private boolean spansCoordinate(int coord) {
-		return (coord >= start) && (coord <= end); 
+	
+	private boolean isWithin(long coord, long start, long stop) {
+		return coord >= start && coord <= stop;
 	}
 	
-	private boolean spansEitherCoordinate(int coord1, int coord2) {
-		return spansCoordinate(coord1) || spansCoordinate(coord2);
+	private boolean overlaps(long start1, long stop1, long start2, long stop2) {
+		return 
+				isWithin(start1, start2, stop2) ||
+				isWithin(stop1, start2, stop2) ||
+				isWithin(start2, start1, stop1) ||
+				isWithin(stop2, start1, stop1);
 	}
 	
 	public boolean overlapsRead(SAMRecord read) {
-		return ((this.seqname.equals(read.getReferenceName())) &&
-			(spansEitherCoordinate(read.getAlignmentStart(), read.getAlignmentEnd())));
+		return overlaps(read.getReferenceName(), read.getAlignmentStart(), read.getAlignmentEnd());
 	}
 	
 	public boolean overlaps(String chromosome, int startPos, int stopPos) {
-		return ((this.seqname.equals(chromosome)) &&
-				(spansEitherCoordinate(startPos, stopPos)));
+		return ((this.seqname.equals(chromosome)) && overlaps(start, end, startPos, stopPos));
 	}
 	
 	public int getKmer() {

@@ -25,6 +25,8 @@ public class Sam2Fastq {
 	public static final String FIELD_DELIMITER = "~|";
 	private static final int MAX_SAM_READ_NAME_LENGTH = 255;
 	
+	public static final int MIN_OFF_TARGET_MAPQ = 30;
+	
 	private FastqOutputFile output1;
 	private ReverseComplementor reverseComplementor = new ReverseComplementor();
 	private boolean shouldIdentifyEndByReadId = false;
@@ -81,14 +83,21 @@ public class Sam2Fastq {
 	    			
 	    			read.setAttribute("YX", yx);
     			}
+
+    			boolean offTargetFiltered = false;
+				if (yx > 0 && !read.getReadUnmappedFlag() && read.getMappingQuality() < MIN_OFF_TARGET_MAPQ && !regionTracker.isInRegion(read)) {
+					read.setAttribute("YR", 1);
+					offTargetFiltered = true;
+					System.out.println("Filtering off target: " + read.getSAMString());
+				}
     			
-    			if (yx > 0) {
+    			if (yx > 0 && !offTargetFiltered) {
     				
 //	    			if ((!read.getReadUnmappedFlag()) && (!regionTracker.isInRegion(read))) {
 //	    				read.setAttribute("YR", 1);
 //	    			}
     				
-    				// Does not exactly match reference, output FASTQ record
+    				// Eligible for realignment, output FASTQ record
 	    			output1.write(samReadToFastqRecord(read, c2r));
     			} else if (writer != null) {
     				// Either xactly matches reference or failed vendor QC, so

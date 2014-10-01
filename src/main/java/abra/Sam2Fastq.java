@@ -86,16 +86,16 @@ public class Sam2Fastq {
 
     			boolean offTargetFiltered = false;
 				if (yx > 0 && !read.getReadUnmappedFlag() && read.getMappingQuality() < MIN_OFF_TARGET_MAPQ && !regionTracker.isInRegion(read)) {
-					read.setAttribute("YR", 1);
+					read.setAttribute("YR", 2);
 					offTargetFiltered = true;
 					System.out.println("Filtering off target: " + read.getSAMString());
 				}
     			
     			if (yx > 0 && !offTargetFiltered) {
     				
-//	    			if ((!read.getReadUnmappedFlag()) && (!regionTracker.isInRegion(read))) {
-//	    				read.setAttribute("YR", 1);
-//	    			}
+	    			if ((!read.getReadUnmappedFlag()) && (!regionTracker.isInRegion(read))) {
+	    				read.setAttribute("YR", 1);
+	    			}
     				
     				// Eligible for realignment, output FASTQ record
 	    			output1.write(samReadToFastqRecord(read, c2r));
@@ -227,7 +227,49 @@ public class Sam2Fastq {
 		run(argz.split(" "));
 	}
 */
+	public static void main(String[] args) throws Exception {
+		
+//		String inputSam = "/home/lmose/dev/abra/region_tracker/normal.sort.bam";
+		String inputSam = "/home/lmose/dev/abra/region_tracker/chr12.small.bam";
+		SAMFileReader reader = new SAMFileReader(new File(inputSam));
+		SAMFileHeader header = reader.getFileHeader();
+		reader.close();
+				
+		CompareToReference2 c2r = null;
+		
+		SAMFileWriterFactory writerFactory = new SAMFileWriterFactory();
+//		writerFactory.setUseAsyncIo(true);
+		
+		header.setSortOrder(SortOrder.unsorted);
+		
+		SAMFileWriter writer = writerFactory.makeSAMOrBAMWriter(
+				header, false, new File("/home/lmose/dev/abra/region_tracker/out.bam"));
+		
+		Sam2Fastq s2f = new Sam2Fastq();
+		
+		
+		RegionLoader loader = new RegionLoader();
+		List<Feature> regions = loader.load("/home/lmose/dev/abra/region_tracker/uncseq5.bed");
+		
+		regions = RegionLoader.collapseRegions(regions, 100);
+		
+		regions = ReAligner.splitRegions(regions);		
+		
+		long s = System.currentTimeMillis();
+		s2f.convert(inputSam, "/home/lmose/dev/abra/region_tracker/t2.fastq.gz", c2r, writer, false, 
+				regions);
+		long e = System.currentTimeMillis();
+		
+		
+		writer.close();
+		
+		System.out.println("Elapsed: " + (e-s)/1000);
+		
+		
+//		s2f.convert("/home/lmose/dev/abra_wxs/21_1071/small_tumor.abra.bam", "/home/lmose/dev/abra_wxs/21_1071/t.fastq", c2r);
+	}
 
+/*
 	public static void main(String[] args) throws Exception {
 		
 		String inputSam = "/home/lmose/dev/ayc/opt/opt2/s2f/t1.bam";
@@ -269,6 +311,8 @@ public class Sam2Fastq {
 		
 //		s2f.convert("/home/lmose/dev/abra_wxs/21_1071/small_tumor.abra.bam", "/home/lmose/dev/abra_wxs/21_1071/t.fastq", c2r);
 	}
+	*/
+	
 	/*
 	public static void main(String[] args) throws Exception {
 		

@@ -30,6 +30,10 @@ public class RegionLoader {
 		BufferedReader reader = new BufferedReader(new FileReader(regionFile));
 		
 		try {
+			
+			String lastChr = "";
+			long lastStart = -1;
+			
 			String line = reader.readLine();
 			
 			int cnt = 0;
@@ -37,14 +41,19 @@ public class RegionLoader {
 			while (line != null) {
 				String[] fields = line.split("\t");
 				
+				String chromosome = fields[SEQNAME_IDX];
 				long startPos = Long.valueOf(fields[start]);
 				long endPos = Long.valueOf(fields[end]);
 				
 				if (startPos >= endPos) {
-					throw new IllegalArgumentException("Region end must be greater than region start: " + line);
+					throw new IllegalArgumentException("Region end must be greater than region start in target BED file: " + line);
 				}
 				
-				Feature feature = new Feature(fields[SEQNAME_IDX], Long.valueOf(fields[start]), Long.valueOf(fields[end])); 
+				if (lastChr.equals(chromosome) && startPos < lastStart) {
+					throw new IllegalArgumentException("Target BED file must be sorted in increasing coordinate order: " + line);
+				}
+				
+				Feature feature = new Feature(chromosome, startPos, endPos);
 				
 				if (fields.length >= KMER_SIZE_IDX+1) {
 					int kmerSize = Integer.parseInt(fields[KMER_SIZE_IDX]);
@@ -55,6 +64,10 @@ public class RegionLoader {
 				
 				line = reader.readLine();
 				cnt++;
+				
+				lastChr = chromosome;
+				lastStart = startPos;
+				
 				if ((cnt % 100000) == 0) {
 					System.out.println("Loaded " + cnt + " regions");
 					System.out.flush();
@@ -94,5 +107,31 @@ public class RegionLoader {
 		System.out.println("Collapsed regions from " + regions.size() + " to " + collapsedRegions.size());
 		
 		return collapsedRegions;
+	}
+	
+	public static void main(String[] args) throws Exception {
+		RegionLoader loader = new RegionLoader();
+//		List<Feature> regions = loader.load("/home/lmose/dev/abra/issue12/test.bed");
+		List<Feature> regions = loader.load("/home/lmose/dev/abra/issue12/test2.bed");
+		
+		regions = RegionLoader.collapseRegions(regions, 100);
+
+		/*
+		for (Feature region : regions) {
+			if (region.getLength() <= 0) {
+				System.out.println(region + " - " + region.getLength());	
+			}
+			
+		}
+		*/
+
+		regions = ReAligner.splitRegions(regions);	
+		
+		for (Feature region : regions) {
+			if (region.getLength() <= 0) {
+				System.out.println(region + " - " + region.getLength());	
+			}
+			
+		}
 	}
 }

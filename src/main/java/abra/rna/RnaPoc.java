@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import abra.NativeAssembler;
+import abra.NativeLibraryLoader;
 
 import net.sf.samtools.SAMFileReader;
 import net.sf.samtools.SAMFileReader.ValidationStringency;
@@ -18,8 +19,26 @@ public class RnaPoc {
 	public static int MAX_INTRON_LENGTH = 1000000;
 	
 	private BufferedWriter contigWriter;
+	
+	private void init(String tempDir) {
+		File workingDir = new File(tempDir);
+		if (workingDir.exists()) {
+			if (!workingDir.delete()) {
+				throw new IllegalStateException("Unable to delete: " + tempDir);
+			}
+		}
 
-	public void run(String input, String output) throws IOException {
+		if (!workingDir.mkdir()) {
+			throw new IllegalStateException("Unable to create: " + tempDir);
+		}
+						
+		new NativeLibraryLoader().load(tempDir);
+
+	}
+
+	public void run(String input, String output, String temp) throws IOException {
+		
+		init(temp);
 		
 		contigWriter = new BufferedWriter(new FileWriter(output, false));
 		
@@ -83,6 +102,6 @@ public class RnaPoc {
 	public static void main(String[] args) throws IOException {
 		RnaPoc poc = new RnaPoc();
 		
-		poc.run(args[0], args[1]);
+		poc.run(args[0], args[1], args[2]);
 	}
 }

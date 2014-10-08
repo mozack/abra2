@@ -54,7 +54,7 @@ public class RnaPoc {
 
 		for (SAMRecord read : reader) {
 			if (read.getMappingQuality() > 0) {
-				if (lastRead == null || (read.getAlignmentStart()-prevMaxEnd) < MAX_READ_GAP) {
+				if (lastRead == null || !lastRead.getReferenceName().equals(read.getReferenceName()) || (read.getAlignmentStart()-prevMaxEnd) < MAX_READ_GAP) {
 					currReads.add(read);
 				} else {
 					processReads(currReads);

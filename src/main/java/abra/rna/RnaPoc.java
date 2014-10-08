@@ -9,6 +9,7 @@ import java.util.List;
 
 import abra.NativeAssembler;
 import abra.NativeLibraryLoader;
+import abra.ThreadManager;
 
 import net.sf.samtools.SAMFileReader;
 import net.sf.samtools.SAMFileReader.ValidationStringency;
@@ -17,9 +18,11 @@ import net.sf.samtools.SAMRecord;
 public class RnaPoc {
 	
 	//public static int MAX_READ_GAP = 1000000;
-	public static int MAX_READ_GAP = 100000;
+	public static int MAX_READ_GAP = 50000;
 	
 	private BufferedWriter contigWriter;
+	
+	private ThreadManager threadManager;
 	
 	private void init(String tempDir) {
 		File workingDir = new File(tempDir);
@@ -37,9 +40,11 @@ public class RnaPoc {
 
 	}
 
-	public void run(String input, String output, String temp) throws IOException {
+	public void run(String input, String output, String temp, int numThreads) throws IOException {
 		
 		init(temp);
+		
+		this.threadManager = new ThreadManager(numThreads);
 		
 		contigWriter = new BufferedWriter(new FileWriter(output, false));
 		
@@ -57,12 +62,13 @@ public class RnaPoc {
 				if (lastRead == null || !lastRead.getReferenceName().equals(read.getReferenceName()) || (read.getAlignmentStart()-prevMaxEnd) < MAX_READ_GAP) {
 					currReads.add(read);
 				} else {
-					processReads(currReads);
+//					processReads(currReads);
+					spawnProcessingThread(currReads);
 					currReads.clear();
 					currReads.add(read);
 				}
 				
-				if (read.getAlignmentEnd() > prevMaxEnd) {
+				if (read.getAlignmentEnd() > prevMaxEnd || !lastRead.getReferenceName().equals(read.getReferenceName())) {
 					prevMaxEnd = read.getAlignmentEnd();
 				}
 				
@@ -74,15 +80,24 @@ public class RnaPoc {
 		contigWriter.close();
 	}
 	
-	private void processReads(List<SAMRecord> reads) throws IOException {
+	private void spawnProcessingThread(List<SAMRecord> reads) {
+		RnaRegionHandler handler = new RnaRegionHandler(threadManager, this, reads);
+		threadManager.spawnThread(handler);
+	}
+	
+	void processReads(List<SAMRecord> reads) throws IOException {
 
 		NativeAssembler assem = newAssembler();
 		
 		String contigs = assem.simpleAssemble(reads);
 		
 		if (!contigs.equals("<ERROR>") && !contigs.equals("<REPEAT>") && !contigs.isEmpty()) {
-			contigWriter.write(contigs);
+			appendContigs(contigs);
 		}
+	}
+	
+	private synchronized void appendContigs(String contigs) throws IOException {
+		contigWriter.write(contigs);
 	}
 	
 	private NativeAssembler newAssembler() {
@@ -109,6 +124,6 @@ public class RnaPoc {
 	public static void main(String[] args) throws IOException {
 		RnaPoc poc = new RnaPoc();
 		
-		poc.run(args[0], args[1], args[2]);
+		poc.run(args[0], args[1], args[2], Integer.parseInt(args[3]));
 	}
 }

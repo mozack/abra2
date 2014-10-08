@@ -963,7 +963,7 @@ char* assemble(const char* input,
 
 	read_length = input_read_length;
 
-//	min_contig_length = read_length + 1;
+	min_contig_length = read_length + 1;
 
 	//TODO: Parameterize mcl - shorter for unaligned region?
 /*

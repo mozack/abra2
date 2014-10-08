@@ -79,4 +79,10 @@ public class RnaPoc {
 
 		return assem;		
 	}
+	
+	public static void main(String[] args) throws IOException {
+		RnaPoc poc = new RnaPoc();
+		
+		poc.run(args[0], args[1]);
+	}
 }

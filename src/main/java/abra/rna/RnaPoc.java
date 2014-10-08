@@ -91,7 +91,7 @@ public class RnaPoc {
 		assem.setTruncateOutputOnRepeat(true);
 		assem.setMaxContigs(1000);
 
-		assem.setMaxPathsFromRoot(100000);
+		assem.setMaxPathsFromRoot(5000000);
 		assem.setReadLength(75);
 		assem.setKmer(new int[] { 17, 27, 37, 47 });
 		assem.setMinKmerFrequency(2);

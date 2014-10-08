@@ -40,7 +40,7 @@ public class RnaPoc {
 
 	}
 
-	public void run(String input, String output, String temp, int numThreads) throws IOException {
+	public void run(String input, String output, String temp, int numThreads) throws IOException, InterruptedException {
 		
 		init(temp);
 		
@@ -64,7 +64,7 @@ public class RnaPoc {
 				} else {
 //					processReads(currReads);
 					spawnProcessingThread(currReads);
-					currReads.clear();
+					currReads = new ArrayList<SAMRecord>();
 					currReads.add(read);
 				}
 				
@@ -75,6 +75,8 @@ public class RnaPoc {
 				lastRead = read;
 			}
 		}
+		
+		threadManager.waitForAllThreadsToComplete();
 		
 		reader.close();
 		contigWriter.close();
@@ -121,7 +123,7 @@ public class RnaPoc {
 		return assem;		
 	}
 	
-	public static void main(String[] args) throws IOException {
+	public static void main(String[] args) throws Exception {
 		RnaPoc poc = new RnaPoc();
 		
 		poc.run(args[0], args[1], args[2], Integer.parseInt(args[3]));

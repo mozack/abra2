@@ -16,7 +16,8 @@ import net.sf.samtools.SAMRecord;
 
 public class RnaPoc {
 	
-	public static int MAX_INTRON_LENGTH = 1000000;
+	//public static int MAX_READ_GAP = 1000000;
+	public static int MAX_READ_GAP = 100000;
 	
 	private BufferedWriter contigWriter;
 	
@@ -47,16 +48,22 @@ public class RnaPoc {
 		SAMFileReader reader = new SAMFileReader(new File(input));
 		reader.setValidationStringency(ValidationStringency.SILENT);
 		
+		int prevMaxEnd = -1;
+		
 		SAMRecord lastRead = null;
 
 		for (SAMRecord read : reader) {
 			if (read.getMappingQuality() > 0) {
-				if (lastRead == null || (read.getAlignmentStart()-lastRead.getAlignmentStart()) < MAX_INTRON_LENGTH) {
+				if (lastRead == null || (read.getAlignmentStart()-prevMaxEnd) < MAX_READ_GAP) {
 					currReads.add(read);
 				} else {
 					processReads(currReads);
 					currReads.clear();
 					currReads.add(read);
+				}
+				
+				if (read.getAlignmentEnd() > prevMaxEnd) {
+					prevMaxEnd = read.getAlignmentEnd();
 				}
 				
 				lastRead = read;

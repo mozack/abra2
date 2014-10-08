@@ -160,7 +160,7 @@ public class NativeAssembler {
 		int regionStart = reads.get(0).getAlignmentStart();
 		int regionEnd = lastRead.getAlignmentEnd() > 0 ? lastRead.getAlignmentEnd() : lastRead.getAlignmentStart();
 		
-		String output = "region_" + regionStart + "_" + regionEnd;
+		String output = "region_" + reads.get(0).getReferenceName() + "_" + regionStart + "_" + regionEnd;
 		String contigs = "";
 		
 		// Make this set of reads eligible for GC
@@ -173,7 +173,7 @@ public class NativeAssembler {
 			contigs = assemble(
 					readBuffer.toString(),
 					outputFile, 
-					"foo", 
+					"output", 
 					1, // truncate_on_repeat
 					maxContigs,
 					maxPathsFromRoot,

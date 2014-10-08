@@ -173,7 +173,7 @@ public class NativeAssembler {
 			contigs = assemble(
 					readBuffer.toString(),
 					outputFile, 
-					"output", 
+					output, 
 					1, // truncate_on_repeat
 					maxContigs,
 					maxPathsFromRoot,

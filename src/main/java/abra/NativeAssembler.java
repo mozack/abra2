@@ -130,6 +130,66 @@ public class NativeAssembler {
 		return isCandidate;
 	}
 	
+	public String simpleAssemble(List<SAMRecord> reads) {
+		
+		StringBuffer readBuffer = new StringBuffer();
+		
+		for (SAMRecord read : reads) {
+			readBuffer.append(read.getReadNegativeStrandFlag() ? "1" : "0");
+			
+			if (read.getReadString().length() == readLength) {
+				readBuffer.append(read.getReadString());
+				readBuffer.append(read.getBaseQualityString());
+			} else {
+				StringBuffer basePadding = new StringBuffer();
+				StringBuffer qualPadding = new StringBuffer();
+				
+				for (int i=0; i<readLength-read.getReadString().length(); i++) {
+					basePadding.append('N');
+					qualPadding.append('!');
+				}
+				
+				readBuffer.append(read.getReadString() + basePadding.toString());
+				readBuffer.append(read.getBaseQualityString() + qualPadding.toString());							
+			}
+		}
+		
+
+
+		SAMRecord lastRead = reads.get(reads.size()-1);
+		int regionStart = reads.get(0).getAlignmentStart();
+		int regionEnd = lastRead.getAlignmentEnd() > 0 ? lastRead.getAlignmentEnd() : lastRead.getAlignmentStart();
+		
+		String output = "region_" + regionStart + "_" + regionEnd;
+		String contigs = "";
+		
+		// Make this set of reads eligible for GC
+		reads.clear();
+		
+		for (int kmer : kmers) { 
+			
+			String outputFile = output + "_k" + kmer;
+			
+			contigs = assemble(
+					readBuffer.toString(),
+					outputFile, 
+					"foo", 
+					1, // truncate_on_repeat
+					maxContigs,
+					maxPathsFromRoot,
+					readLength,
+					kmer,
+					minKmerFrequency,
+					minBaseQuality);
+			
+			if (!contigs.equals("<REPEAT>")) {
+				break;
+			}
+		}
+
+		return contigs;
+	}
+	
 	public String assembleContigs(List<String> inputFiles, String output, String tempDir, List<Feature> regions, String prefix,
 			boolean checkForDupes, ReAligner realigner, CompareToReference2 c2r) {
 		

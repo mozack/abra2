@@ -106,7 +106,7 @@ public class RnaPoc {
 		NativeAssembler assem = new NativeAssembler();
 
 		assem.setTruncateOutputOnRepeat(true);
-		assem.setMaxContigs(1000);
+		assem.setMaxContigs(10000);
 
 		assem.setMaxPathsFromRoot(5000000);
 		assem.setReadLength(75);

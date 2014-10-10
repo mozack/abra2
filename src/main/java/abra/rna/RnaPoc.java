@@ -5,10 +5,14 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 import abra.NativeAssembler;
 import abra.NativeLibraryLoader;
+import abra.ReverseComplementor;
+import abra.SAMRecordUtils;
 import abra.ThreadManager;
 
 import net.sf.samtools.SAMFileReader;
@@ -21,6 +25,9 @@ public class RnaPoc {
 	public static int MAX_READ_GAP = 50000;
 	
 	private BufferedWriter contigWriter;
+	
+	private BufferedWriter reads1;
+	private BufferedWriter reads2;
 	
 	private ThreadManager threadManager;
 	
@@ -40,13 +47,16 @@ public class RnaPoc {
 
 	}
 
-	public void run(String input, String output, String temp, int numThreads) throws IOException, InterruptedException {
+	public void run(String input, String output, String temp, int numThreads, String readsFile) throws IOException, InterruptedException {
 		
 		init(temp);
 		
 		this.threadManager = new ThreadManager(numThreads);
 		
 		contigWriter = new BufferedWriter(new FileWriter(output, false));
+		
+		reads1 = new BufferedWriter(new FileWriter(readsFile + "1.fa", false));
+		reads2 = new BufferedWriter(new FileWriter(readsFile + "2.fa", false));
 		
 		List<SAMRecord> currReads = new ArrayList<SAMRecord>();
 		
@@ -80,6 +90,8 @@ public class RnaPoc {
 		
 		reader.close();
 		contigWriter.close();
+		reads1.close();
+		reads2.close();
 	}
 	
 	private void spawnProcessingThread(List<SAMRecord> reads) {
@@ -93,9 +105,56 @@ public class RnaPoc {
 		
 		String contigs = assem.simpleAssemble(reads);
 		
-		if (!contigs.equals("<ERROR>") && !contigs.equals("<REPEAT>") && !contigs.isEmpty()) {
+		if (contigs.equals("<ERROR>") || contigs.equals("<REPEAT>")) {
+			// Pair and output original reads
+			Collections.sort(reads, new ReadNameComparator());
+			
+			String name = "";
+			SAMRecord first = null;
+			SAMRecord second = null;
+			
+			for (SAMRecord read : reads) {
+				if (SAMRecordUtils.isPrimary(read)) {
+					if (read.getFirstOfPairFlag()) {
+						first = read;
+						if (second != null) {
+							if (first.getReadName().equals(second.getReadName())) {
+								outputRead(reads1, first);
+								outputRead(reads2, second);
+								first = null;
+								second = null;
+							} else {
+								second = null;
+							}
+						}
+					} else {
+						second = read;
+						if (first != null) {
+							if (first.getReadName().equals(second.getReadName())) {
+								outputRead(reads1, first);
+								outputRead(reads2, second);
+								first = null;
+								second = null;
+							} else {
+								first = null;
+							}
+						}
+					}
+				}
+			}
+			
+		} else if (!contigs.isEmpty()) {
 			appendContigs(contigs);
 		}
+	}
+	
+	private void outputRead(BufferedWriter writer, SAMRecord read) throws IOException {
+		writer.write(">" + read.getReadName() + "\n");
+		String bases = read.getReadString();
+		if (read.getReadNegativeStrandFlag()) {
+			bases = new ReverseComplementor().reverseComplement(bases);
+		}
+		writer.write(bases + "\n");
 	}
 	
 	private synchronized void appendContigs(String contigs) throws IOException {
@@ -123,9 +182,23 @@ public class RnaPoc {
 		return assem;		
 	}
 	
+	static class ReadNameComparator implements Comparator<SAMRecord> {
+
+		@Override
+		public int compare(SAMRecord o1, SAMRecord o2) {
+			return o1.getReadName().compareTo(o2.getReadName());
+		}
+		
+	}
+	
 	public static void main(String[] args) throws Exception {
 		RnaPoc poc = new RnaPoc();
+		String input = args[0];
+		String output = args[1];
+		String temp = args[2];
+		int numThreads = Integer.parseInt(args[3]);
+		String readsFile = args[4];
 		
-		poc.run(args[0], args[1], args[2], Integer.parseInt(args[3]));
+		poc.run(input, output, temp, numThreads, readsFile);
 	}
 }

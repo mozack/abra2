@@ -25,9 +25,10 @@ public class RnaPoc {
 	public static int MAX_READ_GAP = 50000;
 	
 	private BufferedWriter contigWriter;
+	private BufferedWriter badRegionBed;
 	
-	private BufferedWriter reads1;
-	private BufferedWriter reads2;
+//	private BufferedWriter reads1;
+//	private BufferedWriter reads2;
 	
 	private ThreadManager threadManager;
 	
@@ -47,16 +48,17 @@ public class RnaPoc {
 
 	}
 
-	public void run(String input, String output, String temp, int numThreads, String readsFile) throws IOException, InterruptedException {
+	public void run(String input, String output, String temp, int numThreads, String badRegionBedFile) throws IOException, InterruptedException {
 		
 		init(temp);
 		
 		this.threadManager = new ThreadManager(numThreads);
 		
 		contigWriter = new BufferedWriter(new FileWriter(output, false));
+		badRegionBed = new BufferedWriter(new FileWriter(badRegionBedFile, false));
 		
-		reads1 = new BufferedWriter(new FileWriter(readsFile + "1.fa", false));
-		reads2 = new BufferedWriter(new FileWriter(readsFile + "2.fa", false));
+//		reads1 = new BufferedWriter(new FileWriter(readsFile + "1.fa", false));
+//		reads2 = new BufferedWriter(new FileWriter(readsFile + "2.fa", false));
 		
 		List<SAMRecord> currReads = new ArrayList<SAMRecord>();
 		
@@ -90,13 +92,26 @@ public class RnaPoc {
 		
 		reader.close();
 		contigWriter.close();
-		reads1.close();
-		reads2.close();
+		badRegionBed.close();
 	}
 	
 	private void spawnProcessingThread(List<SAMRecord> reads) {
 		RnaRegionHandler handler = new RnaRegionHandler(threadManager, this, reads);
 		threadManager.spawnThread(handler);
+	}
+	
+	private String getRegionEntry(List<SAMRecord> reads) {
+		String chr = reads.get(0).getReferenceName();
+		int start = reads.get(0).getAlignmentStart();
+		
+		int stop = start + 1;
+		for (SAMRecord read : reads) {
+			if (read.getAlignmentEnd() > stop) {
+				stop = read.getAlignmentEnd();
+			}
+		}
+		
+		return chr + "\t" + start + "\t" + stop;
 	}
 	
 	void processReads(List<SAMRecord> reads) throws IOException {
@@ -106,6 +121,10 @@ public class RnaPoc {
 		String contigs = assem.simpleAssemble(reads);
 		
 		if (contigs.equals("<ERROR>") || contigs.equals("<REPEAT>")) {
+			
+			badRegionBed.write(getRegionEntry(reads) + "\n");
+			
+			/*
 			// Pair and output original reads
 			Collections.sort(reads, new ReadNameComparator());
 			
@@ -142,6 +161,7 @@ public class RnaPoc {
 					}
 				}
 			}
+			*/
 			
 		} else if (!contigs.isEmpty()) {
 			appendContigs(contigs);

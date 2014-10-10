@@ -116,55 +116,57 @@ public class RnaPoc {
 	
 	void processReads(List<SAMRecord> reads) throws IOException {
 
-		NativeAssembler assem = newAssembler();
-		
-		String contigs = assem.simpleAssemble(reads);
-		
-		if (contigs.equals("<ERROR>") || contigs.equals("<REPEAT>")) {
+		if (reads.size() > 1) {
+			NativeAssembler assem = newAssembler();
 			
-			badRegionBed.write(getRegionEntry(reads) + "\n");
+			String contigs = assem.simpleAssemble(reads);
 			
-			/*
-			// Pair and output original reads
-			Collections.sort(reads, new ReadNameComparator());
-			
-			String name = "";
-			SAMRecord first = null;
-			SAMRecord second = null;
-			
-			for (SAMRecord read : reads) {
-				if (SAMRecordUtils.isPrimary(read)) {
-					if (read.getFirstOfPairFlag()) {
-						first = read;
-						if (second != null) {
-							if (first.getReadName().equals(second.getReadName())) {
-								outputRead(reads1, first);
-								outputRead(reads2, second);
-								first = null;
-								second = null;
-							} else {
-								second = null;
+			if (contigs.equals("<ERROR>") || contigs.equals("<REPEAT>")) {
+				
+				badRegionBed.write(getRegionEntry(reads) + "\n");
+				
+				/*
+				// Pair and output original reads
+				Collections.sort(reads, new ReadNameComparator());
+				
+				String name = "";
+				SAMRecord first = null;
+				SAMRecord second = null;
+				
+				for (SAMRecord read : reads) {
+					if (SAMRecordUtils.isPrimary(read)) {
+						if (read.getFirstOfPairFlag()) {
+							first = read;
+							if (second != null) {
+								if (first.getReadName().equals(second.getReadName())) {
+									outputRead(reads1, first);
+									outputRead(reads2, second);
+									first = null;
+									second = null;
+								} else {
+									second = null;
+								}
 							}
-						}
-					} else {
-						second = read;
-						if (first != null) {
-							if (first.getReadName().equals(second.getReadName())) {
-								outputRead(reads1, first);
-								outputRead(reads2, second);
-								first = null;
-								second = null;
-							} else {
-								first = null;
+						} else {
+							second = read;
+							if (first != null) {
+								if (first.getReadName().equals(second.getReadName())) {
+									outputRead(reads1, first);
+									outputRead(reads2, second);
+									first = null;
+									second = null;
+								} else {
+									first = null;
+								}
 							}
 						}
 					}
 				}
+				*/
+				
+			} else if (!contigs.isEmpty()) {
+				appendContigs(contigs);
 			}
-			*/
-			
-		} else if (!contigs.isEmpty()) {
-			appendContigs(contigs);
 		}
 	}
 	

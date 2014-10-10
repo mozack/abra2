@@ -164,7 +164,7 @@ public class NativeAssembler {
 		String contigs = "";
 		
 		// Make this set of reads eligible for GC
-		reads.clear();
+//		reads.clear();
 		
 		for (int kmer : kmers) { 
 			

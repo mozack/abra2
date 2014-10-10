@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 
 import abra.NativeAssembler;
@@ -114,10 +115,24 @@ public class RnaPoc {
 		return chr + "\t" + start + "\t" + stop;
 	}
 	
+	private void filterNbases(List<SAMRecord> reads) {
+		Iterator<SAMRecord> iter = reads.iterator();
+		
+		while (iter.hasNext()) {
+			SAMRecord read = iter.next();
+			if (read.getReadString().contains("N")) {
+				iter.remove();
+			}
+		}
+		
+	}
+	
 	void processReads(List<SAMRecord> reads) throws IOException {
 
 		if (reads.size() > 1) {
 			NativeAssembler assem = newAssembler();
+
+			filterNbases(reads);
 			
 			String contigs = assem.simpleAssemble(reads);
 			

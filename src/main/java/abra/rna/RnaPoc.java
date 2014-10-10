@@ -129,10 +129,10 @@ public class RnaPoc {
 	
 	void processReads(List<SAMRecord> reads) throws IOException {
 
+		filterNbases(reads);
+		
 		if (reads.size() > 1) {
 			NativeAssembler assem = newAssembler();
-
-			filterNbases(reads);
 			
 			String contigs = assem.simpleAssemble(reads);
 			

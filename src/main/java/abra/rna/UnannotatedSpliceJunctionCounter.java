@@ -155,7 +155,7 @@ public class UnannotatedSpliceJunctionCounter {
         }
         
         public String toString() {
-            return chromosome + ":" + start + "-" + stop;
+            return chromosome + "\t" + start + "\t" + stop;
         }
     }
 }

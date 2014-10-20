@@ -102,6 +102,8 @@ public class ReAligner {
 	
 	private boolean hasContigs = false;
 	
+	private int minMappingQuality;
+	
 	public void reAlign(String[] inputFiles, String[] outputFiles) throws Exception {
 		
 		this.inputSams = inputFiles;
@@ -907,7 +909,7 @@ public class ReAligner {
 	void sam2Fastq(String bam, String fastq, CompareToReference2 c2r, SAMFileWriter finalOutputSam) throws IOException {
 		log("Preprocessing: " + bam);
 		Sam2Fastq sam2Fastq = new Sam2Fastq();
-		sam2Fastq.convert(bam, fastq, c2r, finalOutputSam, isPairedEnd, regions);
+		sam2Fastq.convert(bam, fastq, c2r, finalOutputSam, isPairedEnd, regions, minMappingQuality);
 		log("Done Preprocessing: " + bam);
 	}
 			
@@ -1236,6 +1238,10 @@ public class ReAligner {
 		return this.c2r;
 	}
 	
+	public int getMinMappingQuality() {
+		return this.minMappingQuality;
+	}
+	
 	public int getMaxInsertLength() {
 		return this.maxInsertLength;
 	}
@@ -1293,6 +1299,7 @@ public class ReAligner {
 			realigner.rnaOutputSam = options.getRnaSamOutput();
 			realigner.structuralVariantFile = options.getStructuralVariantFile();
 			realigner.localRepeatFile = options.getLocalRepeatFile();
+			realigner.minMappingQuality = options.getMinimumMappingQuality();
 
 			long s = System.currentTimeMillis();
 			

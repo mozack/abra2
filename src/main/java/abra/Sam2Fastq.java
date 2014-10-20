@@ -26,8 +26,6 @@ public class Sam2Fastq {
 	private static final int MAX_SAM_READ_NAME_LENGTH = 255;
 	
 	public static final int MIN_OFF_TARGET_MAPQ = 30;
-	// TODO: Parameterize this.
-	public static final int MIN_MAPQ = 20;
 	
 	private FastqOutputFile output1;
 	private ReverseComplementor reverseComplementor = new ReverseComplementor();
@@ -42,7 +40,7 @@ public class Sam2Fastq {
 	 */
 	public void convert(String inputSam, String outputFastq, CompareToReference2 c2r,
 			SAMFileWriter writer, boolean isPairedEnd,
-			List<Feature> regions) throws IOException {
+			List<Feature> regions, int minMappingQuality) throws IOException {
 		
 		System.out.println("sam: " + inputSam);
 		
@@ -92,7 +90,7 @@ public class Sam2Fastq {
 //					System.out.println("Filtering off target: " + read.getSAMString());
 				}
     			
-    			if (yx > 0 && !offTargetFiltered && read.getMappingQuality() > MIN_MAPQ) {
+    			if (yx > 0 && !offTargetFiltered && read.getMappingQuality() >= minMappingQuality) {
     				
 	    			if ((!read.getReadUnmappedFlag()) && (!regionTracker.isInRegion(read))) {
 	    				read.setAttribute("YR", 1);
@@ -254,7 +252,7 @@ public class Sam2Fastq {
 		
 		long s = System.currentTimeMillis();
 		s2f.convert(inputSam, "/home/lmose/dev/abra/region_tracker/t2.fastq.gz", c2r, writer, false, 
-				regions);
+				regions, 20);
 		long e = System.currentTimeMillis();
 		
 		

@@ -21,6 +21,7 @@ public class ReAlignerOptions extends Options {
 	private static final String MIN_CONTIG_LENGTH = "mcl";
 	private static final String MAX_POTENTIAL_CONTIGS = "mpc";
 	private static final String MIN_CONTIG_MAPQ = "mc-mapq";
+	private static final String MIN_MAPQ = "mapq";
 	private static final String NUM_THREADS = "threads";
 	private static final String UNALIGNED_ASSEMBLY = "aur";
 	private static final String MAX_UNALIGNED_READS = "mur";
@@ -53,6 +54,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(MAX_POTENTIAL_CONTIGS, "Maximum number of potential contigs for a region").withOptionalArg().ofType(Integer.class).defaultsTo(5000);
             parser.accepts(NUM_THREADS, "Number of threads").withRequiredArg().ofType(Integer.class).defaultsTo(4);
             parser.accepts(MIN_CONTIG_MAPQ, "Minimum contig mapping quality").withOptionalArg().ofType(Integer.class).defaultsTo(25);
+            parser.accepts(MIN_MAPQ, "Minimum mapping quality for a read to be used in assembly and be eligible for realignment").withOptionalArg().ofType(Integer.class).defaultsTo(20);
             parser.accepts(UNALIGNED_ASSEMBLY, "Assemble unaligned reads (currently disabled).");
             parser.accepts(MAX_UNALIGNED_READS, "Maximum number of unaligned reads to assemble").withOptionalArg().ofType(Integer.class).defaultsTo(50000000);
             parser.accepts(SINGLE_END, "Input is single end");
@@ -228,6 +230,10 @@ public class ReAlignerOptions extends Options {
 	
 	public int getAverageDepthCeiling() {
 		return (Integer) getOptions().valueOf(AVERAGE_DEPTH_CEILING);
+	}
+	
+	public int getMinimumMappingQuality() {
+		return (Integer) getOptions().valueOf(MIN_MAPQ);
 	}
 	
 	public boolean isValid() {

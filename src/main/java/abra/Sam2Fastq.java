@@ -26,11 +26,12 @@ public class Sam2Fastq {
 	private static final int MAX_SAM_READ_NAME_LENGTH = 255;
 	
 	public static final int MIN_OFF_TARGET_MAPQ = 30;
+	// TODO: Parameterize this.
+	public static final int MIN_MAPQ = 20;
 	
 	private FastqOutputFile output1;
 	private ReverseComplementor reverseComplementor = new ReverseComplementor();
 	private boolean shouldIdentifyEndByReadId = false;
-	private boolean isMapspliceFusions = false;
 	private String end1Suffix;
 	private String end2Suffix;
 	private RegionTracker regionTracker;
@@ -88,10 +89,10 @@ public class Sam2Fastq {
 				if (yx > 0 && !read.getReadUnmappedFlag() && read.getMappingQuality() < MIN_OFF_TARGET_MAPQ && !regionTracker.isInRegion(read)) {
 					read.setAttribute("YR", 2);
 					offTargetFiltered = true;
-					System.out.println("Filtering off target: " + read.getSAMString());
+//					System.out.println("Filtering off target: " + read.getSAMString());
 				}
     			
-    			if (yx > 0 && !offTargetFiltered) {
+    			if (yx > 0 && !offTargetFiltered && read.getMappingQuality() > MIN_MAPQ) {
     				
 	    			if ((!read.getReadUnmappedFlag()) && (!regionTracker.isInRegion(read))) {
 	    				read.setAttribute("YR", 1);
@@ -100,7 +101,7 @@ public class Sam2Fastq {
     				// Eligible for realignment, output FASTQ record
 	    			output1.write(samReadToFastqRecord(read, c2r));
     			} else if (writer != null) {
-    				// Either xactly matches reference or failed vendor QC, so
+    				// Either xactly matches reference or failed vendor QC or low mapq, so
     				// output directly to final BAM
     				writer.addAlignment(read);
     			}
@@ -186,10 +187,6 @@ public class Sam2Fastq {
 		this.shouldIdentifyEndByReadId = true;
 		this.end1Suffix = end1Suffix;
 		this.end2Suffix = end2Suffix;
-	}
-	
-	public void setMapspliceFusions(boolean isMapspliceFusions) {
-		this.isMapspliceFusions = isMapspliceFusions;
 	}
 
 /*

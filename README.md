@@ -38,7 +38,7 @@ parameter | value
 --in | One or more input BAMs delimited by comma
 --out | One or more output BAM's corresponding to the set of input BAMs
 --ref  | BWA indexed reference genome.
---targets | BED file describing target assembly regions (Usually corresponds to capture targets) with optional kmer lengths for each region
+--targets | BED file describing target assembly regions (Usually corresponds to capture targets) with optional kmer lengths for each region.  Targets must be sorted by position in ascending order within each chromosome.
 --working | Temp working directory
 
 ### Somatic  mode

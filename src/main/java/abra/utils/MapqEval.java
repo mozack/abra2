@@ -17,14 +17,16 @@ public class MapqEval {
 	public void eval(String input, String bed) throws IOException {
 		RegionLoader loader = new RegionLoader();
 		List<Feature> regions = loader.load(bed);
-		SAMFileReader reader = new SAMFileReader(new File(input));
-		reader.setValidationStringency(ValidationStringency.SILENT);
 
 		int[] thresholds = new int[] { 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 255 };
 		
 		
 		for (Feature region : regions) {
+			SAMFileReader reader = new SAMFileReader(new File(input));
+			reader.setValidationStringency(ValidationStringency.SILENT);
+
 			int[] counts = new int[thresholds.length];
+			System.err.println(region.getDescriptor());
 			Iterator<SAMRecord> iter = reader.queryOverlapping(region.getSeqname(), (int) region.getStart(), (int) region.getEnd());
 			while (iter.hasNext()) {
 				SAMRecord read = iter.next();

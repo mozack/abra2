@@ -1264,7 +1264,7 @@ public class ReAligner {
 
 	public static void run(String[] args) throws Exception {
 		
-		System.out.println("Starting 0.83 ...");
+		System.out.println("Starting 0.84 ...");
 		
 		ReAlignerOptions options = new ReAlignerOptions();
 		options.parseOptions(args);

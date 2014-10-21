@@ -46,9 +46,8 @@ public class MapqEval {
 			}
 			
 			System.out.println(output.toString());
+			reader.close();
 		}
-		
-		reader.close();
 	}
 	
 	public static void main(String[] args) throws Exception {

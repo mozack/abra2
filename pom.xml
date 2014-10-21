@@ -117,7 +117,4 @@
      </resource>
    </resources>
   </build>
-  <modules>
-  	<module>?</module>
-  </modules>
 </project>

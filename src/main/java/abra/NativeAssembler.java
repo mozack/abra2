@@ -261,7 +261,7 @@ public class NativeAssembler {
 						if ( (!realigner.isFiltered(read)) && 
 							 (!read.getDuplicateReadFlag()) && 
 							 (!read.getReadFailsVendorQualityCheckFlag()) &&
-							 (read.getMappingQuality() > realigner.getMinMappingQuality()) &&
+							 (read.getMappingQuality() >= realigner.getMinMappingQuality() || read.getReadUnmappedFlag()) &&
 							 //(Sam2Fastq.isPrimary(read)) &&
 //							 (!isHardClipped(read)) &&
 							 ((!checkForDupes) || (!readIds.contains(getIdentifier(read))))) {

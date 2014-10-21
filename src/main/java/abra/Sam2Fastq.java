@@ -90,7 +90,7 @@ public class Sam2Fastq {
 //					System.out.println("Filtering off target: " + read.getSAMString());
 				}
     			
-    			if (yx > 0 && !offTargetFiltered && read.getMappingQuality() >= minMappingQuality) {
+    			if ((yx > 0 && !offTargetFiltered && read.getMappingQuality() >= minMappingQuality) || (read.getReadUnmappedFlag())) {
     				
 	    			if ((!read.getReadUnmappedFlag()) && (!regionTracker.isInRegion(read))) {
 	    				read.setAttribute("YR", 1);

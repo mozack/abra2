@@ -28,9 +28,11 @@ public class MapqEval {
 			Iterator<SAMRecord> iter = reader.queryOverlapping(region.getSeqname(), (int) region.getStart(), (int) region.getEnd());
 			while (iter.hasNext()) {
 				SAMRecord read = iter.next();
-				for (int i=0; i<thresholds.length; i++) {
-					if (read.getMappingQuality() <= thresholds[i]) {
-						counts[i] += 1;
+				if (!read.getReadUnmappedFlag()) {
+					for (int i=0; i<thresholds.length; i++) {
+						if (read.getMappingQuality() <= thresholds[i]) {
+							counts[i] += 1;
+						}
 					}
 				}
 			}

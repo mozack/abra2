@@ -6,13 +6,14 @@ import java.io.File;
 import net.sf.samtools.MyReader;
 import net.sf.samtools.SAMFileHeader;
 import net.sf.samtools.SAMFileHeader.SortOrder;
+import net.sf.samtools.SAMFileReader;
 import net.sf.samtools.SAMFileWriter;
 import net.sf.samtools.SAMFileWriterFactory;
 import net.sf.samtools.SAMRecord;
 
 /**
  * Manages writing paired reads to final output.  Reads that were previously in
- * a "proper pair" will not be modified to become an "inproper pair".
+ * a "proper pair" will not be modified to become an "improper pair".
  * 
  * @author Lisle E. Mose (lmose at unc dot edu)
  */
@@ -76,7 +77,7 @@ public class BetaPairValidatingRealignmentWriter implements RealignmentWriter {
 	}
 	
 	private boolean isValidOrientation(SAMRecord read1, SAMRecord read2) {
-		return isValidOrientation(read1, read2.getAlignmentStart(), read2.getMateNegativeStrandFlag());
+		return isValidOrientation(read1, read2.getAlignmentStart(), read2.getReadNegativeStrandFlag());
 	}
 	
 	public void addAlignment(SAMRecord updatedRead, SAMRecord origRead) {
@@ -358,4 +359,25 @@ public class BetaPairValidatingRealignmentWriter implements RealignmentWriter {
 			this.origRead = null;
 		}
 	}
+	
+	public static void main(String[] args) {
+		SAMFileReader reader = new SAMFileReader(new File("/home/lmose/dev/abra/1076/candidates.bam"));
+		SAMFileHeader header = reader.getFileHeader();
+		reader.close();
+		header.setSortOrder(SortOrder.unsorted);
+		
+		SAMFileWriterFactory writerFactory = new SAMFileWriterFactory();
+		writerFactory.setUseAsyncIo(false);
+		SAMFileWriter writer = writerFactory.makeSAMOrBAMWriter(
+				header, false, new File("/home/lmose/dev/abra/1076/test.bam"));
+
+		
+		BetaPairValidatingRealignmentWriter w = new BetaPairValidatingRealignmentWriter(null,
+				writer, "foofi", 0, 200000);
+		
+		w.candidatesSam = "/home/lmose/dev/abra/1076/candidates.bam";
+		w.processCandidates();
+		writer.close();
+	}
+
 }

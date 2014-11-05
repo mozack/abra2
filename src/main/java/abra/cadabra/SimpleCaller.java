@@ -67,7 +67,7 @@ public class SimpleCaller {
 			int tAtEdge = 0;
 			int gAtEdge = 0;
 			
-			char ref = Character.toUpperCase(c2r.getSequence(reads.getChromosome(), reads.getPosition(), 1).charAt(0));
+			char ref = reads.getChromosome().equals("*") ? 'N' : Character.toUpperCase(c2r.getSequence(reads.getChromosome(), reads.getPosition(), 1).charAt(0));
 			
 			if (ref != 'N') {
 			
@@ -79,7 +79,7 @@ public class SimpleCaller {
 				
 				for (SAMRecord read : reads.getReads()) {
 					
-					if (read.getMappingQuality() >= this.minMapq) {
+					if (read.getMappingQuality() >= this.minMapq && !read.getReadUnmappedFlag()) {
 					
 						BaseInfo baseInfo = getBaseAtReferencePosition(read, reads.getPosition());
 						

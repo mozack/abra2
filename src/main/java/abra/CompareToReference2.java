@@ -50,6 +50,10 @@ public class CompareToReference2 {
 		loadRefMap();
 	}
 	
+	public boolean containsChromosome(String chromosome) {
+		return refMap.containsKey(chromosome);
+	}
+	
 	public List<String> getChromosomes() {
 		return new ArrayList<String>(refMap.keySet());
 	}

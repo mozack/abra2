@@ -281,17 +281,15 @@ public class SimpleCaller {
 					break;
 				}
 			} else if (element.getOperator() == CigarOperator.I) {
-				if (currRefPos == refPos+1) {
+				if (currRefPos == refPos) {
 					//TODO: Handle insertions
-					//ret = new IndelInfo(element, readIdx);
 					isIndel = true;
 					break;
 				}
 				readIdx += element.getLength();
 			} else if (element.getOperator() == CigarOperator.D) {
-				if (currRefPos == refPos+1) {
+				if (refPos >= currRefPos && refPos <= currRefPos+element.getLength()) {
 					//TODO: Handle deletions
-					//ret = new IndelInfo(element, readIdx);
 					isIndel = true;
 					break;
 				}				
@@ -349,6 +347,7 @@ public class SimpleCaller {
 	public static void main(String[] args) throws Exception {
 		SimpleCaller c = new SimpleCaller();
 		
+		/*
 		String reference = args[0];
 		String bam = args[1];
 		float minAllelicFraction = Float.parseFloat(args[2]);
@@ -357,8 +356,11 @@ public class SimpleCaller {
 		int minDistanceFromIndel = Integer.parseInt(args[5]);
 	
 		c.call(reference, bam, minAllelicFraction, minAltObs, minMapq, minDistanceFromIndel);
+		*/
 		
 //		c.call("/home/lmose/reference/chr20/chr20.fa", "/home/lmose/dev/efseq/piotr_test1/calling/k101.sscs.chr20.bam", .003F, 2, 40, 50);
+		c.call("/home/lmose/reference/chr21/chr21.fa", "/home/lmose/dev/efseq/piotr_test1/calling/tiny21.bam", .003F, 2, 40, 50);
+		
 //		c.call("/home/lmose/reference/chr20/chr20.fa", "/home/lmose/dev/efseq/piotr_test1/calling/k101.chr20.bam", .003F, 2, 40, 50);
 		
 	}

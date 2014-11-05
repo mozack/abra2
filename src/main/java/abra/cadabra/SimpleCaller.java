@@ -218,6 +218,10 @@ public class SimpleCaller {
 					}
 					
 					readIdx -= offset;
+					if ((readIdx < 0) || (readIdx >= read.getReadBases().length)) {
+						System.err.println("Read index out of bounds for read: " + read.getSAMString());
+						break;
+					}
 					base = (char) read.getReadBases()[readIdx];
 					break;
 				}

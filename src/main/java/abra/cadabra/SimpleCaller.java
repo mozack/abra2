@@ -1,7 +1,9 @@
 package abra.cadabra;
 
 import java.text.DecimalFormat;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
 import net.sf.samtools.Cigar;
 import net.sf.samtools.CigarElement;
@@ -19,11 +21,17 @@ public class SimpleCaller {
 	private int minAltObs;
 	private float minAltFraction;
 	private int minMapq;
+	private int minDistanceFromIndel;
+	
+	private List<CachedCall> callCache = new ArrayList<CachedCall>();
+	
+	private static int MIN_BASE_QUALITY = 20;
 
-	public void call(String reference, String bam, float minAltFraction, int minAltObs, int minMapq) throws Exception {
+	public void call(String reference, String bam, float minAltFraction, int minAltObs, int minMapq, int minDistanceFromIndel) throws Exception {
 		this.minAltFraction = minAltFraction;
 		this.minAltObs = minAltObs;
 		this.minMapq = minMapq;
+		this.minDistanceFromIndel = minDistanceFromIndel;
 		
 		c2r = new CompareToReference2();
 		c2r.init(reference);
@@ -34,6 +42,8 @@ public class SimpleCaller {
 		
 		String lastChromosome = "";
 		
+		int lastIndelPos = -1;
+		
 		Iterator<ReadsAtLocus> sampleIter = sample.iterator();
 		
 		while (sampleIter.hasNext()) {
@@ -42,6 +52,8 @@ public class SimpleCaller {
 			if (!reads.getChromosome().equals(lastChromosome)) {
 				System.err.println("Processing chromosome: " + reads.getChromosome());
 				lastChromosome = reads.getChromosome();
+				lastIndelPos = -1;
+				flushCache();
 			}
 			
 			int a = 0;
@@ -62,6 +74,8 @@ public class SimpleCaller {
 //				if (reads.getPosition() == 3193842) {
 //					System.out.println("yo.");
 //				}
+				
+				int numIndels = 0;
 				
 				for (SAMRecord read : reads.getReads()) {
 					
@@ -98,7 +112,16 @@ public class SimpleCaller {
 								n++;
 								break;
 						}
+						
+						if (baseInfo.isIndel) {
+							numIndels++;
+						}
 					}
+				}
+				
+				if ((float) numIndels / (float) reads.getReads().size() > this.minAltFraction) {
+					// There is indel support at this locus.  Track it so we can filter nearby SNPs.
+					lastIndelPos = reads.getPosition();
 				}
 				
 				char[] bases = { 'A','C','T','G'};
@@ -109,16 +132,14 @@ public class SimpleCaller {
 				
 				// Require N number of alt obs not near edge of M block
 				if ((callInfo.altCount - callInfo.altEdgeCount) > this.minAltObs && callInfo.altCount > 0) {
-					output(reads.getChromosome(), reads.getPosition(), callInfo);
+					output(reads.getChromosome(), reads.getPosition(), callInfo, lastIndelPos);
 				}
-				
-//				// Require at least 1 alt obs and # reads indel or clip adjacent < 10% of alt obs
-//				if (callInfo.altCount > 1 && callInfo.altCount*.1 > indelOrClipAdjacentCount) {
-//					output(reads.getChromosome(), reads.getPosition(), callInfo);
-//				}
 			}
+			
+			checkCache(reads.getPosition(), lastIndelPos);
 		}
 		
+		flushCache();
 		System.err.println("Done.");
 	}
 	
@@ -131,10 +152,40 @@ public class SimpleCaller {
 		System.out.println("##FORMAT=<ID=AF1,Number=1,Type=String,Description=\"Allele Frequency based upon DP1\">");
 		System.out.println("##FORMAT=<ID=AF2,Number=1,Type=String,Description=\"Allele Frequency based upon DP2\">");
 		System.out.println("#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	SAMPLE");
-
 	}
 	
-	private void output(String chromosome, int position, CallInfo callInfo) {
+	private void output(String chromosome, int position, CallInfo callInfo, int lastIndelPos) {
+		if (position >= lastIndelPos+minDistanceFromIndel) {
+			this.callCache.add(new CachedCall(chromosome, position, callInfo));
+		}
+	}
+	
+	private void checkCache(int currPosition, int lastIndelPos) {
+		Iterator<CachedCall> iter = this.callCache.iterator();
+		while (iter.hasNext()) {
+			CachedCall call = iter.next();
+			if (Math.abs(call.position - lastIndelPos) < minDistanceFromIndel) {
+				// Too close to indel.  Discard call.
+				iter.remove();
+			} else if (currPosition >= call.position + minDistanceFromIndel) {
+				// We have progressed minDistanceFromIndel positions away from the call.  Safe to output
+				// Output the call and remove from cache
+				write(call.chromosome, call.position, call.callInfo);
+				iter.remove();
+			}
+		}
+	}
+	
+	private void flushCache() {
+		for (CachedCall call : this.callCache) {
+			write(call.chromosome, call.position, call.callInfo);
+		}
+		
+		this.callCache.clear();
+	}
+		
+	private void write(String chromosome, int position, CallInfo callInfo) {
+		
 		StringBuffer call = new StringBuffer();
 		call.append(chromosome);
 		call.append('\t');
@@ -193,6 +244,7 @@ public class SimpleCaller {
 	
 	private BaseInfo getBaseAtReferencePosition(SAMRecord read, int refPos) {
 		boolean isNearEdge = false;
+		boolean isIndel = false;
 		int alignmentStart = read.getAlignmentStart();
 		Cigar cigar = read.getCigar();
 		
@@ -222,13 +274,17 @@ public class SimpleCaller {
 						System.err.println("Read index out of bounds for read: " + read.getSAMString());
 						break;
 					}
-					base = (char) read.getReadBases()[readIdx];
+					
+					if (read.getBaseQualities()[readIdx] >= MIN_BASE_QUALITY) {
+						base = (char) read.getReadBases()[readIdx];
+					}
 					break;
 				}
 			} else if (element.getOperator() == CigarOperator.I) {
 				if (currRefPos == refPos+1) {
 					//TODO: Handle insertions
 					//ret = new IndelInfo(element, readIdx);
+					isIndel = true;
 					break;
 				}
 				readIdx += element.getLength();
@@ -236,6 +292,7 @@ public class SimpleCaller {
 				if (currRefPos == refPos+1) {
 					//TODO: Handle deletions
 					//ret = new IndelInfo(element, readIdx);
+					isIndel = true;
 					break;
 				}				
 				currRefPos += element.getLength();
@@ -244,19 +301,7 @@ public class SimpleCaller {
 			}			
 		}
 		
-		return new BaseInfo(Character.toUpperCase(base), isNearEdge);
-	}
-	
-	private boolean isIndelOrClip(CigarElement element) {
-		boolean isIndelOrClip = false;
-		
-		if (element != null) {
-			isIndelOrClip = 
-					element.getOperator() == CigarOperator.D || element.getOperator() == CigarOperator.I || 
-					element.getOperator() == CigarOperator.S || element.getOperator() == CigarOperator.H;
-		}
-		
-		return isIndelOrClip;
+		return new BaseInfo(Character.toUpperCase(base), isNearEdge, isIndel);
 	}
 	
 	static class CallInfo {
@@ -280,10 +325,24 @@ public class SimpleCaller {
 	static class BaseInfo {
 		char base;
 		boolean isNearEdge;
+		boolean isIndel;
 		
-		BaseInfo(char base, boolean isNearEdge) {
+		BaseInfo(char base, boolean isNearEdge, boolean isIndel) {
 			this.base = base;
 			this.isNearEdge = isNearEdge;
+			this.isIndel = isIndel;
+		}
+	}
+	
+	static class CachedCall {
+		String chromosome;
+		int position;
+		CallInfo callInfo;
+		
+		CachedCall(String chromosome, int position, CallInfo callInfo) {
+			this.chromosome = chromosome;
+			this.position = position;
+			this.callInfo = callInfo;
 		}
 	}
 	
@@ -295,11 +354,12 @@ public class SimpleCaller {
 		float minAllelicFraction = Float.parseFloat(args[2]);
 		int minAltObs = Integer.parseInt(args[3]);
 		int minMapq = Integer.parseInt(args[4]);
+		int minDistanceFromIndel = Integer.parseInt(args[5]);
 	
-		c.call(reference, bam, minAllelicFraction, minAltObs, minMapq);
+		c.call(reference, bam, minAllelicFraction, minAltObs, minMapq, minDistanceFromIndel);
 		
-//		c.call("/home/lmose/reference/chr20/chr20.fa", "/home/lmose/dev/efseq/piotr_test1/calling/k101.sscs.chr20.bam", 0F, 2);
-//		c.call("/home/lmose/reference/chr20/chr20.fa", "/home/lmose/dev/efseq/piotr_test1/calling/k101.chr20.bam", .003F, 2, 40);
+//		c.call("/home/lmose/reference/chr20/chr20.fa", "/home/lmose/dev/efseq/piotr_test1/calling/k101.sscs.chr20.bam", .003F, 2, 40, 50);
+//		c.call("/home/lmose/reference/chr20/chr20.fa", "/home/lmose/dev/efseq/piotr_test1/calling/k101.chr20.bam", .003F, 2, 40, 50);
 		
 	}
 }

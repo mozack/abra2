@@ -68,7 +68,7 @@ public class SimpleCaller {
 			int gAtEdge = 0;
 			
 			if (!c2r.containsChromosome(reads.getChromosome())) {
-				System.out.println("Chromosome: [%s] not in reference.  Assuming we've reached unaligned pile and stopping.");
+				System.err.println("Chromosome: [" + reads.getChromosome() + "] not in reference.  Assuming we've reached unaligned pile and stopping.");
 				break;
 			}
 			

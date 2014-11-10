@@ -149,55 +149,57 @@ public class Cadabra {
 		Map<String, Integer> insertBasesMap = new HashMap<String, Integer>();
 		
 		for (SAMRecord read : tumorReads.getReads()) {
+			if (!read.getDuplicateReadFlag()) {
 			
-			IndelInfo readElement = checkForIndelAtLocus(read, position);
-			
-			if (readElement != null) {
-				Integer ymInt = (Integer) read.getAttribute(ReadAdjuster.MISMATCHES_TO_CONTIG_TAG);
-				if (ymInt != null) {
-					int ym = ymInt;
-					if (ym == 0) {
-						mismatch0Count++;
+				IndelInfo readElement = checkForIndelAtLocus(read, position);
+				
+				if (readElement != null) {
+					Integer ymInt = (Integer) read.getAttribute(ReadAdjuster.MISMATCHES_TO_CONTIG_TAG);
+					if (ymInt != null) {
+						int ym = ymInt;
+						if (ym == 0) {
+							mismatch0Count++;
+						}
+						if (ym <= 1) {
+							mismatch1Count++;
+						}
+						totalMismatchCount += ym;
 					}
-					if (ym <= 1) {
-						mismatch1Count++;
-					}
-					totalMismatchCount += ym;
+				} else if (matchesReference(read, position)) {
+					tumorRefCount += 1;
 				}
-			} else if (matchesReference(read, position)) {
-				tumorRefCount += 1;
-			}
-			
-			if (tumorIndel == null && readElement != null) {
-				tumorIndel = readElement.getCigarElement();
-				tumorCount = 1;
-				maxContigMapq = Math.max(maxContigMapq, read.getIntegerAttribute(ReadAdjuster.CONTIG_QUALITY_TAG));
-				if (readElement.getInsertBases() != null) {
-					updateInsertBases(insertBasesMap, readElement.getInsertBases());
-				}
-				minReadIndex = readElement.getReadIndex() < minReadIndex ? readElement.getReadIndex() : minReadIndex;
-				maxReadIndex = readElement.getReadIndex() > maxReadIndex ? readElement.getReadIndex() : maxReadIndex;
-			} else if (tumorIndel != null && readElement != null) {
-				if (tumorIndel.equals(readElement.getCigarElement())) {
-					// Increment tumor indel support count
-					tumorCount += 1;
+				
+				if (tumorIndel == null && readElement != null) {
+					tumorIndel = readElement.getCigarElement();
+					tumorCount = 1;
 					maxContigMapq = Math.max(maxContigMapq, read.getIntegerAttribute(ReadAdjuster.CONTIG_QUALITY_TAG));
 					if (readElement.getInsertBases() != null) {
 						updateInsertBases(insertBasesMap, readElement.getInsertBases());
 					}
 					minReadIndex = readElement.getReadIndex() < minReadIndex ? readElement.getReadIndex() : minReadIndex;
 					maxReadIndex = readElement.getReadIndex() > maxReadIndex ? readElement.getReadIndex() : maxReadIndex;
-
-				} else {
-					// We will not deal with multiple indels at a single locus for now.
-					tumorIndel = null;
-					tumorCount = 0;
-					break;
+				} else if (tumorIndel != null && readElement != null) {
+					if (tumorIndel.equals(readElement.getCigarElement())) {
+						// Increment tumor indel support count
+						tumorCount += 1;
+						maxContigMapq = Math.max(maxContigMapq, read.getIntegerAttribute(ReadAdjuster.CONTIG_QUALITY_TAG));
+						if (readElement.getInsertBases() != null) {
+							updateInsertBases(insertBasesMap, readElement.getInsertBases());
+						}
+						minReadIndex = readElement.getReadIndex() < minReadIndex ? readElement.getReadIndex() : minReadIndex;
+						maxReadIndex = readElement.getReadIndex() > maxReadIndex ? readElement.getReadIndex() : maxReadIndex;
+	
+					} else {
+						// We will not deal with multiple indels at a single locus for now.
+						tumorIndel = null;
+						tumorCount = 0;
+						break;
+					}
 				}
-			}
-			
-			if (!hasSufficientDistanceFromReadEnd && tumorIndel != null && readElement != null && readElement.getCigarElement().equals(tumorIndel)) {
-				hasSufficientDistanceFromReadEnd = sufficientDistanceFromReadEnd(read, readElement.getReadIndex());
+				
+				if (!hasSufficientDistanceFromReadEnd && tumorIndel != null && readElement != null && readElement.getCigarElement().equals(tumorIndel)) {
+					hasSufficientDistanceFromReadEnd = sufficientDistanceFromReadEnd(read, readElement.getReadIndex());
+				}
 			}
 		}
 		
@@ -206,12 +208,14 @@ public class Cadabra {
 		if (tumorCount >= MIN_SUPPORTING_READS && hasSufficientDistanceFromReadEnd && tumorFraction >= MIN_TUMOR_FRACTION) {
 			
 			for (SAMRecord read : normalReads.getReads()) {
-				IndelInfo normalInfo = checkForIndelAtLocus(read.getAlignmentStart(), read.getCigar(), position);
-				
-				if (normalInfo != null && sufficientDistanceFromReadEnd(read, normalInfo.getReadIndex())) {
-					normalCount += 1;					
-				} else if (normalInfo == null && matchesReference(read, position)) {
-					normalRefCount += 1;
+				if (!read.getDuplicateReadFlag()) {
+					IndelInfo normalInfo = checkForIndelAtLocus(read.getAlignmentStart(), read.getCigar(), position);
+					
+					if (normalInfo != null && sufficientDistanceFromReadEnd(read, normalInfo.getReadIndex())) {
+						normalCount += 1;					
+					} else if (normalInfo == null && matchesReference(read, position)) {
+						normalRefCount += 1;
+					}
 				}
 			}
 		}

@@ -204,25 +204,28 @@ public class SomaticLocusCaller {
 		CloseableIterator<SAMRecord> iter = reader.queryOverlapping(locus.chromosome, locus.posStart, locus.posStop);
 		while (iter.hasNext()) {
 			SAMRecord read = iter.next();
-			
-			Character base = getBaseAtPosition(read, locus.posStart);
-			Character refBase = c2r.getSequence(locus.chromosome, locus.posStart, 1).charAt(0);
-			
-			// Override input with actual reference
-			locus.ref = new String(new char[] { refBase });
-			
-			if (locus.isIndel()) {
-				if (hasIndel(read, locus)) {
-					altCount += 1;
-				} else if (!base.equals('N') && base.equals(refBase)) {
-					refCount += 1;
-				}
-			} else {
+			if (!read.getDuplicateReadFlag()) {
+				depth += 1;
 				
-				if (!base.equals('N') && base.equals(refBase)) {
-					refCount += 1;
-				} else if (base.equals(locus.alt.charAt(0))) {
-					altCount += 1;
+				Character base = getBaseAtPosition(read, locus.posStart);
+				Character refBase = c2r.getSequence(locus.chromosome, locus.posStart, 1).charAt(0);
+				
+				// Override input with actual reference
+				locus.ref = new String(new char[] { refBase });
+				
+				if (locus.isIndel()) {
+					if (hasIndel(read, locus)) {
+						altCount += 1;
+					} else if (!base.equals('N') && base.equals(refBase)) {
+						refCount += 1;
+					}
+				} else {
+					
+					if (!base.equals('N') && base.equals(refBase)) {
+						refCount += 1;
+					} else if (base.equals(locus.alt.charAt(0))) {
+						altCount += 1;
+					}
 				}
 			}
 		}

@@ -1,8 +1,10 @@
 package abra.cadabra;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -44,6 +46,69 @@ public class SomaticLocusCaller {
 		
 		normalReader.close();
 		tumorReader.close();
+		
+		outputResults();
+	}
+	
+	private void outputResults() {
+		System.out.println("##fileformat=VCFv4.1");
+		System.out.println("#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NORMAL	TUMOR");
+		
+		for (LocusInfo locus : loci) {
+			String[] fields = new String[] {
+				locus.chromosome,
+				String.valueOf(locus.position),
+				locus.id,
+				locus.ref,
+				locus.alt,
+				"0",
+				getFilter(locus),
+				"SOMATIC;",
+				"DP:RO:AO",
+				getCountsStr(locus.normalCounts),
+				getCountsStr(locus.tumorCounts)
+			};
+			
+			StringBuffer buf = new StringBuffer();
+				
+			for (String field : fields) {
+				buf.append(field);
+				buf.append('\t');
+			}
+
+			buf.deleteCharAt(buf.length()-1);
+			
+			System.out.println(buf.toString());
+		}
+	}
+	
+	private String getCountsStr(Counts counts) {
+		return "" + counts.depth + ":" + counts.refCount + ":" + counts.altCount;
+	}
+	
+	private String getFilter(LocusInfo locus) {
+		String filter = "";
+		if (locus.tumorCounts.altCount == 0) {
+			filter = "NO_TUMOR_OBS;";
+		}
+		
+		if (locus.normalCounts.altCount >= 0) {
+			filter += "NORMAL_OBS";
+		}
+		
+		if (locus.tumorCounts.depth == 0) {
+			filter += "NO_TUMOR_COV";
+		}
+		
+		if (locus.normalCounts.depth == 0) {
+			filter += "NO_NORMAL_COV";
+		}
+		
+		if (filter.equals("")) {
+			filter = "PASS;";
+		}
+		
+		return filter;
 	}
 	
 	private boolean hasIndel(SAMRecord read, int refPos) {
@@ -184,6 +249,7 @@ public class SomaticLocusCaller {
 	}
 	
 	static class LocusInfo {
+		String id;
 		String chromosome;
 		int position;
 		String ref;
@@ -195,6 +261,7 @@ public class SomaticLocusCaller {
 			String[] fields = vcfLine.split("\\s+");
 			chromosome = fields[0];
 			position = Integer.parseInt(fields[1]);
+			id = fields[2];
 			ref = fields[3];
 			alt = fields[4];
 		}

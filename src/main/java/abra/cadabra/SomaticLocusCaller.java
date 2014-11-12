@@ -239,6 +239,8 @@ public class SomaticLocusCaller {
 				loci.add(locus);
 				count += 1;
 			}
+			
+			line = reader.readLine();
 		}
 		
 		System.err.println("Loaded [" + count + "] loci for inspection");

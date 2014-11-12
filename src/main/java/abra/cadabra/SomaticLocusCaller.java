@@ -30,6 +30,8 @@ public class SomaticLocusCaller {
 		loadLoci(vcf);
 		c2r = new CompareToReference2();
 		c2r.init(reference);
+		
+		System.err.println("Processing positions");
 
 		SAMFileReader normalReader = new SAMFileReader(new File(normal));
 		normalReader.setValidationStringency(ValidationStringency.SILENT);
@@ -44,6 +46,8 @@ public class SomaticLocusCaller {
 		
 		normalReader.close();
 		tumorReader.close();
+		
+		System.err.println("Writing results");
 		
 		outputResults();
 	}
@@ -90,16 +94,16 @@ public class SomaticLocusCaller {
 			filter = "NO_TUMOR_OBS;";
 		}
 		
-		if (locus.normalCounts.altCount >= 0) {
-			filter += "NORMAL_OBS";
+		if (locus.normalCounts.altCount > 0) {
+			filter += "NORMAL_OBS;";
 		}
 		
 		if (locus.tumorCounts.depth == 0) {
-			filter += "NO_TUMOR_COV";
+			filter += "NO_TUMOR_COV;";
 		}
 		
 		if (locus.normalCounts.depth == 0) {
-			filter += "NO_NORMAL_COV";
+			filter += "NO_NORMAL_COV;";
 		}
 		
 		if (filter.equals("")) {

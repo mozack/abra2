@@ -1,10 +1,8 @@
 package abra.cadabra;
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -18,7 +16,7 @@ import net.sf.samtools.util.CloseableIterator;
 import abra.CompareToReference2;
 
 /**
- * Given a VCF file of variants to inspect, produces an output file with normal / tumor counts of each variant.
+ * Given a "VCF-like" file of variants to inspect, produces an output file with normal / tumor counts of each variant.
  * SNVs require the alt value to match to be counted.  Indels merely require the existence of an indel at the start postion.
  * 
  * @author Lisle E. Mose (lmose at unc dot edu)
@@ -57,7 +55,7 @@ public class SomaticLocusCaller {
 		for (LocusInfo locus : loci) {
 			String[] fields = new String[] {
 				locus.chromosome,
-				String.valueOf(locus.position),
+				String.valueOf(locus.posStart),
 				locus.id,
 				locus.ref,
 				locus.alt,
@@ -111,19 +109,23 @@ public class SomaticLocusCaller {
 		return filter;
 	}
 	
-	private boolean hasIndel(SAMRecord read, int refPos) {
+	private boolean isWithin(int i, int start, int stop) {
+		return i >= start && i <= stop;
+	}
+	
+	private boolean hasIndel(SAMRecord read, LocusInfo locus) {
 		int readPos = 0;
 		int refPosInRead = read.getAlignmentStart();
 		int cigarElementIdx = 0;
 		
-		while (refPosInRead <= refPos && cigarElementIdx < read.getCigar().numCigarElements() && readPos < read.getReadLength()) {
+		while (refPosInRead <= locus.posStop && cigarElementIdx < read.getCigar().numCigarElements() && readPos < read.getReadLength()) {
 			CigarElement elem = read.getCigar().getCigarElement(cigarElementIdx);
 			
 			switch(elem.getOperator()) {
 				case H: //NOOP
 					break;
 				case I:
-					if (refPosInRead+1 == refPos) {
+					if (isWithin(refPosInRead, locus.posStart, locus.posStop)) {
 						return true;
 					}
 					// Fall through to next case
@@ -131,7 +133,7 @@ public class SomaticLocusCaller {
 					readPos += elem.getLength();
 					break;
 				case D:
-					if (refPosInRead+1 == refPos) {
+					if (isWithin(refPosInRead, locus.posStart, locus.posStop)) {
 						return true;
 					}
 					// Fall through to next case
@@ -190,27 +192,23 @@ public class SomaticLocusCaller {
 	}
 
 	private Counts getCounts(SAMFileReader reader, LocusInfo locus) {
-		int stop = locus.position;
-		if (locus.isIndel()) {
-			stop += 1;
-		}
 		
 		int depth = 0;
 		int altCount = 0;
 		int refCount = 0;
 		
-		CloseableIterator<SAMRecord> iter = reader.queryOverlapping(locus.chromosome, locus.position, stop);
+		CloseableIterator<SAMRecord> iter = reader.queryOverlapping(locus.chromosome, locus.posStart, locus.posStop);
 		while (iter.hasNext()) {
 			SAMRecord read = iter.next();
 			
-			Character base = getBaseAtPosition(read, locus.position);
-			Character refBase = c2r.getSequence(locus.chromosome, locus.position, 1).charAt(0);
+			Character base = getBaseAtPosition(read, locus.posStart);
+			Character refBase = c2r.getSequence(locus.chromosome, locus.posStart, 1).charAt(0);
 			
 			// Override input with actual reference
 			locus.ref = new String(new char[] { refBase });
 			
 			if (locus.isIndel()) {
-				if (hasIndel(read, locus.position)) {
+				if (hasIndel(read, locus)) {
 					altCount += 1;
 				} else if (!base.equals('N') && base.equals(refBase)) {
 					refCount += 1;
@@ -251,7 +249,8 @@ public class SomaticLocusCaller {
 	static class LocusInfo {
 		String id;
 		String chromosome;
-		int position;
+		int posStart;
+		int posStop;
 		String ref;
 		String alt;
 		Counts normalCounts;
@@ -260,10 +259,26 @@ public class SomaticLocusCaller {
 		LocusInfo(String vcfLine) {
 			String[] fields = vcfLine.split("\\s+");
 			chromosome = fields[0];
-			position = Integer.parseInt(fields[1]);
+			
 			id = fields[2];
 			ref = fields[3];
 			alt = fields[4];
+			
+			if (fields[1].contains("-")) {
+				String[] positions = fields[1].split("-");
+				posStart = Integer.parseInt(positions[0]);
+				posStop = Integer.parseInt(positions[1]);
+			} else {
+				posStart = Integer.parseInt(fields[1]);
+				posStop = posStart;
+				if (isIndel()) {
+					posStop += 1;
+				}
+			}
+			
+			if (isIndel()) {
+				posStart -= 1;
+			}
 		}
 		
 		boolean isIndel() {

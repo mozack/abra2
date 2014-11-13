@@ -61,7 +61,7 @@ public class SomaticLocusCaller {
 		for (LocusInfo locus : loci) {
 			String[] fields = new String[] {
 				locus.chromosome,
-				String.valueOf(locus.posStart),
+				locus.isIndel() ? String.valueOf(locus.posStart+1) : String.valueOf(locus.posStart),
 				locus.id,
 				locus.ref,
 				locus.alt,
@@ -125,7 +125,7 @@ public class SomaticLocusCaller {
 		int cigarElementIdx = 0;
 		
 		while (refPosInRead <= locus.posStop && cigarElementIdx < read.getCigar().numCigarElements() && readPos < read.getReadLength()) {
-			CigarElement elem = read.getCigar().getCigarElement(cigarElementIdx);
+			CigarElement elem = read.getCigar().getCigarElement(cigarElementIdx++);
 			
 			switch(elem.getOperator()) {
 				case H: //NOOP
@@ -313,20 +313,21 @@ public class SomaticLocusCaller {
 	
 	public static void main(String[] args) throws Exception {
 		
+		/*
 		String normal = args[0];
 		String tumor = args[1];
 		String vcf = args[2];
 		String reference = args[3];
 		int minBaseQual = Integer.parseInt(args[4]);
+		*/
 		
 		
-		/*
 		String normal = "/home/lmose/dev/uncseq/oncomap/normal_test.bam";
 		String tumor = "/home/lmose/dev/uncseq/oncomap/tumor_test.bam";
 		String vcf = "/home/lmose/dev/uncseq/oncomap/test.vcf";
 		String reference = "/home/lmose/reference/chr7/chr7.fa";
 		int minBaseQual = 20;
-		*/
+		
 
 		SomaticLocusCaller caller = new SomaticLocusCaller();
 		caller.call(normal, tumor, vcf, reference, minBaseQual);

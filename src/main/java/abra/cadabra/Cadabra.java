@@ -82,7 +82,7 @@ public class Cadabra {
 		int cigarElementIdx = 0;
 		
 		while (refPosInRead <= refPos && cigarElementIdx < read.getCigar().numCigarElements() && readPos < read.getReadLength()) {
-			CigarElement elem = read.getCigar().getCigarElement(cigarElementIdx);
+			CigarElement elem = read.getCigar().getCigarElement(cigarElementIdx++);
 			
 			switch(elem.getOperator()) {
 				case H: //NOOP

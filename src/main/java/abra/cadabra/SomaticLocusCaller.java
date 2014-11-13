@@ -313,21 +313,21 @@ public class SomaticLocusCaller {
 	
 	public static void main(String[] args) throws Exception {
 		
-		/*
+		
 		String normal = args[0];
 		String tumor = args[1];
 		String vcf = args[2];
 		String reference = args[3];
 		int minBaseQual = Integer.parseInt(args[4]);
-		*/
 		
 		
+		/*
 		String normal = "/home/lmose/dev/uncseq/oncomap/normal_test.bam";
 		String tumor = "/home/lmose/dev/uncseq/oncomap/tumor_test.bam";
 		String vcf = "/home/lmose/dev/uncseq/oncomap/test.vcf";
 		String reference = "/home/lmose/reference/chr7/chr7.fa";
 		int minBaseQual = 20;
-		
+		*/
 
 		SomaticLocusCaller caller = new SomaticLocusCaller();
 		caller.call(normal, tumor, vcf, reference, minBaseQual);

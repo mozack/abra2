@@ -182,7 +182,7 @@ public class SomaticLocusCaller {
 						readPos += refPos - refPosInRead;
 						if (readPos < read.getReadLength()) {
 							// Found the base.  Return it
-							return new Object[] { read.getReadString().charAt(readPos) , read.getBaseQualities()[readPos] };
+							return new Object[] { read.getReadString().charAt(readPos) , (int) read.getBaseQualities()[readPos] };
 						}
 					} else {
 						readPos += elem.getLength();
@@ -194,7 +194,7 @@ public class SomaticLocusCaller {
 			}
 		}
 		
-		return new Object[] { 'N', 0 };
+		return new Object[] { 'N', (int) 0 };
 	}
 
 	private Counts getCounts(SAMFileReader reader, LocusInfo locus) {

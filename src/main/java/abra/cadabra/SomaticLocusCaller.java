@@ -25,11 +25,13 @@ public class SomaticLocusCaller {
 	
 	private List<LocusInfo> loci = new ArrayList<LocusInfo>();
 	private CompareToReference2 c2r;
+	private int minBaseQual;
 
-	public void call(String normal, String tumor, String vcf, String reference) throws IOException {
+	public void call(String normal, String tumor, String vcf, String reference, int minBaseQual) throws IOException {
 		loadLoci(vcf);
 		c2r = new CompareToReference2();
 		c2r.init(reference);
+		this.minBaseQual = minBaseQual;
 		
 		System.err.println("Processing positions");
 
@@ -156,7 +158,7 @@ public class SomaticLocusCaller {
 		return false;
 	}
 	
-	private Character getBaseAtPosition(SAMRecord read, int refPos) {
+	private Object[] getBaseAndQualAtPosition(SAMRecord read, int refPos) {
 		int readPos = 0;
 		int refPosInRead = read.getAlignmentStart();
 		int cigarElementIdx = 0;
@@ -180,7 +182,7 @@ public class SomaticLocusCaller {
 						readPos += refPos - refPosInRead;
 						if (readPos < read.getReadLength()) {
 							// Found the base.  Return it
-							return read.getReadString().charAt(readPos);
+							return new Object[] { read.getReadString().charAt(readPos) , read.getBaseQualities()[readPos] };
 						}
 					} else {
 						readPos += elem.getLength();
@@ -192,7 +194,7 @@ public class SomaticLocusCaller {
 			}
 		}
 		
-		return 'N';
+		return new Object[] { 'N', 0 };
 	}
 
 	private Counts getCounts(SAMFileReader reader, LocusInfo locus) {
@@ -207,7 +209,9 @@ public class SomaticLocusCaller {
 			if (!read.getDuplicateReadFlag()) {
 				depth += 1;
 				
-				Character base = getBaseAtPosition(read, locus.posStart);
+				Object[] baseAndQual = getBaseAndQualAtPosition(read, locus.posStart);
+				Character base = (Character) baseAndQual[0];
+				int baseQual = (Integer) baseAndQual[1];
 				Character refBase = c2r.getSequence(locus.chromosome, locus.posStart, 1).charAt(0);
 				
 				// Override input with actual reference
@@ -219,7 +223,7 @@ public class SomaticLocusCaller {
 					} else if (!base.equals('N') && base.equals(refBase)) {
 						refCount += 1;
 					}
-				} else {
+				} else if (baseQual >= minBaseQual) {
 					
 					if (!base.equals('N') && base.equals(refBase)) {
 						refCount += 1;
@@ -312,8 +316,9 @@ public class SomaticLocusCaller {
 		String tumor = args[1];
 		String vcf = args[2];
 		String reference = args[3];
+		int minBaseQual = Integer.parseInt(args[4]);
 
 		SomaticLocusCaller caller = new SomaticLocusCaller();
-		caller.call(normal, tumor, vcf, reference);
+		caller.call(normal, tumor, vcf, reference, minBaseQual);
 	}
 }

@@ -26,12 +26,14 @@ public class SomaticLocusCaller {
 	private List<LocusInfo> loci = new ArrayList<LocusInfo>();
 	private CompareToReference2 c2r;
 	private int minBaseQual;
+	private double minMaf;
 
-	public void call(String normal, String tumor, String vcf, String reference, int minBaseQual) throws IOException {
+	public void call(String normal, String tumor, String vcf, String reference, int minBaseQual, double minMaf) throws IOException {
 		loadLoci(vcf);
 		c2r = new CompareToReference2();
 		c2r.init(reference);
 		this.minBaseQual = minBaseQual;
+		this.minMaf = minMaf;
 		
 		System.err.println("Processing positions");
 
@@ -106,6 +108,10 @@ public class SomaticLocusCaller {
 		
 		if (locus.normalCounts.depth == 0) {
 			filter += "NO_NORMAL_COV;";
+		}
+		
+		if ((double) locus.tumorCounts.altCount / (double) (locus.tumorCounts.altCount+locus.tumorCounts.refCount) < minMaf) {
+			filter += "MAF_TOO_LOW";
 		}
 		
 		if (filter.equals("")) {
@@ -313,13 +319,12 @@ public class SomaticLocusCaller {
 	
 	public static void main(String[] args) throws Exception {
 		
-		
 		String normal = args[0];
 		String tumor = args[1];
 		String vcf = args[2];
 		String reference = args[3];
 		int minBaseQual = Integer.parseInt(args[4]);
-		
+		double minMaf = Double.parseDouble(args[5]);
 		
 		/*
 		String normal = "/home/lmose/dev/uncseq/oncomap/normal_test.bam";
@@ -327,9 +332,10 @@ public class SomaticLocusCaller {
 		String vcf = "/home/lmose/dev/uncseq/oncomap/test.vcf";
 		String reference = "/home/lmose/reference/chr7/chr7.fa";
 		int minBaseQual = 20;
+		double minMaf = .005;
 		*/
 
 		SomaticLocusCaller caller = new SomaticLocusCaller();
-		caller.call(normal, tumor, vcf, reference, minBaseQual);
+		caller.call(normal, tumor, vcf, reference, minBaseQual, minMaf);
 	}
 }

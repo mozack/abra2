@@ -832,40 +832,43 @@ public class ReAligner {
 		
 		this.samHeaders = new SAMFileHeader[this.inputSams.length];
 		
-		SAMFileReader reader = new SAMFileReader(new File(inputSams[0]));
-		try {
-			reader.setValidationStringency(ValidationStringency.SILENT);
-	
-			//ASSUMPTION!: All samples have same read length & insert len!
-			samHeaders[0] = reader.getFileHeader();
-			samHeaders[0].setSortOrder(SAMFileHeader.SortOrder.unsorted);
-			
-			Iterator<SAMRecord> iter = reader.iterator();
-			
-			int cnt = 0;
-			while ((iter.hasNext()) && (cnt < 1000000)) {
-				SAMRecord read = iter.next();
-				this.readLength = Math.max(this.readLength, read.getReadLength());
-				this.maxMapq = Math.max(this.maxMapq, read.getMappingQuality());
+		for (int i=0; i<this.inputSams.length; i++) {
+		
+			SAMFileReader reader = new SAMFileReader(new File(inputSams[i]));
+			try {
+				reader.setValidationStringency(ValidationStringency.SILENT);
+		
+				samHeaders[i] = reader.getFileHeader();
+				samHeaders[i].setSortOrder(SAMFileHeader.SortOrder.unsorted);
 				
-				// Assumes aligner sets proper pair flag correctly
-				if ((isPairedEnd) && (read.getReadPairedFlag()) && (read.getProperPairFlag())) {
-					this.minInsertLength = Math.min(this.minInsertLength, Math.abs(read.getInferredInsertSize()));
-					this.maxInsertLength = Math.max(this.maxInsertLength, Math.abs(read.getInferredInsertSize()));
+				Iterator<SAMRecord> iter = reader.iterator();
+				
+				int cnt = 0;
+				while ((iter.hasNext()) && (cnt < 1000000)) {
+					SAMRecord read = iter.next();
+					this.readLength = Math.max(this.readLength, read.getReadLength());
+					this.maxMapq = Math.max(this.maxMapq, read.getMappingQuality());
+					
+					// Assumes aligner sets proper pair flag correctly
+					if ((isPairedEnd) && (read.getReadPairedFlag()) && (read.getProperPairFlag())) {
+						this.minInsertLength = Math.min(this.minInsertLength, Math.abs(read.getInferredInsertSize()));
+						this.maxInsertLength = Math.max(this.maxInsertLength, Math.abs(read.getInferredInsertSize()));
+					}
 				}
+				
+				// Allow some fudge in insert length
+				minInsertLength = Math.max(minInsertLength - 2*readLength, 0);
+				maxInsertLength = maxInsertLength + 2*readLength;
+				
+			} finally {
+				reader.close();
 			}
-			
-			// Allow some fudge in insert length
-			minInsertLength = Math.max(minInsertLength - 2*readLength, 0);
-			maxInsertLength = maxInsertLength + 2*readLength;
-			
-			System.out.println("Min insert length: " + minInsertLength);
-			System.out.println("Max insert length: " + maxInsertLength);
-			
-		} finally {
-			reader.close();
 		}
 		
+		System.out.println("Min insert length: " + minInsertLength);
+		System.out.println("Max insert length: " + maxInsertLength);
+		
+		/*
 		for (int i=1; i<this.inputSams.length; i++) {
 			SAMFileReader reader2 = new SAMFileReader(new File(inputSams[i]));
 			reader2.setValidationStringency(ValidationStringency.SILENT);
@@ -873,6 +876,7 @@ public class ReAligner {
 			samHeaders[i].setSortOrder(SAMFileHeader.SortOrder.unsorted);
 			reader2.close();			
 		}
+		*/
 				
 		log("Max read length is: " + readLength);
 		if (assemblerSettings.getMinContigLength() < 1) {
@@ -1264,7 +1268,7 @@ public class ReAligner {
 
 	public static void run(String[] args) throws Exception {
 		
-		System.out.println("Starting 0.86 ...");
+		System.out.println("Starting 0.87 ...");
 		
 		ReAlignerOptions options = new ReAlignerOptions();
 		options.parseOptions(args);

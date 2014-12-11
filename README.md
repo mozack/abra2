@@ -47,14 +47,19 @@ If working with tumor/normal pairs, it is highly recommended to assemble your sa
 
 In somatic mode, you may also consider using option ```--lr repeat_file```  This option allows for detection of moderate length repeats that could not be resolved at nucleotide precision.  This feature is experimental.
 
-Additionally, translocations may be detected by using ```-sv translocation_file```  The output file will contain putative breakpoints with the number of reads aligned to each breakpoint in the output file.  This feature is experimental. 
+Additionally, translocations may be detected by using ```-sv translocation_file```  The output file will contain putative breakpoints with the number of reads aligned to each breakpoint in the output file.  This feature is experimental.
+
+Sample usage:
+```
+java -Xmx4G -jar $JAR --in normal.bam,tumor.bam --out normal.abra.bam,tumor.abra.bam --ref hg19.fasta --targets targets.bed --threads 8 --working abra_temp_dir > abra.log 2>&1
+```
 
 ### Output
 ABRA produces one or more realigned BAMs.  It is currently necessary to sort and index the output.  At present, the mate information may not be 100% accurate.  Samtools fixmate or Picard Tools FixMateInformation may optionally be used to correct this.
 
 Reads that have been realigned will contain a YO tag indicating their original alignment position.  Reads that were originally unaligned will have a YO value of N/A.
 
-After the output BAM file is sorted and indexed it can be passed into a variant caller such as [Cadabra](https://github.com/mozack/abra#cadabra), [FreeBayes](https://github.com/ekg/freebayes), [Strelka](https://sites.google.com/site/strelkasomaticvariantcaller) and [UNCeqr](http://lbg.med.unc.edu/~mwilkers/unceqr_dist)
+After the output BAM file is sorted and indexed it can be passed into a variant caller such as [FreeBayes](https://github.com/ekg/freebayes) for germline calling and [Cadabra](https://github.com/mozack/abra#cadabra), [Strelka](https://sites.google.com/site/strelkasomaticvariantcaller) or [UNCeqr](http://lbg.med.unc.edu/~mwilkers/unceqr_dist) for somatic calling.
 
 ### Demo / test data
 A test data set and example command line is available under the demo directory.  Edit demo.bash to specify your hg19 reference location (indexed by a recent version of bwa) and run demo.bash.

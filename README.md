@@ -74,6 +74,6 @@ Cadabra is embedded within the ABRA jar file.
 
 Sample usage:
 ```
-java -Xmx8G -cp $JAR abra.cadabra.Cadabra hg19.fasta normal.abra.bam tumor.abra.bam > cadabra.vcf
+java -Xmx4G -cp $JAR abra.cadabra.Cadabra hg19.fasta normal.abra.bam tumor.abra.bam > cadabra.vcf
 ```
 

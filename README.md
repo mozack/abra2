@@ -12,7 +12,7 @@ Here is an ABRA realigned region (original reads on top, ABRA realigned reads on
 
 Building ABRA requires JDK 7, Maven and g++
 
-Just run make.  An executable jar will be generated under the target directory.  i.e. target/abra-0.77-SNAPSHOT-jar-with-dependencies.jar
+Just run make.  An executable jar will be generated under the target directory.  i.e. target/abra-0.86-SNAPSHOT-jar-with-dependencies.jar
 
 Pre-built jars are available for 64 bit linux here: https://github.com/mozack/abra/releases
 

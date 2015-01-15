@@ -70,6 +70,76 @@ public class FishersExactTest {
 		return Math.min(pValue, 1.0);
 	}
 	
+	//TODO: Extract shared code
+	public double twoTailedTest(int normalRef, int normalAlt, int tumorRef, int tumorAlt) {
+		int row1Col1 = normalRef;
+		int row1Col2 = normalAlt;
+		int row2Col1 = tumorRef;
+		int row2Col2 = tumorAlt;
+		
+		int n = row1Col1 + row1Col2 + row2Col1 + row2Col2;
+		if (n > MAX_SIZE) {
+			double scale = (double) MAX_SIZE / (double) n;
+			row1Col1 = (int) (row1Col1 * scale);
+			row1Col2 = (int) (row1Col2 * scale);
+			row2Col1 = (int) (row2Col1 * scale);
+			row2Col2 = (int) (row2Col2 * scale);
+			
+			n = row1Col1 + row1Col2 + row2Col1 + row2Col2;
+		}
+		
+		int row1Col1Start = row1Col1;
+		int row1Col2Start = row1Col2;
+		int row2Col1Start = row2Col1;
+		int row2Col2Start = row2Col2;
+
+		int row1Sum = row1Col1 + row1Col2;
+		int row2Sum = row2Col1 + row2Col2;
+		int col1Sum = row1Col1 + row2Col1;
+		int col2Sum = row1Col2 + row2Col2;
+		
+		double numerator = factorialCache[row1Sum] + factorialCache[row2Sum] + factorialCache[col1Sum] + factorialCache[col2Sum];
+		
+		double pObserved = getPForTable(row1Col1, row1Col2, row2Col1, row2Col2, n, numerator);
+		double pValue = pObserved;
+		
+		while (row1Col2 > 0 && row2Col1 > 0) {
+			row1Col1++;
+			row1Col2--;
+			row2Col1--;
+			row2Col2++;
+			
+			double nextP = getPForTable(row1Col1, row1Col2, row2Col1, row2Col2, n, numerator);
+			
+			if (nextP <= pObserved) {
+				pValue += nextP;
+			}
+		}
+		
+		// Now the other way...
+		row1Col1 = row1Col1Start;
+		row1Col2 = row1Col2Start;
+		row2Col1 = row2Col1Start;
+		row2Col2 = row2Col2Start;
+		
+		while (row1Col1 > 0 && row2Col2 > 0) {
+			row1Col1--;
+			row1Col2++;
+			row2Col1++;
+			row2Col2--;
+			
+			double nextP = getPForTable(row1Col1, row1Col2, row2Col1, row2Col2, n, numerator);
+			
+			if (nextP <= pObserved) {
+				pValue += nextP;
+			}
+		}
+		
+		// Cap p-value at 1 to guard against rounding errors
+		return Math.min(pValue, 1.0);
+
+	}
+	
 	private double getPForTable(int r1c1, int r1c2, int r2c1, int r2c2, int n, double numerator) {
 		//TODO: Remove this as optimization
 		if ((r1c1 + r1c2 + r2c1 + r2c2) != n) throw new IllegalArgumentException("Invalid contigency table");
@@ -85,7 +155,7 @@ public class FishersExactTest {
 	public static void main(String[] args) {
 //		int nr = 1500; int na = 110; int tr = 1400; int ta = 1100;
 		
-		int nr = 80; int na = 5; int tr = 100; int ta = 50;
+		int nr = 709; int na = 20; int tr = 711; int ta = 85;
 		
 		FishersExactTest t = new FishersExactTest();
 		
@@ -108,5 +178,9 @@ public class FishersExactTest {
 		System.out.println("phred: " + (-10 * Math.log10(p)));
 //		
 //		System.out.println(e-s);
+		
+		p = t.twoTailedTest(nr, na, tr, ta);
+		
+		System.out.println("2 tailed: " + p);
 	}
 }

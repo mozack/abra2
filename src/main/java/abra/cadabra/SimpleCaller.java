@@ -26,6 +26,15 @@ public class SimpleCaller {
 	private List<CachedCall> callCache = new ArrayList<CachedCall>();
 	
 	private static int MIN_BASE_QUALITY = 20;
+	
+	private FishersExactTest fishers = new FishersExactTest();
+	
+	// Indices into orientation counts
+	int aIdx = 0;
+	int cIdx = 2;
+	int tIdx = 4;
+	int gIdx = 6;
+	int indelIdx = 8;
 
 	public void call(String reference, String bam, float minAltFraction, int minAltObs, int minMapq, int minDistanceFromIndel) throws Exception {
 		this.minAltFraction = minAltFraction;
@@ -67,6 +76,9 @@ public class SimpleCaller {
 			int tAtEdge = 0;
 			int gAtEdge = 0;
 			
+			//TODO: Encapsulate in class
+			int[] orientationCounts = new int[] { 0,0,0,0,0,0,0,0,0,0 };
+			
 			if (!c2r.containsChromosome(reads.getChromosome())) {
 				System.err.println("Chromosome: [" + reads.getChromosome() + "] not in reference.  Assuming we've reached unaligned pile and stopping.");
 				break;
@@ -87,6 +99,7 @@ public class SimpleCaller {
 					if (read.getMappingQuality() >= this.minMapq && !read.getReadUnmappedFlag()) {
 					
 						BaseInfo baseInfo = getBaseAtReferencePosition(read, reads.getPosition());
+						int baseCountIdx = -1;
 						
 						switch(baseInfo.base) {
 							case 'A':
@@ -94,24 +107,28 @@ public class SimpleCaller {
 								if (baseInfo.isNearEdge) {
 									aAtEdge++;
 								}
+								baseCountIdx = aIdx;
 								break;
 							case 'C':
 								c++;
 								if (baseInfo.isNearEdge) {
 									cAtEdge++;
 								}
+								baseCountIdx = cIdx;
 								break;
 							case 'T':
 								t++;
 								if (baseInfo.isNearEdge) {
 									tAtEdge++;
 								}
+								baseCountIdx = tIdx;
 								break;
 							case 'G':
 								g++;
 								if (baseInfo.isNearEdge) {
 									gAtEdge++;
 								}
+								baseCountIdx = gIdx;
 								break;
 							default:
 								n++;
@@ -120,6 +137,17 @@ public class SimpleCaller {
 						
 						if (baseInfo.isIndel) {
 							numIndels++;
+							baseCountIdx = indelIdx;
+						}
+						
+						if (baseCountIdx > -1) {
+							if (!read.getReadNegativeStrandFlag()) {
+								// Update forward orientation count
+								orientationCounts[baseCountIdx] += 1;
+							} else {
+								// Update reverse orientation count
+								orientationCounts[baseCountIdx+1] += 1;
+							}
 						}
 					}
 				}
@@ -133,7 +161,7 @@ public class SimpleCaller {
 				int[] counts = {a,c,t,g};
 				int[] edgeCounts = { aAtEdge, cAtEdge, tAtEdge, gAtEdge };
 				
-				CallInfo callInfo = getAltBaseAndCounts(bases, counts, edgeCounts, ref, reads.getReads().size());
+				CallInfo callInfo = getAltBaseAndCounts(bases, counts, edgeCounts, ref, reads.getReads().size(), orientationCounts);
 				
 				// Require N number of alt obs not near edge of M block
 				if ((callInfo.altCount - callInfo.altEdgeCount) > this.minAltObs && callInfo.altCount > 0) {
@@ -199,7 +227,7 @@ public class SimpleCaller {
 		call.append(callInfo.ref);
 		call.append('\t');
 		call.append(callInfo.alt);
-		call.append("\t.\t.\tFOO=BAR;\tDP1:DP2:RO:AO:AF1:AF2\t");
+		call.append("\t.\t.\tFOO=BAR;\tDP1:DP2:RO:AO:AF1:AF2:RF:RR:AF:AO:FO\t");
 		
 		int depth1 = callInfo.totalDepth;
 		int depth2 = callInfo.altCount + callInfo.refCount;
@@ -221,12 +249,25 @@ public class SimpleCaller {
 			call.append(vaf1Str);
 			call.append(':');
 			call.append(vaf2Str);
+			call.append(':');
+			call.append(callInfo.refForward);
+			call.append(':');
+			call.append(callInfo.refReverse);
+			call.append(':');
+			call.append(callInfo.altForward);
+			call.append(':');
+			call.append(callInfo.altReverse);
+			call.append(':');
+			
+			double fs = fishers.twoTailedTest(callInfo.refForward, callInfo.refReverse, callInfo.altForward, callInfo.altReverse);
+			double phredFs = -10 * Math.log10(fs);
+			call.append(df.format(phredFs));
 			
 			System.out.println(call.toString());
 		}
 	}
 	
-	private CallInfo getAltBaseAndCounts(char[] bases, int[] counts, int[] edgeCounts, char ref, int totalDepth) {
+	private CallInfo getAltBaseAndCounts(char[] bases, int[] counts, int[] edgeCounts, char ref, int totalDepth, int[] orientationCounts) {
 		int refCount = 0;
 		int altCount = 0;
 		int altEdgeCount = 0;
@@ -244,7 +285,52 @@ public class SimpleCaller {
 			}
 		}
 		
-		return new CallInfo(ref, refCount, alt, altCount, altEdgeCount, totalDepth);
+		int refIdx = -1;
+		int altIdx = -1;
+				
+		switch (ref) {
+			case 'A':
+				refIdx = aIdx;
+				break;
+			case 'C':
+				refIdx = cIdx;
+				break;
+			case 'T':
+				refIdx = tIdx;
+				break;
+			case 'G':
+				refIdx = gIdx;
+				break;
+		}
+		
+		switch (alt) {
+			case 'A':
+				altIdx = aIdx;
+				break;
+			case 'C':
+				altIdx = cIdx;
+				break;
+			case 'T':
+				altIdx = tIdx;
+				break;
+			case 'G':
+				altIdx = gIdx;
+				break;
+		}
+		
+		int refF = 0;
+		int refR = 0;
+		int altF = 0;
+		int altR = 0;
+		
+		if (refIdx > -1 && altIdx > -1) {
+			refF = orientationCounts[refIdx];
+			refR = orientationCounts[refIdx+1];
+			altF = orientationCounts[altIdx];
+			altR = orientationCounts[altIdx+1];
+		}
+			
+		return new CallInfo(ref, refCount, alt, altCount, altEdgeCount, totalDepth, refF, refR, altF, altR);
 	}
 	
 	private BaseInfo getBaseAtReferencePosition(SAMRecord read, int refPos) {
@@ -314,14 +400,22 @@ public class SimpleCaller {
 		int altCount;
 		int totalDepth;
 		int altEdgeCount;
+		int refForward;
+		int refReverse;
+		int altForward;
+		int altReverse;
 		
-		CallInfo(char ref, int refCount, char alt, int altCount, int altEdgeCount, int totalDepth) {
+		CallInfo(char ref, int refCount, char alt, int altCount, int altEdgeCount, int totalDepth, int refForward, int refReverse, int altForward, int altReverse) {
 			this.ref = ref;
 			this.refCount = refCount;
 			this.alt = alt;
 			this.altCount = altCount;
 			this.altEdgeCount = altEdgeCount;
 			this.totalDepth = totalDepth;
+			this.refForward = refForward;
+			this.refReverse = refReverse;
+			this.altForward = altForward;
+			this.altReverse = altReverse;
 		}
 	}
 	
@@ -349,9 +443,15 @@ public class SimpleCaller {
 		}
 	}
 	
+	static class BaseCounts {
+		int forward;
+		int reverse;
+	}
+	
 	public static void main(String[] args) throws Exception {
 		SimpleCaller c = new SimpleCaller();
 		
+		/*
 		String reference = args[0];
 		String bam = args[1];
 		float minAllelicFraction = Float.parseFloat(args[2]);
@@ -360,8 +460,9 @@ public class SimpleCaller {
 		int minDistanceFromIndel = Integer.parseInt(args[5]);
 	
 		c.call(reference, bam, minAllelicFraction, minAltObs, minMapq, minDistanceFromIndel);
+		*/
 		
-//		c.call("/home/lmose/reference/chr20/chr20.fa", "/home/lmose/dev/efseq/piotr_test1/calling/k101.sscs.chr20.bam", .003F, 2, 40, 50);
+		c.call("/home/lmose/reference/chr20/chr20.fa", "/home/lmose/dev/efseq/piotr_test1/calling/k101.sscs.chr20.bam", .003F, 2, 40, 50);
 //		c.call("/home/lmose/reference/chr21/chr21.fa", "/home/lmose/dev/efseq/piotr_test1/calling/tiny21.bam", .003F, 2, 40, 50);
 		
 //		c.call("/home/lmose/reference/chr20/chr20.fa", "/home/lmose/dev/efseq/piotr_test1/calling/k101.chr20.bam", .003F, 2, 40, 50);

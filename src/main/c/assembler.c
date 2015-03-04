@@ -46,7 +46,7 @@ using google::sparse_hash_set;
 #define MIN_BASE_QUALITY 13
 
 // Minimum edge frequency as percent
-#define MIN_EDGE_FREQUENCY .01
+// #define MIN_EDGE_FREQUENCY .01
 
 //TODO: Better variable localization
 __thread int read_length;
@@ -54,6 +54,7 @@ __thread int min_contig_length;
 __thread int kmer_size;
 __thread int min_node_freq;
 __thread int min_base_quality;
+__thread double min_edge_ratio;
 
 #define BIG_CONSTANT(x) (x##LLU)
 
@@ -522,7 +523,7 @@ void prune_low_frequency_edges(sparse_hash_map<const char*, struct node*, my_has
 			vector<node*> to_nodes_to_remove;
 
 			while (to_node != NULL) {
-				if ( ((double) to_node->node->frequency / (double) to_node_total_freq) < MIN_EDGE_FREQUENCY ) {
+				if ( ((double) to_node->node->frequency / (double) to_node_total_freq) < min_edge_ratio ) {
 					to_nodes_to_remove.push_back(to_node->node);
 				}
 				to_node = to_node->next;
@@ -555,7 +556,7 @@ void prune_low_frequency_edges(sparse_hash_map<const char*, struct node*, my_has
 			vector<node*> from_nodes_to_remove;
 
 			while (from_node != NULL) {
-				if ( ((double) from_node->node->frequency / (double) from_node_total_freq) < MIN_EDGE_FREQUENCY ) {
+				if ( ((double) from_node->node->frequency / (double) from_node_total_freq) < min_edge_ratio ) {
 					from_nodes_to_remove.push_back(from_node->node);
 				}
 				from_node = from_node->next;
@@ -1068,7 +1069,8 @@ extern "C"
  JNIEXPORT jstring JNICALL Java_abra_NativeAssembler_assemble
    (JNIEnv *env, jobject obj, jstring j_input, jstring j_output, jstring j_prefix,
     jint j_truncate_on_output, jint j_max_contigs, jint j_max_paths_from_root,
-    jint j_read_length, jint j_kmer_size, jint j_min_node_freq, jint j_min_base_quality)
+    jint j_read_length, jint j_kmer_size, jint j_min_node_freq, jint j_min_base_quality,
+    jdouble j_min_edge_ratio)
  {
 
      //Get the native string from javaString
@@ -1083,6 +1085,7 @@ extern "C"
 	int kmer_size = j_kmer_size;
 	min_node_freq = j_min_node_freq;
 	min_base_quality = j_min_base_quality;
+	min_edge_ratio = j_min_edge_ratio;
 
 	printf("Abra JNI entry point v0.87\n");
 
@@ -1096,6 +1099,7 @@ extern "C"
 	printf("kmer_size: %d\n", kmer_size);
 	printf("min node freq: %d\n", min_node_freq);
 	printf("min base quality: %d\n", min_base_quality);
+	printf("min edge ratio: %d\n", min_edge_ratio);
 
 	char* contig_str = assemble(input, output, prefix, truncate_on_output, max_contigs, max_paths_from_root, read_length, kmer_size);
 	jstring ret = env->NewStringUTF(contig_str);
@@ -1116,6 +1120,7 @@ int main(int argc, char* argv[]) {
 
         min_node_freq = 2;
         min_base_quality = 5;
+        min_edge_ratio = .05;
 
         assemble(
 //                "/datastore/nextgenout4/seqware-analysis/lmose/platinum/test/mtest.reads",

@@ -7,13 +7,19 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+#undef abra_NativeAssembler_MAX_READ_LENGTHS_PER_REGION
+#define abra_NativeAssembler_MAX_READ_LENGTHS_PER_REGION 6L
+#undef abra_NativeAssembler_CYCLE_KMER_LENGTH_THRESHOLD
+#define abra_NativeAssembler_CYCLE_KMER_LENGTH_THRESHOLD 43L
+#undef abra_NativeAssembler_MIN_CANDIDATE_BASE_QUALITY
+#define abra_NativeAssembler_MIN_CANDIDATE_BASE_QUALITY 10L
 /*
  * Class:     abra_NativeAssembler
  * Method:    assemble
- * Signature: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IIIIIII)Ljava/lang/String;
+ * Signature: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IIIIIIID)Ljava/lang/String;
  */
 JNIEXPORT jstring JNICALL Java_abra_NativeAssembler_assemble
-  (JNIEnv *, jobject, jstring, jstring, jstring, jint, jint, jint, jint, jint, jint, jint);
+  (JNIEnv *, jobject, jstring, jstring, jstring, jint, jint, jint, jint, jint, jint, jint, jdouble);
 
 #ifdef __cplusplus
 }

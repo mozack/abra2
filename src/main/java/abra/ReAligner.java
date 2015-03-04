@@ -746,6 +746,8 @@ public class ReAligner {
 						cycleAssem.setMinBaseQuality(assemblerSettings.getMinBaseQuality() * 2);
 						cycleAssem.setMinKmerFrequency(assemblerSettings.getMinNodeFrequncy() * 2);
 						
+						cycleAssem.setMinEdgeRatio(assemblerSettings.getMinEdgeRatio());
+						
 						String cycleContigs = cycleAssem.assembleContigs(bamInput, contigsFasta, tempDir, regions, region.getDescriptor(), true, this, c2r);
 						
 						if (!cycleContigs.equals("<ERROR>") && !cycleContigs.equals("<REPEAT>")) {
@@ -1151,6 +1153,7 @@ public class ReAligner {
 		//assem.setKmer(assemblerSettings.getKmerSize());
 		assem.setKmer(getKmers(region));
 		assem.setMinKmerFrequency(assemblerSettings.getMinNodeFrequncy());
+		assem.setMinEdgeRatio(assemblerSettings.getMinEdgeRatio());
 		assem.setMinBaseQuality(assemblerSettings.getMinBaseQuality());
 		assem.setMinReadCandidateFraction(assemblerSettings.getMinReadCandidateFraction());
 		assem.setMaxAverageDepth(assemblerSettings.getMaxAverageDepth());
@@ -1160,6 +1163,7 @@ public class ReAligner {
 		return assem;
 	}
 	
+	/*
 	private NativeAssembler newUnalignedAssembler(int mnfMultiplier) {
 		//Assembler assem = new JavaAssembler();
 		NativeAssembler assem = new NativeAssembler();
@@ -1176,7 +1180,7 @@ public class ReAligner {
 		assem.setMinBaseQuality(assemblerSettings.getMinBaseQuality());
 
 		return assem;
-	}
+	}*/
 
 	private void init() throws IOException {
 		
@@ -1298,6 +1302,7 @@ public class ReAligner {
 			assemblerSettings.setMaxAverageDepth(options.getMaxAverageRegionDepth());
 			assemblerSettings.setSearchForStructuralVariation(options.shouldSearchForStructuralVariation());
 			assemblerSettings.setAverageDepthCeiling(options.getAverageDepthCeiling());
+			assemblerSettings.setMinEdgeRatio(options.getMinEdgeRatio());
 
 			ReAligner realigner = new ReAligner();
 			realigner.setReference(options.getReference());

@@ -18,7 +18,16 @@ public class AssemblerSettings {
 	private int maxAverageDepth;
 	private boolean searchForStructuralVariation;
 	private int averageDepthCeiling;
+	private double minEdgeRatio;
 		
+	public double getMinEdgeRatio() {
+		return minEdgeRatio;
+	}
+
+	public void setMinEdgeRatio(double minEdgeRatio) {
+		this.minEdgeRatio = minEdgeRatio;
+	}
+
 	public int getAverageDepthCeiling() {
 		return averageDepthCeiling;
 	}
@@ -67,14 +76,6 @@ public class AssemblerSettings {
 		this.kmerSize = kmerSize;
 	}
 	
-	public int getMinEdgeFrequency() {
-		return minEdgeFrequency;
-	}
-	
-	public void setMinEdgeFrequency(int minEdgeFrequency) {
-		this.minEdgeFrequency = minEdgeFrequency;
-	}
-	
 	public void setMinUnalignedNodeFrequency(int minUnalignedNodeFrequency) {
 		this.minUnalignedNodeFrequency = minUnalignedNodeFrequency;
 	}
@@ -120,6 +121,7 @@ public class AssemblerSettings {
 		appendSetting(str, "minBaseQuality", minBaseQuality);
 		appendSetting(str, "minReadCandidateFraction", minReadCandidateFraction);
 		appendSetting(str, "maxAverageRegionDepth", maxAverageDepth);
+		appendSetting(str, "minEdgeRatio", minEdgeRatio);
 		
 		return str.toString();
 	}

@@ -26,7 +26,7 @@ public class BaseQualityByRegion {
 		SAMFileReader reader = new SAMFileReader(new File(input));
 		
 		RegionLoader loader = new RegionLoader();
-		List<Feature> regions = loader.load(regionsGtf);
+		List<Feature> regions = loader.load(regionsGtf, false);
 		
 		regions = ReAligner.splitRegions(regions);
 

@@ -47,7 +47,7 @@ public class KmerSizeEvaluator {
 	public void run() throws IOException, InterruptedException {
 				
 //		new NativeLibraryLoader().load(".");		
-		List<Feature> regions = ReAligner.getRegions(regionsBed, readLength);
+		List<Feature> regions = ReAligner.getRegions(regionsBed, readLength, false);
 		
 		output = new BufferedWriter(new FileWriter(outputFile, false));
 		

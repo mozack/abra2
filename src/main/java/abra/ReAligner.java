@@ -61,6 +61,8 @@ public class ReAligner {
 
 	private String reference;
 	
+	private String bwaIndex;
+	
 	private int minContigMapq;
 
 	private AssemblerSettings assemblerSettings;
@@ -103,6 +105,9 @@ public class ReAligner {
 	private boolean hasContigs = false;
 	
 	private int minMappingQuality;
+	
+	// If true, the input target file specifies kmer values
+	private boolean hasPresetKmers = false;
 	
 	public void reAlign(String[] inputFiles, String[] outputFiles) throws Exception {
 		
@@ -273,6 +278,7 @@ public class ReAligner {
 		
 		System.out.println("regions: " + regionsBed);
 		System.out.println("reference: " + reference);
+		System.out.println("bwa index: " + bwaIndex);
 		System.out.println("working dir: " + tempDir);
 		System.out.println("num threads: " + numThreads);
 		System.out.println("max unaligned reads: " + maxUnalignedReads);
@@ -480,7 +486,7 @@ public class ReAligner {
 	
 	private String alignAndCleanContigs(String contigFasta, String tempDir, boolean isTightAlignment) throws InterruptedException, IOException {
 		log("Aligning contigs");
-		Aligner aligner = new Aligner(reference, numThreads);
+		Aligner aligner = new Aligner(bwaIndex, numThreads);
 		String contigsSam = tempDir + "/" + "all_contigs.sam";
 		aligner.align(contigFasta, contigsSam, false);
 		
@@ -794,9 +800,9 @@ public class ReAligner {
 		return false;
 	}
 	
-	static List<Feature> getRegions(String regionsBed, int readLength) throws IOException {
+	static List<Feature> getRegions(String regionsBed, int readLength, boolean hasPresetKmers) throws IOException {
 		RegionLoader loader = new RegionLoader();
-		List<Feature> regions = loader.load(regionsBed);
+		List<Feature> regions = loader.load(regionsBed, hasPresetKmers);
 		if (regions.size() > 0 && (regions.get(0).getKmer() == 0)) {
 			regions = RegionLoader.collapseRegions(regions, readLength);
 			regions = splitRegions(regions);
@@ -806,7 +812,7 @@ public class ReAligner {
 	}
 		
 	private void loadRegions() throws IOException {
-		this.regions = getRegions(regionsBed, readLength);
+		this.regions = getRegions(regionsBed, readLength, hasPresetKmers);
 		
 //		if (this.assemblerSettings.getKmerSize().length == 0) {
 //			// Using previously collapsed and split regions with kmers here.
@@ -1213,6 +1219,10 @@ public class ReAligner {
 	public void setReference(String reference) {
 		this.reference = reference;
 	}
+	
+	public void setBwaIndex(String bwaIndex) {
+		this.bwaIndex = bwaIndex;
+	}
 
 	public void setTempDir(String temp) {
 		this.tempDir = temp;
@@ -1291,6 +1301,7 @@ public class ReAligner {
 
 			ReAligner realigner = new ReAligner();
 			realigner.setReference(options.getReference());
+			realigner.setBwaIndex(options.getBwaIndex());
 			realigner.setRegionsBed(options.getTargetRegionFile());
 			realigner.setTempDir(options.getWorkingDir());
 			realigner.setAssemblerSettings(assemblerSettings);
@@ -1304,6 +1315,7 @@ public class ReAligner {
 			realigner.structuralVariantFile = options.getStructuralVariantFile();
 			realigner.localRepeatFile = options.getLocalRepeatFile();
 			realigner.minMappingQuality = options.getMinimumMappingQuality();
+			realigner.hasPresetKmers = options.hasPresetKmers();
 
 			long s = System.currentTimeMillis();
 			

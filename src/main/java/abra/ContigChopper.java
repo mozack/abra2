@@ -248,7 +248,7 @@ public class ContigChopper {
 		RegionLoader loader = new RegionLoader();
 //		List<Feature> regions = loader.load("/home/lmose/dev/abra_wxs/3/sim83.gtf");
 //		List<Feature> regions = loader.load("/home/lmose/dev/ayc/regions/clinseq5/setd2.gtf");
-		List<Feature> regions = loader.load("/home/lmose/dev/ayc/regions/clinseq5/chop3.gtf");
+		List<Feature> regions = loader.load("/home/lmose/dev/ayc/regions/clinseq5/chop3.gtf", false);
 //		List<Feature> regions = loader.load("/home/lmose/dev/ayc/regions/clinseq5/uncseq5.gtf");
 		
 //		regions = ReAligner.splitRegions(regions);

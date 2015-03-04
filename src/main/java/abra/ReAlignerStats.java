@@ -48,7 +48,7 @@ public class ReAlignerStats {
 		
 		
 		RegionLoader loader = new RegionLoader();
-		regions = loader.load(regionsGtf);
+		regions = loader.load(regionsGtf, false);
 		
 //		printRegionHeader();
 		
@@ -77,7 +77,7 @@ public class ReAlignerStats {
 	
 	public void run() throws IOException {
 		RegionLoader loader = new RegionLoader();
-		regions = loader.load(regionsGtf);
+		regions = loader.load(regionsGtf, false);
 		
 		printRegionHeader();
 		

@@ -21,7 +21,7 @@ public class RegionLoader {
 	private static final int BED_END_IDX = 2;
 	private static final int KMER_SIZE_IDX = 3;
 
-	public List<Feature> load(String regionFile) throws FileNotFoundException, IOException {
+	public List<Feature> load(String regionFile, boolean hasPresetKmers) throws FileNotFoundException, IOException {
 		List<Feature> features = new ArrayList<Feature>();
 		
 		int start = BED_START_IDX;
@@ -50,12 +50,12 @@ public class RegionLoader {
 				}
 				
 				if (lastChr.equals(chromosome) && startPos < lastStart) {
-					throw new IllegalArgumentException("Target BED file must be sorted in increasing coordinate order: " + line);
+					throw new IllegalArgumentException("Target BED file must be sorted in increasing coordinate order (grouped by chromosome): " + line);
 				}
 				
 				Feature feature = new Feature(chromosome, startPos, endPos);
 				
-				if (fields.length >= KMER_SIZE_IDX+1) {
+				if (fields.length >= KMER_SIZE_IDX+1 && hasPresetKmers) {
 					int kmerSize = Integer.parseInt(fields[KMER_SIZE_IDX]);
 					feature.setKmer(kmerSize);
 				}
@@ -112,7 +112,7 @@ public class RegionLoader {
 	public static void main(String[] args) throws Exception {
 		RegionLoader loader = new RegionLoader();
 //		List<Feature> regions = loader.load("/home/lmose/dev/abra/issue12/test.bed");
-		List<Feature> regions = loader.load("/home/lmose/dev/abra/issue12/test2.bed");
+		List<Feature> regions = loader.load("/home/lmose/dev/abra/issue12/test2.bed", false);
 		
 		regions = RegionLoader.collapseRegions(regions, 100);
 

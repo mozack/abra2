@@ -16,7 +16,7 @@ public class MapqEval {
 
 	public void eval(String input, String bed) throws IOException {
 		RegionLoader loader = new RegionLoader();
-		List<Feature> regions = loader.load(bed);
+		List<Feature> regions = loader.load(bed, false);
 
 		int[] thresholds = new int[] { 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 255 };
 		

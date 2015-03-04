@@ -244,7 +244,7 @@ public class Sam2Fastq {
 		
 		
 		RegionLoader loader = new RegionLoader();
-		List<Feature> regions = loader.load("/home/lmose/dev/abra/region_tracker/uncseq5.bed");
+		List<Feature> regions = loader.load("/home/lmose/dev/abra/region_tracker/uncseq5.bed", false);
 		
 		regions = RegionLoader.collapseRegions(regions, 100);
 		

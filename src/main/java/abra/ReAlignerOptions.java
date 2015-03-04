@@ -13,7 +13,9 @@ public class ReAlignerOptions extends Options {
 	private static final String INPUT_SAM = "in";
 	private static final String OUTPUT_SAM = "out";
 	private static final String REFERENCE = "ref";
+	private static final String BWA_INDEX = "bwa-ref";
 	private static final String TARGET_REGIONS = "targets";
+	private static final String TARGET_REGIONS_WITH_KMERS = "target-kmers";
 	private static final String WORKING_DIR = "working";
 	private static final String KMER_SIZE = "kmer";
 	private static final String MIN_NODE_FREQUENCY = "mnf";
@@ -34,6 +36,7 @@ public class ReAlignerOptions extends Options {
 	private static final String SEARCH_FOR_STRUCTURAL_VARIATION = "sv";
 	private static final String SEARCH_FOR_LOCAL_REPEATS = "lr";
 	private static final String AVERAGE_DEPTH_CEILING = "adc";
+	private static final String MIN_EDGE_RATIO = "mef";
 	
 	private OptionParser parser;
 	private boolean isValid;
@@ -45,7 +48,9 @@ public class ReAlignerOptions extends Options {
             parser.accepts(INPUT_SAM, "Required list of input sam or bam file(s) separated by comma").withRequiredArg().ofType(String.class);
             parser.accepts(OUTPUT_SAM, "Required list of output sam or bam file(s) separated by comma").withRequiredArg().ofType(String.class);
             parser.accepts(REFERENCE, "Genome reference location").withRequiredArg().ofType(String.class);
-            parser.accepts(TARGET_REGIONS, "BED file containing target regions (with optional kmer size -- see KmerSizeEvaluator)").withRequiredArg().ofType(String.class);
+            parser.accepts(BWA_INDEX, "BWA index prefix.  Use this only if the bwa index prefix does not match the ref option.").withRequiredArg().ofType(String.class);
+            parser.accepts(TARGET_REGIONS, "BED file containing target regions").withRequiredArg().ofType(String.class);
+            parser.accepts(TARGET_REGIONS_WITH_KMERS, "BED-like file containing target regions with per region kmer sizes in 4th column").withRequiredArg().ofType(String.class);
             parser.accepts(WORKING_DIR, "Working directory for intermediate output.  Must not already exist").withRequiredArg().ofType(String.class);
             parser.accepts(KMER_SIZE, "Optional assembly kmer size(delimit with commas if multiple sizes specified)").withOptionalArg().ofType(String.class);
             parser.accepts(MIN_NODE_FREQUENCY, "Assembly minimum node frequency").withRequiredArg().ofType(Integer.class).defaultsTo(2);
@@ -66,6 +71,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(SEARCH_FOR_STRUCTURAL_VARIATION, "Enable Structural Variation searching (experimental, only supported for paired end)").withRequiredArg().ofType(String.class);
             parser.accepts(SEARCH_FOR_LOCAL_REPEATS, "Search for potential larger local repeats and output to specified file (only for multiple samples)").withRequiredArg().ofType(String.class);
             parser.accepts(AVERAGE_DEPTH_CEILING, "Skip regions with average depth greater than this value").withOptionalArg().ofType(Integer.class).defaultsTo(100000);
+            parser.accepts(MIN_EDGE_RATIO, "Min edge pruning ratio.  Default value is appropriate for relatively sensitive somatic cases.  May be increased for improved speed in germline only cases.").withRequiredArg().ofType(Double.class).defaultsTo(.05);
     	}
     	
     	return parser;
@@ -94,7 +100,12 @@ public class ReAlignerOptions extends Options {
 			System.out.println("Missing required reference");
 		}
 		
-		if (!getOptions().hasArgument(TARGET_REGIONS)) {
+		if (getOptions().hasArgument(TARGET_REGIONS) && getOptions().hasArgument(TARGET_REGIONS_WITH_KMERS)) {
+			isValid = false;
+			System.out.println("Please specifiy only one of: " + TARGET_REGIONS + ", " + TARGET_REGIONS_WITH_KMERS);
+		}		
+		
+		if (!getOptions().hasArgument(TARGET_REGIONS) && !getOptions().hasArgument(TARGET_REGIONS_WITH_KMERS)) {
 			isValid = false;
 			System.out.println("Missing required target regions");
 		}
@@ -136,8 +147,34 @@ public class ReAlignerOptions extends Options {
 		return (String) getOptions().valueOf(REFERENCE);
 	}
 	
+	public String getBwaIndex() {
+		
+		String index = null;
+		
+		if (getOptions().hasArgument(BWA_INDEX)) {
+			index = (String) getOptions().valueOf(BWA_INDEX);
+		} else {
+			index = (String) getOptions().valueOf(REFERENCE);
+		}
+		
+		return index;
+	}
+	
 	public String getTargetRegionFile() {
-		return (String) getOptions().valueOf(TARGET_REGIONS);
+		
+		String file = null;
+		
+		if (getOptions().hasArgument(TARGET_REGIONS_WITH_KMERS)) {
+			file = (String) getOptions().valueOf(TARGET_REGIONS_WITH_KMERS);
+		} else {
+			file = (String) getOptions().valueOf(TARGET_REGIONS);
+		}
+		
+		return file;
+	}
+
+	public boolean hasPresetKmers() {
+		return getOptions().hasArgument(TARGET_REGIONS_WITH_KMERS);
 	}
 	
 	public String getWorkingDir() {
@@ -210,6 +247,10 @@ public class ReAlignerOptions extends Options {
 	
 	public double getMinReadCandidateFraction() {
 		return (Double) getOptions().valueOf(MIN_READ_CANDIDATE_FRACTION);
+	}
+	
+	public double getMinEdgeRatio() {
+		return (Double) getOptions().valueOf(MIN_EDGE_RATIO);
 	}
 	
 	public int getMaxAverageRegionDepth() {

@@ -36,7 +36,7 @@ public class ReAlignerOptions extends Options {
 	private static final String SEARCH_FOR_STRUCTURAL_VARIATION = "sv";
 	private static final String SEARCH_FOR_LOCAL_REPEATS = "lr";
 	private static final String AVERAGE_DEPTH_CEILING = "adc";
-	private static final String MIN_EDGE_RATIO = "mef";
+	private static final String MIN_EDGE_RATIO = "mer";
 	
 	private OptionParser parser;
 	private boolean isValid;

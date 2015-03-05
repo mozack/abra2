@@ -100,7 +100,7 @@ public class ReferenceEvaluator {
 			readBuf.append(qualities);
 		}
 		
-		String contig = assembler.nativeAssemble(readBuf.toString(), region.getDescriptor(), "eval", 0, 1, (ReAligner.MAX_REGION_LENGTH + 2*readLength)*2, readLength, kmers, 1, 0);
+		String contig = assembler.nativeAssemble(readBuf.toString(), region.getDescriptor(), "eval", 0, 1, (ReAligner.MAX_REGION_LENGTH + 2*readLength)*2, readLength, kmers, 1, 0, .01);
 		int basesIdx = contig.indexOf('\n') + 1;
 		if (basesIdx < contig.length()) {
 			String contigBases = contig.substring(basesIdx, contig.length()-1);

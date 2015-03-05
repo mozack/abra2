@@ -698,7 +698,11 @@ public class ReAligner {
 				regions.add(region);
 				String contigs = assem.assembleContigs(bams, contigsFasta, tempDir, regions, region.getDescriptor(), true, this, c2r);
 				if (!contigs.equals("<ERROR>") && !contigs.equals("<REPEAT>") && !contigs.isEmpty()) {
+					
+					long s = System.currentTimeMillis();
 					appendContigs(contigs);
+					long e = System.currentTimeMillis();
+					System.out.println("ELAPSED_APPEND_TIME: " + (e-s));
 				
 					List<BreakpointCandidate> svCandidates = assem.getSvCandidateRegions();
 					for (BreakpointCandidate svCandidate : svCandidates) {

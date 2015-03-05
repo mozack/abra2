@@ -18,6 +18,10 @@ public class ReAlignerRunnable extends AbraRunnable {
 	
 	@Override
 	public void go() throws Exception {
-		reAligner.processRegion(region);		
+		long s = System.currentTimeMillis();
+		reAligner.processRegion(region);	
+		long e = System.currentTimeMillis();
+		
+		System.out.println("ReAlignerRunnable elapsed: " + (e-s));
 	}
 }

@@ -138,6 +138,7 @@ public class NativeAssembler {
 		StringBuffer readBuffer = new StringBuffer();
 		
 		for (SAMRecord read : reads) {
+			readBuffer.append((char) 1);
 			readBuffer.append(read.getReadNegativeStrandFlag() ? "1" : "0");
 			
 			if (read.getReadString().length() == readLength) {
@@ -328,6 +329,8 @@ public class NativeAssembler {
 				
 				int downsampleTarget = desiredNumberOfReads(regions);
 				
+				char sampleId = 1;
+				
 				for (List<SAMRecord> reads : readsList) {
 					// Default to always keep
 					double keepProbability = 1.1;
@@ -340,6 +343,7 @@ public class NativeAssembler {
 					
 					for (SAMRecord read : reads) {
 						if (random.nextDouble() < keepProbability) {
+							readBuffer.append(sampleId);
 							readBuffer.append(read.getReadNegativeStrandFlag() ? "1" : "0");
 							
 							if (read.getReadString().length() == readLength) {
@@ -362,6 +366,7 @@ public class NativeAssembler {
 					
 					// Make this set of reads eligible for GC
 					reads.clear();
+					sampleId += 1;
 				}
 			}
 			

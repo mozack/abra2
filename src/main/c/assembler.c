@@ -39,6 +39,9 @@ using google::sparse_hash_set;
 // TODO: This is used to bound qual sum arrays.  Use a memory pool instead for this.
 #define MAX_KMER_LEN 201
 
+// TODO: Allocate dynamically
+#define MAX_SAMPLES 8
+
 // This makes sense for small assembly windows, but should be parameterized for larger assemblies
 #define MAX_NODES 9000
 
@@ -150,6 +153,7 @@ struct node {
 	struct linked_node* fromNodes;
 	char* contributingRead;
 	unsigned char qual_sums[MAX_KMER_LEN];
+	unsigned short sample_frequency[MAX_SAMPLES];
 	unsigned short frequency;
 	char hasMultipleUniqueReads;
 	char contributing_strand;
@@ -221,7 +225,7 @@ unsigned char phred33(char ch) {
 	return ch - '!';
 }
 
-struct node* new_node(char* seq, char* contributingRead, struct_pool* pool, int strand, char* quals) {
+struct node* new_node(char sample_id, char* seq, char* contributingRead, struct_pool* pool, int strand, char* quals) {
 
 //	node* my_node = (node*) malloc(sizeof(node));
 	node* my_node = allocate_node(pool);
@@ -230,6 +234,7 @@ struct node* new_node(char* seq, char* contributingRead, struct_pool* pool, int 
 //	strcpy(my_node->contributingRead, contributingRead);
 	my_node->contributingRead = contributingRead;
 	my_node->frequency = 1;
+	my_node->sample_frequency[sample_id-1] = 1;
 	my_node->hasMultipleUniqueReads = 0;
 	my_node->contributing_strand = (char) strand;
 	for (int i=0; i<kmer_size; i++) {
@@ -271,9 +276,13 @@ void link_nodes(struct node* from_node, struct node* to_node) {
 	}
 }
 
-void increment_node_freq(struct node* node, char* read_seq, int strand, char* kmer_qual) {
+void increment_node_freq(char sample_id, struct node* node, char* read_seq, int strand, char* kmer_qual) {
 	if (node->frequency < MAX_FREQUENCY-1) {
 		node->frequency++;
+	}
+
+	if (node->sample_frequency[sample_id-1] < MAX_FREQUENCY-1) {
+		node->sample_frequency[sample_id-1] += 1;
 	}
 
 	if (!(node->hasMultipleUniqueReads) &&
@@ -314,7 +323,7 @@ int include_kmer(char* sequence, char*qual, int idx) {
 	return include;
 }
 
-void add_to_graph(char* sequence, sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, struct_pool* pool, char* qual, int strand) {
+void add_to_graph(char sample_id, char* sequence, sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, struct_pool* pool, char* qual, int strand) {
 
 	struct node* prev = 0;
 
@@ -327,7 +336,7 @@ void add_to_graph(char* sequence, sparse_hash_map<const char*, struct node*, my_
 			struct node* curr = (*nodes)[kmer];
 
 			if (curr == NULL) {
-				curr = new_node(kmer, sequence, pool, strand, kmer_qual);
+				curr = new_node(sample_id, kmer, sequence, pool, strand, kmer_qual);
 
 				if (curr == NULL) {
 					printf("Null node for kmer: %s\n", kmer);
@@ -336,7 +345,7 @@ void add_to_graph(char* sequence, sparse_hash_map<const char*, struct node*, my_
 
 				(*nodes)[kmer] = curr;
 			} else {
-				increment_node_freq(curr, sequence, strand, kmer_qual);
+				increment_node_freq(sample_id, curr, sequence, strand, kmer_qual);
 			}
 
 			if (prev != NULL) {
@@ -352,7 +361,7 @@ void add_to_graph(char* sequence, sparse_hash_map<const char*, struct node*, my_
 
 void build_graph2(const char* input, sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, struct_pool* pool) {
 	int input_len = strlen(input);
-	int record_len = read_length*2 + 1;
+	int record_len = read_length*2 + 2;
 	int num_records = input_len / record_len;
 	int record = 0;
 	const char* ptr = input;
@@ -360,14 +369,17 @@ void build_graph2(const char* input, sparse_hash_map<const char*, struct node*, 
 
 	while ((record < num_records) && (nodes->size() < MAX_NODES)) {
 		ptr = &(input[record*record_len]);
+
+		char sample_id = ptr[0];
+
 		int strand = 0;
 
-		if (ptr[0] == '0') {
+		if (ptr[1] == '0') {
 			strand = 0;
-		} else if (ptr[0] == '1') {
+		} else if (ptr[1] == '1') {
 			strand = 1;
 		} else {
-			printf("Initial char in input invalid: %c\n", ptr[0]);
+			printf("Initial char in input invalid: %c\n", ptr[1]);
 			printf("ERROR!  INVALID INPUT:\n===========================%s\n===========================\n", input);
 			exit(-1);
 		}
@@ -376,19 +388,19 @@ void build_graph2(const char* input, sparse_hash_map<const char*, struct node*, 
 		// upon null terminator.
 		char* read_ptr = allocate_read(pool);
 		memset(read_ptr, 0, read_length+1);
-		memcpy(read_ptr, &(ptr[1]), read_length);
+		memcpy(read_ptr, &(ptr[2]), read_length);
 
 //		char* read_ptr = (char*) &(ptr[1]);
 
-		char* qual_ptr = (char*) &(ptr[read_length+1]);
-		add_to_graph(read_ptr, nodes, pool, qual_ptr, strand);
+		char* qual_ptr = (char*) &(ptr[read_length+2]);
+		add_to_graph(sample_id, read_ptr, nodes, pool, qual_ptr, strand);
 		record++;
 	}
 
 	printf("Num reads: %d\n", record);
 	printf("Num nodes: %d\n", nodes->size());
 }
-
+/*
 void build_graph(const char* read_file, sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, struct_pool* pool) {
 	FILE *fp = fopen(read_file, "r");
 	char read[MAX_READ_LENGTH];
@@ -421,6 +433,7 @@ void build_graph(const char* read_file, sparse_hash_map<const char*, struct node
 
 	fclose(fp);
 }
+*/
 
 struct linked_node* remove_node_from_list(struct node* node, struct linked_node* list) {
 	struct linked_node* node_ptr = list;
@@ -494,6 +507,21 @@ void remove_node_and_cleanup(const char* key, struct node* node, sparse_hash_map
 	node->fromNodes = NULL;
 }
 
+char is_min_edge_ratio_reached(int per_sample_total_freq[], struct node* node) {
+	char exceeds_min_ratio = 0;
+
+	for (int i=0; i<MAX_SAMPLES; i++) {
+		if ((per_sample_total_freq[i] > 0) &&
+			((double) node->sample_frequency[i] / (double) per_sample_total_freq[i] >= min_edge_ratio)) {
+
+			exceeds_min_ratio = 1;
+			break;
+		}
+	}
+
+	return exceeds_min_ratio;
+}
+
 void prune_low_frequency_edges(sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes) {
 
 	long removed_edge_count = 0;
@@ -512,10 +540,18 @@ void prune_low_frequency_edges(sparse_hash_map<const char*, struct node*, my_has
 			// Calculate total outgoing "edge" frequency
 			int to_node_total_freq = 0;
 
+			int per_sample_total_freq[MAX_SAMPLES];
+			memset(per_sample_total_freq, 0, sizeof(int)*MAX_SAMPLES);
+
 			while (to_node != NULL) {
 				// Using node frequency as proxy for edge frequency here...
 				to_node_total_freq = to_node_total_freq + to_node->node->frequency;
+				for (int i=0; i<MAX_SAMPLES; i++) {
+					per_sample_total_freq[i] += to_node->node->sample_frequency[i];
+				}
+
 				to_node = to_node->next;
+
 			}
 
 			// Identify edges to prune
@@ -523,9 +559,16 @@ void prune_low_frequency_edges(sparse_hash_map<const char*, struct node*, my_has
 			vector<node*> to_nodes_to_remove;
 
 			while (to_node != NULL) {
-				if ( ((double) to_node->node->frequency / (double) to_node_total_freq) < min_edge_ratio ) {
+				char exceeds_min_ratio = is_min_edge_ratio_reached(per_sample_total_freq, to_node->node);
+
+				if (!exceeds_min_ratio) {
 					to_nodes_to_remove.push_back(to_node->node);
 				}
+
+//				if ( ((double) to_node->node->frequency / (double) to_node_total_freq) < min_edge_ratio ) {
+//					to_nodes_to_remove.push_back(to_node->node);
+//				}
+
 				to_node = to_node->next;
 			}
 
@@ -544,10 +587,16 @@ void prune_low_frequency_edges(sparse_hash_map<const char*, struct node*, my_has
 
 			// Calculate total outgoing "edge" frequency
 			int from_node_total_freq = 0;
+			memset(per_sample_total_freq, 0, sizeof(int)*MAX_SAMPLES);
 
 			while (from_node != NULL) {
 				// Using node frequency as proxy for edge frequency here...
 				from_node_total_freq = from_node_total_freq + from_node->node->frequency;
+
+				for (int i=0; i<MAX_SAMPLES; i++) {
+					per_sample_total_freq[i] += from_node->node->sample_frequency[i];
+				}
+
 				from_node = from_node->next;
 			}
 
@@ -556,9 +605,16 @@ void prune_low_frequency_edges(sparse_hash_map<const char*, struct node*, my_has
 			vector<node*> from_nodes_to_remove;
 
 			while (from_node != NULL) {
-				if ( ((double) from_node->node->frequency / (double) from_node_total_freq) < min_edge_ratio ) {
-					from_nodes_to_remove.push_back(from_node->node);
+
+				char exceeds_min_ratio = is_min_edge_ratio_reached(per_sample_total_freq, from_node->node);
+
+				if (!exceeds_min_ratio) {
+					from_nodes_to_remove.push_back(to_node->node);
 				}
+
+//				if ( ((double) from_node->node->frequency / (double) from_node_total_freq) < min_edge_ratio ) {
+//					from_nodes_to_remove.push_back(from_node->node);
+//				}
 				from_node = from_node->next;
 			}
 
@@ -1099,7 +1155,7 @@ extern "C"
 	printf("kmer_size: %d\n", kmer_size);
 	printf("min node freq: %d\n", min_node_freq);
 	printf("min base quality: %d\n", min_base_quality);
-	printf("min edge ratio: %d\n", min_edge_ratio);
+	printf("min edge ratio: %f\n", min_edge_ratio);
 
 	char* contig_str = assemble(input, output, prefix, truncate_on_output, max_contigs, max_paths_from_root, read_length, kmer_size);
 	jstring ret = env->NewStringUTF(contig_str);

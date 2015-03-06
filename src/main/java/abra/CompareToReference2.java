@@ -395,7 +395,7 @@ public class CompareToReference2 {
 		if (is2Bit) {
 			StringBuffer buf = new StringBuffer(length);
 			int start = Math.max(position, 0);
-			int stop = Math.min(position+length, ref.length*4+1);
+			int stop = Math.min(position+length, ref.length*4);
 			
 			for (int i=start; i<stop; i++) {
 				buf.append(getBaseAsChar(i, ref));
@@ -451,9 +451,14 @@ public class CompareToReference2 {
 	
 	public static void main(String[] args) throws Exception {
 		CompareToReference2 c2r = new CompareToReference2(); 
-		c2r.init("/home/lmose/reference/chr3/chr3.fa");
+		c2r.init("/home/lmose/reference/chrM/MT.fa");
 //		c2r.init("/home/lmose/reference/test/test.fa");
-		System.out.println(c2r.getSequence("chr3", 178948013, 100));
+		
+		for (int i=16400; i<16600; i++) {
+			System.out.println("" + i + " : " + c2r.getSequence("MT", i, 100));
+		}
+		
+//		System.out.println(c2r.getSequence("MT", 16474, 100));
 
 //		c2r.init("/home/lmose/reference/t2/t2.fa");
 //		System.out.println(c2r.getSequence("x1", 1, 12));

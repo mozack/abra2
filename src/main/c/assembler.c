@@ -545,8 +545,6 @@ void prune_low_frequency_edges(sparse_hash_map<const char*, struct node*, my_has
 			int per_sample_total_freq[MAX_SAMPLES];
 			memset(per_sample_total_freq, 0, sizeof(int)*MAX_SAMPLES);
 
-			printf("Calculating per sample to freqs\n");
-			fflush(stdout);
 			while (to_node != NULL) {
 				// Using node frequency as proxy for edge frequency here...
 				to_node_total_freq = to_node_total_freq + to_node->node->frequency;
@@ -562,8 +560,6 @@ void prune_low_frequency_edges(sparse_hash_map<const char*, struct node*, my_has
 			vector<node*> to_nodes_to_remove;
 
 			while (to_node != NULL) {
-				printf("Checking to edge ratio\n");
-				fflush(stdout);
 				char exceeds_min_ratio = is_min_edge_ratio_reached(per_sample_total_freq, to_node->node);
 
 				if (!exceeds_min_ratio) {
@@ -594,8 +590,6 @@ void prune_low_frequency_edges(sparse_hash_map<const char*, struct node*, my_has
 			int from_node_total_freq = 0;
 			memset(per_sample_total_freq, 0, sizeof(int)*MAX_SAMPLES);
 
-			printf("Calculating per sample from freqs\n");
-			fflush(stdout);
 			while (from_node != NULL) {
 				// Using node frequency as proxy for edge frequency here...
 				from_node_total_freq = from_node_total_freq + from_node->node->frequency;
@@ -612,8 +606,6 @@ void prune_low_frequency_edges(sparse_hash_map<const char*, struct node*, my_has
 			vector<node*> from_nodes_to_remove;
 
 			while (from_node != NULL) {
-				printf("Checking from edge ratio\n");
-				fflush(stdout);
 				char exceeds_min_ratio = is_min_edge_ratio_reached(per_sample_total_freq, from_node->node);
 
 				if (!exceeds_min_ratio) {

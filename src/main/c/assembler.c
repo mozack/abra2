@@ -617,7 +617,7 @@ void prune_low_frequency_edges(sparse_hash_map<const char*, struct node*, my_has
 				char exceeds_min_ratio = is_min_edge_ratio_reached(per_sample_total_freq, from_node->node);
 
 				if (!exceeds_min_ratio) {
-					from_nodes_to_remove.push_back(to_node->node);
+					from_nodes_to_remove.push_back(from_node->node);
 				}
 
 //				if ( ((double) from_node->node->frequency / (double) from_node_total_freq) < min_edge_ratio ) {

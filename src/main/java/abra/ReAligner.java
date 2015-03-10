@@ -194,6 +194,7 @@ public class ReAligner {
 		
 		if (hasContigs) {
 			clock = new Clock("Align and clean contigs");
+			clock.start();
 			cleanContigsFasta = alignAndCleanContigs(contigFasta, tempDir, true);
 			clock.stopAndPrint();
 		}

@@ -68,6 +68,9 @@ public class Aligner {
 	}
 	
 	public void shortAlign(String input, String outputSam) throws IOException, InterruptedException {
+		String map = "bwa mem -h 1000 -O 200,200 " + reference + " " + input + " > " + outputSam;
+		runCommand(map);
+		/*
 		String sai = outputSam + ".sai";
 		
 		String aln = "bwa aln " + reference + " " + input + " -f " + sai + " -b -t " + numThreads + " -o 0";
@@ -84,6 +87,7 @@ public class Aligner {
 		String convert = "bwa samse " + reference + " " + sai + " " + input + " -n 1000 > " + outputSam;
 		
 		runCommand(convert);
+		*/
 	}
 	
 	public void index() throws IOException, InterruptedException {

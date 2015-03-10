@@ -47,8 +47,8 @@ public class BetaPairValidatingRealignmentWriter implements RealignmentWriter {
 		
 		candidatesSam = tempDir + "/candidates.bam";
 		
-		candidatesSamWriter = new SAMFileWriterFactory().makeSAMOrBAMWriter(
-				header, false, new File(candidatesSam));
+		candidatesSamWriter = new SAMFileWriterFactory().makeBAMWriter(
+				header, false, new File(candidatesSam), 1);
 		
 		this.minInsertLength = minInsertLen;
 		this.maxInsertLength = maxInsertLen;

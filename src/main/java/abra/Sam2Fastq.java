@@ -27,6 +27,8 @@ public class Sam2Fastq {
 	
 	public static final int MIN_OFF_TARGET_MAPQ = 30;
 	
+	public static int COMPRESSION_LEVEL = 1;
+	
 	private FastqOutputFile output1;
 	private ReverseComplementor reverseComplementor = new ReverseComplementor();
 	private boolean shouldIdentifyEndByReadId = false;
@@ -38,7 +40,7 @@ public class Sam2Fastq {
 	 * Convert the input SAM/BAM file into a single fastq file.
 	 * Input SAM files that contain multiple mappings should be sorted by read name.
 	 */
-	public void convert(String inputSam, String outputFastq, CompareToReference2 c2r,
+	public void convert(String inputSam, String toProcessBam, CompareToReference2 c2r,
 			SAMFileWriter writer, boolean isPairedEnd,
 			List<Feature> regions, int minMappingQuality) throws IOException {
 		
@@ -47,8 +49,18 @@ public class Sam2Fastq {
         SAMFileReader reader = new SAMFileReader(new File(inputSam));
         reader.setValidationStringency(ValidationStringency.SILENT);
         
-        output1 = new FastqOutputFile();
-        output1.init(outputFastq);
+		SAMFileWriterFactory writerFactory = new SAMFileWriterFactory();
+		SAMFileHeader header = reader.getFileHeader();
+		header.setSortOrder(SortOrder.unsorted);
+		
+		
+		
+		SAMFileWriter toProcessWriter = writerFactory.makeBAMWriter(
+				header, false, new File(toProcessBam), COMPRESSION_LEVEL);
+		
+        
+//        output1 = new FastqOutputFile();
+//        output1.init(outputFastq);
         int lineCnt = 0;
         
         this.regionTracker = new RegionTracker(regions, reader.getFileHeader());
@@ -97,7 +109,10 @@ public class Sam2Fastq {
 	    			}
     				
     				// Eligible for realignment, output FASTQ record
-	    			output1.write(samReadToFastqRecord(read, c2r));
+//	    			output1.write(samReadToFastqRecord(read, c2r));
+	    			
+	    			
+	    			toProcessWriter.addAlignment(samReadToUnmappedSam(read));
     			} else if (writer != null) {
     				// Either xactly matches reference or failed vendor QC or low mapq, so
     				// output directly to final BAM
@@ -111,8 +126,47 @@ public class Sam2Fastq {
             }
         }
                 
-        output1.close();
+//        output1.close();
+        toProcessWriter.close();
         reader.close();
+	}
+
+	private SAMRecord samReadToUnmappedSam(SAMRecord read) {
+		
+		String bases = read.getReadString();
+		String qualities = read.getBaseQualityString();
+		
+		if (read.getReadNegativeStrandFlag()) {
+			bases = reverseComplementor.reverseComplement(bases);
+			qualities = reverseComplementor.reverse(qualities);
+		}
+		
+		read.setReadString("");
+		read.setBaseQualityString("");
+		
+		String readStr = read.getSAMString();
+
+		readStr = readStr.replace("\t", FIELD_DELIMITER);
+		
+		// Trim newline if applicable
+		if (readStr.charAt(readStr.length()-1) == '\n') {
+			readStr = readStr.substring(0, readStr.length()-1);
+		}
+		
+		String readName = readStr;
+		
+		read.setReadName(readName);
+		read.setReadString(bases);
+		read.setBaseQualityString(qualities);
+		read.setFlags(0);
+		read.clearAttributes();
+		read.setReadUnmappedFlag(true);
+		read.setMappingQuality(SAMRecord.NO_MAPPING_QUALITY);
+		read.setReferenceIndex(SAMRecord.NO_ALIGNMENT_REFERENCE_INDEX);
+		read.setAlignmentStart(SAMRecord.NO_ALIGNMENT_START);
+		read.setCigarString(SAMRecord.NO_ALIGNMENT_CIGAR);
+
+		return read;
 	}
 	
 	private FastqRecord samReadToFastqRecord(SAMRecord read, CompareToReference2 c2r) {
@@ -129,13 +183,6 @@ public class Sam2Fastq {
 		read.setBaseQualityString("");
 		
 		String readStr = read.getSAMString();
-/*		
-		if (readStr.length() > MAX_SAM_READ_NAME_LENGTH) {
-			String msg = "Warning!  Max SAM Read name length exceeded for: " + readStr;
-			System.out.println(msg);
-//			throw new RuntimeException(msg);
-		}
-*/
 
 		readStr = readStr.replace("\t", FIELD_DELIMITER);
 		
@@ -187,15 +234,14 @@ public class Sam2Fastq {
 		this.end2Suffix = end2Suffix;
 	}
 
-public static void main(String[] args) throws Exception {
+	public static void main(String[] args) throws Exception {
 
-	
 		/*
 		String inputSam = "/home/lmose/dev/abra/s2fq_test/chr22.bam";
 		String outputSam = "/home/lmose/dev/abra/s2fq_test/chr22_out.bam";
 		String bed = "/home/lmose/dev/abra/s2fq_test/chr22.bed";
-		String tempReadFile = "/home/lmose/dev/abra/s2fq_test/chr22.fastq.gz";
-		//String tempReadFile = "/home/lmose/dev/abra/s2fq_test/chr22.temp.bam";
+		//String tempReadFile = "/home/lmose/dev/abra/s2fq_test/chr22.fastq.gz";
+		String tempReadFile = "/home/lmose/dev/abra/s2fq_test/chr22.temp.bam";
 		String ref = "/home/lmose/reference/chr22/chr22.fa";
 		*/
 		
@@ -204,6 +250,8 @@ public static void main(String[] args) throws Exception {
 		String bed = args[2];
 		String tempReadFile = args[3];
 		String ref = args[4];
+		COMPRESSION_LEVEL  = Integer.parseInt(args[5]);
+		
 		
 		SAMFileReader reader = new SAMFileReader(new File(inputSam));
 		SAMFileHeader header = reader.getFileHeader();
@@ -234,5 +282,4 @@ public static void main(String[] args) throws Exception {
 		
 		System.out.println("Elapsed: " + (e-s)/1000);
 	}
-
 }

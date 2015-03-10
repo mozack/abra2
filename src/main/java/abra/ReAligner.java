@@ -109,6 +109,8 @@ public class ReAligner {
 	// If true, the input target file specifies kmer values
 	private boolean hasPresetKmers = false;
 	
+	public static final int COMPRESSION_LEVEL = 1;
+	
 	public void reAlign(String[] inputFiles, String[] outputFiles) throws Exception {
 		
 		this.inputSams = inputFiles;
@@ -146,6 +148,7 @@ public class ReAligner {
 		tempDirs = new String[inputSams.length];
 		
 		SAMFileWriterFactory writerFactory = new SAMFileWriterFactory();
+		
 //		writerFactory.setUseAsyncIo(true);
 		writerFactory.setUseAsyncIo(false);
 		
@@ -158,8 +161,8 @@ public class ReAligner {
 			tempDirs[i] = temp;
 
 			// init BAM writer
-			writers[i] = writerFactory.makeSAMOrBAMWriter(
-					samHeaders[i], false, new File(outputFiles[i]));
+			writers[i] = writerFactory.makeBAMWriter(
+					samHeaders[i], false, new File(outputFiles[i]), COMPRESSION_LEVEL);
 		}
 		
 		// Start pre-processing reads on separate thread for each input file.
@@ -190,7 +193,9 @@ public class ReAligner {
 		String cleanContigsFasta = null;
 		
 		if (hasContigs) {
+			clock = new Clock("Align and clean contigs");
 			cleanContigsFasta = alignAndCleanContigs(contigFasta, tempDir, true);
+			clock.stopAndPrint();
 		}
 				
 		if (cleanContigsFasta != null) {		
@@ -235,8 +240,12 @@ public class ReAligner {
 	}
 	
 	private void preProcessReads(String inputSam, String tempDir, SAMFileWriter writer) throws InterruptedException {
+//		PreprocessReadsRunnable thread = new PreprocessReadsRunnable(threadManager, this,
+//				inputSam, this.getPreprocessedFastq(tempDir), c2r, writer);
+		
 		PreprocessReadsRunnable thread = new PreprocessReadsRunnable(threadManager, this,
-				inputSam, this.getPreprocessedFastq(tempDir), c2r, writer);
+				inputSam, this.getPreprocessedBam(tempDir), c2r, writer);
+
 		
 		threadManager.spawnThread(thread);
 	}
@@ -1023,18 +1032,24 @@ public class ReAligner {
 		return tempDir + "/" + "original_reads.fastq.gz";
 	}
 	
+	private String getPreprocessedBam(String tempDir) {
+		return tempDir + "/" + "original_reads.bam";
+	}
+	
 	void alignToContigs(String tempDir, String alignedToContigSam,
 			String contigFasta) throws IOException, InterruptedException {
 		
 		// Convert original bam to fastq
 //		String fastq = tempDir + "/" + "original_reads.fastq.gz";
-		String fastq = getPreprocessedFastq(tempDir);
+//		String fastq = getPreprocessedFastq(tempDir);
+		
+		String bam = getPreprocessedBam(tempDir);
 		
 		//TODO: Manage threads more intelligently based upon number of samples being processed.
 		Aligner contigAligner = new Aligner(contigFasta, numThreads);
 		
 		// Align region fastq against assembled contigs
-		contigAligner.shortAlign(fastq, alignedToContigSam);
+		contigAligner.shortAlign(bam, alignedToContigSam);
 	}
 	
 	static class Pair<T, Y> {

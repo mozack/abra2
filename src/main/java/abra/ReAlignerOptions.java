@@ -71,7 +71,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(SEARCH_FOR_STRUCTURAL_VARIATION, "Enable Structural Variation searching (experimental, only supported for paired end)").withRequiredArg().ofType(String.class);
             parser.accepts(SEARCH_FOR_LOCAL_REPEATS, "Search for potential larger local repeats and output to specified file (only for multiple samples)").withRequiredArg().ofType(String.class);
             parser.accepts(AVERAGE_DEPTH_CEILING, "Skip regions with average depth greater than this value").withOptionalArg().ofType(Integer.class).defaultsTo(100000);
-            parser.accepts(MIN_EDGE_RATIO, "Min edge pruning ratio.  Default value is appropriate for relatively sensitive somatic cases.  May be increased for improved speed in germline only cases.").withRequiredArg().ofType(Double.class).defaultsTo(.05);
+            parser.accepts(MIN_EDGE_RATIO, "Min edge pruning ratio.  Default value is appropriate for relatively sensitive somatic cases.  May be increased for improved speed in germline only cases.").withRequiredArg().ofType(Double.class).defaultsTo(.02);
     	}
     	
     	return parser;

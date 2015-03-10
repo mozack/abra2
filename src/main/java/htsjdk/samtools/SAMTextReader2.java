@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package net.sf.samtools;
+package htsjdk.samtools;
 
 import htsjdk.samtools.SAMFileReader;
 import htsjdk.samtools.QueryInterval;
@@ -70,7 +70,7 @@ public class SAMTextReader2 extends SAMFileReader.ReaderImplementation {
     private RecordIterator mIterator = null;
     private File mFile = null;
     private final TextTagCodec tagCodec = new TextTagCodec();
-    private SAMFileReader.ValidationStringency validationStringency = SAMFileReader.ValidationStringency.DEFAULT_STRINGENCY;
+    private ValidationStringency validationStringency = ValidationStringency.DEFAULT_STRINGENCY;
 
     /**
      * Add information about the origin (reader and position) to SAM records.
@@ -81,7 +81,7 @@ public class SAMTextReader2 extends SAMFileReader.ReaderImplementation {
      * Prepare to read a SAM text file.
      * @param stream Need not be buffered, as this class provides buffered reading.
      */
-    SAMTextReader2(final InputStream stream, final SAMFileReader.ValidationStringency validationStringency, final SAMRecordFactory factory, SAMFileHeader header) {
+    SAMTextReader2(final InputStream stream, final ValidationStringency validationStringency, final SAMRecordFactory factory, SAMFileHeader header) {
         mReader = new BufferedLineReader(stream);
         this.validationStringency = validationStringency;
         this.samRecordFactory = factory;
@@ -90,7 +90,7 @@ public class SAMTextReader2 extends SAMFileReader.ReaderImplementation {
 //        readHeader();
     }
     
-    SAMTextReader2(String readStr, final SAMFileReader.ValidationStringency validationStringency, final SAMRecordFactory factory, SAMFileHeader header) {
+    SAMTextReader2(String readStr, final ValidationStringency validationStringency, final SAMRecordFactory factory, SAMFileHeader header) {
         this.validationStringency = validationStringency;
         this.samRecordFactory = factory;
         this.mFileHeader = header;
@@ -133,15 +133,15 @@ public class SAMTextReader2 extends SAMFileReader.ReaderImplementation {
         this.samRecordFactory = factory;
     }
 
-    boolean hasIndex() {
+    public boolean hasIndex() {
         return false;    
     }
 
-    BAMIndex getIndex() {
+    public BAMIndex getIndex() {
         throw new UnsupportedOperationException();
     }
 
-    void close() {
+    public void close() {
         if (mReader != null) {
             try {
                 mReader.close();
@@ -151,15 +151,15 @@ public class SAMTextReader2 extends SAMFileReader.ReaderImplementation {
         }
     }
 
-    SAMFileHeader getFileHeader() {
+    public SAMFileHeader getFileHeader() {
         return mFileHeader;
     }
 
-    public SAMFileReader.ValidationStringency getValidationStringency() {
+    public ValidationStringency getValidationStringency() {
         return validationStringency;
     }
 
-    public void setValidationStringency(final SAMFileReader.ValidationStringency stringency) {
+    public void setValidationStringency(final ValidationStringency stringency) {
         this.validationStringency = stringency;
     }
 
@@ -170,7 +170,7 @@ public class SAMTextReader2 extends SAMFileReader.ReaderImplementation {
      *
      * @return Iterator of SAMRecords in file order.
      */
-    CloseableIterator<SAMRecord> getIterator() {
+    public CloseableIterator<SAMRecord> getIterator() {
 //        if (mReader == null) {
 //            throw new IllegalStateException("File reader is closed");
 //        }
@@ -186,7 +186,7 @@ public class SAMTextReader2 extends SAMFileReader.ReaderImplementation {
      * @param fileSpan The file span.
      * @return An iterator over the given file span.
      */
-    CloseableIterator<SAMRecord> getIterator(final SAMFileSpan fileSpan) {
+    public CloseableIterator<SAMRecord> getIterator(final SAMFileSpan fileSpan) {
         throw new UnsupportedOperationException("Cannot directly iterate over regions within SAM text files.");
     }
 
@@ -194,7 +194,7 @@ public class SAMTextReader2 extends SAMFileReader.ReaderImplementation {
      * Generally gets a pointer to the first read in the file.  Unsupported for SAMTextReaders.
      * @return An pointer to the first read in the file.
      */
-    SAMFileSpan getFilePointerSpanningReads() {
+    public SAMFileSpan getFilePointerSpanningReads() {
         throw new UnsupportedOperationException("Cannot retrieve file pointers within SAM text files.");
     }
 
@@ -208,7 +208,7 @@ public class SAMTextReader2 extends SAMFileReader.ReaderImplementation {
     /**
      * Unsupported for SAM text files.
      */
-    CloseableIterator<SAMRecord> queryAlignmentStart(final String sequence, final int start) {
+    public CloseableIterator<SAMRecord> queryAlignmentStart(final String sequence, final int start) {
         throw new UnsupportedOperationException("Cannot query SAM text files");
     }
 
@@ -244,9 +244,9 @@ public class SAMTextReader2 extends SAMFileReader.ReaderImplementation {
     private void reportErrorParsingLine(final String reason) {
         final String errorMessage = makeErrorString(reason);
 
-        if (validationStringency == SAMFileReader.ValidationStringency.STRICT) {
+        if (validationStringency == ValidationStringency.STRICT) {
             throw new SAMFormatException(errorMessage);
-        } else if (validationStringency == SAMFileReader.ValidationStringency.LENIENT) {
+        } else if (validationStringency == ValidationStringency.LENIENT) {
             System.err.println("Ignoring SAM validation error due to lenient parsing:");
             System.err.println(errorMessage);
         }
@@ -254,9 +254,9 @@ public class SAMTextReader2 extends SAMFileReader.ReaderImplementation {
 
     private void reportErrorParsingLine(final Exception e) {
         final String errorMessage = makeErrorString(e.getMessage());
-        if (validationStringency == SAMFileReader.ValidationStringency.STRICT) {
+        if (validationStringency == ValidationStringency.STRICT) {
             throw new SAMFormatException(errorMessage);
-        } else if (validationStringency == SAMFileReader.ValidationStringency.LENIENT) {
+        } else if (validationStringency == ValidationStringency.LENIENT) {
             System.err.println("Ignoring SAM validation error due to lenient parsing:");
             System.err.println(errorMessage);
         }
@@ -534,20 +534,7 @@ public class SAMTextReader2 extends SAMFileReader.ReaderImplementation {
     }
 
 	@Override
-	CloseableIterator<SAMRecord> query(QueryInterval[] intervals,
-			boolean contained) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public CloseableIterator<SAMRecord> getIterator(SAMFileSpan arg0) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public ValidationStringency getValidationStringency() {
+	public CloseableIterator<SAMRecord> query(QueryInterval[] arg0, boolean arg1) {
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -560,18 +547,6 @@ public class SAMTextReader2 extends SAMFileReader.ReaderImplementation {
 
 	@Override
 	void enableFileSource(SamReader arg0, boolean arg1) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	void setSAMRecordFactory(SAMRecordFactory arg0) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	void setValidationStringency(ValidationStringency arg0) {
 		// TODO Auto-generated method stub
 		
 	}

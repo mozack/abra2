@@ -1,5 +1,5 @@
 /* Copyright 2013 University of North Carolina at Chapel Hill.  All rights reserved. */
-package net.sf.samtools;
+package htsjdk.samtools;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;

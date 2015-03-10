@@ -70,7 +70,7 @@ public class Aligner {
 	public void shortAlign(String input, String outputSam) throws IOException, InterruptedException {
 		String sai = outputSam + ".sai";
 		
-		String aln = "bwa aln " + reference + " " + input + " -f " + sai + " -t " + numThreads + " -o 0";
+		String aln = "bwa aln " + reference + " " + input + " -f " + sai + "-b -t " + numThreads + " -o 0";
 		
 		runCommand(aln);
 		

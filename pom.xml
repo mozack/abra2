@@ -59,18 +59,29 @@
       <scope>test</scope>
     </dependency>
 
-    <!-- In LBG repository -->
+    <!-- In UNC repository (isis.unc.edu) -->
     <dependency>
     	<groupId>samtools</groupId>
     	<artifactId>sam</artifactId>
-    	<version>1.82</version>
+    	<version>1.129</version>
 	</dependency>
 	
     <dependency>
     	<groupId>picard</groupId>
     	<artifactId>picard</artifactId>
-    	<version>1.82</version>
+    	<version>1.129</version>
 	</dependency>
+
+<!--  
+    <dependency>
+    	<artifactId>gatk</artifactId>
+    	<groupId>gatk</groupId>
+    	<scope>system</scope>
+    	<version>3.1</version>
+    <systemPath>/home/lmose/dev/gatk3.1/gatk-protected-3.1/target/GenomeAnalysisTK.jar</systemPath>
+</dependency>
+-->
+
 
   </dependencies>
 

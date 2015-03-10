@@ -14,8 +14,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
-import net.sf.picard.sam.BuildBamIndex;
-import net.sf.picard.sam.SortSam;
+import picard.sam.BuildBamIndex;
+import picard.sam.SortSam;
 import net.sf.samtools.Cigar;
 import net.sf.samtools.CigarElement;
 import net.sf.samtools.CigarOperator;

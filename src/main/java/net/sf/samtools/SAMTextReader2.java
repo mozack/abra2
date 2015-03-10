@@ -23,10 +23,17 @@
  */
 package net.sf.samtools;
 
-
-import net.sf.samtools.util.BufferedLineReader;
-import net.sf.samtools.util.CloseableIterator;
-import net.sf.samtools.util.StringUtil;
+import htsjdk.samtools.SAMFileReader;
+import htsjdk.samtools.QueryInterval;
+import htsjdk.samtools.SAMFileSpan;
+import htsjdk.samtools.SAMRecord;
+import htsjdk.samtools.SAMRecordFactory;
+import htsjdk.samtools.SamReader;
+import htsjdk.samtools.SamReader.Type;
+import htsjdk.samtools.ValidationStringency;
+import htsjdk.samtools.util.BufferedLineReader;
+import htsjdk.samtools.util.CloseableIterator;
+import htsjdk.samtools.util.StringUtil;
 
 import java.io.File;
 import java.io.InputStream;
@@ -525,4 +532,47 @@ public class SAMTextReader2 extends SAMFileReader.ReaderImplementation {
             }
         }
     }
+
+	@Override
+	CloseableIterator<SAMRecord> query(QueryInterval[] intervals,
+			boolean contained) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public CloseableIterator<SAMRecord> getIterator(SAMFileSpan arg0) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public ValidationStringency getValidationStringency() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Type type() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	void enableFileSource(SamReader arg0, boolean arg1) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	void setSAMRecordFactory(SAMRecordFactory arg0) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	void setValidationStringency(ValidationStringency arg0) {
+		// TODO Auto-generated method stub
+		
+	}
 }

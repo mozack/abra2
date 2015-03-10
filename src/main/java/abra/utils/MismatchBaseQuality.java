@@ -9,8 +9,8 @@ import java.util.Map;
 
 import abra.CompareToReference2;
 
-import net.sf.samtools.SAMFileReader;
-import net.sf.samtools.SAMRecord;
+import htsjdk.samtools.SAMFileReader;
+import htsjdk.samtools.SAMRecord;
 
 /**
  * Utility class for assessing mismatches by base quality

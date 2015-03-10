@@ -19,10 +19,10 @@ import abra.Feature;
 import abra.RegionLoader;
 import abra.utils.trio.LocusGenotype.Genotype;
 
-import net.sf.samtools.SAMFileHeader;
-import net.sf.samtools.SAMFileReader;
-import net.sf.samtools.SAMFileReader.ValidationStringency;
-import net.sf.samtools.SAMRecord;
+import htsjdk.samtools.SAMFileHeader;
+import htsjdk.samtools.SAMFileReader;
+import htsjdk.samtools.ValidationStringency;
+import htsjdk.samtools.SAMRecord;
 
 /**
  * Reader class for SAM or BAM file containing paired reads.

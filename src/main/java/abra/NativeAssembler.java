@@ -10,9 +10,9 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 
-import net.sf.samtools.SAMFileReader;
-import net.sf.samtools.SAMRecord;
-import net.sf.samtools.SAMFileReader.ValidationStringency;
+import htsjdk.samtools.SAMFileReader;
+import htsjdk.samtools.SAMRecord;
+import htsjdk.samtools.ValidationStringency;
 
 /**
  * Handles regional assembly by invoking the native assembler.

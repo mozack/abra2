@@ -1,6 +1,6 @@
 package abra.cadabra;
 
-import net.sf.samtools.CigarElement;
+import htsjdk.samtools.CigarElement;
 
 public class IndelInfo {
 

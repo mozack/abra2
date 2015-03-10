@@ -16,9 +16,9 @@ import abra.ReverseComplementor;
 import abra.SAMRecordUtils;
 import abra.ThreadManager;
 
-import net.sf.samtools.SAMFileReader;
-import net.sf.samtools.SAMFileReader.ValidationStringency;
-import net.sf.samtools.SAMRecord;
+import htsjdk.samtools.SAMFileReader;
+import htsjdk.samtools.ValidationStringency;
+import htsjdk.samtools.SAMRecord;
 
 public class RnaPoc {
 	
@@ -47,6 +47,52 @@ public class RnaPoc {
 						
 		new NativeLibraryLoader().load(tempDir);
 
+	}
+	
+	public void runByRegion(String input, String output, String temp, int numThreads, String badRegionBedFile) throws IOException, InterruptedException {
+		init(temp);
+		
+		this.threadManager = new ThreadManager(numThreads);
+		
+		contigWriter = new BufferedWriter(new FileWriter(output, false));
+		badRegionBed = new BufferedWriter(new FileWriter(badRegionBedFile, false));
+		
+//		reads1 = new BufferedWriter(new FileWriter(readsFile + "1.fa", false));
+//		reads2 = new BufferedWriter(new FileWriter(readsFile + "2.fa", false));
+		
+		List<SAMRecord> currReads = new ArrayList<SAMRecord>();
+		
+		SAMFileReader reader = new SAMFileReader(new File(input));
+		reader.setValidationStringency(ValidationStringency.SILENT);
+		
+		int prevMaxEnd = -1;
+		
+		SAMRecord lastRead = null;
+
+		for (SAMRecord read : reader) {
+			if (read.getMappingQuality() > 0) {
+				if (lastRead == null || !lastRead.getReferenceName().equals(read.getReferenceName()) || (read.getAlignmentStart()-prevMaxEnd) < MAX_READ_GAP) {
+					currReads.add(read);
+				} else {
+//					processReads(currReads);
+					spawnProcessingThread(currReads);
+					currReads = new ArrayList<SAMRecord>();
+					currReads.add(read);
+				}
+				
+				if (read.getAlignmentEnd() > prevMaxEnd || !lastRead.getReferenceName().equals(read.getReferenceName())) {
+					prevMaxEnd = read.getAlignmentEnd();
+				}
+				
+				lastRead = read;
+			}
+		}
+		
+		threadManager.waitForAllThreadsToComplete();
+		
+		reader.close();
+		contigWriter.close();
+		badRegionBed.close();
 	}
 
 	public void run(String input, String output, String temp, int numThreads, String badRegionBedFile) throws IOException, InterruptedException {

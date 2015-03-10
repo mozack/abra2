@@ -5,9 +5,9 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
 
-import net.sf.samtools.SAMFileReader;
-import net.sf.samtools.SAMRecord;
-import net.sf.samtools.SAMFileReader.ValidationStringency;
+import htsjdk.samtools.SAMFileReader;
+import htsjdk.samtools.SAMRecord;
+import htsjdk.samtools.ValidationStringency;
 
 import abra.Feature;
 import abra.RegionLoader;

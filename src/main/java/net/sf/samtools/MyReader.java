@@ -4,7 +4,7 @@ package net.sf.samtools;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 
-import net.sf.samtools.SAMFileReader.ValidationStringency;
+import htsjdk.samtools.ValidationStringency;
 
 public class MyReader {
 

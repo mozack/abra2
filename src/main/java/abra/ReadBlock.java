@@ -6,10 +6,10 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
-import net.sf.samtools.Cigar;
-import net.sf.samtools.CigarElement;
-import net.sf.samtools.CigarOperator;
-import net.sf.samtools.SAMRecord;
+import htsjdk.samtools.Cigar;
+import htsjdk.samtools.CigarElement;
+import htsjdk.samtools.CigarOperator;
+import htsjdk.samtools.SAMRecord;
 
 /**
  * Represents a Block of a read.  i.e. A Cigar of 15M5I30M would be represented

@@ -1,8 +1,8 @@
 /* Copyright 2013 University of North Carolina at Chapel Hill.  All rights reserved. */
 package abra;
 
-import net.sf.samtools.SAMFileWriter;
-import net.sf.samtools.SAMRecord;
+import htsjdk.samtools.SAMFileWriter;
+import htsjdk.samtools.SAMRecord;
 
 /**
  * Simple realignment writer.  Does not consider read pair information when writing to output BAM.

@@ -8,11 +8,11 @@ import java.util.Map;
 import abra.CompareToReference2;
 import abra.ReadAdjuster;
 
-import net.sf.samtools.Cigar;
-import net.sf.samtools.CigarElement;
-import net.sf.samtools.CigarOperator;
-import net.sf.samtools.SAMRecord;
-import net.sf.samtools.TextCigarCodec;
+import htsjdk.samtools.Cigar;
+import htsjdk.samtools.CigarElement;
+import htsjdk.samtools.CigarOperator;
+import htsjdk.samtools.SAMRecord;
+import htsjdk.samtools.TextCigarCodec;
 
 public class Cadabra {
 
@@ -413,7 +413,9 @@ public class Cadabra {
 			// Get assembled contig info.
 			String[] fields = contigInfo.split(":");
 			int contigPos = Integer.parseInt(fields[1]);
-			Cigar contigCigar = TextCigarCodec.getSingleton().decode(fields[2]);
+			
+//			Cigar contigCigar = TextCigarCodec.getSingleton().decode(fields[2]);
+			Cigar contigCigar = TextCigarCodec.decode(fields[2]);
 			
 			// Check to see if contig contains indel at current locus
 			elem = checkForIndelAtLocus(contigPos, contigCigar, refPos);

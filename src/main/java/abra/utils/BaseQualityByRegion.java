@@ -9,9 +9,9 @@ import abra.Feature;
 import abra.RegionLoader;
 import abra.ReAligner;
 
-import net.sf.samtools.SAMFileReader;
-import net.sf.samtools.SAMRecord;
-import net.sf.samtools.util.CloseableIterator;
+import htsjdk.samtools.SAMFileReader;
+import htsjdk.samtools.SAMRecord;
+import htsjdk.samtools.util.CloseableIterator;
 
 /**
  * Utility class for exploring base quality by region

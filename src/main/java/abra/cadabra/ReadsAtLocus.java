@@ -2,8 +2,8 @@ package abra.cadabra;
 
 import java.util.List;
 
-import net.sf.samtools.SAMRecord;
-import net.sf.samtools.SAMSequenceDictionary;
+import htsjdk.samtools.SAMRecord;
+import htsjdk.samtools.SAMSequenceDictionary;
 
 public class ReadsAtLocus {
 

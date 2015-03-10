@@ -3,7 +3,7 @@ package abra;
 
 import java.io.IOException;
 
-import net.sf.samtools.SAMFileWriter;
+import htsjdk.samtools.SAMFileWriter;
 
 /**
  * Thread entry point for read alignment.

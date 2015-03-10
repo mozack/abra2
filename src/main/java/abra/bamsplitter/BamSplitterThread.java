@@ -3,10 +3,10 @@ package abra.bamsplitter;
 import java.io.File;
 import java.util.Iterator;
 
-import net.sf.samtools.SAMFileReader;
-import net.sf.samtools.SAMFileWriter;
-import net.sf.samtools.SAMRecord;
-import net.sf.samtools.SAMFileReader.ValidationStringency;
+import htsjdk.samtools.SAMFileReader;
+import htsjdk.samtools.SAMFileWriter;
+import htsjdk.samtools.SAMRecord;
+import htsjdk.samtools.ValidationStringency;
 import abra.AbraRunnable;
 import abra.ThreadManager;
 

@@ -2,7 +2,7 @@ package abra.rna;
 
 import java.util.List;
 
-import net.sf.samtools.SAMRecord;
+import htsjdk.samtools.SAMRecord;
 import abra.AbraRunnable;
 import abra.ThreadManager;
 

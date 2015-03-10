@@ -2,7 +2,7 @@ package abra;
 
 import static abra.Logger.log;
 
-import net.sf.samtools.SAMFileWriter;
+import htsjdk.samtools.SAMFileWriter;
 
 /**
  * Thread entry point for read pre-processing

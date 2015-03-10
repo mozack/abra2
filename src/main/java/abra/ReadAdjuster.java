@@ -9,12 +9,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import net.sf.samtools.CigarOperator;
-import net.sf.samtools.SAMFileHeader;
-import net.sf.samtools.SAMFileReader;
-import net.sf.samtools.SAMFileWriter;
-import net.sf.samtools.SAMRecord;
-import net.sf.samtools.SAMFileReader.ValidationStringency;
+import htsjdk.samtools.CigarOperator;
+import htsjdk.samtools.SAMFileHeader;
+import htsjdk.samtools.SAMFileReader;
+import htsjdk.samtools.SAMFileWriter;
+import htsjdk.samtools.SAMFileWriterFactory;
+import htsjdk.samtools.SAMRecord;
+import htsjdk.samtools.ValidationStringency;
 
 /**
  * Responsible for adjusting read alignments.
@@ -106,8 +107,8 @@ public class ReadAdjuster {
 			writer.addAlignment(readToOutput, orig);
 		}
 
-		int realignedCount = writer.flush();
 		contigReader.close();
+		int realignedCount = writer.flush();
 		
 		log("Done adjusting reads.  Number of reads realigned: " + realignedCount);
 	}
@@ -490,4 +491,26 @@ public class ReadAdjuster {
 		}
 	}
 
+	public static void main(String[] args) throws Exception {
+		CompareToReference2 c2r = new CompareToReference2();
+		c2r.init("/datastore/nextgenout2/share/labs/UNCseq/tools-data/reference/hg19_hs37d5_viral.fa");
+		ReadAdjuster ra = new ReadAdjuster(true, 60, c2r, 0, 200000);
+
+		SAMFileReader reader = new SAMFileReader(new File("/datastore/nextgenout2/share/labs/UNCseq/LCCC1108_v4_testG/UNCseq1076/working/tumor.sort.dedup.bam"));
+		reader.setValidationStringency(ValidationStringency.SILENT);
+		
+		SAMFileWriterFactory writerFactory = new SAMFileWriterFactory();
+		writerFactory.setUseAsyncIo(false);
+		SAMFileWriter writer = writerFactory.makeSAMOrBAMWriter(
+				reader.getFileHeader(), false, new File("/datastore/nextgenout4/seqware-analysis/lmose/uncseq/new_workflow/1076_test/test.bam"));
+		
+		ra.adjustReads(
+				"/datastore/nextgenout2/share/labs/UNCseq/LCCC1108_v4_testG/UNCseq1076/working/abra/temp2/align_to_contig.sam", 
+				writer, 
+				true, 
+				"/datastore/nextgenout4/seqware-analysis/lmose/uncseq/new_workflow/1076_test/temp", reader.getFileHeader());
+		
+		reader.close();
+		writer.close();
+	}
 }

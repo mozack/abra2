@@ -1,8 +1,8 @@
 /* Copyright 2013 University of North Carolina at Chapel Hill.  All rights reserved. */
 package abra;
 
-import net.sf.samtools.Cigar;
-import net.sf.samtools.SAMRecord;
+import htsjdk.samtools.Cigar;
+import htsjdk.samtools.SAMRecord;
 
 import org.testng.Assert;
 import org.testng.annotations.Test;

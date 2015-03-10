@@ -187,71 +187,45 @@ public class Sam2Fastq {
 		this.end2Suffix = end2Suffix;
 	}
 
-/*
-	public static void run(String[] args) throws IOException {
-		Sam2FastqOptions options = new Sam2FastqOptions();
-		options.parseOptions(args);
+public static void main(String[] args) throws Exception {
+
+	
+		/*
+		String inputSam = "/home/lmose/dev/abra/s2fq_test/chr22.bam";
+		String outputSam = "/home/lmose/dev/abra/s2fq_test/chr22_out.bam";
+		String bed = "/home/lmose/dev/abra/s2fq_test/chr22.bed";
+		String tempReadFile = "/home/lmose/dev/abra/s2fq_test/chr22.fastq.gz";
+		//String tempReadFile = "/home/lmose/dev/abra/s2fq_test/chr22.temp.bam";
+		String ref = "/home/lmose/reference/chr22/chr22.fa";
+		*/
 		
-		if (options.isValid()) {
-			long s = System.currentTimeMillis();
-			System.out.println("sam2fastq starting");
-			
-			Sam2Fastq sam2Fastq = new Sam2Fastq();
-			if (options.isPairedEnd()) {
-				
-				if (options.shouldIdEndByReadName()) {
-					sam2Fastq.setEndSuffixes(options.getEnd1Suffix(), options.getEnd2Suffix());
-				}
-				
-				sam2Fastq.setMapspliceFusions(options.isMapspliceFusions());
-				
-				sam2Fastq.convert(options.getInputFile(), options.getFastq1(), options.getFastq2());
-			} else {
-				sam2Fastq.convert(options.getInputFile(), options.getFastq1());
-			}
-			
-			long e = System.currentTimeMillis();
-			System.out.println("sam2fastq done.  Elapsed secs: " + (e-s)/1000);
-		}
-	}
-*/
-/*	
-	public static void main(String[] args) throws Exception {
-		String argz = "--end1 /1 --end2 /2 --in /home/lisle/sam2fastq/round2/test2.sam  --fastq1 /home/lisle/sam2fastq/round2/1.fastq --fastq2 /home/lisle/sam2fastq/round2/2.fastq --mapsplice";
+		String inputSam = args[0];
+		String outputSam = args[1];
+		String bed = args[2];
+		String tempReadFile = args[3];
+		String ref = args[4];
 		
-		run(argz.split(" "));
-	}
-*/
-	public static void main(String[] args) throws Exception {
-		
-//		String inputSam = "/home/lmose/dev/abra/region_tracker/normal.sort.bam";
-		String inputSam = "/home/lmose/dev/abra/region_tracker/chr12.small.bam";
 		SAMFileReader reader = new SAMFileReader(new File(inputSam));
 		SAMFileHeader header = reader.getFileHeader();
 		reader.close();
 				
-		CompareToReference2 c2r = null;
+		CompareToReference2 c2r = new CompareToReference2();
+		c2r.init(ref);
 		
 		SAMFileWriterFactory writerFactory = new SAMFileWriterFactory();
-//		writerFactory.setUseAsyncIo(true);
-		
 		header.setSortOrder(SortOrder.unsorted);
 		
 		SAMFileWriter writer = writerFactory.makeSAMOrBAMWriter(
-				header, false, new File("/home/lmose/dev/abra/region_tracker/out.bam"));
+				header, false, new File(outputSam));
 		
 		Sam2Fastq s2f = new Sam2Fastq();
 		
 		
 		RegionLoader loader = new RegionLoader();
-		List<Feature> regions = loader.load("/home/lmose/dev/abra/region_tracker/uncseq5.bed", false);
-		
-		regions = RegionLoader.collapseRegions(regions, 100);
-		
-		regions = ReAligner.splitRegions(regions);		
-		
+		List<Feature> regions = loader.load(bed, false);
+				
 		long s = System.currentTimeMillis();
-		s2f.convert(inputSam, "/home/lmose/dev/abra/region_tracker/t2.fastq.gz", c2r, writer, false, 
+		s2f.convert(inputSam, tempReadFile, c2r, writer, false, 
 				regions, 20);
 		long e = System.currentTimeMillis();
 		
@@ -259,103 +233,6 @@ public class Sam2Fastq {
 		writer.close();
 		
 		System.out.println("Elapsed: " + (e-s)/1000);
-		
-		
-//		s2f.convert("/home/lmose/dev/abra_wxs/21_1071/small_tumor.abra.bam", "/home/lmose/dev/abra_wxs/21_1071/t.fastq", c2r);
 	}
 
-/*
-	public static void main(String[] args) throws Exception {
-		
-		String inputSam = "/home/lmose/dev/ayc/opt/opt2/s2f/t1.bam";
-		SAMFileReader reader = new SAMFileReader(new File(inputSam));
-		SAMFileHeader header = reader.getFileHeader();
-		reader.close();
-				
-		CompareToReference2 c2r = new CompareToReference2();
-		c2r.init("/home/lmose/reference/chr1/chr1.fa");
-		
-		SAMFileWriterFactory writerFactory = new SAMFileWriterFactory();
-//		writerFactory.setUseAsyncIo(true);
-		
-		header.setSortOrder(SortOrder.unsorted);
-		
-		SAMFileWriter writer = writerFactory.makeSAMOrBAMWriter(
-				header, false, new File("/home/lmose/dev/ayc/opt/opt2/s2f/output_t1.bam"));
-		
-		Sam2Fastq s2f = new Sam2Fastq();
-		
-		
-		RegionLoader loader = new RegionLoader();
-		List<Feature> regions = loader.load("/home/lmose/dev/ayc/regions/clinseq5/uncseq5.gtf");
-		
-		regions = RegionLoader.collapseRegions(regions, 100);
-		
-		regions = ReAligner.splitRegions(regions);		
-		
-		long s = System.currentTimeMillis();
-		s2f.convert(inputSam, "/home/lmose/dev/ayc/opt/opt2/s2f/t2.fastq.gz", c2r, writer, false, 
-				regions);
-		long e = System.currentTimeMillis();
-		
-		
-		writer.close();
-		
-		System.out.println("Elapsed: " + (e-s)/1000);
-		
-		
-//		s2f.convert("/home/lmose/dev/abra_wxs/21_1071/small_tumor.abra.bam", "/home/lmose/dev/abra_wxs/21_1071/t.fastq", c2r);
-	}
-	*/
-	
-	/*
-	public static void main(String[] args) throws Exception {
-		
-		String inputSam = "/home/lmose/dev/ayc/opt/t7.bam";
-		SAMFileReader reader = new SAMFileReader(new File(inputSam));
-		SAMFileHeader header = reader.getFileHeader();
-		reader.close();
-				
-		CompareToReference2 c2r = new CompareToReference2();
-		c2r.init("/home/lmose/reference/chr7/chr7.fa");
-		
-		SAMFileWriterFactory writerFactory = new SAMFileWriterFactory();
-//		writerFactory.setUseAsyncIo(true);
-		
-		header.setSortOrder(SortOrder.unsorted);
-		
-		SAMFileWriter writer = writerFactory.makeSAMOrBAMWriter(
-				header, false, new File("/home/lmose/dev/ayc/opt/output_t7.bam"));
-		
-		Sam2Fastq s2f = new Sam2Fastq();
-		
-		long s = System.currentTimeMillis();
-		
-		
-		System.out.println("chr1: " + header.getSequenceIndex("chr1"));
-		System.out.println("chr2: " + header.getSequenceIndex("chr2"));
-		System.out.println("chrY: " + header.getSequenceIndex("chrY"));
-		System.out.println("chrM: " + header.getSequenceIndex("chrM"));
-		
-//		String inputSam, String outputFastq, CompareToReference2 c2r,
-//		SAMFileHeader header, SAMFileWriter writer, ReAligner realigner
-		
-		GtfLoader loader = new GtfLoader();
-		List<Feature> regions = loader.load("/home/lmose/dev/ayc/regions/clinseq5/uncseq5.gtf");
-		
-		regions = ReAligner.collapseRegions(regions, 100);
-		
-		regions = ReAligner.splitRegions(regions);		
-		
-		s2f.convert(inputSam, "/home/lmose/dev/ayc/opt/t7.fastq.gz", c2r, header, writer, false, 
-				regions);
-		long e = System.currentTimeMillis();
-		
-		System.out.println("Elapsed: " + (e-s)/1000);
-		
-		writer.close();
-		
-//		s2f.convert("/home/lmose/dev/abra_wxs/21_1071/small_tumor.abra.bam", "/home/lmose/dev/abra_wxs/21_1071/t.fastq", c2r);
-	}
-	*/
 }

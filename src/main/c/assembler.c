@@ -511,7 +511,7 @@ char is_min_edge_ratio_reached(int per_sample_total_freq[], struct node* node) {
 	char exceeds_min_ratio = 0;
 
 	for (int i=0; i<MAX_SAMPLES; i++) {
-		printf("sample: %d, freq: %d, total_freq: %d\n", i, node->sample_frequency[i], per_sample_total_freq[i]);
+//		printf("sample: %d, freq: %d, total_freq: %d\n", i, node->sample_frequency[i], per_sample_total_freq[i]);
 
 		if ((per_sample_total_freq[i] > 0) &&
 			((double) node->sample_frequency[i] / (double) per_sample_total_freq[i] >= min_edge_ratio)) {

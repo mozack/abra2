@@ -68,7 +68,10 @@ public class Aligner {
 	}
 	
 	public void shortAlign(String input, String outputSam) throws IOException, InterruptedException {
-		String map = "bwa mem -h 1000 -O 200,200 " + reference + " " + input + " > " + outputSam;
+//		String map = "bwa mem -h 1000 -O 200,200 " + reference + " " + input + " > " + outputSam;
+		
+		
+		String map = "samtools view " + input + " |  awk '{print \"@\" $1 \"\n\" $10 \"\n+\n\" $11}' | bwa mem  ../clean_contigs.fasta - > " + outputSam;
 		runCommand(map);
 		/*
 		String sai = outputSam + ".sai";

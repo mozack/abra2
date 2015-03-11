@@ -60,6 +60,11 @@ public class ReadAdjuster {
 		
 		for (SAMRecord read : contigReader) {
 			
+			if (read.getSupplementaryAlignmentFlag() || read.getNotPrimaryAlignmentFlag()) {
+				// Skip supplemental and secondary alignments
+				continue;
+			}
+			
 			String origSamStr = read.getReadName();
 			origSamStr = origSamStr.replace(Sam2Fastq.FIELD_DELIMITER, "\t");
 			SAMRecord orig;

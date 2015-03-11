@@ -71,7 +71,7 @@ public class Aligner {
 //		String map = "bwa mem -h 1000 -O 200,200 " + reference + " " + input + " > " + outputSam;
 		
 		
-		String map = "samtools view " + input + " |  awk '{print \"@\" $1 \"\n\" $10 \"\n+\n\" $11}' | bwa mem -t " + numThreads + " " + reference + " - > " + outputSam;
+		String map = "samtools view " + input + " |  awk '{print \"@\" $1 \"\\n\" $10 \"\\n+\\n\" $11}' | bwa mem -t " + numThreads + " " + reference + " - > " + outputSam;
 		runCommand(map);
 		/*
 		String sai = outputSam + ".sai";

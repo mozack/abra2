@@ -93,6 +93,8 @@ public class Aligner {
 		*/
 		
 		String map = "bwa aln " + reference + " " + input + " -b -t " + numThreads + " -o 0 | bwa samse " + reference + " - " + input + " -n 1000 > " + outputSam;
+		
+		runCommand(map);
 	}
 	
 	public void index() throws IOException, InterruptedException {

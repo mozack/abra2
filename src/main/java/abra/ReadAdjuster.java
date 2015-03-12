@@ -4,17 +4,22 @@ import static abra.Logger.log;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import htsjdk.samtools.CigarOperator;
+import htsjdk.samtools.DefaultSAMRecordFactory;
 import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.SAMFileReader;
 import htsjdk.samtools.SAMFileWriter;
 import htsjdk.samtools.SAMFileWriterFactory;
 import htsjdk.samtools.SAMRecord;
+import htsjdk.samtools.SamInputResource;
+import htsjdk.samtools.SamReader;
+import htsjdk.samtools.SamReaderFactory;
 import htsjdk.samtools.ValidationStringency;
 
 /**
@@ -46,15 +51,22 @@ public class ReadAdjuster {
 		this.c2r = c2r;
 	}
 	
-	public void adjustReads(String alignedToContigSam, SAMFileWriter outputSam, boolean isTightAlignment,
+	public void adjustReads(InputStream alignedToContigStream, SAMFileWriter outputSam, boolean isTightAlignment,
 			String tempDir, SAMFileHeader samHeader) throws IOException {
 		
 		log("Adjusting reads.");
 		
 		RealignmentWriter writer = getRealignmentWriter(outputSam, isTightAlignment, tempDir);
 		
-		SAMFileReader contigReader = new SAMFileReader(new File(alignedToContigSam));
-		contigReader.setValidationStringency(ValidationStringency.SILENT);
+//		SAMFileReader contigReader = new SAMFileReader(new File(alignedToContigSam));
+//		contigReader.setValidationStringency(ValidationStringency.SILENT);
+		
+		final SamReader contigReader =
+                SamReaderFactory.make()
+                        .validationStringency(ValidationStringency.SILENT)
+                        .samRecordFactory(DefaultSAMRecordFactory.getInstance())
+                        .open(SamInputResource.of(alignedToContigStream));
+		
 		
 		SamStringReader samStringReader = new SamStringReader(samHeader);
 		
@@ -496,6 +508,7 @@ public class ReadAdjuster {
 		}
 	}
 
+	/*
 	public static void main(String[] args) throws Exception {
 		CompareToReference2 c2r = new CompareToReference2();
 		c2r.init("/datastore/nextgenout2/share/labs/UNCseq/tools-data/reference/hg19_hs37d5_viral.fa");
@@ -518,4 +531,5 @@ public class ReadAdjuster {
 		reader.close();
 		writer.close();
 	}
+	*/
 }

@@ -106,7 +106,12 @@ public class Aligner {
 		runCommand(convert);
 		*/
 		
-		String map = "bwa aln " + reference + " " + input + " -b -t " + numThreads + " -o 0 | bwa samse " + reference + " - " + input + " -n 1000 > " + outputSam;
+		String map = "bwa aln " + reference + " " + input + " -b -t " + numThreads + " -o 0 | bwa samse " + reference + " - " + input + " -n 1000";
+		
+		// Redirect stdout to file if no stdout consumer provided.
+		if (adjustReadsRunnable == null) {
+			map += " > " + outputSam;
+		}
 		
 		runCommand(map, adjustReadsRunnable);
 	}

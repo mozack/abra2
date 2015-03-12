@@ -80,7 +80,7 @@ public class Aligner {
 			
 			// Read piped input stream and update read queue
 			Queue<SAMRecord> queue = new ConcurrentLinkedQueue<SAMRecord>();
-			stdout = new Thread(new ReadInputStreamRunnable(threadManager, proc.getInputStream(), queue));
+			stdout = new Thread(new ReadInputStreamRunnable(threadManager, pis, queue));
 		 
 			// Process read queue content
 			stdoutConsumer.setReadQueue(queue);

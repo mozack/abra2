@@ -20,6 +20,7 @@ public class ReadInputStreamRunnable extends AbraRunnable {
 	public ReadInputStreamRunnable(ThreadManager threadManager, InputStream is, Queue<SAMRecord> queue) {
 		super(threadManager);
 		this.is = is;
+		this.queue = queue;
 	}
 
 	@Override

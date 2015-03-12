@@ -8,6 +8,8 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -64,13 +66,27 @@ public class Aligner {
 		Thread stdout = null;
 		Thread adjustThread = null;
 		ReadInputStreamRunnable isRunnable = null;
+		Thread draino = null;
+		
 		if (stdoutConsumer != null) {
-			Queue<SAMRecord> queue = new ConcurrentLinkedQueue<SAMRecord>(); 
+			
+			PipedInputStream pis = new PipedInputStream(10000000);
+			PipedOutputStream pos = new PipedOutputStream();
+			pos.connect(pis);
+			
+			// Drain stdout and write to the piped output stream
+			draino = new Thread(new Draino(proc.getInputStream(), pos));
+			draino.start();
+			
+			// Read piped input stream and update read queue
+			Queue<SAMRecord> queue = new ConcurrentLinkedQueue<SAMRecord>();
+			stdout = new Thread(new ReadInputStreamRunnable(threadManager, proc.getInputStream(), queue));
+		 
+			// Process read queue content
 			stdoutConsumer.setReadQueue(queue);
 			adjustThread = new Thread(stdoutConsumer);
-			
-			stdout = new Thread(new ReadInputStreamRunnable(threadManager, proc.getInputStream(), queue));
 			adjustThread.start();
+			
 		} else {
 			stdout = new Thread(new CommandOutputConsumer(proc, proc.getInputStream()));
 		}

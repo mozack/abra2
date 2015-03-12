@@ -33,7 +33,7 @@ public class SVEvaluator {
 			for (int i=0; i<inputSams.length; i++) {
 				svSams[i] = tempDirs[i] + "/" + "sv_aligned_to_contig.sam";
 				
-				realigner.alignToContigs(tempDirs[i], svSams[i], svCandidates);
+				realigner.alignToContigs(tempDirs[i], svSams[i], svCandidates, null, null);
 			}
 			
 			List<Map<String, Integer>> svCounts = new ArrayList<Map<String, Integer>>();

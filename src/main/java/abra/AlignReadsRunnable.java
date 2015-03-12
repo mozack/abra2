@@ -10,6 +10,7 @@ import htsjdk.samtools.SAMFileWriter;
  * 
  * @author Lisle E. Mose (lmose at unc dot edu)
  */
+@Deprecated
 public class AlignReadsRunnable extends AbraRunnable {
 		
 	private String tempDir;
@@ -35,6 +36,6 @@ public class AlignReadsRunnable extends AbraRunnable {
 
 	@Override
 	public void go() throws Exception{
-		reAligner.alignReads(tempDir, inputSam, cleanContigsFasta, c2r, finalOutputSam, alignedToContigSam);
+//		reAligner.alignReads(tempDir, inputSam, cleanContigsFasta, c2r, finalOutputSam, alignedToContigSam);
 	}
 }

@@ -37,6 +37,10 @@ public class Aligner {
 	}
 
 	private void runCommand(String cmd) throws IOException, InterruptedException {
+		runCommand(cmd, null);
+	}
+	
+	private void runCommand(String cmd, AdjustReadsStreamRunnable stdoutConsumer) throws IOException, InterruptedException {
 		
 		//String cmd = "bwa bwasw -f " + outputSam + " " + reference + " " + input;
 		System.out.println("Running: [" + cmd + "]");
@@ -50,7 +54,17 @@ public class Aligner {
 			};
 		Process proc = Runtime.getRuntime().exec(cmds);
 		
-		Thread stdout = new Thread(new CommandOutputConsumer(proc, proc.getInputStream()));
+//		Thread stdout = new Thread(new CommandOutputConsumer(proc, proc.getInputStream()));
+		
+		
+		Thread stdout = null;
+		if (stdoutConsumer != null) {
+			stdoutConsumer.setInputStream(proc.getInputStream());
+			stdout = new Thread(stdoutConsumer);
+		} else {
+			stdout = new Thread(new CommandOutputConsumer(proc, proc.getInputStream()));
+		}
+		
 		stdout.start();
 		
 		Thread stderr = new Thread(new CommandOutputConsumer(proc, proc.getErrorStream()));
@@ -67,7 +81,7 @@ public class Aligner {
 		}
 	}
 	
-	public void shortAlign(String input, String outputSam) throws IOException, InterruptedException {		
+	public void shortAlign(String input, String outputSam, AdjustReadsStreamRunnable adjustReadsRunnable) throws IOException, InterruptedException {		
 		
 		//TODO: Just consume bwa output directly?  May allow longer read names.
 //		String convert = "bwa samse " + reference + " " + sai + " " + input + " -n 1000 " +
@@ -94,7 +108,7 @@ public class Aligner {
 		
 		String map = "bwa aln " + reference + " " + input + " -b -t " + numThreads + " -o 0 | bwa samse " + reference + " - " + input + " -n 1000 > " + outputSam;
 		
-		runCommand(map);
+		runCommand(map, adjustReadsRunnable);
 	}
 	
 	public void index() throws IOException, InterruptedException {

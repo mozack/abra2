@@ -404,7 +404,7 @@ public class ReAligner {
 		
 		for (int i=0; i<inputSams.length; i++) {
 			alignedToContigsSams[i] = tempDirs[i] + "/" + "align_to_contig.sam";
-			alignReads(tempDirs[i], inputSams[i], cleanContigsFasta, c2r, writers[i], alignedToContigsSams[i]);
+			alignReads(tempDirs[i], inputSams[i], cleanContigsFasta, c2r, writers[i], alignedToContigsSams[i], samHeaders[i]);
 			
 //			AlignReadsRunnable runnable = new AlignReadsRunnable(threadManager, this, tempDirs[i], inputSams[i], cleanContigsFasta,
 //					c2r, writers[i], alignedToContigsSams[i]);
@@ -542,9 +542,10 @@ public class ReAligner {
 	}
 	
 	String alignReads(String tempDir, String inputSam, String cleanContigsFasta,
-			CompareToReference2 c2r, SAMFileWriter finalOutputSam, String alignedToContigSam) throws InterruptedException, IOException {
+			CompareToReference2 c2r, SAMFileWriter finalOutputSam, String alignedToContigSam,
+			SAMFileHeader header) throws InterruptedException, IOException {
 		log("Aligning original reads to contigs");
-		alignToContigs(tempDir, alignedToContigSam, cleanContigsFasta);
+		alignToContigs(tempDir, alignedToContigSam, cleanContigsFasta, finalOutputSam, header);
 		return alignedToContigSam;
 	}
 	
@@ -1038,7 +1039,7 @@ public class ReAligner {
 	}
 	
 	void alignToContigs(String tempDir, String alignedToContigSam,
-			String contigFasta) throws IOException, InterruptedException {
+			String contigFasta, SAMFileWriter writer, SAMFileHeader header) throws IOException, InterruptedException {
 		
 		// Convert original bam to fastq
 //		String fastq = tempDir + "/" + "original_reads.fastq.gz";
@@ -1049,9 +1050,34 @@ public class ReAligner {
 		//TODO: Manage threads more intelligently based upon number of samples being processed.
 		Aligner contigAligner = new Aligner(contigFasta, numThreads);
 		
+		AdjustReadsStreamRunnable readStreamRunnable = null;
+		
+		if (writer != null) {
+			readStreamRunnable = new AdjustReadsStreamRunnable(threadManager, readAdjuster,
+					writer, true, tempDir, header);
+		}
+			
 		// Align region fastq against assembled contigs
-		contigAligner.shortAlign(bam, alignedToContigSam);
+		contigAligner.shortAlign(bam, alignedToContigSam, readStreamRunnable);
 	}
+	
+	/*
+	private void adjustReads(String[] sortedAlignedToContig, 
+			boolean isTightAlignment, CompareToReference2 c2r) throws InterruptedException, IOException {
+		
+		Thread[] threads = new Thread[inputSams.length];
+		for (int i=0; i<inputSams.length; i++) {
+			AdjustReadsRunnable runnable = new AdjustReadsRunnable(threadManager, readAdjuster, 
+					sortedAlignedToContig[i], writers[i], isTightAlignment, tempDirs[i], samHeaders[i]);
+			threads[i] = threadManager.spawnThread(runnable);
+		}
+		
+		for (Thread thread : threads) {
+			thread.join();
+		}
+	}
+	*/
+
 	
 	static class Pair<T, Y> {
 		private T t;

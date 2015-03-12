@@ -70,7 +70,7 @@ public class Aligner {
 		
 		if (stdoutConsumer != null) {
 			
-			PipedInputStream pis = new PipedInputStream(10000000);
+			PipedInputStream pis = new PipedInputStream(1000000000);
 			PipedOutputStream pos = new PipedOutputStream();
 			pos.connect(pis);
 			

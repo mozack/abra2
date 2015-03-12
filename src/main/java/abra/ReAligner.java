@@ -1050,15 +1050,21 @@ public class ReAligner {
 		//TODO: Manage threads more intelligently based upon number of samples being processed.
 		Aligner contigAligner = new Aligner(contigFasta, numThreads);
 		
-		AdjustReadsStreamRunnable readStreamRunnable = null;
+//		AdjustReadsStreamRunnable readStreamRunnable = null;
+		AdjustReadsQueueRunnable readQueueRunnable = null;
 		
 		if (writer != null) {
-			readStreamRunnable = new AdjustReadsStreamRunnable(threadManager, readAdjuster,
-					writer, true, tempDir, header);
+//			readStreamRunnable = new AdjustReadsStreamRunnable(threadManager, readAdjuster,
+//					writer, true, tempDir, header);
+			
+			MutableBoolean isDone = new MutableBoolean();
+			
+			readQueueRunnable = new AdjustReadsQueueRunnable(threadManager, readAdjuster,
+					writer, true, tempDir, header, isDone);
 		}
 			
 		// Align region fastq against assembled contigs
-		contigAligner.shortAlign(bam, alignedToContigSam, readStreamRunnable);
+		contigAligner.shortAlign(bam, alignedToContigSam, readQueueRunnable, threadManager);
 	}
 	
 	/*

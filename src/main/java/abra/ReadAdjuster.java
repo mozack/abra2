@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 
 import htsjdk.samtools.CigarOperator;
 import htsjdk.samtools.DefaultSAMRecordFactory;
@@ -51,8 +52,8 @@ public class ReadAdjuster {
 		this.c2r = c2r;
 	}
 	
-	public void adjustReads(InputStream alignedToContigStream, SAMFileWriter outputSam, boolean isTightAlignment,
-			String tempDir, SAMFileHeader samHeader) throws IOException {
+	public void adjustReads(Queue<SAMRecord> readQueue, SAMFileWriter outputSam, boolean isTightAlignment,
+			String tempDir, SAMFileHeader samHeader, MutableBoolean isDone) throws IOException {
 		
 		log("Adjusting reads.");
 		
@@ -61,16 +62,27 @@ public class ReadAdjuster {
 //		SAMFileReader contigReader = new SAMFileReader(new File(alignedToContigSam));
 //		contigReader.setValidationStringency(ValidationStringency.SILENT);
 		
-		final SamReader contigReader =
-                SamReaderFactory.make()
-                        .validationStringency(ValidationStringency.SILENT)
-                        .samRecordFactory(DefaultSAMRecordFactory.getInstance())
-                        .open(SamInputResource.of(alignedToContigStream));
+//		final SamReader contigReader =
+//                SamReaderFactory.make()
+//                        .validationStringency(ValidationStringency.SILENT)
+//                        .samRecordFactory(DefaultSAMRecordFactory.getInstance())
+//                        .open(SamInputResource.of(alignedToContigStream));
 		
 		
 		SamStringReader samStringReader = new SamStringReader(samHeader);
+
 		
-		for (SAMRecord read : contigReader) {
+//		for (SAMRecord read : contigReader) {
+		while (!isDone.isTrue()) {
+			
+			SAMRecord read = readQueue.poll();
+			
+			if (read == null) {
+				try {
+					Thread.sleep(100);
+				} catch (InterruptedException e) {}
+				continue;
+			}
 			
 			if (read.getSupplementaryAlignmentFlag() || read.getNotPrimaryAlignmentFlag()) {
 				// Skip supplemental and secondary alignments
@@ -124,7 +136,7 @@ public class ReadAdjuster {
 			writer.addAlignment(readToOutput, orig);
 		}
 
-		contigReader.close();
+//		contigReader.close();
 		int realignedCount = writer.flush();
 		
 		log("Done adjusting reads.  Number of reads realigned: " + realignedCount);

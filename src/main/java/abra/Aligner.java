@@ -1,11 +1,15 @@
 /* Copyright 2013 University of North Carolina at Chapel Hill.  All rights reserved. */
 package abra;
 
+import htsjdk.samtools.SAMRecord;
+
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * Handles alignment for contigs and short reads.
@@ -37,10 +41,10 @@ public class Aligner {
 	}
 
 	private void runCommand(String cmd) throws IOException, InterruptedException {
-		runCommand(cmd, null);
+		runCommand(cmd, null, null);
 	}
 	
-	private void runCommand(String cmd, AdjustReadsStreamRunnable stdoutConsumer) throws IOException, InterruptedException {
+	private void runCommand(String cmd, AdjustReadsQueueRunnable stdoutConsumer, ThreadManager threadManager) throws IOException, InterruptedException {
 		
 		//String cmd = "bwa bwasw -f " + outputSam + " " + reference + " " + input;
 		System.out.println("Running: [" + cmd + "]");
@@ -58,9 +62,15 @@ public class Aligner {
 		
 		
 		Thread stdout = null;
+		Thread adjustThread = null;
+		ReadInputStreamRunnable isRunnable = null;
 		if (stdoutConsumer != null) {
-			stdoutConsumer.setInputStream(proc.getInputStream());
-			stdout = new Thread(stdoutConsumer);
+			Queue<SAMRecord> queue = new ConcurrentLinkedQueue<SAMRecord>(); 
+			stdoutConsumer.setReadQueue(queue);
+			adjustThread = new Thread(stdoutConsumer);
+			
+			stdout = new Thread(new ReadInputStreamRunnable(threadManager, proc.getInputStream(), queue));
+			adjustThread.start();
 		} else {
 			stdout = new Thread(new CommandOutputConsumer(proc, proc.getInputStream()));
 		}
@@ -72,6 +82,13 @@ public class Aligner {
 		
 		int ret = proc.waitFor();
 		
+		stdout.join();
+		if (stdoutConsumer != null) {
+			stdoutConsumer.setDone();
+			adjustThread.join();
+		}
+		stderr.join();
+		
 		long e = System.currentTimeMillis();
 		
 		System.out.println("BWA time: " + (e-s)/1000 + " seconds.");
@@ -81,7 +98,7 @@ public class Aligner {
 		}
 	}
 	
-	public void shortAlign(String input, String outputSam, AdjustReadsStreamRunnable adjustReadsRunnable) throws IOException, InterruptedException {		
+	public void shortAlign(String input, String outputSam, AdjustReadsQueueRunnable adjustReadsRunnable, ThreadManager threadManager) throws IOException, InterruptedException {		
 		
 		//TODO: Just consume bwa output directly?  May allow longer read names.
 //		String convert = "bwa samse " + reference + " " + sai + " " + input + " -n 1000 " +
@@ -113,7 +130,7 @@ public class Aligner {
 			map += " > " + outputSam;
 		}
 		
-		runCommand(map, adjustReadsRunnable);
+		runCommand(map, adjustReadsRunnable, threadManager);
 	}
 	
 	public void index() throws IOException, InterruptedException {

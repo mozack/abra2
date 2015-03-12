@@ -211,7 +211,7 @@ public class ReAligner {
 			clock.start();
 			log("Adjust reads");
 			
-			adjustReads(alignedSams, true, c2r);
+//			adjustReads(alignedSams, true, c2r);
 			
 			for (SAMFileWriter writer : this.writers) {
 				writer.close();

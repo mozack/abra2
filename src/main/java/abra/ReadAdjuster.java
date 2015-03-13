@@ -71,9 +71,14 @@ public class ReadAdjuster {
 		
 		SamStringReader samStringReader = new SamStringReader(samHeader);
 
+		int count = 1;
 		
 //		for (SAMRecord read : contigReader) {
 		while (!isDone.isTrue() && !readQueue.isEmpty()) {
+			
+			if ((count++ % 1000000) == 0) {
+				System.out.println("Processed: " + count + " reads in read adjuster.");
+			}
 			
 			SAMRecord read = readQueue.poll();
 			

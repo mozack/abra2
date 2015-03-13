@@ -34,11 +34,16 @@ public class ReadInputStreamRunnable extends AbraRunnable {
 	
 		
 		for (SAMRecord read : reader) {
+			// TODO: Don't let queue get too big.
+			queue.add(read);
+			/*
 			if (queue.size() < MAX_QUEUE_SIZE) {
 				queue.add(read);
 			} else {
+				// BUG!!!!
 				Thread.sleep(1000);
 			}
+			*/
 		}
 		
 		reader.close();

@@ -73,7 +73,7 @@ public class ReadAdjuster {
 
 		
 //		for (SAMRecord read : contigReader) {
-		while (!isDone.isTrue()) {
+		while (!isDone.isTrue() && !readQueue.isEmpty()) {
 			
 			SAMRecord read = readQueue.poll();
 			

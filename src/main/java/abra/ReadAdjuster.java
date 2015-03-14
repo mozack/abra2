@@ -77,10 +77,16 @@ public class ReadAdjuster {
 		int count = 1;
 		
 //		for (SAMRecord read : contigReader) {
+		
+		long s = System.currentTimeMillis();
+		long e = 0;
+		
 		while (!isDone.isTrue() || !readQueue.isEmpty()) {
 			
 			if ((count++ % 100000) == 0) {
-				System.out.println("Processed: " + count + " reads in read adjuster.");
+				e = System.currentTimeMillis();
+				System.out.println("Processed: " + count + " reads in read adjuster.  Elapsed seconds: " + (e-s)/1000);
+				s = System.currentTimeMillis();
 			}
 			
 			SAMRecord read = readQueue.poll();

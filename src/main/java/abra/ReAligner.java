@@ -149,10 +149,10 @@ public class ReAligner {
 		
 		SAMFileWriterFactory writerFactory = new SAMFileWriterFactory();
 		
-		writerFactory.setUseAsyncIo(true);
-		writerFactory.setAsyncOutputBufferSize(500000);
+//		writerFactory.setUseAsyncIo(true);
+//		writerFactory.setAsyncOutputBufferSize(500000);
 		
-//		writerFactory.setUseAsyncIo(false);
+		writerFactory.setUseAsyncIo(false);
 		
 		writers = new SAMFileWriter[inputSams.length];
 		

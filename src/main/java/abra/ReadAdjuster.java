@@ -83,6 +83,7 @@ public class ReadAdjuster {
 			SAMRecord read = readQueue.poll();
 			
 			if (read == null) {
+				System.out.println("RA: Waiting for reads");
 				try {
 					Thread.sleep(100);
 				} catch (InterruptedException e) {}

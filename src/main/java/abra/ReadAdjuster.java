@@ -17,6 +17,7 @@ import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.SAMFileReader;
 import htsjdk.samtools.SAMFileWriter;
 import htsjdk.samtools.SAMFileWriterFactory;
+import htsjdk.samtools.SAMLineParser;
 import htsjdk.samtools.SAMRecord;
 import htsjdk.samtools.SamInputResource;
 import htsjdk.samtools.SamReader;
@@ -68,8 +69,10 @@ public class ReadAdjuster {
 //                        .samRecordFactory(DefaultSAMRecordFactory.getInstance())
 //                        .open(SamInputResource.of(alignedToContigStream));
 		
-		
-		SamStringReader samStringReader = new SamStringReader(samHeader);
+		SAMLineParser parser = new SAMLineParser(new DefaultSAMRecordFactory(),
+                ValidationStringency.SILENT, samHeader,
+                null, null);
+//		SamStringReader samStringReader = new SamStringReader(samHeader);
 
 		int count = 1;
 		
@@ -99,7 +102,8 @@ public class ReadAdjuster {
 			origSamStr = origSamStr.replace(Sam2Fastq.FIELD_DELIMITER, "\t");
 			SAMRecord orig;
 			try {
-				orig = samStringReader.getRead(origSamStr);
+				orig = parser.parseLine(origSamStr);
+//				orig = samStringReader.getRead(origSamStr);
 			} catch (RuntimeException e) {
 				System.out.println("Error processing: [" + origSamStr + "]");
 				System.out.println("Contig read: [" + read.getSAMString() + "]");
@@ -129,7 +133,7 @@ public class ReadAdjuster {
 				
 				int totalHits = numBestHits + numSubOptimalHits;
 				
-				List<HitInfo> bestHits = getBestHits(contigReadStr, samStringReader, read, matchingString);
+				List<HitInfo> bestHits = getBestHits(contigReadStr, parser, read, matchingString);
 				
 				Map<String, SAMRecord> outputReadAlignmentInfo = convertBestHitsToAlignmentInfo(bestHits, origRead);
 				
@@ -274,13 +278,14 @@ public class ReadAdjuster {
 		return outputReadAlignmentInfo;
 	}
 	
-	private List<HitInfo> getBestHits(String contigReadStr, SamStringReader samStringReader,
+	private List<HitInfo> getBestHits(String contigReadStr, SAMLineParser parser,
 			SAMRecord read, String matchingString) {
 		List<HitInfo> bestHits = new ArrayList<HitInfo>();
 
 		contigReadStr = contigReadStr.substring(contigReadStr.indexOf('~')+1);
 		contigReadStr = contigReadStr.replace('~', '\t');
-		SAMRecord contigRead = samStringReader.getRead(contigReadStr);
+//		SAMRecord contigRead = samStringReader.getRead(contigReadStr);
+		SAMRecord contigRead = parser.parseLine(contigReadStr);
 		
 		int bestMismatches = SAMRecordUtils.getIntAttribute(read, "XM");
 		
@@ -325,7 +330,8 @@ public class ReadAdjuster {
 					if ((cigar.equals(matchingString)) && (mismatches == bestMismatches)) {
 						altContigReadStr = altContigReadStr.substring(altContigReadStr.indexOf('~')+1);
 						altContigReadStr = altContigReadStr.replace('~', '\t');
-						contigRead = samStringReader.getRead(altContigReadStr);
+//						contigRead = samStringReader.getRead(altContigReadStr);
+						contigRead = parser.parseLine(altContigReadStr);
 						
 						// Filter this hit if it aligns past the end of the contig
 						// Must use cigar length instead of read length, because the

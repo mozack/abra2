@@ -12,7 +12,7 @@ import java.util.Queue;
 
 public class ReadInputStreamRunnable extends AbraRunnable {
 
-	private static final int MAX_QUEUE_SIZE = 1000000;
+	private static final int MAX_QUEUE_SIZE = 600000;
 	
 	private InputStream is;
 	private Queue<SAMRecord> queue;
@@ -34,16 +34,11 @@ public class ReadInputStreamRunnable extends AbraRunnable {
 	
 		
 		for (SAMRecord read : reader) {
-			// TODO: Don't let queue get too big.
-			queue.add(read);
-			/*
-			if (queue.size() < MAX_QUEUE_SIZE) {
-				queue.add(read);
-			} else {
-				// BUG!!!!
-				Thread.sleep(1000);
+			while (queue.size() > MAX_QUEUE_SIZE) {
+				System.out.println("Queue too big");
+				Thread.sleep(100);
 			}
-			*/
+			queue.add(read);
 		}
 		
 		reader.close();

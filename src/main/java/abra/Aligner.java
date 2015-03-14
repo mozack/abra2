@@ -79,7 +79,7 @@ public class Aligner {
 			draino.start();
 			
 			// Read piped input stream and update read queue
-			Queue<SAMRecord> queue = new ConcurrentLinkedQueue<SAMRecord>();
+			Queue<SAMRecord> queue = new ConcurrentQueue<SAMRecord>();
 			stdout = new Thread(new ReadInputStreamRunnable(threadManager, pis, queue));
 		 
 			// Process read queue content

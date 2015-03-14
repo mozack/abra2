@@ -95,7 +95,7 @@ public class ReadAdjuster {
 				System.out.println("RA: Waiting for reads");
 				try {
 					Thread.sleep(100);
-				} catch (InterruptedException e) {}
+				} catch (InterruptedException except) {}
 				continue;
 			}
 			
@@ -110,11 +110,11 @@ public class ReadAdjuster {
 			try {
 				orig = parser.parseLine(origSamStr);
 //				orig = samStringReader.getRead(origSamStr);
-			} catch (RuntimeException e) {
+			} catch (RuntimeException exception) {
 				System.out.println("Error processing: [" + origSamStr + "]");
 				System.out.println("Contig read: [" + read.getSAMString() + "]");
-				e.printStackTrace();
-				throw e;
+				exception.printStackTrace();
+				throw exception;
 			}
 			orig.setHeader(samHeader);
 			

@@ -1,20 +1,22 @@
 /* Copyright 2013 University of North Carolina at Chapel Hill.  All rights reserved. */
 package abra;
 
+import java.util.List;
+
 /**
  * Thread entry point for region specific processing.
  * 
  * @author Lisle E. Mose (lmose at unc dot edu)
  */
 public class ReAlignerRunnable extends AbraRunnable {
-	private Feature region;
+	private List<Feature> regions;
 	private ReAligner reAligner;
 	private long createTime;
 	
-	public ReAlignerRunnable(ThreadManager threadManager, ReAligner reAligner, Feature region) {
+	public ReAlignerRunnable(ThreadManager threadManager, ReAligner reAligner, List<Feature> regions) {
 		super(threadManager);
 		createTime = System.nanoTime();
-		this.region = region;
+		this.regions = regions;
 		this.reAligner = reAligner;
 	}
 	
@@ -26,7 +28,9 @@ public class ReAlignerRunnable extends AbraRunnable {
 			System.out.println("ReAlignerRunnable spawn_time: " + (s-spawnStartTime)/1000000);
 		}
 		
-		reAligner.processRegion(region);
+		for (Feature region : regions) {
+			reAligner.processRegion(region);
+		}
 		long e = System.nanoTime();
 		
 		System.out.println("ReAlignerRunnable elapsed: " + (e-s)/1000000);

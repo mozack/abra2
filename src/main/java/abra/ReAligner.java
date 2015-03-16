@@ -175,9 +175,22 @@ public class ReAligner {
 		
 		log("Iterating over regions");
 		
+		List<Feature> regionsToProcess = new ArrayList<Feature>();
+		
 		for (Feature region : regions) {
 			log("Processing region: " + region.getDescriptor());
-			spawnRegionThread(region, null);
+			
+			regionsToProcess.add(region);
+			
+			if (regionsToProcess.size() >= 100) {
+				spawnRegionThread(new ArrayList<Feature>(regionsToProcess), null);
+				regionsToProcess.clear();
+			}
+		}
+		
+		if (regionsToProcess.size() > 0) {
+			spawnRegionThread(new ArrayList<Feature>(regionsToProcess), null);
+			regionsToProcess.clear();			
 		}
 		
 		log("Waiting for all threads to complete");
@@ -578,8 +591,8 @@ public class ReAligner {
 		}
 	}
 	
-	private void spawnRegionThread(Feature region, String inputSam) throws InterruptedException {
-		ReAlignerRunnable thread = new ReAlignerRunnable(threadManager, this, region);
+	private void spawnRegionThread(List<Feature> regions, String inputSam) throws InterruptedException {
+		ReAlignerRunnable thread = new ReAlignerRunnable(threadManager, this, regions);
 		threadManager.spawnThread(thread);
 	}
 	

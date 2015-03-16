@@ -8,9 +8,6 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.PipedInputStream;
-import java.io.PipedOutputStream;
-import java.util.Queue;
 
 /**
  * Handles alignment for contigs and short reads.
@@ -22,7 +19,6 @@ public class Aligner {
 	private String reference;
 	private int numThreads;
 	private static final int MAX_SMALL_REFERENCE_LINES = 1000000;
-	private static final int MAX_BYTES_TO_BUFFER = 1000000;
 	
 	public Aligner(String reference, int numThreads) {
 		this.reference = reference;
@@ -43,12 +39,11 @@ public class Aligner {
 	}
 
 	private void runCommand(String cmd) throws IOException, InterruptedException {
-		runCommand(cmd, null, null);
+		runCommand(cmd, null);
 	}
 	
-	private void runCommand(String cmd, AdjustReadsQueueRunnable stdoutConsumer, ThreadManager threadManager) throws IOException, InterruptedException {
+	private void runCommand(String cmd, StdoutHandler stdoutHandler) throws IOException, InterruptedException {
 		
-		//String cmd = "bwa bwasw -f " + outputSam + " " + reference + " " + input;
 		System.out.println("Running: [" + cmd + "]");
 		
 		long s = System.currentTimeMillis();
@@ -59,50 +54,27 @@ public class Aligner {
 				cmd
 			};
 		Process proc = Runtime.getRuntime().exec(cmds);
-		
-//		Thread stdout = new Thread(new CommandOutputConsumer(proc, proc.getInputStream()));
-		
-		
+
 		Thread stdout = null;
-		Thread adjustThread = null;
-		ReadInputStreamRunnable isRunnable = null;
-		Thread draino = null;
 		
-		if (stdoutConsumer != null) {
-			
-			PipedInputStream pis = new PipedInputStream(MAX_BYTES_TO_BUFFER);
-			PipedOutputStream pos = new PipedOutputStream();
-			pos.connect(pis);
-			
-			// Drain stdout and write to the piped output stream
-			draino = new Thread(new Draino(proc.getInputStream(), pos));
-			draino.start();
-			
-			// Read piped input stream and update read queue
-			Queue<SAMRecord> queue = new ConcurrentQueue<SAMRecord>();
-			stdout = new Thread(new ReadInputStreamRunnable(threadManager, pis, queue));
-		 
-			// Process read queue content
-			stdoutConsumer.setReadQueue(queue);
-			adjustThread = new Thread(stdoutConsumer);
-			adjustThread.start();
-			
+		if (stdoutHandler != null) {
+			stdoutHandler.process(proc);
 		} else {
 			stdout = new Thread(new CommandOutputConsumer(proc, proc.getInputStream()));
+			stdout.start();
 		}
-		
-		stdout.start();
 		
 		Thread stderr = new Thread(new CommandOutputConsumer(proc, proc.getErrorStream()));
 		stderr.start();
 		
 		int ret = proc.waitFor();
 		
-		stdout.join();
-		if (stdoutConsumer != null) {
-			stdoutConsumer.setDone();
-			adjustThread.join();
+		if (stdoutHandler != null) {
+			stdoutHandler.postProcess();
+		} else {
+			stdout.join();
 		}
+		
 		stderr.join();
 		
 		long e = System.currentTimeMillis();
@@ -114,16 +86,16 @@ public class Aligner {
 		}
 	}
 	
-	public void shortAlign(String input, String outputSam, AdjustReadsQueueRunnable adjustReadsRunnable, ThreadManager threadManager) throws IOException, InterruptedException {		
+	public void shortAlign(String input, String outputSam, StdoutHandler stdoutHandler) throws IOException, InterruptedException {		
 		
 		String map = "bwa aln " + reference + " " + input + " -b -t " + numThreads + " -o 0 | bwa samse " + reference + " - " + input + " -n 1000";
 		
 		// Redirect stdout to file if no stdout consumer provided.
-		if (adjustReadsRunnable == null) {
+		if (stdoutHandler == null) {
 			map += " > " + outputSam;
 		}
 		
-		runCommand(map, adjustReadsRunnable, threadManager);
+		runCommand(map, stdoutHandler);
 	}
 	
 	public void index() throws IOException, InterruptedException {

@@ -7,24 +7,23 @@ import htsjdk.samtools.SamReader;
 import htsjdk.samtools.SamReaderFactory;
 import htsjdk.samtools.ValidationStringency;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.Queue;
 
-public class ReadInputStreamRunnable extends AbraRunnable {
+public class ReadInputStreamRunnable implements Runnable {
 
 	private static final int MAX_QUEUE_SIZE = 600000;
 	
 	private InputStream is;
 	private Queue<SAMRecord> queue;
 	
-	public ReadInputStreamRunnable(ThreadManager threadManager, InputStream is, Queue<SAMRecord> queue) {
-		super(threadManager);
+	public ReadInputStreamRunnable(InputStream is, Queue<SAMRecord> queue) {
 		this.is = is;
 		this.queue = queue;
 	}
 
-	@Override
-	public void go() throws Exception {
+	public void run() {
 		
 		final SamReader reader =
 		        SamReaderFactory.make()
@@ -36,11 +35,18 @@ public class ReadInputStreamRunnable extends AbraRunnable {
 		for (SAMRecord read : reader) {
 			while (queue.size() > MAX_QUEUE_SIZE) {
 				System.out.println("Queue too big");
-				Thread.sleep(100);
+				try {
+					Thread.sleep(100);
+				} catch (InterruptedException e) { }
 			}
 			queue.add(read);
 		}
 		
-		reader.close();
+		try {
+			reader.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+			throw new RuntimeException(e);
+		}
 	}	
 }

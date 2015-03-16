@@ -1046,30 +1046,24 @@ public class ReAligner {
 	void alignToContigs(String tempDir, String alignedToContigSam,
 			String contigFasta, SAMFileWriter writer, SAMFileHeader header) throws IOException, InterruptedException {
 		
-		// Convert original bam to fastq
-//		String fastq = tempDir + "/" + "original_reads.fastq.gz";
-//		String fastq = getPreprocessedFastq(tempDir);
-		
 		String bam = getPreprocessedBam(tempDir);
 		
 		//TODO: Manage threads more intelligently based upon number of samples being processed.
 		Aligner contigAligner = new Aligner(contigFasta, numThreads);
 		
-//		AdjustReadsStreamRunnable readStreamRunnable = null;
-		AdjustReadsQueueRunnable readQueueRunnable = null;
+		AlignerStdoutHandler stdoutHandler = null;
 		
-		if (writer != null) {
-//			readStreamRunnable = new AdjustReadsStreamRunnable(threadManager, readAdjuster,
-//					writer, true, tempDir, header);
-			
+		if (writer != null) {			
 			MutableBoolean isDone = new MutableBoolean();
 			
-			readQueueRunnable = new AdjustReadsQueueRunnable(threadManager, readAdjuster,
+			AdjustReadsQueueRunnable readQueueRunnable = new AdjustReadsQueueRunnable(threadManager, readAdjuster,
 					writer, true, tempDir, header, isDone);
+			
+			stdoutHandler = new AlignerStdoutHandler(readQueueRunnable);
 		}
 			
 		// Align region fastq against assembled contigs
-		contigAligner.shortAlign(bam, alignedToContigSam, readQueueRunnable, threadManager);
+		contigAligner.shortAlign(bam, alignedToContigSam, stdoutHandler);
 	}
 	
 	/*

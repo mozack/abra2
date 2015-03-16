@@ -182,7 +182,7 @@ public class ReAligner {
 			
 			regionsToProcess.add(region);
 			
-			if (regionsToProcess.size() >= 100) {
+			if (regionsToProcess.size() >= 1) {
 				spawnRegionThread(new ArrayList<Feature>(regionsToProcess), null);
 				regionsToProcess.clear();
 			}
@@ -447,6 +447,7 @@ public class ReAligner {
 		return numIndelBases;
 	}
 
+	/*
 	private void adjustReads(String[] sortedAlignedToContig, 
 			boolean isTightAlignment, CompareToReference2 c2r) throws InterruptedException, IOException {
 		
@@ -461,6 +462,7 @@ public class ReAligner {
 			thread.join();
 		}
 	}
+	*/
 	
 	private void discardMisalignedContigs(String inputSam, String outputSam) {
 		SAMFileReader reader = new SAMFileReader(new File(inputSam));

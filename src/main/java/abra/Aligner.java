@@ -11,7 +11,6 @@ import java.io.InputStreamReader;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * Handles alignment for contigs and short reads.
@@ -23,6 +22,7 @@ public class Aligner {
 	private String reference;
 	private int numThreads;
 	private static final int MAX_SMALL_REFERENCE_LINES = 1000000;
+	private static final int MAX_BYTES_TO_BUFFER = 1000000;
 	
 	public Aligner(String reference, int numThreads) {
 		this.reference = reference;
@@ -70,7 +70,7 @@ public class Aligner {
 		
 		if (stdoutConsumer != null) {
 			
-			PipedInputStream pis = new PipedInputStream(1000000000);
+			PipedInputStream pis = new PipedInputStream(MAX_BYTES_TO_BUFFER);
 			PipedOutputStream pos = new PipedOutputStream();
 			pos.connect(pis);
 			
@@ -115,29 +115,6 @@ public class Aligner {
 	}
 	
 	public void shortAlign(String input, String outputSam, AdjustReadsQueueRunnable adjustReadsRunnable, ThreadManager threadManager) throws IOException, InterruptedException {		
-		
-		//TODO: Just consume bwa output directly?  May allow longer read names.
-//		String convert = "bwa samse " + reference + " " + sai + " " + input + " -n 1000 " +
-//				"| samtools view -bS -F 0x04 -o " + outputSam + " -";
-		
-//		String convert = "bwa samse " + reference + " " + sai + " " + input + " -n 1000 " +
-//				"| samtools view -bS -o " + outputSam + " -";
-
-		
-//		String map = "samtools view " + input + " |  awk '{print \"@\" $1 \"\\n\" $10 \"\\n+\\n\" $11}' | bwa mem -t " + numThreads + " " + reference + " - > " + outputSam;
-//		runCommand(map);
-
-		/*
-		String sai = outputSam + ".sai";
-		
-		String aln = "bwa aln " + reference + " " + input + " -f " + sai + " -b -t " + numThreads + " -o 0";
-		
-		runCommand(aln);
-		
-		String convert = "bwa samse " + reference + " " + sai + " " + input + " -n 1000 > " + outputSam;
-		
-		runCommand(convert);
-		*/
 		
 		String map = "bwa aln " + reference + " " + input + " -b -t " + numThreads + " -o 0 | bwa samse " + reference + " - " + input + " -n 1000";
 		

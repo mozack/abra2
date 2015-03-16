@@ -6,6 +6,7 @@ import java.util.Map;
 
 import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.SAMFileReader;
+import htsjdk.samtools.SAMLineParser;
 import htsjdk.samtools.ValidationStringency;
 import htsjdk.samtools.SAMRecord;
 
@@ -15,11 +16,11 @@ public class SVReadCounter {
 	
 	private static final int MAX_EDIT_DISTANCE = 5;
 	
-	private SamStringReader samStringReader; 
+	private SAMLineParser parser;
 
 	public Map<String, Integer> countReadsSupportingBreakpoints(String svSam, int readLength, SAMFileHeader samHeader) {
 		
-		samStringReader = new SamStringReader(samHeader);
+		parser = new SAMLineParser(samHeader);
 		
 		SAMFileReader reader = new SAMFileReader(new File(svSam));
 		reader.setValidationStringency(ValidationStringency.SILENT);
@@ -70,7 +71,7 @@ public class SVReadCounter {
 		origSamStr = origSamStr.replace(Sam2Fastq.FIELD_DELIMITER, "\t");
 		SAMRecord orig;
 		try {
-			orig = samStringReader.getRead(origSamStr);
+			orig = parser.parseLine(origSamStr);
 		} catch (RuntimeException e) {
 			System.out.println("Error processing: [" + origSamStr + "]");
 			System.out.println("Contig read: [" + read.getSAMString() + "]");

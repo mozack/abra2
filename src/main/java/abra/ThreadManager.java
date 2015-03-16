@@ -24,7 +24,7 @@ public class ThreadManager {
 			waitForAvailableThread();
 		} catch (InterruptedException e) {}
 		
-		runnable.setSpawnStartTime(System.currentTimeMillis());
+		runnable.setSpawnStartTime(System.nanoTime());
 		addThread(runnable);
 		Thread thread = new Thread(runnable);
 		thread.start();

@@ -9,9 +9,11 @@ package abra;
 public class ReAlignerRunnable extends AbraRunnable {
 	private Feature region;
 	private ReAligner reAligner;
+	private long createTime;
 	
 	public ReAlignerRunnable(ThreadManager threadManager, ReAligner reAligner, Feature region) {
 		super(threadManager);
+		createTime = System.currentTimeMillis();
 		this.region = region;
 		this.reAligner = reAligner;
 	}
@@ -19,7 +21,12 @@ public class ReAlignerRunnable extends AbraRunnable {
 	@Override
 	public void go() throws Exception {
 		long s = System.currentTimeMillis();
-		reAligner.processRegion(region);	
+		synchronized(AbraRunnable.class) {
+			System.out.println("ReAlignerRunnable time_to_go: " + (s-createTime));
+			System.out.println("ReAlignerRunnable spawn_time: " + (s-spawnStartTime));
+		}
+		
+		reAligner.processRegion(region);
 		long e = System.currentTimeMillis();
 		
 		System.out.println("ReAlignerRunnable elapsed: " + (e-s));

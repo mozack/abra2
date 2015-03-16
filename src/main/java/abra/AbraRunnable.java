@@ -7,6 +7,7 @@ package abra;
  */
 public abstract class AbraRunnable implements Runnable {
 
+	long spawnStartTime;
 	private ThreadManager threadManager;
 	
 	public AbraRunnable(ThreadManager threadManager) {
@@ -23,6 +24,10 @@ public abstract class AbraRunnable implements Runnable {
 		} finally {
 			threadManager.removeThread(this);
 		}
+	}
+	
+	public void setSpawnStartTime(long spawnStartTime) {
+		this.spawnStartTime = spawnStartTime;
 	}
 	
 	public abstract void go() throws Exception;

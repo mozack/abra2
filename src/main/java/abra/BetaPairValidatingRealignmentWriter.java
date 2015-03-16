@@ -6,10 +6,13 @@ import java.io.File;
 import htsjdk.samtools.MyReader;
 import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.SAMFileHeader.SortOrder;
+import htsjdk.samtools.DefaultSAMRecordFactory;
 import htsjdk.samtools.SAMFileReader;
 import htsjdk.samtools.SAMFileWriter;
 import htsjdk.samtools.SAMFileWriterFactory;
+import htsjdk.samtools.SAMLineParser;
 import htsjdk.samtools.SAMRecord;
+import htsjdk.samtools.ValidationStringency;
 
 /**
  * Manages writing paired reads to final output.  Reads that were previously in
@@ -30,7 +33,7 @@ public class BetaPairValidatingRealignmentWriter implements RealignmentWriter {
 	
 	private String candidatesSam;
 	private SAMFileWriter candidatesSamWriter;
-	private SamStringReader samStringReader;
+	private SAMLineParser parser;
 	
 	private CompareToReference2 c2r;
 	private SAMFileHeader header;
@@ -43,7 +46,9 @@ public class BetaPairValidatingRealignmentWriter implements RealignmentWriter {
 		header = writer.getFileHeader().clone();
 		header.setSortOrder(SortOrder.queryname);
 		
-		samStringReader = new SamStringReader(header);
+		parser = new SAMLineParser(new DefaultSAMRecordFactory(),
+                ValidationStringency.SILENT, header,
+                null, null);
 		
 		candidatesSam = tempDir + "/candidates.bam";
 		
@@ -290,7 +295,7 @@ public class BetaPairValidatingRealignmentWriter implements RealignmentWriter {
 		
 		if (read != null) {
 			String origStr = (String) read.getAttribute("YG");
-			orig = samStringReader.getRead(origStr);
+			orig = parser.parseLine(origStr);
 			read.setAttribute("YG", null);
 		}
 		

@@ -111,8 +111,13 @@ public class Sam2Fastq {
     				// Eligible for realignment, output FASTQ record
 //	    			output1.write(samReadToFastqRecord(read, c2r));
 	    			
-	    			
-	    			toProcessWriter.addAlignment(samReadToUnmappedSam(read));
+	    			try {
+	    				toProcessWriter.addAlignment(samReadToUnmappedSam(read));
+	    			} catch (IllegalArgumentException e) {
+	    				System.out.println("Error on: " + read.getSAMString());
+	    				e.printStackTrace();
+	    				throw e;
+	    			}
     			} else if (writer != null) {
     				// Either xactly matches reference or failed vendor QC or low mapq, so
     				// output directly to final BAM

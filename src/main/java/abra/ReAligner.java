@@ -437,8 +437,6 @@ public class ReAligner {
 				(contig.getAlignmentEnd() <= regionStop)) {
 			
 				outputReadsBam.addAlignment(contig);
-			} else {
-				System.out.println("Discarding: " + contig);
 			}
 		}
 		

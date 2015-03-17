@@ -629,7 +629,7 @@ void prune_low_frequency_edges(sparse_hash_map<const char*, struct node*, my_has
 		}
 	}
 
-	printf("Pruned %ld edges\n", removed_edge_count);
+//	printf("Pruned %ld edges\n", removed_edge_count);
 }
 
 
@@ -647,7 +647,7 @@ void prune_graph(sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nod
 		}
 	}
 
-	printf("Remaining nodes after pruning step 1: %d\n", nodes->size());
+//	printf("Remaining nodes after pruning step 1: %d\n", nodes->size());
 
 	// Now go back through and ensure that each node reaches minimum frequency threshold.
 	int freq = min_node_freq;
@@ -657,7 +657,7 @@ void prune_graph(sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nod
 
 		if (increase_freq > 0) {
 			freq = freq + increase_freq;
-			printf("Increased mnf to: %d for nodes size: %d\n", freq, nodes->size());
+//			printf("Increased mnf to: %d for nodes size: %d\n", freq, nodes->size());
 		}
 	}
 
@@ -674,7 +674,7 @@ void prune_graph(sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nod
 		}
 	}
 
-	printf("Remaining nodes after pruning step 2: %d\n", nodes->size());
+//	printf("Remaining nodes after pruning step 2: %d\n", nodes->size());
 
 	prune_low_frequency_edges(nodes);
 
@@ -690,7 +690,7 @@ void prune_graph(sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nod
 		}
 	}
 
-	printf("Remaining nodes after edge pruning: %d\n", nodes->size());
+//	printf("Remaining nodes after edge pruning: %d\n", nodes->size());
 }
 
 void print_kmer(struct node* node) {
@@ -767,7 +767,7 @@ struct linked_node* identify_root_nodes(sparse_hash_map<const char*, struct node
 //		printf("\n");
 	}
 
-	printf("num root nodes: %d\n", count);
+//	printf("num root nodes: %d\n", count);
 
 	return root_nodes;
 }
@@ -867,9 +867,9 @@ int build_contigs(
 		struct contig* contig = contigs.top();
 
 		if (is_node_visited(contig, contig->curr_node)) {
-			printf("Repeat node: ");
-			print_kmer(contig->curr_node);
-			printf("\n");
+//			printf("Repeat node: ");
+//			print_kmer(contig->curr_node);
+//			printf("\n");
 			// We've encountered a repeat
 			contig->is_repeat = 1;
 			if ((!shadow_mode) && (!stop_on_repeat)) {
@@ -1143,7 +1143,7 @@ extern "C"
 	min_base_quality = j_min_base_quality;
 	min_edge_ratio = j_min_edge_ratio;
 
-	printf("Abra JNI entry point v0.87\n");
+	printf("Abra JNI entry point v0.88\n");
 
 	printf("input len: %s : %d\n", prefix, strlen(input));
 	printf("output: %s\n", output);

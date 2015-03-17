@@ -29,22 +29,27 @@ public class SVEvaluator {
 			aligner.index();
 			
 			String[] svSams = new String[inputSams.length];
+
+			List<Map<String, Integer>> svCounts = new ArrayList<Map<String, Integer>>();
+			Set<String> breakpointIds = new HashSet<String>();
 			
 			for (int i=0; i<inputSams.length; i++) {
 				svSams[i] = tempDirs[i] + "/" + "sv_aligned_to_contig.sam";
 				
-				realigner.alignToContigs(tempDirs[i], svSams[i], svCandidates, null, null);
+				SVReadCounter svReadCounter = realigner.alignToSVContigs(tempDirs[i], svSams[i], svCandidates, null, samHeaders[i]);
+				svCounts.add(svReadCounter.getCounts());
+				breakpointIds.addAll(svReadCounter.getCounts().keySet());
+//				realigner.alignToContigs(tempDirs[i], svSams[i], svCandidates, null, null);
 			}
 			
-			List<Map<String, Integer>> svCounts = new ArrayList<Map<String, Integer>>();
-			Set<String> breakpointIds = new HashSet<String>();
-			
+			/*
 			for (int i=0; i<svSams.length; i++) {
 				SVReadCounter svReadCounter = new SVReadCounter();
 				Map<String, Integer> counts = svReadCounter.countReadsSupportingBreakpoints(svSams[i], readLength, samHeaders[i]);
 				svCounts.add(counts);
 				breakpointIds.addAll(counts.keySet());
 			}
+			*/
 			
 			BufferedWriter writer = new BufferedWriter(new FileWriter(structuralVariantFile, false));
 			for (String breakpointId : breakpointIds) {

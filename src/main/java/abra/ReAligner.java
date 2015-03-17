@@ -1042,29 +1042,42 @@ public class ReAligner {
 	private String getPreprocessedBam(String tempDir) {
 		return tempDir + "/" + "original_reads.bam";
 	}
+
+	SVReadCounter alignToSVContigs(String tempDir, String alignedToContigSam,
+			String contigFasta, SAMFileWriter writer, SAMFileHeader header) throws IOException, InterruptedException {
+		
+		SVAlignerStdoutHandler stdoutHandler = new SVAlignerStdoutHandler(readLength, header);
+
+		alignToContigs(tempDir, alignedToContigSam, contigFasta, writer, header, stdoutHandler);
+		
+		return stdoutHandler.getCounter();
+	}
 	
 	void alignToContigs(String tempDir, String alignedToContigSam,
 			String contigFasta, SAMFileWriter writer, SAMFileHeader header) throws IOException, InterruptedException {
 		
+		MutableBoolean isDone = new MutableBoolean();
+		
+		AdjustReadsQueueRunnable readQueueRunnable = new AdjustReadsQueueRunnable(threadManager, readAdjuster,
+				writer, true, tempDir, header, isDone);
+		
+		AlignerStdoutHandler stdoutHandler = new AlignerStdoutHandler(readQueueRunnable);
+
+		alignToContigs(tempDir, alignedToContigSam, contigFasta, writer, header, stdoutHandler);
+	}
+	
+	void alignToContigs(String tempDir, String alignedToContigSam,
+			String contigFasta, SAMFileWriter writer, SAMFileHeader header, StdoutHandler stdoutHandler) throws IOException, InterruptedException {
+		
 		String bam = getPreprocessedBam(tempDir);
 		
-		//TODO: Manage threads more intelligently based upon number of samples being processed.
 		Aligner contigAligner = new Aligner(contigFasta, numThreads);
 		
-		AlignerStdoutHandler stdoutHandler = null;
-		
-		if (writer != null) {			
-			MutableBoolean isDone = new MutableBoolean();
-			
-			AdjustReadsQueueRunnable readQueueRunnable = new AdjustReadsQueueRunnable(threadManager, readAdjuster,
-					writer, true, tempDir, header, isDone);
-			
-			stdoutHandler = new AlignerStdoutHandler(readQueueRunnable);
-		}
-			
 		// Align region fastq against assembled contigs
 		contigAligner.shortAlign(bam, alignedToContigSam, stdoutHandler);
 	}
+
+	
 	
 	/*
 	private void adjustReads(String[] sortedAlignedToContig, 

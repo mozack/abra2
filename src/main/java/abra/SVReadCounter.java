@@ -5,8 +5,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import htsjdk.samtools.SAMFileHeader;
-import htsjdk.samtools.SAMFileReader;
 import htsjdk.samtools.SAMLineParser;
+import htsjdk.samtools.SamReader;
 import htsjdk.samtools.ValidationStringency;
 import htsjdk.samtools.SAMRecord;
 
@@ -17,14 +17,16 @@ public class SVReadCounter {
 	private static final int MAX_EDIT_DISTANCE = 5;
 	
 	private SAMLineParser parser;
+	
+	private Map<String, Integer> counts;
 
-	public Map<String, Integer> countReadsSupportingBreakpoints(String svSam, int readLength, SAMFileHeader samHeader) {
+//	public Map<String, Integer> countReadsSupportingBreakpoints(String svSam, int readLength, SAMFileHeader samHeader) {
+		
+
+	public Map<String, Integer> countReadsSupportingBreakpoints(SamReader reader, int readLength, SAMFileHeader samHeader) {
 		
 		parser = new SAMLineParser(samHeader);
 		
-		SAMFileReader reader = new SAMFileReader(new File(svSam));
-		reader.setValidationStringency(ValidationStringency.SILENT);
-
 		String fullMatch = readLength + "M";
 		
 		// Require 90% of the read to overlap the breakpoint
@@ -61,7 +63,7 @@ public class SVReadCounter {
 			}
 		}
 		
-		reader.close();
+		this.counts = breakpointCounts;
 		
 		return breakpointCounts;
 	}
@@ -86,6 +88,11 @@ public class SVReadCounter {
 		return orig;
 	}
 	
+	public Map<String, Integer> getCounts() {
+		return counts;
+	}
+	
+	/*
 	public static void main(String[] args) {
 		SVReadCounter svc = new SVReadCounter();
 		
@@ -99,4 +106,5 @@ public class SVReadCounter {
 		
 		reader.close();
 	}
+	*/
 }

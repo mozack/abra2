@@ -397,8 +397,8 @@ void build_graph2(const char* input, sparse_hash_map<const char*, struct node*, 
 		record++;
 	}
 
-	printf("Num reads: %d\n", record);
-	printf("Num nodes: %d\n", nodes->size());
+//	printf("Num reads: %d\n", record);
+//	printf("Num nodes: %d\n", nodes->size());
 }
 /*
 void build_graph(const char* read_file, sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, struct_pool* pool) {
@@ -1143,19 +1143,20 @@ extern "C"
 	min_base_quality = j_min_base_quality;
 	min_edge_ratio = j_min_edge_ratio;
 
-	printf("Abra JNI entry point v0.88\n");
+	printf("Abra JNI entry point v0.88, prefix: %s, read_length: %d, kmer_size: %d, min_node_freq: %d, min_base_qual: %d, min_edge_ratio %f\n",
+			prefix, read_length, kmer_size, min_node_freq, min_base_quality, min_edge_ratio);
 
-	printf("input len: %s : %d\n", prefix, strlen(input));
-	printf("output: %s\n", output);
-	printf("prefix: %s\n", prefix);
-	printf("truncate_on_output: %d\n", truncate_on_output);
-	printf("max_contigs: %d\n", max_contigs);
-	printf("max_paths_from_root: %d\n", max_paths_from_root);
-	printf("read_length: %d\n", read_length);
-	printf("kmer_size: %d\n", kmer_size);
-	printf("min node freq: %d\n", min_node_freq);
-	printf("min base quality: %d\n", min_base_quality);
-	printf("min edge ratio: %f\n", min_edge_ratio);
+//	printf("input len: %s : %d\n", prefix, strlen(input));
+//	printf("output: %s\n", output);
+//	printf("prefix: %s\n", prefix);
+//	printf("truncate_on_output: %d\n", truncate_on_output);
+//	printf("max_contigs: %d\n", max_contigs);
+//	printf("max_paths_from_root: %d\n", max_paths_from_root);
+//	printf("read_length: %d\n", read_length);
+//	printf("kmer_size: %d\n", kmer_size);
+//	printf("min node freq: %d\n", min_node_freq);
+//	printf("min base quality: %d\n", min_base_quality);
+//	printf("min edge ratio: %f\n", min_edge_ratio);
 
 	char* contig_str = assemble(input, output, prefix, truncate_on_output, max_contigs, max_paths_from_root, read_length, kmer_size);
 	jstring ret = env->NewStringUTF(contig_str);

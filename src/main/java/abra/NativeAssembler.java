@@ -315,6 +315,8 @@ public class NativeAssembler {
 				if (reads.size() < minReadCount) {
 					minReadCount = reads.size();
 				}
+				
+				readCount += reads.size();
 			}
 			
 			StringBuffer readBuffer = new StringBuffer();

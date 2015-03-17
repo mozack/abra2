@@ -34,7 +34,7 @@ public class ReadInputStreamRunnable implements Runnable {
 		
 		for (SAMRecord read : reader) {
 			while (queue.size() > MAX_QUEUE_SIZE) {
-				System.out.println("Queue too big");
+//				System.out.println("Queue too big");
 				try {
 					Thread.sleep(100);
 				} catch (InterruptedException e) { }

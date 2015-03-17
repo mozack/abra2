@@ -107,9 +107,9 @@ public class Sam2Fastq {
 	    			if ((!read.getReadUnmappedFlag()) && (!regionTracker.isInRegion(read))) {
 	    				read.setAttribute("YR", 1);
 	    			}
-    				
-    				// Eligible for realignment, output FASTQ record
-//	    			output1.write(samReadToFastqRecord(read, c2r));
+    					    			
+	    			// SA tag causes read info to not fit into read name, remove it for now.
+	    			read.setAttribute("SA", null);
 	    			
 	    			try {
 	    				toProcessWriter.addAlignment(samReadToUnmappedSam(read));

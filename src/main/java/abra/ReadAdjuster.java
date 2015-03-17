@@ -2,9 +2,7 @@ package abra;
 
 import static abra.Logger.log;
 
-import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -16,12 +14,8 @@ import htsjdk.samtools.DefaultSAMRecordFactory;
 import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.SAMFileReader;
 import htsjdk.samtools.SAMFileWriter;
-import htsjdk.samtools.SAMFileWriterFactory;
 import htsjdk.samtools.SAMLineParser;
 import htsjdk.samtools.SAMRecord;
-import htsjdk.samtools.SamInputResource;
-import htsjdk.samtools.SamReader;
-import htsjdk.samtools.SamReaderFactory;
 import htsjdk.samtools.ValidationStringency;
 
 /**
@@ -59,24 +53,12 @@ public class ReadAdjuster {
 		log("Adjusting reads.");
 		
 		RealignmentWriter writer = getRealignmentWriter(outputSam, isTightAlignment, tempDir);
-		
-//		SAMFileReader contigReader = new SAMFileReader(new File(alignedToContigSam));
-//		contigReader.setValidationStringency(ValidationStringency.SILENT);
-		
-//		final SamReader contigReader =
-//                SamReaderFactory.make()
-//                        .validationStringency(ValidationStringency.SILENT)
-//                        .samRecordFactory(DefaultSAMRecordFactory.getInstance())
-//                        .open(SamInputResource.of(alignedToContigStream));
-		
+				
 		SAMLineParser parser = new SAMLineParser(new DefaultSAMRecordFactory(),
                 ValidationStringency.SILENT, samHeader,
                 null, null);
-//		SamStringReader samStringReader = new SamStringReader(samHeader);
 
 		int count = 1;
-		
-//		for (SAMRecord read : contigReader) {
 		
 		long s = System.currentTimeMillis();
 		long e = 0;
@@ -92,7 +74,7 @@ public class ReadAdjuster {
 			SAMRecord read = readQueue.poll();
 			
 			if (read == null) {
-				System.out.println("RA: Waiting for reads");
+//				System.out.println("RA: Waiting for reads");
 				try {
 					Thread.sleep(100);
 				} catch (InterruptedException except) {}
@@ -109,7 +91,6 @@ public class ReadAdjuster {
 			SAMRecord orig;
 			try {
 				orig = parser.parseLine(origSamStr);
-//				orig = samStringReader.getRead(origSamStr);
 			} catch (RuntimeException exception) {
 				System.out.println("Error processing: [" + origSamStr + "]");
 				System.out.println("Contig read: [" + read.getSAMString() + "]");
@@ -152,7 +133,6 @@ public class ReadAdjuster {
 			writer.addAlignment(readToOutput, orig);
 		}
 
-//		contigReader.close();
 		int realignedCount = writer.flush();
 		
 		log("Done adjusting reads.  Number of reads realigned: " + realignedCount);
@@ -290,7 +270,6 @@ public class ReadAdjuster {
 
 		contigReadStr = contigReadStr.substring(contigReadStr.indexOf('~')+1);
 		contigReadStr = contigReadStr.replace('~', '\t');
-//		SAMRecord contigRead = samStringReader.getRead(contigReadStr);
 		SAMRecord contigRead = parser.parseLine(contigReadStr);
 		
 		int bestMismatches = SAMRecordUtils.getIntAttribute(read, "XM");
@@ -336,7 +315,6 @@ public class ReadAdjuster {
 					if ((cigar.equals(matchingString)) && (mismatches == bestMismatches)) {
 						altContigReadStr = altContigReadStr.substring(altContigReadStr.indexOf('~')+1);
 						altContigReadStr = altContigReadStr.replace('~', '\t');
-//						contigRead = samStringReader.getRead(altContigReadStr);
 						contigRead = parser.parseLine(altContigReadStr);
 						
 						// Filter this hit if it aligns past the end of the contig
@@ -387,11 +365,7 @@ public class ReadAdjuster {
 		Integer yr = orig.getIntegerAttribute("YR");
 		if ((yr != null) && (yr == 1)) {
 			// Original alignment was outside of target region list.
-			// Calc updated edit distance to reference and compare to original
-			
-//			int origEditDistance = getOrigEditDistance(orig);
-//			int updatedEditDistance = c2r.numMismatches(read) + getNumIndelBases(read);
-			
+			// Calc updated edit distance to reference and compare to original			
 			double origEditDistance = SAMRecordUtils.getOrigEditDistance(orig);
 			double updatedEditDistance = c2r.numMismatches(read) + (1.5 * SAMRecordUtils.getNumIndels(read));
 			
@@ -439,9 +413,6 @@ public class ReadAdjuster {
 				if ((block.getType() == CigarOperator.I) && (block.getLength() != 0)) {
 					contigPosition = contigPosition - (contigBlock.getLength() - block.getLength());
 					block.setReferenceStart(block.getReferenceStart() - (contigBlock.getLength() - block.getLength()));
-//					block = contigBlock.getSubBlock(accumulatedLength,
-//								contigPosition, read.getReadLength()
-//								- accumulatedLength);
 					
 					totalInsertLength += block.getLength();
 				}
@@ -537,29 +508,4 @@ public class ReadAdjuster {
 			return mismatches;
 		}
 	}
-
-	/*
-	public static void main(String[] args) throws Exception {
-		CompareToReference2 c2r = new CompareToReference2();
-		c2r.init("/datastore/nextgenout2/share/labs/UNCseq/tools-data/reference/hg19_hs37d5_viral.fa");
-		ReadAdjuster ra = new ReadAdjuster(true, 60, c2r, 0, 200000);
-
-		SAMFileReader reader = new SAMFileReader(new File("/datastore/nextgenout2/share/labs/UNCseq/LCCC1108_v4_testG/UNCseq1076/working/tumor.sort.dedup.bam"));
-		reader.setValidationStringency(ValidationStringency.SILENT);
-		
-		SAMFileWriterFactory writerFactory = new SAMFileWriterFactory();
-		writerFactory.setUseAsyncIo(false);
-		SAMFileWriter writer = writerFactory.makeSAMOrBAMWriter(
-				reader.getFileHeader(), false, new File("/datastore/nextgenout4/seqware-analysis/lmose/uncseq/new_workflow/1076_test/test.bam"));
-		
-		ra.adjustReads(
-				"/datastore/nextgenout2/share/labs/UNCseq/LCCC1108_v4_testG/UNCseq1076/working/abra/temp2/align_to_contig.sam", 
-				writer, 
-				true, 
-				"/datastore/nextgenout4/seqware-analysis/lmose/uncseq/new_workflow/1076_test/temp", reader.getFileHeader());
-		
-		reader.close();
-		writer.close();
-	}
-	*/
 }

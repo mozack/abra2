@@ -1,6 +1,5 @@
 package abra;
 
-import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -20,9 +19,6 @@ public class SVReadCounter {
 	private SAMLineParser parser;
 	
 	private Map<String, Integer> counts;
-
-//	public Map<String, Integer> countReadsSupportingBreakpoints(String svSam, int readLength, SAMFileHeader samHeader) {
-		
 
 	public Map<String, Integer> countReadsSupportingBreakpoints(SamReader reader, int readLength, SAMFileHeader samHeader) {
 		
@@ -84,9 +80,6 @@ public class SVReadCounter {
 			throw e;
 		}
 		orig.setHeader(samHeader);
-		
-//		orig.setReadString(read.getReadString());
-//		orig.setBaseQualityString(read.getBaseQualityString());
 
 		return orig;
 	}
@@ -94,20 +87,4 @@ public class SVReadCounter {
 	public Map<String, Integer> getCounts() {
 		return counts;
 	}
-	
-	/*
-	public static void main(String[] args) {
-		SVReadCounter svc = new SVReadCounter();
-		
-		SAMFileReader reader = new SAMFileReader(new File("/home/lmose/dev/abra/sv/test_sv.sam"));
-		
-		Map<String, Integer> counts = svc.countReadsSupportingBreakpoints("/home/lmose/dev/abra/sv/sv.bam", 100, reader.getFileHeader());
-		
-		for (String bp : counts.keySet()) {
-			System.out.println(bp + "\t" + counts.get(bp));
-		}
-		
-		reader.close();
-	}
-	*/
 }

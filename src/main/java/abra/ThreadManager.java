@@ -34,15 +34,9 @@ public class ThreadManager {
 			waitForAvailableThread();
 		} catch (InterruptedException e) {}
 		
-		runnable.setSpawnStartTime(System.nanoTime());
 		addThread(runnable);
 		
 		executor.submit(runnable);
-		
-//		Thread thread = new Thread(runnable);
-//		thread.start();
-		
-//		return thread;
 	}
 	
 	private synchronized void addThread(AbraRunnable thread) {
@@ -68,14 +62,5 @@ public class ThreadManager {
 		while (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
 			log("Waiting on " + threads.size() + " threads.");
 		}
-		
-//		long start = System.currentTimeMillis();		
-//		while (activeThreads() > 0) {
-//			long elapsedSecs = (System.currentTimeMillis() - start) / 1000;
-//			if ((elapsedSecs % 60) == 0) {
-//				log("Waiting on " + threads.size() + " threads.");
-//			}
-//			Thread.sleep(500);
-//		}
 	}
 }

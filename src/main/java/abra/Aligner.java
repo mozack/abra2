@@ -1,8 +1,6 @@
 /* Copyright 2013 University of North Carolina at Chapel Hill.  All rights reserved. */
 package abra;
 
-import htsjdk.samtools.SAMRecord;
-
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
@@ -18,7 +16,6 @@ public class Aligner {
 	
 	private String reference;
 	private int numThreads;
-	private static final int MAX_SMALL_REFERENCE_LINES = 1000000;
 	
 	public Aligner(String reference, int numThreads) {
 		this.reference = reference;
@@ -26,7 +23,6 @@ public class Aligner {
 	}
 	
 	public void align(String input, String outputSam, boolean isGapExtensionFavored) throws IOException, InterruptedException {
-//		String cmd = "bwa bwasw -t " + numThreads + " -f " + outputSam + " " + reference + " " + input;
 		
 		String cmd;
 		if (!isGapExtensionFavored) {

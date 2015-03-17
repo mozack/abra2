@@ -4,6 +4,7 @@ import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
+import htsjdk.samtools.DefaultSAMRecordFactory;
 import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.SAMLineParser;
 import htsjdk.samtools.SamReader;
@@ -25,7 +26,9 @@ public class SVReadCounter {
 
 	public Map<String, Integer> countReadsSupportingBreakpoints(SamReader reader, int readLength, SAMFileHeader samHeader) {
 		
-		parser = new SAMLineParser(samHeader);
+		parser = new SAMLineParser(new DefaultSAMRecordFactory(),
+                ValidationStringency.SILENT, samHeader,
+                null, null);
 		
 		String fullMatch = readLength + "M";
 		

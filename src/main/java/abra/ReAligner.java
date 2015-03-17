@@ -170,7 +170,6 @@ public class ReAligner {
 		log("Iterating over regions");
 		
 		for (Feature region : regions) {
-			log("Processing region: " + region.getDescriptor());
 			spawnRegionThread(region, null);
 		}
 		
@@ -558,6 +557,7 @@ public class ReAligner {
 	}
 	
 	public void processRegion(Feature region) throws Exception {
+		log("Processing region: " + region.getDescriptor());
 		
 		try {
 			String contigsFasta = tempDir + "/" + region.getDescriptor() + "_contigs.fasta";

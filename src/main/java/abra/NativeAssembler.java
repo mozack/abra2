@@ -436,7 +436,12 @@ public class NativeAssembler {
 		
 		long end = System.currentTimeMillis();
 		
-		System.out.println("Elapsed_msecs_in_NativeAssembler\tRegion:\t" + regions.get(0).getDescriptor() + "\tLength:\t" + regions.get(0).getLength() + "\tReadCount:\t" + readCount + "\tElapsed\t" + (end-start) + "\tAssembled\t" + isAssemblyCandidate + "\t" + this.kmers[0]);
+		int kmer = readLength + 1;
+		if (kmers.length > 0) {
+			kmer = kmers[0];
+		}
+		
+		System.out.println("Elapsed_msecs_in_NativeAssembler\tRegion:\t" + regions.get(0).getDescriptor() + "\tLength:\t" + regions.get(0).getLength() + "\tReadCount:\t" + readCount + "\tElapsed\t" + (end-start) + "\tAssembled\t" + isAssemblyCandidate + "\t" + kmer);
 		
 		return contigs;
 	}

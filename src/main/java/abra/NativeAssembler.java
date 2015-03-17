@@ -36,7 +36,6 @@ public class NativeAssembler {
 	private int minKmerFrequency;
 	private int minBaseQuality;
 	private double minReadCandidateFraction;
-	private Set<String> readIds;
 	private int maxAverageDepth;
 	List<Position> svCandidates = new ArrayList<Position>();
 	List<BreakpointCandidate> svCandidateRegions = new ArrayList<BreakpointCandidate>();
@@ -195,6 +194,66 @@ public class NativeAssembler {
 		return contigs;
 	}
 	
+	//
+	//  Returns a downsampled set of reads for each sample.
+	//
+	private List<List<SAMRecord>> getReads(List<String> inputFiles, List<Feature> regions, ReAligner realigner) {
+		
+		int downsampleTarget = desiredNumberOfReads(regions);
+		List<DownsampledReadList> readsList = new ArrayList<DownsampledReadList>();
+
+		for (String input : inputFiles) {
+			Set<String> readIds = new HashSet<String>();
+			DownsampledReadList reads = new DownsampledReadList(downsampleTarget);
+			readsList.add(reads);
+			
+			for (Feature region : regions) {
+				SAMFileReader reader = new SAMFileReader(new File(input));
+				reader.setValidationStringency(ValidationStringency.SILENT);
+				
+				Iterator<SAMRecord> iter;
+				if (region != null) {
+					iter = reader.queryOverlapping(region.getSeqname(), (int) region.getStart(), (int) region.getEnd());
+				} else {
+					iter = reader.iterator();
+				}
+				
+				while (iter.hasNext()) {
+					
+					SAMRecord read = iter.next();
+											
+					// Don't allow same read to be counted twice.
+					if ( (!realigner.isFiltered(read)) && 
+						 (!read.getDuplicateReadFlag()) && 
+						 (!read.getReadFailsVendorQualityCheckFlag()) &&
+						 (read.getMappingQuality() >= realigner.getMinMappingQuality() || read.getReadUnmappedFlag()) &&
+						 (!readIds.contains(getIdentifier(read)))) {
+						
+						if (read.getReadString().length() > readLength) {
+							reader.close();
+							throw new IllegalArgumentException("Maximum read length of: " + readLength +
+									" exceeded for: " + read.getSAMString());
+						}
+						
+						readIds.add(getIdentifier(read));
+												
+						reads.add(read);
+					}
+				}
+				
+				reader.close();
+			}
+		}
+		
+		List<List<SAMRecord>> sampleReads = new ArrayList<List<SAMRecord>>();
+		
+		for (DownsampledReadList downsampledReads : readsList) {
+			sampleReads.add(downsampledReads.getReads());
+		}
+		
+		return sampleReads;
+	}
+	
 	public String assembleContigs(List<String> inputFiles, String output, String tempDir, List<Feature> regions, String prefix,
 			boolean checkForDupes, ReAligner realigner, CompareToReference2 c2r) {
 		
@@ -227,101 +286,34 @@ public class NativeAssembler {
 		int readCount = 0;
 		
 		int minReadCount = Integer.MAX_VALUE;
-		
-		int maxReadsPerSample = maxNumberOfReadsPerSample(regions);
-		
-		boolean isMaxReadsForRegionExceeded = false;
 
 		// if c2r is null, this is the unaligned region.
 		boolean isAssemblyCandidate = c2r == null ? true : false;
 		
 		try {
-			
-			List<List<SAMRecord>> readsList = new ArrayList<List<SAMRecord>>();
-
-			for (String input : inputFiles) {
-				readIds = new HashSet<String>();
-				List<SAMRecord> reads = new ArrayList<SAMRecord>();
-				readsList.add(reads);
-				
-				for (Feature region : regions) {
-					SAMFileReader reader = new SAMFileReader(new File(input));
-					reader.setValidationStringency(ValidationStringency.SILENT);
-					
-					Iterator<SAMRecord> iter;
-					if (region != null) {
-						iter = reader.queryOverlapping(region.getSeqname(), (int) region.getStart(), (int) region.getEnd());
-					} else {
-						iter = reader.iterator();
-					}
-					
-					int candidateReadCount = 0;
-					
-					while (iter.hasNext() && !isMaxReadsForRegionExceeded) {
 						
-						SAMRecord read = iter.next();
-						readCount++;
-												
-						// Don't allow same read to be counted twice.
-						if ( (!realigner.isFiltered(read)) && 
-							 (!read.getDuplicateReadFlag()) && 
-							 (!read.getReadFailsVendorQualityCheckFlag()) &&
-							 (read.getMappingQuality() >= realigner.getMinMappingQuality() || read.getReadUnmappedFlag()) &&
-							 //(Sam2Fastq.isPrimary(read)) &&
-//							 (!isHardClipped(read)) &&
-							 ((!checkForDupes) || (!readIds.contains(getIdentifier(read))))) {
-							
-							if (read.getReadString().length() > readLength) {
-								reader.close();
-								throw new IllegalArgumentException("Maximum read length of: " + readLength +
-										" exceeded for: " + read.getSAMString());
-							}
-	
-							Integer numBestHits = (Integer) read.getIntegerAttribute("X0");
-							boolean hasAmbiguousInitialAlignment = numBestHits != null && numBestHits > 1;
-							
-							if (!hasAmbiguousInitialAlignment) {
-								if (!checkForDupes) {
-									readIds.add(getIdentifier(read));
-								}
-								
-								if (!isAssemblyCandidate && isAssemblyTriggerCandidate(read, c2r)) {
-									candidateReadCount++;
-								}
-								
-								reads.add(read);
-								
-								if (shouldSearchForSv && isSvCandidate(read, region)) {
-									svCandidates.add(new Position(read.getMateReferenceName(), read.getMateAlignmentStart(), input));
-								}
-								
-								if (reads.size() > maxReadsPerSample) {
-									isMaxReadsForRegionExceeded = true;
-									break;
-								}
-							}
-						}
+			List<List<SAMRecord>> readsList = getReads(inputFiles, regions, realigner);
+			
+			for (List<SAMRecord> reads : readsList) {
+				int candidateReadCount = 0;
+				for (SAMRecord read : reads) {
+					if (!isAssemblyCandidate && isAssemblyTriggerCandidate(read, c2r)) {
+						candidateReadCount++;
 					}
 					
-					reader.close();
-					
-					if (candidateReadCount > minCandidateCount(reads.size(), region)) {
-						isAssemblyCandidate = true;
+					if (shouldSearchForSv && isSvCandidate(read)) {
+						svCandidates.add(new Position(read.getMateReferenceName(), read.getMateAlignmentStart()));
 					}
+				}
+				
+				if (candidateReadCount > minCandidateCount(reads.size(), regions.get(0))) {
+					isAssemblyCandidate = true;
 				}
 				
 				if (reads.size() < minReadCount) {
 					minReadCount = reads.size();
 				}
 			}
-			
-			if (isMaxReadsForRegionExceeded) {
-				isAssemblyCandidate = false;
-				shouldSearchForSv = false;
-				System.out.println("Max reads exceeded for region: " + prefix);
-			}
-			
-			readIds = null;
 			
 			StringBuffer readBuffer = new StringBuffer();
 			
@@ -477,13 +469,12 @@ public class NativeAssembler {
 		return result;
 	}
 	
-	private boolean isSvCandidate(SAMRecord read, Feature region) {
+	private boolean isSvCandidate(SAMRecord read) {
 		boolean isCandidate = false;
 		if (!read.getProperPairFlag() && !read.getMateUnmappedFlag()) {
 			if (!read.getReferenceName().equals(read.getMateReferenceName())) {
 				isCandidate = true;
-			} else if (Math.abs(read.getAlignmentStart() - read.getMateAlignmentStart()) > CombineChimera3.MAX_GAP_LENGTH &&
-					!region.overlaps(read.getMateReferenceName(), read.getMateAlignmentStart()-(int)region.getLength(), read.getMateAlignmentStart()+read.getReadLength()+(int)region.getLength())) {
+			} else if (Math.abs(read.getAlignmentStart() - read.getMateAlignmentStart()) > CombineChimera3.MAX_GAP_LENGTH) {
 				isCandidate = true;
 			}
 		}
@@ -576,12 +567,10 @@ public class NativeAssembler {
 	static class Position implements Comparable<Position> {
 		private String chromosome;
 		private int position;
-		private String inputFile;
 		
-		Position(String chromosome, int position, String inputFile) {
+		Position(String chromosome, int position) {
 			this.chromosome = chromosome;
 			this.position = position;
-			this.inputFile = inputFile;
 		}
 		
 		String getChromosome() {

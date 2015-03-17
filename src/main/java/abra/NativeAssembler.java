@@ -241,6 +241,8 @@ public class NativeAssembler {
 					}
 				}
 				
+				System.out.println("DOWNSAMPLE: " + regions.get(0).getDescriptor() + reads.getTotalReadCount() + " -> " + reads.getReads().size());
+				
 				reader.close();
 			}
 		}

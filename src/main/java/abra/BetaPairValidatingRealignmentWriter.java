@@ -3,7 +3,6 @@ package abra;
 
 import java.io.File;
 
-import htsjdk.samtools.MyReader;
 import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.SAMFileHeader.SortOrder;
 import htsjdk.samtools.DefaultSAMRecordFactory;
@@ -335,7 +334,7 @@ public class BetaPairValidatingRealignmentWriter implements RealignmentWriter {
 
 		public SAMRecord getUpdatedRead() {
 			if ( (updatedReadStr != null) && (updatedRead == null) ) {
-				updatedRead = MyReader.getRead(updatedReadStr, header);
+				updatedRead = parser.parseLine(updatedReadStr);
 			}
 			
 			return updatedRead;
@@ -343,7 +342,7 @@ public class BetaPairValidatingRealignmentWriter implements RealignmentWriter {
 
 		public SAMRecord getOrigRead() {
 			if (origRead == null) {
-				origRead = MyReader.getRead(origReadStr, header);
+				origRead = parser.parseLine(origReadStr);
 			}
 			
 			return origRead;

@@ -24,12 +24,7 @@ public class Aligner {
 	
 	public void align(String input, String outputSam, boolean isGapExtensionFavored) throws IOException, InterruptedException {
 		
-		String cmd;
-		if (!isGapExtensionFavored) {
-			cmd = "bwa mem -t " + numThreads + " " + reference + " " + input + " > " + outputSam;
-		} else {
-			cmd = "bwa mem -A 2 -B 8 -O 12 -L 10 -U 34 -t " + numThreads + " " + reference + " " + input + " > " + outputSam;
-		}
+		String cmd = "bwa mem -t " + numThreads + " " + reference + " " + input + " > " + outputSam;
 		
 		runCommand(cmd);
 	}
@@ -84,7 +79,10 @@ public class Aligner {
 	
 	public void shortAlign(String input, String outputSam, StdoutHandler stdoutHandler) throws IOException, InterruptedException {		
 		
-		String map = "bwa aln " + reference + " " + input + " -b -t " + numThreads + " -o 0 | bwa samse " + reference + " - " + input + " -n 1000";
+		// Throttle back the number of threads to accomodate the stdout processing.
+		int threads = Math.max(numThreads-2, 1);
+		
+		String map = "bwa aln " + reference + " " + input + " -b -t " + threads + " -o 0 | bwa samse " + reference + " - " + input + " -n 1000";
 		
 		// Redirect stdout to file if no stdout consumer provided.
 		if (stdoutHandler == null) {

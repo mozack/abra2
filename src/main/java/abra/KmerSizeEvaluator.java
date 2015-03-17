@@ -61,6 +61,7 @@ public class KmerSizeEvaluator {
 				threadManager.waitForAllThreadsToComplete();
 				outputRegions(output, outputRegions);
 				outputRegions.clear();
+				threadManager = new ThreadManager(threadManager.getNumThreads());
 			}
 			
 			String regionBases = getBases(region, c2r);
@@ -220,8 +221,9 @@ public class KmerSizeEvaluator {
 //		String outputBed = "/home/lmose/dev/abra/dream/round2/output.bed";
 //		String regionsBed = "/home/lmose/dev/abra/dream/round2/20.orig.bed";
 		
-		if (args.length != 6) {
+		if (args.length != 5) {
 			System.out.println("KmerSizeEvaluator <readLength> <reference> <output_bed> <num_threads> <input_bed>");
+			System.exit(-1);
 		}
 		
 		int readLength = Integer.parseInt(args[0]);

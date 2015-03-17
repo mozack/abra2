@@ -63,4 +63,8 @@ public class ThreadManager {
 			log("Waiting on " + threads.size() + " threads.");
 		}
 	}
+
+	public int getNumThreads() {
+		return numThreads;
+	}
 }

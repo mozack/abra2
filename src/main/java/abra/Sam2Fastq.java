@@ -141,8 +141,11 @@ public class Sam2Fastq {
             }
         }
                 
-//        output1.close();
-        toProcessWriter.close();
+        if (isBamOutput) {
+        	toProcessWriter.close();
+        } else {
+        	output1.close();
+        }
         reader.close();
 	}
 

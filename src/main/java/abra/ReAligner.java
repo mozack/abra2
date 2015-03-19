@@ -919,7 +919,7 @@ public class ReAligner {
 		Aligner contigAligner = new Aligner(contigFasta, numThreads);
 		
 		// Align region fastq against assembled contigs
-		contigAligner.shortAlign(bam, alignedToContigSam, stdoutHandler);
+		contigAligner.shortAlign(bam, alignedToContigSam, stdoutHandler, isOutputIntermediateBam);
 	}
 	
 	static class Pair<T, Y> {

@@ -77,12 +77,15 @@ public class Aligner {
 		}
 	}
 	
-	public void shortAlign(String input, String outputSam, StdoutHandler stdoutHandler) throws IOException, InterruptedException {		
+	public void shortAlign(String input, String outputSam, StdoutHandler stdoutHandler, boolean isBamInput) throws IOException, InterruptedException {		
 		
 		// Throttle back the number of threads to accomodate the stdout processing.
 		int threads = Math.max(numThreads-2, 1);
 		
-		String map = "bwa aln " + reference + " " + input + " -b -t " + threads + " -o 0 | bwa samse " + reference + " - " + input + " -n 1000";
+		String bamFlag = isBamInput ? " -b " : " ";
+		
+//		String map = "bwa aln " + reference + " " + input + " -b -t " + threads + " -o 0 | bwa samse " + reference + " - " + input + " -n 1000";
+		String map = "bwa aln " + reference + " " + input + bamFlag + "-t " + threads + " -o 0 | bwa samse " + reference + " - " + input + " -n 1000";
 		
 		// Redirect stdout to file if no stdout consumer provided.
 		if (stdoutHandler == null) {

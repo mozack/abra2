@@ -74,6 +74,8 @@ public class Sam2Fastq {
     			read.setAttribute("OQ", null);
     			read.setAttribute("MD", null);
     			read.setAttribute("BQ", null);
+    			read.setAttribute("BI", null);
+    			read.setAttribute("BD", null);
     			
     			int yx = 0;
     			

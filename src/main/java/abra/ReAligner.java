@@ -914,7 +914,7 @@ public class ReAligner {
 	void alignToContigs(String tempDir, String alignedToContigSam,
 			String contigFasta, SAMFileWriter writer, SAMFileHeader header, StdoutHandler stdoutHandler) throws IOException, InterruptedException {
 		
-		String bam = getPreprocessedBam(tempDir);
+		String bam = getTempReadFile(tempDir);
 		
 		Aligner contigAligner = new Aligner(contigFasta, numThreads);
 		

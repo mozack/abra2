@@ -67,6 +67,8 @@ public class ReAligner {
 	
 	private boolean shouldReprocessUnaligned = true;
 	
+	private boolean isOutputIntermediateBam = false;
+	
 	private String structuralVariantFile;
 	private String localRepeatFile;
 	private BufferedWriter localRepeatWriter;
@@ -230,7 +232,7 @@ public class ReAligner {
 	
 	private void preProcessReads(String inputSam, String tempDir, SAMFileWriter writer) throws InterruptedException {
 		PreprocessReadsRunnable thread = new PreprocessReadsRunnable(threadManager, this,
-				inputSam, this.getPreprocessedBam(tempDir), c2r, writer);
+				inputSam, this.getTempReadFile(tempDir), c2r, writer);
 
 		threadManager.spawnThread(thread);
 	}
@@ -778,10 +780,10 @@ public class ReAligner {
 		log("Max RNA read length is: " + rnaReadLength);
 	}
 	
-	void sam2Fastq(String bam, String fastq, CompareToReference2 c2r, SAMFileWriter finalOutputSam) throws IOException {
+	void sam2Fastq(String bam, String intermediateOutput, CompareToReference2 c2r, SAMFileWriter finalOutputSam) throws IOException {
 		log("Preprocessing: " + bam);
 		Sam2Fastq sam2Fastq = new Sam2Fastq();
-		sam2Fastq.convert(bam, fastq, c2r, finalOutputSam, isPairedEnd, regions, minMappingQuality);
+		sam2Fastq.convert(bam, intermediateOutput, c2r, finalOutputSam, isPairedEnd, regions, minMappingQuality, isOutputIntermediateBam);
 		log("Done Preprocessing: " + bam);
 	}
 			
@@ -872,6 +874,18 @@ public class ReAligner {
 	
 	private String getPreprocessedBam(String tempDir) {
 		return tempDir + "/" + "original_reads.bam";
+	}
+	
+	private String getProprocessedFastq(String tempDir) {
+		return tempDir + "/" + "original_reads.fastq.gz";
+	}
+	
+	private String getTempReadFile(String tempDir) {
+		if (isOutputIntermediateBam) {
+			return getPreprocessedBam(tempDir);
+		} else {
+			return getProprocessedFastq(tempDir);
+		}
 	}
 
 	SVReadCounter alignToSVContigs(String tempDir, String alignedToContigSam,
@@ -1192,6 +1206,7 @@ public class ReAligner {
 			realigner.localRepeatFile = options.getLocalRepeatFile();
 			realigner.minMappingQuality = options.getMinimumMappingQuality();
 			realigner.hasPresetKmers = options.hasPresetKmers();
+			realigner.isOutputIntermediateBam = options.useIntermediateBam();
 
 			long s = System.currentTimeMillis();
 			

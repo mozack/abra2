@@ -37,6 +37,7 @@ public class ReAlignerOptions extends Options {
 	private static final String SEARCH_FOR_LOCAL_REPEATS = "lr";
 	private static final String AVERAGE_DEPTH_CEILING = "adc";
 	private static final String MIN_EDGE_RATIO = "mer";
+	private static final String USE_INTERMEDIATE_BAM = "ib";
 	
 	private OptionParser parser;
 	private boolean isValid;
@@ -72,6 +73,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(SEARCH_FOR_LOCAL_REPEATS, "Search for potential larger local repeats and output to specified file (only for multiple samples)").withRequiredArg().ofType(String.class);
             parser.accepts(AVERAGE_DEPTH_CEILING, "Skip regions with average depth greater than this value").withOptionalArg().ofType(Integer.class).defaultsTo(100000);
             parser.accepts(MIN_EDGE_RATIO, "Min edge pruning ratio.  Default value is appropriate for relatively sensitive somatic cases.  May be increased for improved speed in germline only cases.").withRequiredArg().ofType(Double.class).defaultsTo(.02);
+            parser.accepts(USE_INTERMEDIATE_BAM, "If specified, write intermediate data to BAM file using the intel deflator when available.  Use this to speed up processing.");
     	}
     	
     	return parser;
@@ -223,6 +225,10 @@ public class ReAlignerOptions extends Options {
 	
 	public boolean isSkipUnalignedAssembly() {
 		return !getOptions().has(UNALIGNED_ASSEMBLY);
+	}
+	
+	public boolean useIntermediateBam() {
+		return getOptions().has(USE_INTERMEDIATE_BAM);
 	}
 	
 	public int getMaxUnalignedReads() {

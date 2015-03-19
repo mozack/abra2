@@ -40,27 +40,31 @@ public class Sam2Fastq {
 	 * Convert the input SAM/BAM file into a single fastq file.
 	 * Input SAM files that contain multiple mappings should be sorted by read name.
 	 */
-	public void convert(String inputSam, String toProcessBam, CompareToReference2 c2r,
+	public void convert(String inputSam, String outputFile, CompareToReference2 c2r,
 			SAMFileWriter writer, boolean isPairedEnd,
-			List<Feature> regions, int minMappingQuality) throws IOException {
+			List<Feature> regions, int minMappingQuality, boolean isBamOutput) throws IOException {
 		
 		System.out.println("sam: " + inputSam);
 		
         SAMFileReader reader = new SAMFileReader(new File(inputSam));
         reader.setValidationStringency(ValidationStringency.SILENT);
         
-		SAMFileWriterFactory writerFactory = new SAMFileWriterFactory();
-		SAMFileHeader header = reader.getFileHeader();
-		header.setSortOrder(SortOrder.unsorted);
-		
-		
-		
-		SAMFileWriter toProcessWriter = writerFactory.makeBAMWriter(
-				header, false, new File(toProcessBam), COMPRESSION_LEVEL);
-		
+        SAMFileWriter toProcessWriter = null;
         
-//        output1 = new FastqOutputFile();
-//        output1.init(outputFastq);
+        if (isBamOutput) {
+        
+			SAMFileWriterFactory writerFactory = new SAMFileWriterFactory();
+			SAMFileHeader header = reader.getFileHeader();
+			header.setSortOrder(SortOrder.unsorted);
+			
+			toProcessWriter = writerFactory.makeBAMWriter(
+					header, false, new File(outputFile), COMPRESSION_LEVEL);
+		
+        } else {
+	        output1 = new FastqOutputFile();
+	        output1.init(outputFile);
+        }
+        
         int lineCnt = 0;
         
         this.regionTracker = new RegionTracker(regions, reader.getFileHeader());
@@ -114,7 +118,11 @@ public class Sam2Fastq {
 	    			read.setAttribute("SA", null);
 	    			
 	    			try {
-	    				toProcessWriter.addAlignment(samReadToUnmappedSam(read));
+	    				if (isBamOutput) {
+	    					toProcessWriter.addAlignment(samReadToUnmappedSam(read));
+	    				} else {
+	    					output1.write(samReadToFastqRecord(read));
+	    				}
 	    			} catch (IllegalArgumentException e) {
 	    				System.out.println("Error on: " + read.getSAMString());
 	    				e.printStackTrace();
@@ -176,7 +184,7 @@ public class Sam2Fastq {
 		return read;
 	}
 	
-	private FastqRecord samReadToFastqRecord(SAMRecord read, CompareToReference2 c2r) {
+	private FastqRecord samReadToFastqRecord(SAMRecord read) {
 		
 		String bases = read.getReadString();
 		String qualities = read.getBaseQualityString();
@@ -281,7 +289,7 @@ public class Sam2Fastq {
 				
 		long s = System.currentTimeMillis();
 		s2f.convert(inputSam, tempReadFile, c2r, writer, false, 
-				regions, 20);
+				regions, 20, true);
 		long e = System.currentTimeMillis();
 		
 		

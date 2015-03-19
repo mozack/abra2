@@ -282,6 +282,7 @@ public class ReAligner {
 		System.out.println("rna: " + rnaSam);
 		System.out.println("rna output: " + rnaOutputSam);
 		System.out.println("paired end: " + isPairedEnd);
+		System.out.println("use intermediate bam: " + isOutputIntermediateBam);
 		
 		String javaVersion = System.getProperty("java.version");
 		System.out.println("Java version: " + javaVersion);

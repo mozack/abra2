@@ -1216,6 +1216,8 @@ public class ReAligner {
 			long e = System.currentTimeMillis();
 
 			System.out.println("Elapsed seconds: " + (e - s) / 1000);
+		} else {
+			System.exit(-1);
 		}
 	}
 	

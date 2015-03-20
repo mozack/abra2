@@ -69,7 +69,7 @@ A test data set and example command line is available under the demo directory. 
 #### IntelDeflator
 ABRA relies heavily upon the [HTSJDK](http://samtools.github.io/htsjdk/) for reading and writing BAM files.  BAM compression can be slow and an optional native library can be used to speed up this compression on some systems. See [IntelDeflator](https://broadinstitute.github.io/picard/intel-deflater.html)
 
-To use this simply add: -Dsamjdk.intel_deflater_so_path=<path/to/libIntelDeflater.so> to your java command line.  libIntelDeflater.so is available under the lib directory.
+To use this simply add: ```-Dsamjdk.intel_deflater_so_path=<path/to/libIntelDeflater.so>``` to your java command line.  libIntelDeflater.so is available under the lib directory.
 
 #### Assembly graph pruning
 ABRA's default graph pruning is mild.  Pruning more aggressively may decrease running times.  The default min edge ratio value is .02 (2 percent) - appropriate for sensitive somatic variant detection.  For diploid germline only cases, this can safely be increased to .10

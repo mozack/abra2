@@ -5,7 +5,9 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.util.zip.Deflater;
 import java.util.zip.GZIPOutputStream;
 
 /**
@@ -18,7 +20,8 @@ public class FastqOutputFile {
     
     public void init(String filename) throws IOException {
     	
-    	GZIPOutputStream zip = new GZIPOutputStream(new FileOutputStream(new File(filename)));
+    	GZIPOutputStream zip = new GZIPOutputStream(new FileOutputStream(new File(filename))){{def.setLevel(Deflater.BEST_SPEED);}};
+
         writer = new BufferedWriter(new OutputStreamWriter(zip, "UTF-8"));
     }
     

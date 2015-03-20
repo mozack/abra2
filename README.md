@@ -66,15 +66,15 @@ A test data set and example command line is available under the demo directory. 
 
 ### Speeding things up
 
-# IntelDeflator
+#### IntelDeflator
 ABRA relies heavily upon the [HTSJDK](http://samtools.github.io/htsjdk/)  An optional native library can be used to speed up BAM file compression on some systems. See [IntelDeflator](https://broadinstitute.github.io/picard/intel-deflater.html)
 
 To use simply add: -Dsamjdk.intel_deflater_so_path=<path/to/libIntelDeflater.so> to your java command line
 
-# Assembly graph pruning
+#### Assembly graph pruning
 ABRA's default graph pruning is mild.  Pruning more aggressively may decrease running times.  The default min edge ratio value is .02 (2 percent) - appropriate for sensitive somatic variant detection.  For diploid germline only cases, this can safely be increased to .10
  
-# Region kmers
+#### Region kmers
 ABRA computes an appropriate kmer size for each region based upon the properties of the reference.  If the same bed file is used as input many times, this can be pre-computed using the KmerSizeEvaluator.
 
 Usage:

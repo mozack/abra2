@@ -64,6 +64,26 @@ After the output BAM file is sorted and indexed it can be passed into a variant 
 ### Demo / test data
 A test data set and example command line is available under the demo directory.  Edit demo.bash to specify your hg19 reference location (indexed by a recent version of bwa) and run demo.bash.
 
+### Speeding things up
+
+# IntelDeflator
+ABRA relies heavily upon the [HTSJDK](http://samtools.github.io/htsjdk/)  An optional native library can be used to speed up BAM file compression on some systems. See [IntelDeflator](https://broadinstitute.github.io/picard/intel-deflater.html)
+
+To use simply add: -Dsamjdk.intel_deflater_so_path=<path/to/libIntelDeflater.so> to your java command line
+
+# Assembly graph pruning
+ABRA's default graph pruning is mild.  Pruning more aggressively may decrease running times.  The default min edge ratio value is .02 (2 percent) - appropriate for sensitive somatic variant detection.  For diploid germline only cases, this can safely be increased to .10
+ 
+# Region kmers
+ABRA computes an appropriate kmer size for each region based upon the properties of the reference.  If the same bed file is used as input many times, this can be pre-computed using the KmerSizeEvaluator.
+
+Usage:
+```
+java -Xmx4G -cp abra.jar abra.KmerSizeEvaluator  <readLength> <reference> <output_bed> <num_threads> <input_bed>
+```
+
+This resultant <output_bed> file will contain kmer sizes in the 4th column.  Pass this into ABRA using the --target-kmers param to avoid re-computing these values repeatedly.
+
 ### Cadabra
 
 Cadabra is a somatic indel caller that works specifically with ABRA alignments.  It uses SAM tags embedded by ABRA to identify assembled indels with support in the tumor, and a general lack of support in the normal.  It performs very well according to our tests.
@@ -77,22 +97,3 @@ Sample usage:
 java -Xmx4G -cp $JAR abra.cadabra.Cadabra hg19.fasta normal.abra.bam tumor.abra.bam > cadabra.vcf
 ```
 
-### Speeding things up
-
-## IntelDeflator
-ABRA relies heavily upon the [HTSJDK](http://samtools.github.io/htsjdk/)  An optional native library can be used to speed up BAM file compression on some systems. See [IntelDeflator](https://broadinstitute.github.io/picard/intel-deflater.html)
-
-To use simply add: -Dsamjdk.intel_deflater_so_path=<path/to/libIntelDeflater.so> to your java command line
-
-## Assembly graph pruning
-ABRA's default graph pruning is mild.  Pruning more aggressively may decrease running times.  The default min edge ratio value is .02 (2 percent) - appropriate for sensitive somatic variant detection.  For diploid germline only cases, this can safely be increased to .10
- 
-## Region kmers
-ABRA computes an appropriate kmer size for each region based upon the properties of the reference.  If the same bed file is used as input many times, this can be pre-computed using the KmerSizeEvaluator.
-
-Usage:
-```
-java -Xmx4G -cp abra.jar abra.KmerSizeEvaluator  <readLength> <reference> <output_bed> <num_threads> <input_bed>
-```
-
-This resultant <output_bed> file will contain kmer sizes in the 4th column.  Pass this into ABRA using the --target-kmers param to avoid re-computing these values repeatedly.

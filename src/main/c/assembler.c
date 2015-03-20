@@ -1143,7 +1143,7 @@ extern "C"
 	min_base_quality = j_min_base_quality;
 	min_edge_ratio = j_min_edge_ratio;
 
-	printf("Abra JNI entry point v0.90, prefix: %s, read_length: %d, kmer_size: %d, min_node_freq: %d, min_base_qual: %d, min_edge_ratio %f\n",
+	printf("Abra JNI entry point v0.91, prefix: %s, read_length: %d, kmer_size: %d, min_node_freq: %d, min_base_qual: %d, min_edge_ratio %f\n",
 			prefix, read_length, kmer_size, min_node_freq, min_base_quality, min_edge_ratio);
 
 //	printf("input len: %s : %d\n", prefix, strlen(input));

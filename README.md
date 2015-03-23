@@ -55,9 +55,11 @@ java -Xmx4G -jar $JAR --in normal.bam,tumor.bam --out normal.abra.bam,tumor.abra
 ```
 
 The translocation file will consist of entries in the following format:
+
 ```<breakpoint_id>	<locus1>	<locus2>	<sample1_supporting_reads>	<sample2_supporting_reads>```
 
 For example:
+
 ```BP_1	chr11:10000000	chr17:30003455	0	112``` 
 
 In the above example one breakpoint is identified between chr11:10000000 and chr17:30003455 with no read support in sample1 (normal) and 112 reads supporting the breakpoint in sample2 (tumor).

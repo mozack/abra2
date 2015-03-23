@@ -45,14 +45,24 @@ parameter | value
 
 If working with tumor/normal pairs, it is highly recommended to assemble your samples together.  To do this, simply specify multiple input and output BAM files on the command line.
 
-In somatic mode, you may also consider using option ```--lr repeat_file```  This option allows for detection of moderate length repeats that could not be resolved at nucleotide precision.  This feature is experimental.
+Additionally, translocations may be detected by using ```-sv translocation_file```  The output file will contain putative breakpoints with the number of reads aligned to each breakpoint in the output file.
 
-Additionally, translocations may be detected by using ```-sv translocation_file```  The output file will contain putative breakpoints with the number of reads aligned to each breakpoint in the output file.  This feature is experimental.
+In somatic mode, you may also consider using option ```--lr repeat_file```  This option allows for detection of moderate length repeats that could not be resolved at nucleotide precision.  This feature is experimental.
 
 Sample usage:
 ```
-java -Xmx4G -jar $JAR --in normal.bam,tumor.bam --out normal.abra.bam,tumor.abra.bam --ref hg19.fasta --targets targets.bed --threads 8 --working abra_temp_dir > abra.log 2>&1
+java -Xmx4G -jar $JAR --in normal.bam,tumor.bam --out normal.abra.bam,tumor.abra.bam --ref hg19.fasta --targets targets.bed --threads 8 --working abra_temp_dir --sv abra.sv.txt > abra.log 2>&1
 ```
+
+The translocation file will consist of entries in the following format:
+```<breakpoint_id>	<locus1>	<locus2>	<sample1_supporting_reads>	<sample2_supporting_reads>```
+
+For example:
+```BP_1	chr11:10000000	chr17:30003455	0	112``` 
+
+In the above example one breakpoint is identified between chr11:10000000 and chr17:30003455 with no read support in sample1 (normal) and 112 reads supporting the breakpoint in sample2 (tumor).
+Users should use sample read counts to perform filtering on SV calls to identify the true somatic translocations. 
+
 
 ### Output
 ABRA produces one or more realigned BAMs.  It is currently necessary to sort and index the output.  At present, the mate information may not be 100% accurate.  Samtools fixmate or Picard Tools FixMateInformation may optionally be used to correct this.

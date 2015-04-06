@@ -70,7 +70,15 @@ public class Sam2Fastq {
         this.regionTracker = new RegionTracker(regions, reader.getFileHeader());
         
         for (SAMRecord read : reader) {
-    		if (SAMRecordUtils.isPrimary(read) && (!SAMRecordUtils.isFiltered(isPairedEnd, read))) {
+        	if (!SAMRecordUtils.isPrimary(read)) {
+        		// Write secondary / supplemental reads directly to the output BAM file.
+        		// TODO: If primary is realigned, perhaps this should be handled differently?
+        		
+        		if (writer != null) {
+        			writer.addAlignment(read);
+        		}
+        	}
+        	else if (!SAMRecordUtils.isFiltered(isPairedEnd, read)) {
     			
     			// These tags can be lengthy, so remove them.
     			// TODO: Improve the way this is handled

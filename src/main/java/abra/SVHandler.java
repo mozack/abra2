@@ -136,26 +136,62 @@ public class SVHandler {
 	private boolean isInTargetRegions(SAMRecord primary, SAMRecord secondary) {
 		boolean isInTargetRegions = false;
 		
-		//TODO: Handle underscore in chromosome name.
-		String[] fields = primary.getReadName().split("_");
-		if (fields.length == 9) {
-			String chr1 = fields[0];
-			int start1 = Integer.parseInt(fields[1]);
-			int stop1 = Integer.parseInt(fields[2]);
-			
-			String chr2 = fields[4];
-			int start2 = Integer.parseInt(fields[5]);
-			int stop2 = Integer.parseInt(fields[6]);
-			
-			Feature region1 = new Feature(chr1, start1, stop1);
-			Feature region2 = new Feature(chr2, start2, stop2);
-			
-			if (region1.overlapsRead(primary) || region1.overlapsRead(secondary)) {
-				if (region2.overlapsRead(primary) || region2.overlapsRead(secondary)) {
-					isInTargetRegions = true;
+		String[] regions = primary.getReadName().split("__");
+		if (regions.length == 2) {
+			String[] region1 = regions[0].split("_");
+			String[] region2 = regions[1].split("_");
+			if (region1.length >= 3 && region2.length >= 5) {
+				int region1IdxPad = region1.length - 3; // Adjustment for underscore in chromosome name
+				int region2IdxPad = region2.length - 5; // Adjustment for underscore in chromosome name
+				
+				String chr1 = region1[0];
+				for (int i=1; i<=region1IdxPad; i++) {
+					chr1 += "_";
+					chr1 += region1[i];
 				}
+				int start1 = Integer.parseInt(region1[1 + region1IdxPad]);
+				int stop1 = Integer.parseInt(region1[2 + region1IdxPad]);
+				
+				String chr2 = region2[0];
+				for (int i=1; i<=region2IdxPad; i++) {
+					chr1 += "_";
+					chr2 += region2[i];
+				}
+				int start2 = Integer.parseInt(region2[1 + region2IdxPad]);
+				int stop2 = Integer.parseInt(region2[2 + region2IdxPad]);
+				
+				Feature feature1 = new Feature(chr1, start1, stop1);
+				Feature feature2 = new Feature(chr2, start2, stop2);
+				
+				if (feature1.overlapsRead(primary) || feature1.overlapsRead(secondary)) {
+					if (feature2.overlapsRead(primary) || feature2.overlapsRead(secondary)) {
+						isInTargetRegions = true;
+					}
+				}
+
 			}
 		}
+		
+		
+//		String[] fields = primary.getReadName().split("_");
+//		if (fields.length == 9) {
+//			String chr1 = fields[0];
+//			int start1 = Integer.parseInt(fields[1]);
+//			int stop1 = Integer.parseInt(fields[2]);
+//			
+//			String chr2 = fields[4];
+//			int start2 = Integer.parseInt(fields[5]);
+//			int stop2 = Integer.parseInt(fields[6]);
+//			
+//			Feature region1 = new Feature(chr1, start1, stop1);
+//			Feature region2 = new Feature(chr2, start2, stop2);
+//			
+//			if (region1.overlapsRead(primary) || region1.overlapsRead(secondary)) {
+//				if (region2.overlapsRead(primary) || region2.overlapsRead(secondary)) {
+//					isInTargetRegions = true;
+//				}
+//			}
+//		}
 		return isInTargetRegions;
 	}
 	
@@ -323,6 +359,7 @@ public class SVHandler {
 	public static void main(String[] args) throws Exception {
 		SVHandler svh = new SVHandler(100);
 //		svh.identifySVCandidates("/home/lmose/dev/abra/sv/sv_contigs.sam", "/home/lmose/dev/abra/sv/sv_candidates.fa");
-		svh.identifySVCandidates("/home/lmose/dev/abra/sv/dream/sv_contigs.bam", "/home/lmose/dev/abra/sv/dream/sv_candidates.fa");
+//		svh.identifySVCandidates("/home/lmose/dev/abra/sv/dream/sv_contigs.bam", "/home/lmose/dev/abra/sv/dream/sv_candidates.fa");
+		svh.identifySVCandidates("/home/lmose/dev/abra/sv/virus_test/test.sam", "/home/lmose/dev/abra/sv/virus_test/test.fa");
 	}
 }

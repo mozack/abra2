@@ -53,7 +53,7 @@ public class SVEvaluator {
 			
 			BufferedWriter writer = new BufferedWriter(new FileWriter(structuralVariantFile, false));
 			for (String breakpointId : breakpointIds) {
-				writer.append(breakpointId);
+				writer.append(breakpointId.replace("+", "_"));
 				for (Map<String, Integer> counts : svCounts) {
 					writer.append('\t');
 					if (counts.containsKey(breakpointId)) {

@@ -344,7 +344,7 @@ public class SVHandler {
 		}
 		
 		String getLabel() {
-			return leftChr + "_" + leftPos + "_" + rightChr + "_" + rightPos + "_" + readName;
+			return leftChr.replace("_", "+") + "_" + leftPos + "_" + rightChr.replace("_", "+") + "_" + rightPos + "_" + readName;
 		}
 		
 		String getBases() {

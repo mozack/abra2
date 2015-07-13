@@ -19,6 +19,7 @@ public class AssemblerSettings {
 	private boolean searchForStructuralVariation;
 	private int averageDepthCeiling;
 	private double minEdgeRatio;
+	private boolean isDebug;
 		
 	public double getMinEdgeRatio() {
 		return minEdgeRatio;
@@ -106,6 +107,14 @@ public class AssemblerSettings {
 	
 	public void setMaxPotentialContigs(int maxPotentialContigs) {
 		this.maxPotentialContigs = maxPotentialContigs;
+	}
+	
+	public boolean isDebug() {
+		return this.isDebug;
+	}
+	
+	public void setDebug(boolean isDebug) {
+		this.isDebug = isDebug;
 	}
 		
 	public String getDescription() {

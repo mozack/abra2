@@ -16,10 +16,10 @@ extern "C" {
 /*
  * Class:     abra_NativeAssembler
  * Method:    assemble
- * Signature: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IIIIIIID)Ljava/lang/String;
+ * Signature: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IIIIIIIDI)Ljava/lang/String;
  */
 JNIEXPORT jstring JNICALL Java_abra_NativeAssembler_assemble
-  (JNIEnv *, jobject, jstring, jstring, jstring, jint, jint, jint, jint, jint, jint, jint, jdouble);
+  (JNIEnv *, jobject, jstring, jstring, jstring, jint, jint, jint, jint, jint, jint, jint, jdouble, jint);
 
 #ifdef __cplusplus
 }

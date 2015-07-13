@@ -102,6 +102,8 @@ public class ReAligner {
 	
 	private int minMappingQuality;
 	
+	private boolean isDebug;
+	
 	// If true, the input target file specifies kmer values
 	private boolean hasPresetKmers = false;
 	
@@ -698,8 +700,10 @@ public class ReAligner {
 		this.regions = getRegions(regionsBed, readLength, hasPresetKmers);
 		
 		System.out.println("Num regions: " + regions.size());
-		for (Feature region : regions) {
-			System.out.println(region.getSeqname() + "\t" + region.getStart() + "\t" + region.getEnd() + "\t" + region.getKmer());
+		if (isDebug) {
+			for (Feature region : regions) {
+				System.out.println(region.getSeqname() + "\t" + region.getStart() + "\t" + region.getEnd() + "\t" + region.getKmer());
+			}
 		}
 	}
 
@@ -1189,6 +1193,7 @@ public class ReAligner {
 			assemblerSettings.setSearchForStructuralVariation(options.shouldSearchForStructuralVariation());
 			assemblerSettings.setAverageDepthCeiling(options.getAverageDepthCeiling());
 			assemblerSettings.setMinEdgeRatio(options.getMinEdgeRatio());
+			assemblerSettings.setDebug(options.isDebug());
 
 			ReAligner realigner = new ReAligner();
 			realigner.setReference(options.getReference());
@@ -1208,6 +1213,7 @@ public class ReAligner {
 			realigner.minMappingQuality = options.getMinimumMappingQuality();
 			realigner.hasPresetKmers = options.hasPresetKmers();
 			realigner.isOutputIntermediateBam = options.useIntermediateBam();
+			realigner.isDebug = options.isDebug();
 
 			long s = System.currentTimeMillis();
 			

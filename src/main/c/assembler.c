@@ -58,6 +58,7 @@ __thread int kmer_size;
 __thread int min_node_freq;
 __thread int min_base_quality;
 __thread double min_edge_ratio;
+__thread int debug;
 
 #define BIG_CONSTANT(x) (x##LLU)
 
@@ -1037,7 +1038,9 @@ char* assemble(const char* input,
 	sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes = new sparse_hash_map<const char*, struct node*, my_hash, eqstr>();
 
 	long startTime = time(NULL);
-	printf("Assembling: -> %s\n", output);
+	if (debug) {
+		printf("Assembling: -> %s\n", output);
+	}
 	nodes->set_deleted_key(NULL);
 
 	build_graph2(input, nodes, pool);
@@ -1078,7 +1081,9 @@ char* assemble(const char* input,
 				contig_count = 0;
 				break;
 			case STOPPED_ON_REPEAT:
-				printf("STOPPED_ON_REPEAT: %s\n", prefix);
+				if (debug) {
+					printf("STOPPED_ON_REPEAT: %s\n", prefix);
+				}
 				contig_count = 0;
 				break;
 			case TOO_MANY_PATHS_FROM_ROOT:
@@ -1108,7 +1113,9 @@ char* assemble(const char* input,
 		printf("What!!?? %d : %d\n", kmer_size, input_kmer_size);
 	}
 	assert(kmer_size == input_kmer_size);
-	printf("Done assembling(%ld): %s, %d\n", (stopTime-startTime), output, contig_count);
+	if (debug) {
+		printf("Done assembling(%ld): %s, %d\n", (stopTime-startTime), output, contig_count);
+	}
 
 	if (status == OK || status == TOO_MANY_PATHS_FROM_ROOT) {
 		return contig_str;
@@ -1126,7 +1133,7 @@ extern "C"
    (JNIEnv *env, jobject obj, jstring j_input, jstring j_output, jstring j_prefix,
     jint j_truncate_on_output, jint j_max_contigs, jint j_max_paths_from_root,
     jint j_read_length, jint j_kmer_size, jint j_min_node_freq, jint j_min_base_quality,
-    jdouble j_min_edge_ratio)
+    jdouble j_min_edge_ratio, jint j_debug)
  {
 
      //Get the native string from javaString
@@ -1142,9 +1149,12 @@ extern "C"
 	min_node_freq = j_min_node_freq;
 	min_base_quality = j_min_base_quality;
 	min_edge_ratio = j_min_edge_ratio;
+	debug = j_debug;
 
-	printf("Abra JNI entry point v0.92, prefix: %s, read_length: %d, kmer_size: %d, min_node_freq: %d, min_base_qual: %d, min_edge_ratio %f\n",
-			prefix, read_length, kmer_size, min_node_freq, min_base_quality, min_edge_ratio);
+	if (debug) {
+		printf("Abra JNI entry point v0.92, prefix: %s, read_length: %d, kmer_size: %d, min_node_freq: %d, min_base_qual: %d, min_edge_ratio %f, debug: %d\n",
+				prefix, read_length, kmer_size, min_node_freq, min_base_quality, min_edge_ratio, debug);
+	}
 
 //	printf("input len: %s : %d\n", prefix, strlen(input));
 //	printf("output: %s\n", output);

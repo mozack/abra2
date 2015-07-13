@@ -43,10 +43,11 @@ public class NativeAssembler {
 	private boolean isCycleExceedingThresholdDetected = false;
 	private int averageDepthCeiling;
 	private double minEdgeRatio;
+	private boolean isDebug = true;
 
 	private native String assemble(String input, String output, String prefix,
 			int truncateOnRepeat, int maxContigs, int maxPathsFromRoot, int readLength, 
-			int kmerSize, int minKmerFreq, int minBaseQuality, double minEdgeRatio);
+			int kmerSize, int minKmerFreq, int minBaseQuality, double minEdgeRatio, int debug);
 	
 	private String getIdentifier(SAMRecord read) {
 		String id = read.getReadName();
@@ -184,7 +185,8 @@ public class NativeAssembler {
 					kmer,
 					minKmerFrequency,
 					minBaseQuality,
-					minEdgeRatio);
+					minEdgeRatio,
+					isDebug ? 1 : 0);
 			
 			if (!contigs.equals("<REPEAT>")) {
 				break;
@@ -242,7 +244,9 @@ public class NativeAssembler {
 				}
 				
 				if (reads.getTotalReadCount() != reads.getReads().size()) {
-					System.out.println("downsampled: " + regions.get(0).getDescriptor() + ": " + reads.getTotalReadCount() + " -> " + reads.getReads().size());	
+					if (isDebug) {
+						System.out.println("downsampled: " + regions.get(0).getDescriptor() + ": " + reads.getTotalReadCount() + " -> " + reads.getReads().size());
+					}
 				}
 				
 				reader.close();
@@ -370,7 +374,8 @@ public class NativeAssembler {
 							kmer,
 							minKmerFrequency,
 							minBaseQuality,
-							minEdgeRatio);
+							minEdgeRatio,
+							isDebug ? 1 : 0);
 					
 					if (!contigs.equals("<REPEAT>")) {
 						break;
@@ -449,10 +454,10 @@ public class NativeAssembler {
 	}
 	
 	String nativeAssemble(String input, String output, String prefix, int truncateOnRepeat, int maxContigs, int maxPathsFromRoot, int readLength, int[] kmers,
-			int minKmerFreq, int minBaseQuality, double minEdgeRatio) {
+			int minKmerFreq, int minBaseQuality, double minEdgeRatio, int debug) {
 		String result = "";
 		for (int kmer : kmers) {
-			result = assemble(input, output, prefix, truncateOnRepeat, maxContigs, maxPathsFromRoot, readLength, kmer, minKmerFreq, minBaseQuality, minEdgeRatio);
+			result = assemble(input, output, prefix, truncateOnRepeat, maxContigs, maxPathsFromRoot, readLength, kmer, minKmerFreq, minBaseQuality, minEdgeRatio, debug);
 			if (!result.equals("<REPEAT>")) {
 				break;
 			}
@@ -553,6 +558,10 @@ public class NativeAssembler {
 	
 	public boolean isCycleExceedingThresholdDetected() {
 		return isCycleExceedingThresholdDetected;
+	}
+	
+	public void setDebug(boolean isDebug) {
+		this.isDebug = isDebug;
 	}
 	
 	static class Position implements Comparable<Position> {

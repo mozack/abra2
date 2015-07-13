@@ -1049,6 +1049,7 @@ public class ReAligner {
 		assem.setMaxAverageDepth(assemblerSettings.getMaxAverageDepth());
 		assem.setShouldSearchForSv(this.isPairedEnd && assemblerSettings.searchForStructuralVariation());
 		assem.setAverageDepthCeiling(assemblerSettings.getAverageDepthCeiling());
+		assem.setDebug(assemblerSettings.isDebug());
 
 		return assem;
 	}

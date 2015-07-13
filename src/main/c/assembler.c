@@ -1152,7 +1152,7 @@ extern "C"
 	debug = j_debug;
 
 	if (debug) {
-		printf("Abra JNI entry point v0.92, prefix: %s, read_length: %d, kmer_size: %d, min_node_freq: %d, min_base_qual: %d, min_edge_ratio %f, debug: %d\n",
+		printf("Abra JNI entry point v0.93, prefix: %s, read_length: %d, kmer_size: %d, min_node_freq: %d, min_base_qual: %d, min_edge_ratio %f, debug: %d\n",
 				prefix, read_length, kmer_size, min_node_freq, min_base_quality, min_edge_ratio, debug);
 	}
 

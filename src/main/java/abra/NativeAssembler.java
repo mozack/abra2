@@ -439,6 +439,13 @@ public class NativeAssembler {
 				}
 				last = pos;
 			}
+			
+			// Don't forget last SV candidate region
+			if (currentFeatureCount > (minReadCount/MAX_READ_LENGTHS_PER_REGION) * minReadCandidateFraction) {
+				Feature region = new Feature(currentFeatureChr, currentFeatureStart-readLength, currentFeatureStop+readLength);
+				BreakpointCandidate candidate = new BreakpointCandidate(region, currentFeatureCount);
+				this.svCandidateRegions.add(candidate);
+			}
 		}
 		
 		long end = System.currentTimeMillis();

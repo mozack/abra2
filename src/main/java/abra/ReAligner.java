@@ -589,7 +589,9 @@ public class ReAligner {
 					List<BreakpointCandidate> svCandidates = assem.getSvCandidateRegions();
 					for (BreakpointCandidate svCandidate : svCandidates) {
 						
-						System.out.println("SV: " + region.getDescriptor() + "-->" + svCandidate.getRegion().getDescriptor());
+						if (isDebug) {
+							System.out.println("SV: " + region.getDescriptor() + "-->" + svCandidate.getRegion().getDescriptor());
+						}
 						List<Feature> svRegions = new ArrayList<Feature>();
 						svRegions.add(region);
 						Feature svCandidateRegion = new Feature(svCandidate.getRegion().getSeqname(), svCandidate.getRegion().getStart(), 

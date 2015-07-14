@@ -80,7 +80,8 @@ public class SVReadCounter {
 
 								
 								String breakpointGroupId = refFields[0] + "_" + refFields[1] + "\t" + refFields[2] + ":" + refFields[3] + "\t" +
-										refFields[4] + ":" + refFields[5] + "_" + refFields[6] + "_" + refFields[7];
+										refFields[4] + ":" + refFields[5] + "_" + refFields[refFields.length-2] + "_" + refFields[refFields.length-1];
+								
 
 								Integer count = breakpointCounts.get(breakpointGroupId);
 								if (count == null) {

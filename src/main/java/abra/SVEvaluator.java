@@ -20,7 +20,7 @@ public class SVEvaluator {
 		realigner.alignStructuralVariantCandidates(svContigFasta, svContigsSam);
 		
 		// Extract Breakpoint candidates
-		SVHandler svHandler = new SVHandler(readLength);
+		SVHandler svHandler = new SVHandler(readLength, realigner.getMinMappingQuality());
 		String svCandidates = tempDir + "/" + "sv_candidates.fa";
 		boolean hasCandidates = svHandler.identifySVCandidates(svContigsSam, svCandidates);
 		

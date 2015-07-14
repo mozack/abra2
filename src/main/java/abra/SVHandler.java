@@ -20,14 +20,14 @@ import htsjdk.samtools.SAMRecord;
  */
 public class SVHandler {
 	
-	private static final int MIN_MAPQ = 45;
-	
 	private int readLength;
+	private int minMapq;
 	//TODO: Re-evaluate this range and consider not hardcoding.
 	private static final int GROUP_RANGE = 1000;
 	
-	public SVHandler(int readLength) {
+	public SVHandler(int readLength, int minMapq) {
 		this.readLength = readLength;
+		this.minMapq = minMapq;
 	}
 
 	public boolean identifySVCandidates(String input, String output) throws IOException {
@@ -105,7 +105,7 @@ public class SVHandler {
 		SAMRecord read1 = readList.get(0);
 		SAMRecord read2 = readList.get(1);
 		
-		if (read1.getMappingQuality() < MIN_MAPQ || read2.getMappingQuality() < MIN_MAPQ) {
+		if (read1.getMappingQuality() < minMapq || read2.getMappingQuality() < minMapq) {
 			return null;
 		}
 		
@@ -357,9 +357,9 @@ public class SVHandler {
 	}
 	
 	public static void main(String[] args) throws Exception {
-		SVHandler svh = new SVHandler(100);
+		SVHandler svh = new SVHandler(100, 20);
 //		svh.identifySVCandidates("/home/lmose/dev/abra/sv/sv_contigs.sam", "/home/lmose/dev/abra/sv/sv_candidates.fa");
 //		svh.identifySVCandidates("/home/lmose/dev/abra/sv/dream/sv_contigs.bam", "/home/lmose/dev/abra/sv/dream/sv_candidates.fa");
-		svh.identifySVCandidates("/home/lmose/dev/abra/sv/virus_test/test.sam", "/home/lmose/dev/abra/sv/virus_test/test.fa");
+		svh.identifySVCandidates("/home/lmose/dev/abra/sv/virus_test3/test.sam", "/home/lmose/dev/abra/sv/virus_test3/test.fa");
 	}
 }

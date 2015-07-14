@@ -207,6 +207,8 @@ public class SVHandler {
 		String rightChr;
 		int leftPos;
 		int rightPos;
+		String leftStrand;
+		String rightStrand;
 		
 		if (secondary.getCigar().getCigarElement(0).getOperator() == CigarOperator.HARD_CLIP) {
 			readIdx = secondary.getCigar().getCigarElement(0).getLength();
@@ -215,8 +217,10 @@ public class SVHandler {
 			
 			leftChr = primary.getReferenceName();
 			leftPos = primary.getAlignmentStart() + readIdx;
+			leftStrand = primary.getReadNegativeStrandFlag() ? "R" : "F";
 			rightChr = secondary.getReferenceName();
 			rightPos = secondary.getAlignmentStart();
+			rightStrand = secondary.getReadNegativeStrandFlag() ? "R" : "F";
 		} else {
 			readIdx = secondary.getReadLength();
 			left = secondary.getReferenceName() + "_" + (secondary.getAlignmentStart() + readIdx) + "_" + (secondary.getReadNegativeStrandFlag() ? "R" : "F");
@@ -224,8 +228,10 @@ public class SVHandler {
 			
 			leftChr = secondary.getReferenceName();
 			leftPos = secondary.getAlignmentStart() + readIdx;
+			leftStrand = secondary.getReadNegativeStrandFlag() ? "R" : "F";
 			rightChr = primary.getReferenceName();
 			rightPos = primary.getAlignmentStart();
+			rightStrand = primary.getReadNegativeStrandFlag() ? "R" : "F";
 		}
 		
 		int startIdx = Math.max(readIdx - readLength, 0);
@@ -235,7 +241,7 @@ public class SVHandler {
 //		String label = ">" + left + "_" + right + "_" + primary.getReadName();
 //		return label + "\n" + svBases;
 		
-		return new Breakpoint(leftChr, leftPos, rightChr, rightPos, svBases, primary.getReadName());
+		return new Breakpoint(leftChr, leftPos, rightChr, rightPos, svBases, primary.getReadName(), leftStrand, rightStrand);
 	}
 	
 	static class BreakpointGroup {
@@ -316,14 +322,18 @@ public class SVHandler {
 		private int rightPos;
 		private String bases;
 		private String readName;
+		private String leftStrand;
+		private String rightStrand;
 		
-		Breakpoint(String leftChr, int leftPos, String rightChr, int rightPos, String bases, String readName) {
+		Breakpoint(String leftChr, int leftPos, String rightChr, int rightPos, String bases, String readName, String leftStrand, String rightStrand) {
 			this.leftChr = leftChr;
 			this.leftPos = leftPos;
 			this.rightChr = rightChr;
 			this.rightPos = rightPos;
 			this.bases = bases;
 			this.readName = readName;
+			this.leftStrand = leftStrand;
+			this.rightStrand = rightStrand;
 		}
 
 		@Override
@@ -344,7 +354,7 @@ public class SVHandler {
 		}
 		
 		String getLabel() {
-			return leftChr.replace("_", "+") + "_" + leftPos + "_" + rightChr.replace("_", "+") + "_" + rightPos + "_" + readName;
+			return leftChr.replace("_", "+") + "_" + leftPos + "_" + rightChr.replace("_", "+") + "_" + rightPos + "_" + readName + "_" + leftStrand + "_" + rightStrand;
 		}
 		
 		String getBases() {

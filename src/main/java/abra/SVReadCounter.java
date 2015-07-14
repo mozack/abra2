@@ -6,7 +6,9 @@ import java.util.Map;
 import htsjdk.samtools.DefaultSAMRecordFactory;
 import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.SAMLineParser;
+import htsjdk.samtools.SamInputResource;
 import htsjdk.samtools.SamReader;
+import htsjdk.samtools.SamReaderFactory;
 import htsjdk.samtools.ValidationStringency;
 import htsjdk.samtools.SAMRecord;
 
@@ -43,10 +45,43 @@ public class SVReadCounter {
 						int origEditDistance = SAMRecordUtils.getIntAttribute(orig, "YX");
 						if (editDistance < origEditDistance) {
 							//TODO: Inspect alternate alignments
+							/*
+							String[] regions = read.getReferenceName().split("__");
+							if (regions.length == 2) {
+								String[] region1 = regions[0].split("_");
+								String[] region2 = regions[1].split("_");
+								if (region1.length >= 3 && region2.length >= 5) {
+									int region1IdxPad = region1.length - 3; // Adjustment for underscore in chromosome name
+									int region2IdxPad = region2.length - 5; // Adjustment for underscore in chromosome name
+									
+									String chr1 = region1[0];
+									for (int i=1; i<=region1IdxPad; i++) {
+										chr1 += "_";
+										chr1 += region1[i];
+									}
+									int start1 = Integer.parseInt(region1[1 + region1IdxPad]);
+									int stop1 = Integer.parseInt(region1[2 + region1IdxPad]);
+									
+									String chr2 = region2[0];
+									for (int i=1; i<=region2IdxPad; i++) {
+										chr1 += "_";
+										chr2 += region2[i];
+									}
+									int start2 = Integer.parseInt(region2[1 + region2IdxPad]);
+									int stop2 = Integer.parseInt(region2[2 + region2IdxPad]);
+								}
+							}
+							*/
+							
 							String[] refFields = read.getReferenceName().split("_");
-							if (refFields.length >= 6) {
+							if (refFields.length >= 8) {
+//								String breakpointGroupId = refFields[0] + "_" + refFields[1] + "\t" + refFields[2] + ":" + refFields[3] + "\t" +
+//										refFields[4] + ":" + refFields[5];
+
+								
 								String breakpointGroupId = refFields[0] + "_" + refFields[1] + "\t" + refFields[2] + ":" + refFields[3] + "\t" +
-										refFields[4] + ":" + refFields[5];
+										refFields[4] + ":" + refFields[5] + "_" + refFields[6] + "_" + refFields[7];
+
 								Integer count = breakpointCounts.get(breakpointGroupId);
 								if (count == null) {
 									breakpointCounts.put(breakpointGroupId, 1);
@@ -86,5 +121,25 @@ public class SVReadCounter {
 	
 	public Map<String, Integer> getCounts() {
 		return counts;
+	}
+	
+	public static void main(String[] args) throws Exception {
+		String file = "/home/lmose/dev/abra/sv/virus_test2/t.sv.bam";
+		
+		final SamReader reader =
+		        SamReaderFactory.make()
+		                .validationStringency(ValidationStringency.SILENT)
+		                .samRecordFactory(DefaultSAMRecordFactory.getInstance())
+		                .open(SamInputResource.of(file));
+		
+		SAMFileHeader header = reader.getFileHeader();
+		
+		System.out.println("header: " + header);
+
+		SVReadCounter counter = new SVReadCounter();
+		Map<String, Integer> counts = counter.countReadsSupportingBreakpoints(reader, 100, header);
+		reader.close();
+		
+		System.out.println(counts);
 	}
 }

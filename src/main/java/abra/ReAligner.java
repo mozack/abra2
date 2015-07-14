@@ -562,7 +562,9 @@ public class ReAligner {
 	}
 	
 	public void processRegion(Feature region) throws Exception {
-		log("Processing region: " + region.getDescriptor());
+		if (isDebug) {
+			log("Processing region: " + region.getDescriptor());
+		}
 		
 		try {
 			String contigsFasta = tempDir + "/" + region.getDescriptor() + "_contigs.fasta";
@@ -853,7 +855,9 @@ public class ReAligner {
 						contigRead.setAlignmentStart(contigRead.getAlignmentStart()-prefix.length());
 
 					} else {
-						System.out.println("Not padding contig: " + contigRead.getReadName());
+						if (isDebug) {
+							System.out.println("Not padding contig: " + contigRead.getReadName());
+						}
 					}
 										
 					//TODO: Safer delimiter?  This assumes no ~ in any read

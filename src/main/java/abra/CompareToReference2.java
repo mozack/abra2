@@ -2,6 +2,7 @@
 package abra;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
@@ -16,6 +17,7 @@ import java.util.Random;
 import htsjdk.samtools.Cigar;
 import htsjdk.samtools.CigarElement;
 import htsjdk.samtools.CigarOperator;
+import htsjdk.samtools.SAMFileReader;
 import htsjdk.samtools.SAMRecord;
 
 /**
@@ -211,7 +213,9 @@ public class CompareToReference2 {
 					refIdx += element.getLength();
 				} else if (element.getOperator() == CigarOperator.S) {
 					
-					if (elementIdx == 0) {
+					// Adjust ref idx if this is leading soft clip
+					// Allow for hard clipping to happen prior to soft clipping
+					if (elementIdx == 0 || (elementIdx == 1 && read.getCigar().getCigarElement(0).getOperator() == CigarOperator.H)) {
 						refIdx -= element.getLength();
 					}
 					
@@ -449,6 +453,7 @@ public class CompareToReference2 {
 	}
 	*/
 	
+	/*
 	public static void main(String[] args) throws Exception {
 		CompareToReference2 c2r = new CompareToReference2(); 
 		c2r.init("/home/lmose/reference/chrM/MT.fa");
@@ -463,8 +468,9 @@ public class CompareToReference2 {
 //		c2r.init("/home/lmose/reference/t2/t2.fa");
 //		System.out.println(c2r.getSequence("x1", 1, 12));
 	}
+	*/
 	
-	/*
+
 	public static void main(String[] args) throws Exception {
 		
 //		String ref = args[0];
@@ -473,15 +479,18 @@ public class CompareToReference2 {
 //		String ref = "/home/lmose/reference/chr7/chr7.fa";
 //		String sam = "/home/lmose/dev/ayc/24/26/test";
 		
-		String ref = "/home/lmose/reference/chr1/1.fa";
-		String sam = "/home/lmose/dev/abra_wxs/4/ttest1.bam";
+//		String ref = "/home/lmose/reference/chr1/1.fa";
+//		String sam = "/home/lmose/dev/abra_wxs/4/ttest1.bam";
+		
+		String sam = "/home/lmose/dev/abra/mgfield/MM134T_GL000219_1.bam";
+//		String sam = "/home/lmose/dev/abra/mgfield/test.sam";
 
+		String ref = "/home/lmose/dev/abra/mgfield/GL000219.1.fa";
 		
 		CompareToReference2 c2r = new CompareToReference2();
 		c2r.init(ref);
 		
-//		Thread.sleep(100000);
-		
+//		Thread.sleep(100000);	
 		SAMFileReader rdr = new SAMFileReader(new File(sam));
 		
 		for (SAMRecord read : rdr) {
@@ -492,5 +501,4 @@ public class CompareToReference2 {
 		
 		rdr.close();
 	}
-	*/
 }

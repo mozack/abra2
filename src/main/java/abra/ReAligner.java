@@ -173,8 +173,13 @@ public class ReAligner {
 		
 		log("Iterating over regions");
 		
+		int count = 0;
 		for (Feature region : regions) {
+			count += 1;
 			spawnRegionThread(region, null);
+			if ((count % 1000) == 0) {
+				System.out.println("Processing region: " + count + " of " + regions.size());
+			}
 		}
 		
 		

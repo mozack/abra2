@@ -93,16 +93,20 @@ public class ReadLocusReader implements Iterable<ReadsAtLocus> {
 			
 			while (shouldReadFromFile && samIter.hasNext()) {
 				SAMRecord read = samIter.next();
+
+				// Skip over unmapped reads
+				if (!read.getReadUnmappedFlag()) {
 				
-				if (readCache.isEmpty() && !read.getReferenceName().equals(currentChr)) {
-					currentChr = read.getReferenceName();
-					currentPos = getAlignmentStart(read);
-				}
-				
-				readCache.add(read);
-				
-				if (getAlignmentStart(read) > currentPos || !read.getReferenceName().equals(currentChr)) {
-					shouldReadFromFile = false;
+					if (readCache.isEmpty() && !read.getReferenceName().equals(currentChr)) {
+						currentChr = read.getReferenceName();
+						currentPos = getAlignmentStart(read);
+					}
+					
+					readCache.add(read);
+					
+					if (getAlignmentStart(read) > currentPos || !read.getReferenceName().equals(currentChr)) {
+						shouldReadFromFile = false;
+					}
 				}
 			}			
 		}

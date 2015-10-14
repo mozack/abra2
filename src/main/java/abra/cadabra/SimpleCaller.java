@@ -184,6 +184,11 @@ public class SimpleCaller {
 		System.out.println("##FORMAT=<ID=RO,Number=1,Type=String,Description=\"Ref observations\">");
 		System.out.println("##FORMAT=<ID=AF1,Number=1,Type=String,Description=\"Allele Frequency based upon DP1\">");
 		System.out.println("##FORMAT=<ID=AF2,Number=1,Type=String,Description=\"Allele Frequency based upon DP2\">");
+		System.out.println("##FORMAT=<ID=RF,Number=1,Type=String,Description=\"Reference forward strand observations\">");
+		System.out.println("##FORMAT=<ID=RR,Number=1,Type=String,Description=\"Reference reverse strand observations\">");
+		System.out.println("##FORMAT=<ID=AF,Number=1,Type=String,Description=\"Alternate forward strand observations\">");
+		System.out.println("##FORMAT=<ID=AR,Number=1,Type=String,Description=\"Alternate reverse strand observations\">");
+		System.out.println("##FORMAT=<ID=FO,Number=1,Type=String,Description=\"Fisher's Exact Test evaluating ref/alt forward/reverse obs\">");
 		System.out.println("#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	SAMPLE");
 	}
 	
@@ -227,7 +232,7 @@ public class SimpleCaller {
 		call.append(callInfo.ref);
 		call.append('\t');
 		call.append(callInfo.alt);
-		call.append("\t.\t.\tFOO=BAR;\tDP1:DP2:RO:AO:AF1:AF2:RF:RR:AF:AO:FO\t");
+		call.append("\t.\t.\tFOO=BAR;\tDP1:DP2:RO:AO:AF1:AF2:RF:RR:AF:AR:FO\t");
 		
 		int depth1 = callInfo.totalDepth;
 		int depth2 = callInfo.altCount + callInfo.refCount;

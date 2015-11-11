@@ -39,6 +39,7 @@ public class ReAlignerOptions extends Options {
 	private static final String MIN_EDGE_RATIO = "mer";
 	private static final String USE_INTERMEDIATE_BAM = "ib";
 	private static final String NO_DEBUG = "no-debug";
+	private static final String MAX_NODES = "maxn";
 	
 	private OptionParser parser;
 	private boolean isValid;
@@ -76,6 +77,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(MIN_EDGE_RATIO, "Min edge pruning ratio.  Default value is appropriate for relatively sensitive somatic cases.  May be increased for improved speed in germline only cases.").withRequiredArg().ofType(Double.class).defaultsTo(.02);
             parser.accepts(USE_INTERMEDIATE_BAM, "If specified, write intermediate data to BAM file using the intel deflator when available.  Use this to speed up processing.");
             parser.accepts(NO_DEBUG, "Throttle down debug logging");
+            parser.accepts(MAX_NODES, "Maximum pre-pruned nodes in regional assembly").withOptionalArg().ofType(Integer.class).defaultsTo(9000);
     	}
     	
     	return parser;
@@ -291,5 +293,9 @@ public class ReAlignerOptions extends Options {
 	
 	public boolean isValid() {
 		return isValid;
+	}
+	
+	public int getMaxNodes() {
+		return (Integer) getOptions().valueOf(MAX_NODES);
 	}
 }

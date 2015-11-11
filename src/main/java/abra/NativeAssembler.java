@@ -44,10 +44,12 @@ public class NativeAssembler {
 	private int averageDepthCeiling;
 	private double minEdgeRatio;
 	private boolean isDebug = true;
+	private int maxNodes;
 
 	private native String assemble(String input, String output, String prefix,
 			int truncateOnRepeat, int maxContigs, int maxPathsFromRoot, int readLength, 
-			int kmerSize, int minKmerFreq, int minBaseQuality, double minEdgeRatio, int debug);
+			int kmerSize, int minKmerFreq, int minBaseQuality, double minEdgeRatio, int debug,
+			int maxNodes);
 	
 	private String getIdentifier(SAMRecord read) {
 		String id = read.getReadName();
@@ -186,7 +188,8 @@ public class NativeAssembler {
 					minKmerFrequency,
 					minBaseQuality,
 					minEdgeRatio,
-					isDebug ? 1 : 0);
+					isDebug ? 1 : 0,
+					maxNodes);
 			
 			if (!contigs.equals("<REPEAT>")) {
 				break;
@@ -375,7 +378,8 @@ public class NativeAssembler {
 							minKmerFrequency,
 							minBaseQuality,
 							minEdgeRatio,
-							isDebug ? 1 : 0);
+							isDebug ? 1 : 0,
+							maxNodes);
 					
 					if (!contigs.equals("<REPEAT>")) {
 						break;
@@ -463,10 +467,11 @@ public class NativeAssembler {
 	}
 	
 	String nativeAssemble(String input, String output, String prefix, int truncateOnRepeat, int maxContigs, int maxPathsFromRoot, int readLength, int[] kmers,
-			int minKmerFreq, int minBaseQuality, double minEdgeRatio, int debug) {
+			int minKmerFreq, int minBaseQuality, double minEdgeRatio, int debug, int maxNodes) {
 		String result = "";
 		for (int kmer : kmers) {
-			result = assemble(input, output, prefix, truncateOnRepeat, maxContigs, maxPathsFromRoot, readLength, kmer, minKmerFreq, minBaseQuality, minEdgeRatio, debug);
+			result = assemble(input, output, prefix, truncateOnRepeat, maxContigs, maxPathsFromRoot, readLength, kmer, minKmerFreq, minBaseQuality, minEdgeRatio, debug,
+					maxNodes);
 			if (!result.equals("<REPEAT>")) {
 				break;
 			}
@@ -551,6 +556,10 @@ public class NativeAssembler {
 	
 	public void setMinBaseQuality(int minBaseQuality) {
 		this.minBaseQuality = minBaseQuality;
+	}
+	
+	public void setMaxNodes(int maxNodes) {
+		this.maxNodes = maxNodes;
 	}
 	
 	public void setMaxAverageDepth(int maxAverageDepth) {

@@ -20,7 +20,16 @@ public class AssemblerSettings {
 	private int averageDepthCeiling;
 	private double minEdgeRatio;
 	private boolean isDebug;
+	private int maxNodes;
 		
+	public int getMaxNodes() {
+		return maxNodes;
+	}
+
+	public void setMaxNodes(int maxNodes) {
+		this.maxNodes = maxNodes;
+	}
+
 	public double getMinEdgeRatio() {
 		return minEdgeRatio;
 	}

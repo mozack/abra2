@@ -29,6 +29,8 @@ public class ReferenceEvaluator {
 	private Set<Feature> excludeRegions;
 	private ThreadManager threadManager;
 	
+	private static final int MAX_NODES = 9000;
+	
 	public ReferenceEvaluator(int readLength, String reference, int[] kmers, String in, String out, int numThreads) {
 		this.readLength = readLength;
 		this.reference = reference;
@@ -100,7 +102,7 @@ public class ReferenceEvaluator {
 			readBuf.append(qualities);
 		}
 		
-		String contig = assembler.nativeAssemble(readBuf.toString(), region.getDescriptor(), "eval", 0, 1, (ReAligner.MAX_REGION_LENGTH + 2*readLength)*2, readLength, kmers, 1, 0, .01, 1);
+		String contig = assembler.nativeAssemble(readBuf.toString(), region.getDescriptor(), "eval", 0, 1, (ReAligner.MAX_REGION_LENGTH + 2*readLength)*2, readLength, kmers, 1, 0, .01, 1, MAX_NODES);
 		int basesIdx = contig.indexOf('\n') + 1;
 		if (basesIdx < contig.length()) {
 			String contigBases = contig.substring(basesIdx, contig.length()-1);

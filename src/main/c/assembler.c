@@ -42,9 +42,6 @@ using google::sparse_hash_set;
 // TODO: Allocate dynamically
 #define MAX_SAMPLES 8
 
-// This makes sense for small assembly windows, but should be parameterized for larger assemblies
-#define MAX_NODES 9000
-
 // Kmers containing bases below this threshold are excluded from assembly.
 #define MIN_BASE_QUALITY 13
 
@@ -59,6 +56,7 @@ __thread int min_node_freq;
 __thread int min_base_quality;
 __thread double min_edge_ratio;
 __thread int debug;
+__thread int max_nodes;
 
 #define BIG_CONSTANT(x) (x##LLU)
 
@@ -368,7 +366,7 @@ void build_graph2(const char* input, sparse_hash_map<const char*, struct node*, 
 	const char* ptr = input;
 	int num_reads = 0;
 
-	while ((record < num_records) && (nodes->size() < MAX_NODES)) {
+	while ((record < num_records) && (nodes->size() < max_nodes)) {
 		ptr = &(input[record*record_len]);
 
 		char sample_id = ptr[0];
@@ -1047,7 +1045,7 @@ char* assemble(const char* input,
 
 	int status = -1;
 
-	if (nodes->size() >= MAX_NODES) {
+	if (nodes->size() >= max_nodes) {
 		status = TOO_MANY_NODES;
 		printf("Graph too complex for region: %s\n", prefix);
 	}
@@ -1133,7 +1131,7 @@ extern "C"
    (JNIEnv *env, jobject obj, jstring j_input, jstring j_output, jstring j_prefix,
     jint j_truncate_on_output, jint j_max_contigs, jint j_max_paths_from_root,
     jint j_read_length, jint j_kmer_size, jint j_min_node_freq, jint j_min_base_quality,
-    jdouble j_min_edge_ratio, jint j_debug)
+    jdouble j_min_edge_ratio, jint j_debug, jint j_max_nodes)
  {
 
      //Get the native string from javaString
@@ -1150,10 +1148,11 @@ extern "C"
 	min_base_quality = j_min_base_quality;
 	min_edge_ratio = j_min_edge_ratio;
 	debug = j_debug;
+	max_nodes = j_max_nodes;
 
 	if (debug) {
-		printf("Abra JNI entry point v0.94, prefix: %s, read_length: %d, kmer_size: %d, min_node_freq: %d, min_base_qual: %d, min_edge_ratio %f, debug: %d\n",
-				prefix, read_length, kmer_size, min_node_freq, min_base_quality, min_edge_ratio, debug);
+		printf("Abra JNI entry point v0.95, prefix: %s, read_length: %d, kmer_size: %d, min_node_freq: %d, min_base_qual: %d, min_edge_ratio %f, debug: %d, max_nodes: %d\n",
+				prefix, read_length, kmer_size, min_node_freq, min_base_quality, min_edge_ratio, debug, max_nodes);
 	}
 
 //	printf("input len: %s : %d\n", prefix, strlen(input));

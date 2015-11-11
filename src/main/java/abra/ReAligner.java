@@ -1056,6 +1056,7 @@ public class ReAligner {
 		assem.setMinKmerFrequency(assemblerSettings.getMinNodeFrequncy());
 		assem.setMinEdgeRatio(assemblerSettings.getMinEdgeRatio());
 		assem.setMinBaseQuality(assemblerSettings.getMinBaseQuality());
+		assem.setMaxNodes(assemblerSettings.getMaxNodes());
 		assem.setMinReadCandidateFraction(assemblerSettings.getMinReadCandidateFraction());
 		assem.setMaxAverageDepth(assemblerSettings.getMaxAverageDepth());
 		assem.setShouldSearchForSv(this.isPairedEnd && assemblerSettings.searchForStructuralVariation());
@@ -1206,6 +1207,7 @@ public class ReAligner {
 			assemblerSettings.setAverageDepthCeiling(options.getAverageDepthCeiling());
 			assemblerSettings.setMinEdgeRatio(options.getMinEdgeRatio());
 			assemblerSettings.setDebug(options.isDebug());
+			assemblerSettings.setMaxNodes(options.getMaxNodes());
 
 			ReAligner realigner = new ReAligner();
 			realigner.setReference(options.getReference());

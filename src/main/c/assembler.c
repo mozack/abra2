@@ -1151,7 +1151,7 @@ extern "C"
 	max_nodes = j_max_nodes;
 
 	if (debug) {
-		printf("Abra JNI entry point v0.95, prefix: %s, read_length: %d, kmer_size: %d, min_node_freq: %d, min_base_qual: %d, min_edge_ratio %f, debug: %d, max_nodes: %d\n",
+		printf("Abra JNI entry point v0.96, prefix: %s, read_length: %d, kmer_size: %d, min_node_freq: %d, min_base_qual: %d, min_edge_ratio %f, debug: %d, max_nodes: %d\n",
 				prefix, read_length, kmer_size, min_node_freq, min_base_quality, min_edge_ratio, debug, max_nodes);
 	}
 

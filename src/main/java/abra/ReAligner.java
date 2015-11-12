@@ -43,6 +43,9 @@ public class ReAligner {
 	// Minimum sequence length recommended for use with bwa mem
 	private static final int MIN_CONTIG_LENGTH = 70;
 	
+	// Cannot be larger than buffer in assembler.c
+	private static final int MAX_KMER_SIZE = 199;
+	
 	private SAMFileHeader[] samHeaders;
 	
 	private List<Feature> regions;
@@ -1025,6 +1028,9 @@ public class ReAligner {
 		int[] kmerSizes = null;
 		
 		int maxKmerSize = this.readLength-15; 
+		if (maxKmerSize > MAX_KMER_SIZE) {
+			maxKmerSize = MAX_KMER_SIZE;
+		}
 		List<Integer> kmers = new ArrayList<Integer>();
 		
 		while (kmerSize < maxKmerSize) {

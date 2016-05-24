@@ -39,6 +39,10 @@ public class RegionLoader {
 			int cnt = 0;
 			
 			while (line != null) {
+				if(line.startsWith("#")) {
+					line = reader.readLine();
+					continue;
+				}
 				String[] fields = line.split("\t");
 				
 				String chromosome = fields[SEQNAME_IDX];

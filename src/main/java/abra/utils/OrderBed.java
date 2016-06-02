@@ -46,13 +46,13 @@ public class OrderBed {
 				
 				Feature region = new Feature(chromosome, startPos, endPos);
 				
-				if (chromosome.equals(lastChr)) {
-					features.add(region);
-				} else {
+				if (!chromosome.equals(lastChr)) {
 					// Sort and output the current chromosome's features
 					outputFeatures(features);
 					lastChr = chromosome;
 				}
+				
+				features.add(region);
 				
 				line = reader.readLine();
 			}

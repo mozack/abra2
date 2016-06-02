@@ -49,7 +49,7 @@ public class RegionLoader {
 				long startPos = Long.valueOf(fields[start]);
 				long endPos = Long.valueOf(fields[end]);
 				
-				if (startPos >= endPos) {
+				if (startPos > endPos) {
 					throw new IllegalArgumentException("Region end must be greater than region start in target BED file: " + line);
 				}
 				

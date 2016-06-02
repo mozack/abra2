@@ -52,6 +52,8 @@ public class OrderBed {
 					// Sort and output the current chromosome's features
 					outputFeatures(features);
 				}
+				
+				line = reader.readLine();
 			}
 			
 			// Output last chromosome
@@ -94,8 +96,8 @@ public class OrderBed {
 	}
 	
 	public static void main(String[] args) throws Exception {
-		System.err.println("Staring bed ordering.");
-		String bedFile = args[1];
+		System.err.println("Starting bed ordering.");
+		String bedFile = args[0];
 		orderBed(bedFile);
 		System.err.println("Bed ordering done.");
 		

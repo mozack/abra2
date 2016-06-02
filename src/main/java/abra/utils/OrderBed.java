@@ -51,6 +51,7 @@ public class OrderBed {
 				} else {
 					// Sort and output the current chromosome's features
 					outputFeatures(features);
+					lastChr = chromosome;
 				}
 				
 				line = reader.readLine();

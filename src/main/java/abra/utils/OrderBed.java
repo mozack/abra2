@@ -40,8 +40,8 @@ public class OrderBed {
 				long startPos = Long.valueOf(fields[1]);
 				long endPos = Long.valueOf(fields[2]);
 				
-				if (startPos >= endPos) {
-					throw new IllegalArgumentException("Region end must be greater than region start in target BED file: " + line);
+				if (startPos > endPos) {
+					throw new IllegalArgumentException("Region end must be greater than or equal to region start in target BED file: " + line);
 				}
 				
 				Feature region = new Feature(chromosome, startPos, endPos);

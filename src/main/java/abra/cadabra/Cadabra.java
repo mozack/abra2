@@ -503,6 +503,11 @@ public class Cadabra {
 //		String normal = "/home/lmose/dev/abra/cadabra/ins/ntest.bam";
 //		String tumor = "/home/lmose/dev/abra/cadabra/ins/ttest.bam";
 		
+		if (args.length < 3) {
+			System.out.println("Usage: java -cp abra.jar abra.cadabra.Cadabra <reference> <normal_bam> <tumor_bam>");
+			System.exit(-1);
+		}
+		
 		String reference = args[0];
 		String normal = args[1];
 		String tumor = args[2];

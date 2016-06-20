@@ -20,7 +20,7 @@ using google::sparse_hash_set;
 //#define MIN_CONTIG_LENGTH 101
 //#define MIN_NODE_FREQUENCY 3
 //#define MIN_NODE_FREQUENCY 2
-#define MAX_CONTIG_SIZE 50000
+#define MAX_CONTIG_SIZE 5000
 #define MAX_READ_LENGTH 1001
 //#define MIN_BASE_QUALITY 20
 #define INCREASE_MIN_NODE_FREQ_THRESHOLD 1600
@@ -652,14 +652,12 @@ void prune_graph(sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nod
 	int freq = min_node_freq;
 
 	if (!isUnalignedRegion) {
-		/*
 		int increase_freq = nodes->size() / INCREASE_MIN_NODE_FREQ_THRESHOLD;
 
 		if (increase_freq > 0) {
 			freq = freq + increase_freq;
 //			printf("Increased mnf to: %d for nodes size: %d\n", freq, nodes->size());
 		}
-		*/
 	}
 
 	if (freq > 1) {

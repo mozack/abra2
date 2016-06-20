@@ -700,10 +700,10 @@ public class ReAligner {
 	static List<Feature> getRegions(String regionsBed, int readLength, boolean hasPresetKmers) throws IOException {
 		RegionLoader loader = new RegionLoader();
 		List<Feature> regions = loader.load(regionsBed, hasPresetKmers);
-		if (regions.size() > 0 && (regions.get(0).getKmer() == 0)) {
-			regions = RegionLoader.collapseRegions(regions, readLength);
-			regions = splitRegions(regions);
-		}
+//		if (regions.size() > 0 && (regions.get(0).getKmer() == 0)) {
+//			regions = RegionLoader.collapseRegions(regions, readLength);
+//			regions = splitRegions(regions);
+//		}
 
 		return regions;
 	}
@@ -1055,7 +1055,7 @@ public class ReAligner {
 		assem.setMaxContigs(assemblerSettings
 				.getMaxPotentialContigs());
 
-		assem.setMaxPathsFromRoot(100000);
+		assem.setMaxPathsFromRoot(100000000);
 		assem.setReadLength(readLength);
 		//assem.setKmer(assemblerSettings.getKmerSize());
 		assem.setKmer(getKmers(region));
@@ -1191,7 +1191,7 @@ public class ReAligner {
 
 	public static void run(String[] args) throws Exception {
 		
-		System.out.println("Starting 0.96 ...");
+		System.out.println("Starting 0.97 ...");
 		
 		ReAlignerOptions options = new ReAlignerOptions();
 		options.parseOptions(args);

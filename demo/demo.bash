@@ -5,7 +5,7 @@
 # Path to ABRA jar file (with dependencies)
 # If you've downloaded the jar, set this to the appropriate location
 # Compiled jars will be under the target directory
-JAR=../target/abra-0.96-SNAPSHOT-jar-with-dependencies.jar
+JAR=../target/abra-0.97-SNAPSHOT-jar-with-dependencies.jar
 
 # Path to hg19 reference (indexed by BWA)
 #REF=/datastore/rclbg/nextgenout3/MOSE_TEST/abra/brca/ref/GRCh37-lite.fa

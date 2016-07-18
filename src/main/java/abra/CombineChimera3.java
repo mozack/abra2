@@ -54,7 +54,7 @@ public class CombineChimera3 {
 		outputReadsBam.close();
 		reader.close();
 		
-		System.out.println("Done combining chimeric reads.");
+		System.err.println("Done combining chimeric reads.");
 	}
 	
 	// SAMRecords in the input represent chimera for the same read
@@ -349,13 +349,13 @@ public class CombineChimera3 {
 
 	private void outputRead(SAMRecord read, boolean isCombined, SAMFileWriter out) {
 		try {
-			System.out.println(read.getSAMString());
+			System.err.println(read.getSAMString());
 			out.addAlignment(read);
 		} catch (NullPointerException e) {
-			System.out.println("isCombined: " + isCombined);
-			System.out.println(read);
-			System.out.println(read.getReadName());
-			System.out.println(read.getSAMString());
+			System.err.println("isCombined: " + isCombined);
+			System.err.println(read);
+			System.err.println(read.getReadName());
+			System.err.println(read.getSAMString());
 			throw e;
 		}
 	}

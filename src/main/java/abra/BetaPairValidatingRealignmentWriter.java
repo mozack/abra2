@@ -103,7 +103,7 @@ public class BetaPairValidatingRealignmentWriter implements RealignmentWriter {
 		}
 		
 		if ((count++ % 100000) == 0) {
-			System.out.println("Num candidates: " + numCandidates);
+			System.err.println("Num candidates: " + numCandidates);
 		}
 	}
 	
@@ -264,7 +264,7 @@ public class BetaPairValidatingRealignmentWriter implements RealignmentWriter {
 	}
 	
 	private void processCandidates() {
-		System.out.println("Processing candidates");
+		System.err.println("Processing candidates");
 		SimpleSamReadPairReader reader = new SimpleSamReadPairReader(candidatesSam);
 		
 		for (ReadPair pair : reader) {
@@ -286,7 +286,7 @@ public class BetaPairValidatingRealignmentWriter implements RealignmentWriter {
 				checkOrigAndOutput(reads2);
 			}
 		}
-		System.out.println("Done processing candidates");
+		System.err.println("Done processing candidates");
 	}
 	
 	private SAMRecord getOriginalRead(SAMRecord read) {
@@ -302,12 +302,12 @@ public class BetaPairValidatingRealignmentWriter implements RealignmentWriter {
 	}
 	
 	public int flush() {
-		System.out.println("Flushing");
+		System.err.println("Flushing");
 		candidatesSamWriter.close();
 		processCandidates();
 		
-		System.out.println("updatedCount: " + updatedCount);
-		System.out.println("origCount: " + origCount);
+		System.err.println("updatedCount: " + updatedCount);
+		System.err.println("origCount: " + origCount);
 		return realignCount;
 	}
 	

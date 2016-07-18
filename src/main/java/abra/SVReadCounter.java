@@ -90,7 +90,7 @@ public class SVReadCounter {
 									breakpointCounts.put(breakpointGroupId, count + 1);
 								}
 							} else {
-								System.out.println("Error analyzing breakpoint for: " + read.getSAMString());
+								System.err.println("Error analyzing breakpoint for: " + read.getSAMString());
 							}
 						}
 					}
@@ -110,8 +110,8 @@ public class SVReadCounter {
 		try {
 			orig = parser.parseLine(origSamStr);
 		} catch (RuntimeException e) {
-			System.out.println("Error processing: [" + origSamStr + "]");
-			System.out.println("Contig read: [" + read.getSAMString() + "]");
+			System.err.println("Error processing: [" + origSamStr + "]");
+			System.err.println("Contig read: [" + read.getSAMString() + "]");
 			e.printStackTrace();
 			throw e;
 		}
@@ -135,12 +135,12 @@ public class SVReadCounter {
 		
 		SAMFileHeader header = reader.getFileHeader();
 		
-		System.out.println("header: " + header);
+		System.err.println("header: " + header);
 
 		SVReadCounter counter = new SVReadCounter();
 		Map<String, Integer> counts = counter.countReadsSupportingBreakpoints(reader, 100, header);
 		reader.close();
 		
-		System.out.println(counts);
+		System.err.println(counts);
 	}
 }

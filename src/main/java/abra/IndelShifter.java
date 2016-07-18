@@ -79,7 +79,7 @@ public class IndelShifter {
 				}
 			}
 		} catch (RuntimeException e) {
-			System.out.println("Error processing: " + read.getSAMString());
+			System.err.println("Error processing: " + read.getSAMString());
 			throw e;
 		}
 		

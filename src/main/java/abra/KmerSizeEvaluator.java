@@ -84,7 +84,7 @@ public class KmerSizeEvaluator {
 		
 		output.close();
 		
-		System.out.println("Done.");
+		System.err.println("Done.");
 	}
 	
 	private void excludeRegion(Feature region) {
@@ -222,7 +222,7 @@ public class KmerSizeEvaluator {
 //		String regionsBed = "/home/lmose/dev/abra/dream/round2/20.orig.bed";
 		
 		if (args.length != 5) {
-			System.out.println("KmerSizeEvaluator <readLength> <reference> <output_bed> <num_threads> <input_bed>");
+			System.err.println("KmerSizeEvaluator <readLength> <reference> <output_bed> <num_threads> <input_bed>");
 			System.exit(-1);
 		}
 		
@@ -242,6 +242,6 @@ public class KmerSizeEvaluator {
 		
 		double elapsed = (e-s)/1000;
 		elapsed /= 60;
-		System.out.println("Elapsed mins: " + elapsed);
+		System.err.println("Elapsed mins: " + elapsed);
 	}
 }

@@ -496,7 +496,7 @@ public class CompareToReference2 {
 		for (SAMRecord read : rdr) {
 			int mismatches = c2r.numMismatches(read);
 			
-			System.out.println("mismatches: " + mismatches);
+			System.err.println("mismatches: " + mismatches);
 		}
 		
 		rdr.close();

@@ -41,11 +41,11 @@ public class NativeLibraryLoader {
 				throw new RuntimeException(e);
 			}
 			
-			System.out.println("Loading native library from: " + file.getAbsolutePath());
+			System.err.println("Loading native library from: " + file.getAbsolutePath());
 			System.load(file.getAbsolutePath());
 		} else {
 			// Search library path.
-			System.out.println("Searching for native library in standard path");
+			System.err.println("Searching for native library in standard path");
 			System.loadLibrary("Abra");
 		}
 	}

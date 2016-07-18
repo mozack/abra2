@@ -192,7 +192,7 @@ struct struct_pool* init_pool() {
 
 char* allocate_read(struct_pool* pool) {
 	if (pool->read_pool->block_idx > MAX_READ_BLOCKS) {
-		printf("READ BLOCK INDEX TOO BIG!!!!\n");
+		fprintf(stderr,"READ BLOCK INDEX TOO BIG!!!!\n");
 		exit(-1);
 	}
 
@@ -207,7 +207,7 @@ char* allocate_read(struct_pool* pool) {
 
 struct node* allocate_node(struct_pool* pool) {
 	if (pool->node_pool->block_idx >= MAX_NODE_BLOCKS) {
-		printf("NODE BLOCK INDEX TOO BIG!!!!\n");
+		fprintf(stderr,"NODE BLOCK INDEX TOO BIG!!!!\n");
 		exit(-1);
 	}
 
@@ -338,7 +338,7 @@ void add_to_graph(char sample_id, char* sequence, sparse_hash_map<const char*, s
 				curr = new_node(sample_id, kmer, sequence, pool, strand, kmer_qual);
 
 				if (curr == NULL) {
-					printf("Null node for kmer: %s\n", kmer);
+					fprintf(stderr,"Null node for kmer: %s\n", kmer);
 					exit(-1);
 				}
 
@@ -378,8 +378,8 @@ void build_graph2(const char* input, sparse_hash_map<const char*, struct node*, 
 		} else if (ptr[1] == '1') {
 			strand = 1;
 		} else {
-			printf("Initial char in input invalid: %c\n", ptr[1]);
-			printf("ERROR!  INVALID INPUT:\n===========================%s\n===========================\n", input);
+			fprintf(stderr,"Initial char in input invalid: %c\n", ptr[1]);
+			fprintf(stderr,"ERROR!  INVALID INPUT:\n===========================%s\n===========================\n", input);
 			exit(-1);
 		}
 
@@ -396,8 +396,8 @@ void build_graph2(const char* input, sparse_hash_map<const char*, struct node*, 
 		record++;
 	}
 
-//	printf("Num reads: %d\n", record);
-//	printf("Num nodes: %d\n", nodes->size());
+//	fprintf(stderr,"Num reads: %d\n", record);
+//	fprintf(stderr,"Num nodes: %d\n", nodes->size());
 }
 /*
 void build_graph(const char* read_file, sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, struct_pool* pool) {
@@ -422,13 +422,13 @@ void build_graph(const char* read_file, sparse_hash_map<const char*, struct node
 			line++;
 
 			if ((line % 100000) == 0) {
-				printf("Processed %d reads.\n", line);
+				fprintf(stderr,"Processed %d reads.\n", line);
 			}
 		}
 	}
 
-	printf("Num reads: %d\n", line);
-	printf("Num nodes: %d\n", nodes->size());
+	fprintf(stderr,"Num reads: %d\n", line);
+	fprintf(stderr,"Num nodes: %d\n", nodes->size());
 
 	fclose(fp);
 }
@@ -510,7 +510,7 @@ char is_min_edge_ratio_reached(int per_sample_total_freq[], struct node* node) {
 	char exceeds_min_ratio = 0;
 
 	for (int i=0; i<MAX_SAMPLES; i++) {
-//		printf("sample: %d, freq: %d, total_freq: %d\n", i, node->sample_frequency[i], per_sample_total_freq[i]);
+//		fprintf(stderr,"sample: %d, freq: %d, total_freq: %d\n", i, node->sample_frequency[i], per_sample_total_freq[i]);
 
 		if ((per_sample_total_freq[i] > 0) &&
 			((double) node->sample_frequency[i] / (double) per_sample_total_freq[i] >= min_edge_ratio)) {
@@ -628,7 +628,7 @@ void prune_low_frequency_edges(sparse_hash_map<const char*, struct node*, my_has
 		}
 	}
 
-//	printf("Pruned %ld edges\n", removed_edge_count);
+//	fprintf(stderr,"Pruned %ld edges\n", removed_edge_count);
 }
 
 
@@ -646,7 +646,7 @@ void prune_graph(sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nod
 		}
 	}
 
-//	printf("Remaining nodes after pruning step 1: %d\n", nodes->size());
+//	fprintf(stderr,"Remaining nodes after pruning step 1: %d\n", nodes->size());
 
 	// Now go back through and ensure that each node reaches minimum frequency threshold.
 	int freq = min_node_freq;
@@ -656,7 +656,7 @@ void prune_graph(sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nod
 
 		if (increase_freq > 0) {
 			freq = freq + increase_freq;
-//			printf("Increased mnf to: %d for nodes size: %d\n", freq, nodes->size());
+//			fprintf(stderr,"Increased mnf to: %d for nodes size: %d\n", freq, nodes->size());
 		}
 	}
 
@@ -673,7 +673,7 @@ void prune_graph(sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nod
 		}
 	}
 
-//	printf("Remaining nodes after pruning step 2: %d\n", nodes->size());
+//	fprintf(stderr,"Remaining nodes after pruning step 2: %d\n", nodes->size());
 
 	prune_low_frequency_edges(nodes);
 
@@ -689,32 +689,32 @@ void prune_graph(sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nod
 		}
 	}
 
-//	printf("Remaining nodes after edge pruning: %d\n", nodes->size());
+//	fprintf(stderr,"Remaining nodes after edge pruning: %d\n", nodes->size());
 }
 
 void print_kmer(struct node* node) {
     for (int i=0; i<kmer_size; i++) {
-            printf("%c", node->kmer[i]);
+            fprintf(stderr,"%c", node->kmer[i]);
     }
 }
 
 void print_node(struct node* node) {
-        printf("kmer: ");
+        fprintf(stderr,"kmer: ");
         print_kmer(node);
-        printf("\tfrom: ");
+        fprintf(stderr,"\tfrom: ");
 
         struct linked_node* from = node->fromNodes;
         while (from != NULL) {
         	print_kmer(from->node);
-        	printf(",");
+        	fprintf(stderr,",");
         	from = from->next;
         }
 
-        printf("\tto: ");
+        fprintf(stderr,"\tto: ");
         struct linked_node* to = node->toNodes;
         while (to != NULL) {
         	print_kmer(to->node);
-        	printf(",");
+        	fprintf(stderr,",");
         	to = to->next;
         }
 }
@@ -758,15 +758,15 @@ struct linked_node* identify_root_nodes(sparse_hash_map<const char*, struct node
 			root_nodes->node = node;
 			root_nodes->next = next;
 
-//			printf("\tROOT");
+//			fprintf(stderr,"\tROOT");
 
 			count++;
 		}
 
-//		printf("\n");
+//		fprintf(stderr,"\n");
 	}
 
-//	printf("num root nodes: %d\n", count);
+//	fprintf(stderr,"num root nodes: %d\n", count);
 
 	return root_nodes;
 }
@@ -782,7 +782,7 @@ struct contig {
 struct contig* new_contig() {
 	struct contig* curr_contig;
 	curr_contig = (contig*) malloc(sizeof(contig));
-//	printf("seq size: %d\n", sizeof(curr_contig->seq));
+//	fprintf(stderr,"seq size: %d\n", sizeof(curr_contig->seq));
 	memset(curr_contig->seq, 0, sizeof(curr_contig->seq));
 	curr_contig->size = 0;
 	curr_contig->is_repeat = 0;
@@ -815,7 +815,7 @@ void output_contig(struct contig* contig, int& contig_count, const char* prefix,
 	char buf[1024];
 
 	if (strlen(contigs) + strlen(contig->seq) > MAX_TOTAL_CONTIG_LEN) {
-		printf("contig string too long: %s\n", prefix);
+		fprintf(stderr,"contig string too long: %s\n", prefix);
 		exit(-1);
 	}
 
@@ -866,9 +866,9 @@ int build_contigs(
 		struct contig* contig = contigs.top();
 
 		if (is_node_visited(contig, contig->curr_node)) {
-//			printf("Repeat node: ");
+//			fprintf(stderr,"Repeat node: ");
 //			print_kmer(contig->curr_node);
-//			printf("\n");
+//			fprintf(stderr,"\n");
 			// We've encountered a repeat
 			contig->is_repeat = 1;
 			if ((!shadow_mode) && (!stop_on_repeat)) {
@@ -907,7 +907,7 @@ int build_contigs(
 				char kmer[1024];
 				memset(kmer, 0, 1024);
 				strncpy(kmer, contig->curr_node->kmer, kmer_size);
-				printf("Max contig size exceeded at node: %s\n", kmer);
+				fprintf(stderr,"Max contig size exceeded at node: %s\n", kmer);
 
 				//TODO: Provide different status
 				status = TOO_MANY_CONTIGS;
@@ -926,7 +926,7 @@ int build_contigs(
 			while (to_linked_node != NULL) {
 				//TODO: Do not clone contig for first node.
 				struct contig* contig_branch = copy_contig(contig);
-//				printf("orig size: %d, copy size: %d\n", contig->visited_nodes->size(), contig_branch->visited_nodes->size());
+//				fprintf(stderr,"orig size: %d, copy size: %d\n", contig->visited_nodes->size(), contig_branch->visited_nodes->size());
 				contig_branch->curr_node = to_linked_node->node;
 				contigs.push(contig_branch);
 				to_linked_node = to_linked_node->next;
@@ -1037,7 +1037,7 @@ char* assemble(const char* input,
 
 	long startTime = time(NULL);
 	if (debug) {
-		printf("Assembling: -> %s\n", output);
+		fprintf(stderr,"Assembling: -> %s\n", output);
 	}
 	nodes->set_deleted_key(NULL);
 
@@ -1047,7 +1047,7 @@ char* assemble(const char* input,
 
 	if (nodes->size() >= max_nodes) {
 		status = TOO_MANY_NODES;
-		printf("Graph too complex for region: %s\n", prefix);
+		fprintf(stderr,"Graph too complex for region: %s\n", prefix);
 	}
 
 	//TODO: Set this explicitly
@@ -1075,12 +1075,12 @@ char* assemble(const char* input,
 
 		switch(status) {
 			case TOO_MANY_CONTIGS:
-				printf("TOO_MANY_CONTIGS: %s\n", prefix);
+				fprintf(stderr,"TOO_MANY_CONTIGS: %s\n", prefix);
 				contig_count = 0;
 				break;
 			case STOPPED_ON_REPEAT:
 				if (debug) {
-					printf("STOPPED_ON_REPEAT: %s\n", prefix);
+					fprintf(stderr,"STOPPED_ON_REPEAT: %s\n", prefix);
 				}
 				contig_count = 0;
 				break;
@@ -1088,7 +1088,7 @@ char* assemble(const char* input,
 				char kmer[1024];
 				memset(kmer, 0, 1024);
 				strncpy(kmer, root_nodes->node->kmer, kmer_size);
-				printf("TOO_MANY_PATHS_FROM_ROOT: %s - %s\n", prefix, kmer);
+				fprintf(stderr,"TOO_MANY_PATHS_FROM_ROOT: %s - %s\n", prefix, kmer);
 				break;
 		}
 
@@ -1108,11 +1108,11 @@ char* assemble(const char* input,
 	long stopTime = time(NULL);
 
 	if (kmer_size != input_kmer_size) {
-		printf("What!!?? %d : %d\n", kmer_size, input_kmer_size);
+		fprintf(stderr,"What!!?? %d : %d\n", kmer_size, input_kmer_size);
 	}
 	assert(kmer_size == input_kmer_size);
 	if (debug) {
-		printf("Done assembling(%ld): %s, %d\n", (stopTime-startTime), output, contig_count);
+		fprintf(stderr,"Done assembling(%ld): %s, %d\n", (stopTime-startTime), output, contig_count);
 	}
 
 	if (status == OK || status == TOO_MANY_PATHS_FROM_ROOT) {
@@ -1151,7 +1151,7 @@ extern "C"
 	max_nodes = j_max_nodes;
 
 	if (debug) {
-		printf("Abra JNI entry point v0.97, prefix: %s, read_length: %d, kmer_size: %d, min_node_freq: %d, min_base_qual: %d, min_edge_ratio %f, debug: %d, max_nodes: %d\n",
+		fprintf(stderr,"Abra JNI entry point v0.97, prefix: %s, read_length: %d, kmer_size: %d, min_node_freq: %d, min_base_qual: %d, min_edge_ratio %f, debug: %d, max_nodes: %d\n",
 				prefix, read_length, kmer_size, min_node_freq, min_base_quality, min_edge_ratio, debug, max_nodes);
 	}
 

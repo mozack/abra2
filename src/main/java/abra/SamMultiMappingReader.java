@@ -52,7 +52,7 @@ public class SamMultiMappingReader implements Iterable<List<SAMRecord>> {
     		numRecords++;
     		
     		if ((numRecords % 1000000) == 0) {
-    			System.out.println("Processed: " + numRecords + " records.");
+    			System.err.println("Processed: " + numRecords + " records.");
     		}
     	}
     	

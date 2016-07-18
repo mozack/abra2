@@ -35,7 +35,7 @@ public class Aligner {
 	
 	private void runCommand(String cmd, StdoutHandler stdoutHandler) throws IOException, InterruptedException {
 		
-		System.out.println("Running: [" + cmd + "]");
+		System.err.println("Running: [" + cmd + "]");
 		
 		long s = System.currentTimeMillis();
 
@@ -70,7 +70,7 @@ public class Aligner {
 		
 		long e = System.currentTimeMillis();
 		
-		System.out.println("BWA time: " + (e-s)/1000 + " seconds.");
+		System.err.println("BWA time: " + (e-s)/1000 + " seconds.");
 		
 		if (ret != 0) {
 			throw new RuntimeException("BWA exited with non-zero return code : [" + ret + "] for command: [" + cmd + "]");
@@ -143,7 +143,7 @@ public class Aligner {
             
             try {
 	            while ( (line = br.readLine()) != null) {
-	            	System.out.println(line);
+	            	System.err.println(line);
 	            }
 	            
 	            br.close();
@@ -153,7 +153,7 @@ public class Aligner {
             	throw new RuntimeException(e);
             }
             
-            System.out.println("Stream thread done.");
+            System.err.println("Stream thread done.");
 		}
 		
 	}

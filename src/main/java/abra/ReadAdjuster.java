@@ -67,7 +67,7 @@ public class ReadAdjuster {
 			
 			if ((count++ % 100000) == 0) {
 				e = System.currentTimeMillis();
-				System.out.println("Processed: " + count + " reads in read adjuster.  Elapsed seconds: " + (e-s)/1000);
+				System.err.println("Processed: " + count + " reads in read adjuster.  Elapsed seconds: " + (e-s)/1000);
 				s = System.currentTimeMillis();
 			}
 			
@@ -92,8 +92,8 @@ public class ReadAdjuster {
 			try {
 				orig = parser.parseLine(origSamStr);
 			} catch (RuntimeException exception) {
-				System.out.println("Error processing: [" + origSamStr + "]");
-				System.out.println("Contig read: [" + read.getSAMString() + "]");
+				System.err.println("Error processing: [" + origSamStr + "]");
+				System.err.println("Contig read: [" + read.getSAMString() + "]");
 				exception.printStackTrace();
 				throw exception;
 			}
@@ -295,7 +295,7 @@ public class ReadAdjuster {
 			String alternateHitsStr = (String) read.getAttribute("XA");
 			if (alternateHitsStr == null) {
 				String msg = "best hits = " + numBestHits + ", but no XA entry for: " + read.getSAMString();
-				System.out.println(msg);							
+				System.err.println(msg);							
 			} else {
 				
 				String[] alternates = alternateHitsStr.split(";");
@@ -309,7 +309,7 @@ public class ReadAdjuster {
 					int mismatches = Integer.parseInt(altInfo[3]);
 					
 					if ((cigar.equals(matchingString)) && (mismatches < bestMismatches)) {
-						System.out.println("MISMATCH_ISSUE: " + read.getSAMString());
+						System.err.println("MISMATCH_ISSUE: " + read.getSAMString());
 					}
 					
 					if ((cigar.equals(matchingString)) && (mismatches == bestMismatches)) {

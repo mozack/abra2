@@ -73,8 +73,8 @@ public class RegionLoader {
 				lastStart = startPos;
 				
 				if ((cnt % 100000) == 0) {
-					System.out.println("Loaded " + cnt + " regions");
-					System.out.flush();
+					System.err.println("Loaded " + cnt + " regions");
+					System.err.flush();
 				}
 			}
 		} finally {
@@ -108,7 +108,7 @@ public class RegionLoader {
 			collapsedRegions.add(currentRegion);
 		}
 		
-		System.out.println("Collapsed regions from " + regions.size() + " to " + collapsedRegions.size());
+		System.err.println("Collapsed regions from " + regions.size() + " to " + collapsedRegions.size());
 		
 		return collapsedRegions;
 	}
@@ -133,7 +133,7 @@ public class RegionLoader {
 		
 		for (Feature region : regions) {
 			if (region.getLength() <= 0) {
-				System.out.println(region + " - " + region.getLength());	
+				System.err.println(region + " - " + region.getLength());	
 			}
 			
 		}

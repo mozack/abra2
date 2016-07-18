@@ -88,7 +88,7 @@ public class ReferenceEvaluator {
 		include.close();
 		exclude.close();
 		
-		System.out.println("Done.");
+		System.err.println("Done.");
 	}
 	
 	private void evalRegion(Feature region, String regionBases) {

@@ -42,8 +42,8 @@ public class CompareToReference {
 //				if (!refStr.equals(read.getReadString())) {
 //				StringBuffer diffStr = new StringBuffer();
 				if (numDifferences(read) > maxDiff) {
-					System.out.println("------------");
-					System.out.println("read: " + read.getSAMString());
+					System.err.println("------------");
+					System.err.println("read: " + read.getSAMString());
 //					System.out.println("ref: " + refStr);
 //					System.out.println("dif: " + diffStr.toString());
 					count += 1;

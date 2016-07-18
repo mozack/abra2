@@ -248,7 +248,7 @@ public class NativeAssembler {
 				
 				if (reads.getTotalReadCount() != reads.getReads().size()) {
 					if (isDebug) {
-						System.out.println("downsampled: " + regions.get(0).getDescriptor() + ": " + reads.getTotalReadCount() + " -> " + reads.getReads().size());
+						System.err.println("downsampled: " + regions.get(0).getDescriptor() + ": " + reads.getTotalReadCount() + " -> " + reads.getReads().size());
 					}
 				}
 				
@@ -460,7 +460,7 @@ public class NativeAssembler {
 		}
 		
 		if (isDebug) {
-			System.out.println("Elapsed_msecs_in_NativeAssembler\tRegion:\t" + regions.get(0).getDescriptor() + "\tLength:\t" + regions.get(0).getLength() + "\tReadCount:\t" + readCount + "\tElapsed\t" + (end-start) + "\tAssembled\t" + isAssemblyCandidate + "\t" + kmer);
+			System.err.println("Elapsed_msecs_in_NativeAssembler\tRegion:\t" + regions.get(0).getDescriptor() + "\tLength:\t" + regions.get(0).getLength() + "\tReadCount:\t" + readCount + "\tElapsed\t" + (end-start) + "\tAssembled\t" + isAssemblyCandidate + "\t" + kmer);
 		}
 		
 		return contigs;
@@ -647,13 +647,13 @@ public class NativeAssembler {
 		List<Feature> regions = new ArrayList<Feature>();
 		regions.add(region);
 		String contigs = assem.assembleContigs(inputFiles, output, "asm_temp", regions, prefix, checkForDupes, realigner, c2r);
-		System.out.println(contigs);
+		System.err.println(contigs);
 		
-		System.out.println("-------------------------");
+		System.err.println("-------------------------");
 		
 		List<BreakpointCandidate> svCandidates = assem.getSvCandidateRegions();
 		for (BreakpointCandidate svCandidate : svCandidates) { 
-			System.out.println("SV: " + region.getDescriptor() + "-->" + svCandidate.getRegion().getDescriptor());
+			System.err.println("SV: " + region.getDescriptor() + "-->" + svCandidate.getRegion().getDescriptor());
 		}
 		
 //		assem.assembleContigs(args[0], args[1], "contig");

@@ -44,7 +44,7 @@ public class Sam2Fastq {
 			SAMFileWriter writer, boolean isPairedEnd,
 			List<Feature> regions, int minMappingQuality, boolean isBamOutput) throws IOException {
 		
-		System.out.println("sam: " + inputSam);
+		System.err.println("sam: " + inputSam);
 		
         SAMFileReader reader = new SAMFileReader(new File(inputSam));
         reader.setValidationStringency(ValidationStringency.SILENT);
@@ -99,7 +99,7 @@ public class Sam2Fastq {
 	    				try {
 	    					yx = SAMRecordUtils.getEditDistance(read, c2r);
 	    				} catch (ArrayIndexOutOfBoundsException e) {
-	    					System.out.println("Index error for read: " + read.getSAMString());
+	    					System.err.println("Index error for read: " + read.getSAMString());
 	    					throw e;
 	    				}
 	    			} else {
@@ -132,7 +132,7 @@ public class Sam2Fastq {
 	    					output1.write(samReadToFastqRecord(read));
 	    				}
 	    			} catch (IllegalArgumentException e) {
-	    				System.out.println("Error on: " + read.getSAMString());
+	    				System.err.println("Error on: " + read.getSAMString());
 	    				e.printStackTrace();
 	    				throw e;
 	    			}
@@ -145,7 +145,7 @@ public class Sam2Fastq {
     		
             lineCnt++;
             if ((lineCnt % 1000000) == 0) {
-                System.out.println("record: " + lineCnt);
+                System.err.println("record: " + lineCnt);
             }
         }
                 
@@ -306,6 +306,6 @@ public class Sam2Fastq {
 		
 		writer.close();
 		
-		System.out.println("Elapsed: " + (e-s)/1000);
+		System.err.println("Elapsed: " + (e-s)/1000);
 	}
 }

@@ -13,7 +13,7 @@ public class OperatingSystemCommand {
 	public static void runCommand(String cmd) throws IOException, InterruptedException {
 		
 		//String cmd = "bwa bwasw -f " + outputSam + " " + reference + " " + input;
-		System.out.println("Running: [" + cmd + "]");
+		System.err.println("Running: [" + cmd + "]");
 		
 		long s = System.currentTimeMillis();
 		
@@ -25,7 +25,7 @@ public class OperatingSystemCommand {
 		
 		long e = System.currentTimeMillis();
 		
-		System.out.println("cmd time: " + (e-s)/1000 + " seconds.");
+		System.err.println("cmd time: " + (e-s)/1000 + " seconds.");
 		
 		if (ret != 0) {
 			throw new RuntimeException("cmd exited with non-zero return code : [" + ret + "] for command: [" + cmd + "]");
@@ -43,7 +43,7 @@ public class OperatingSystemCommand {
 			cmdStr.append(" ");
 		}
 		
-		System.out.println("Running: [" + cmdStr + "]");
+		System.err.println("Running: [" + cmdStr + "]");
 		
 		long s = System.currentTimeMillis();
 		
@@ -55,7 +55,7 @@ public class OperatingSystemCommand {
 		
 		long e = System.currentTimeMillis();
 		
-		System.out.println("cmd time: " + (e-s)/1000 + " seconds.");
+		System.err.println("cmd time: " + (e-s)/1000 + " seconds.");
 		
 		if (ret != 0) {
 			throw new RuntimeException("cmd exited with non-zero return code : [" + ret + "] for command: [" + cmdStr + "]");

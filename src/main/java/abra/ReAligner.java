@@ -181,7 +181,7 @@ public class ReAligner {
 			count += 1;
 			spawnRegionThread(region, null);
 			if ((count % 1000) == 0) {
-				System.out.println("Processing region: " + count + " of " + regions.size());
+				System.err.println("Processing region: " + count + " of " + regions.size());
 			}
 		}
 		
@@ -237,7 +237,7 @@ public class ReAligner {
 			clock.stopAndPrint();
 		}
 		
-		System.out.println("Done.");
+		System.err.println("Done.");
 	}
 	
 	private void preProcessReads(String inputSam, String tempDir, SAMFileWriter writer) throws InterruptedException {
@@ -274,28 +274,28 @@ public class ReAligner {
 		
 		int ctr = 0;
 		for (String input : inputSams) {
-			System.out.println("input" + ctr + ": " + input);
+			System.err.println("input" + ctr + ": " + input);
 		}
 
 		ctr = 0;
 		for (String output : outputFiles) {
-			System.out.println("output" + ctr + ": " + output);
+			System.err.println("output" + ctr + ": " + output);
 		}
 		
-		System.out.println("regions: " + regionsBed);
-		System.out.println("reference: " + reference);
-		System.out.println("bwa index: " + bwaIndex);
-		System.out.println("working dir: " + tempDir);
-		System.out.println("num threads: " + numThreads);
-		System.out.println("max unaligned reads: " + maxUnalignedReads);
-		System.out.println(assemblerSettings.getDescription());
-		System.out.println("rna: " + rnaSam);
-		System.out.println("rna output: " + rnaOutputSam);
-		System.out.println("paired end: " + isPairedEnd);
-		System.out.println("use intermediate bam: " + isOutputIntermediateBam);
+		System.err.println("regions: " + regionsBed);
+		System.err.println("reference: " + reference);
+		System.err.println("bwa index: " + bwaIndex);
+		System.err.println("working dir: " + tempDir);
+		System.err.println("num threads: " + numThreads);
+		System.err.println("max unaligned reads: " + maxUnalignedReads);
+		System.err.println(assemblerSettings.getDescription());
+		System.err.println("rna: " + rnaSam);
+		System.err.println("rna output: " + rnaOutputSam);
+		System.err.println("paired end: " + isPairedEnd);
+		System.err.println("use intermediate bam: " + isOutputIntermediateBam);
 		
 		String javaVersion = System.getProperty("java.version");
-		System.out.println("Java version: " + javaVersion);
+		System.err.println("Java version: " + javaVersion);
 		if (javaVersion.startsWith("1.6") || javaVersion.startsWith("1.5") || javaVersion.startsWith("1.4")) {
 			throw new RuntimeException("Please upgrade to Java 7 or later to run ABRA.");
 		}
@@ -303,9 +303,9 @@ public class ReAligner {
 		try {
 			InetAddress localhost = java.net.InetAddress.getLocalHost();
 			String hostname = localhost.getHostName();
-			System.out.println("hostname: " + hostname);
+			System.err.println("hostname: " + hostname);
 		} catch (Throwable t) {
-			System.out.println("Error getting hostname: " + t.getMessage());
+			System.err.println("Error getting hostname: " + t.getMessage());
 		}
 	}
 	
@@ -584,7 +584,7 @@ public class ReAligner {
 			
 			// Assemble contigs
 			if (region.getKmer() > this.readLength-15) {
-				System.out.println("Skipping assembly of region: " + region.getDescriptor() + " - " + region.getKmer());
+				System.err.println("Skipping assembly of region: " + region.getDescriptor() + " - " + region.getKmer());
 			} else {
 				NativeAssembler assem = (NativeAssembler) newAssembler(region);
 				List<Feature> regions = new ArrayList<Feature>();
@@ -598,7 +598,7 @@ public class ReAligner {
 					for (BreakpointCandidate svCandidate : svCandidates) {
 						
 						if (isDebug) {
-							System.out.println("SV: " + region.getDescriptor() + "-->" + svCandidate.getRegion().getDescriptor());
+							System.err.println("SV: " + region.getDescriptor() + "-->" + svCandidate.getRegion().getDescriptor());
 						}
 						List<Feature> svRegions = new ArrayList<Feature>();
 						svRegions.add(region);
@@ -617,7 +617,7 @@ public class ReAligner {
 				}
 				
 				if (assem.isCycleExceedingThresholdDetected() && (bams.size() > 1) && this.localRepeatWriter != null) {
-					System.out.println("Attempting cycle detection for: " + region.getDescriptor());
+					System.err.println("Attempting cycle detection for: " + region.getDescriptor());
 					
 					// Assemble each region separately looking for cycles
 					List<String> cycleStatus = new ArrayList<String>();
@@ -657,7 +657,7 @@ public class ReAligner {
 						buf.append(status + "\t");
 					}
 					
-					System.out.println("Cycle detection for region: " + region + ".  Result: [" + buf.toString() + "]");
+					System.err.println("Cycle detection for region: " + region + ".  Result: [" + buf.toString() + "]");
 					
 					if (isAnyElementDifferent(cycleStatus)) {
 						StringBuffer out = new StringBuffer();
@@ -711,10 +711,10 @@ public class ReAligner {
 	private void loadRegions() throws IOException {
 		this.regions = getRegions(regionsBed, readLength, hasPresetKmers);
 		
-		System.out.println("Num regions: " + regions.size());
+		System.err.println("Num regions: " + regions.size());
 		if (isDebug) {
 			for (Feature region : regions) {
-				System.out.println(region.getSeqname() + "\t" + region.getStart() + "\t" + region.getEnd() + "\t" + region.getKmer());
+				System.err.println(region.getSeqname() + "\t" + region.getStart() + "\t" + region.getEnd() + "\t" + region.getKmer());
 			}
 		}
 	}
@@ -762,8 +762,8 @@ public class ReAligner {
 			}
 		}
 		
-		System.out.println("Min insert length: " + minInsertLength);
-		System.out.println("Max insert length: " + maxInsertLength);
+		System.err.println("Min insert length: " + minInsertLength);
+		System.err.println("Max insert length: " + maxInsertLength);
 				
 		log("Max read length is: " + readLength);
 		if (assemblerSettings.getMinContigLength() < 1) {
@@ -866,7 +866,7 @@ public class ReAligner {
 
 					} else {
 						if (isDebug) {
-							System.out.println("Not padding contig: " + contigRead.getReadName());
+							System.err.println("Not padding contig: " + contigRead.getReadName());
 						}
 					}
 										
@@ -1191,7 +1191,7 @@ public class ReAligner {
 
 	public static void run(String[] args) throws Exception {
 		
-		System.out.println("Starting 0.97 ...");
+		System.err.println("Starting 0.97 ...");
 		
 		ReAlignerOptions options = new ReAlignerOptions();
 		options.parseOptions(args);
@@ -1241,7 +1241,7 @@ public class ReAligner {
 
 			long e = System.currentTimeMillis();
 
-			System.out.println("Elapsed seconds: " + (e - s) / 1000);
+			System.err.println("Elapsed seconds: " + (e - s) / 1000);
 		} else {
 			System.exit(-1);
 		}

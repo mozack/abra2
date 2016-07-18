@@ -67,7 +67,7 @@ public class ReAlignerStats {
 			
 			cnt++;
 			if ((cnt % 1000000) == 0) {
-				System.out.println(cnt);
+				System.err.println(cnt);
 			}
 		}
 		
@@ -92,7 +92,7 @@ public class ReAlignerStats {
 				count += 1;
 			}
 			iter.close();
-			System.out.print(count + ",");
+			System.err.print(count + ",");
 		}
 		
 		reader.close();
@@ -100,9 +100,9 @@ public class ReAlignerStats {
 	
 	private void printRegionHeader() {
 		for (Feature region : regions) {
-			System.out.print(region.getDescriptor() + ",");
+			System.err.print(region.getDescriptor() + ",");
 		}
-		System.out.println();
+		System.err.println();
 	}
 	
 	public static void main(String[] args) throws Exception {
@@ -125,7 +125,7 @@ public class ReAlignerStats {
 		for (int i=0; i<orig.length; i++) {
 			int d = (Integer.valueOf(orig[i]) - Integer.valueOf(real[i]));
 			if (Math.abs(d) > 1000) {
-				System.out.println(i + " : " + d);
+				System.err.println(i + " : " + d);
 			}
 		}
 	}

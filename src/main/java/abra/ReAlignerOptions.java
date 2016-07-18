@@ -89,41 +89,41 @@ public class ReAlignerOptions extends Options {
 		
 		if (!getOptions().hasArgument(INPUT_SAM)) {
 			isValid = false;
-			System.out.println("Missing required input SAM/BAM file");
+			System.err.println("Missing required input SAM/BAM file");
 		}
 
 		if (!getOptions().hasArgument(OUTPUT_SAM)) {
 			isValid = false;
-			System.out.println("Missing required input SAM/BAM file");
+			System.err.println("Missing required input SAM/BAM file");
 		}
 		
 		if (getInputFiles().length != getOutputFiles().length) {
-			System.out.println("Number of input files must equal number of output files");
+			System.err.println("Number of input files must equal number of output files");
 		}
 		
 		if (!getOptions().hasArgument(REFERENCE)) {
 			isValid = false;
-			System.out.println("Missing required reference");
+			System.err.println("Missing required reference");
 		}
 		
 		if (getOptions().hasArgument(TARGET_REGIONS) && getOptions().hasArgument(TARGET_REGIONS_WITH_KMERS)) {
 			isValid = false;
-			System.out.println("Please specifiy only one of: " + TARGET_REGIONS + ", " + TARGET_REGIONS_WITH_KMERS);
+			System.err.println("Please specifiy only one of: " + TARGET_REGIONS + ", " + TARGET_REGIONS_WITH_KMERS);
 		}		
 		
 		if (!getOptions().hasArgument(TARGET_REGIONS) && !getOptions().hasArgument(TARGET_REGIONS_WITH_KMERS)) {
 			isValid = false;
-			System.out.println("Missing required target regions");
+			System.err.println("Missing required target regions");
 		}
 		
 		if (!getOptions().hasArgument(WORKING_DIR)) {
 			isValid = false;
-			System.out.println("Missing required working directory");
+			System.err.println("Missing required working directory");
 		}
 		
 		if ((getOptions().hasArgument(NUM_THREADS) && (Integer) getOptions().valueOf(NUM_THREADS) < 1)) {
 			isValid = false;
-			System.out.println("Num threads must be greater than zero.");
+			System.err.println("Num threads must be greater than zero.");
 		}
 		
         if (!isValid) {

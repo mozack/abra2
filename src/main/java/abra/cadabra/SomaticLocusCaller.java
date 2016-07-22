@@ -221,7 +221,8 @@ public class SomaticLocusCaller {
 				Character refBase = c2r.getSequence(locus.chromosome, locus.posStart, 1).charAt(0);
 				
 				// Override input with actual reference
-				locus.ref = new String(new char[] { refBase });
+//				locus.ref = new String(new char[] { refBase });
+				locus.actualRef = new String(new char[] { refBase });
 				
 				if (locus.isIndel()) {
 					if (hasIndel(read, locus)) {
@@ -270,6 +271,7 @@ public class SomaticLocusCaller {
 		String chromosome;
 		int posStart;
 		int posStop;
+		String actualRef;
 		String ref;
 		String alt;
 		Counts normalCounts;
@@ -326,15 +328,22 @@ public class SomaticLocusCaller {
 		int minBaseQual = Integer.parseInt(args[4]);
 		double minMaf = Double.parseDouble(args[5]);
 		
+
+//		String normal = "/home/lmose/dev/uncseq/oncomap/normal_test.bam";
+//		String tumor = "/home/lmose/dev/uncseq/oncomap/tumor_test.bam";
+//		String vcf = "/home/lmose/dev/uncseq/oncomap/test.vcf";
+//		String reference = "/home/lmose/reference/chr7/chr7.fa";
+
 		/*
-		String normal = "/home/lmose/dev/uncseq/oncomap/normal_test.bam";
-		String tumor = "/home/lmose/dev/uncseq/oncomap/tumor_test.bam";
-		String vcf = "/home/lmose/dev/uncseq/oncomap/test.vcf";
-		String reference = "/home/lmose/reference/chr7/chr7.fa";
+		String normal = "/home/lmose/dev/somatic_locus_caller/ntest.bam";
+		String tumor = "/home/lmose/dev/somatic_locus_caller/ttest.bam";
+		String vcf = "/home/lmose/dev/somatic_locus_caller/oncomap.txt";
+		String reference = "/home/lmose/reference/chr1/chr1.fa";
+
+		
 		int minBaseQual = 20;
 		double minMaf = .005;
-		*/
-
+*/
 		SomaticLocusCaller caller = new SomaticLocusCaller();
 		caller.call(normal, tumor, vcf, reference, minBaseQual, minMaf);
 	}

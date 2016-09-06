@@ -590,6 +590,21 @@ public class ReAligner {
 				List<Feature> regions = new ArrayList<Feature>();
 				regions.add(region);
 				String contigs = assem.assembleContigs(bams, contigsFasta, tempDir, regions, region.getDescriptor(), true, this, c2r);
+				
+				// Get reference sequence matching current region
+				System.out.println("Getting reference for: " + region.getSeqname() + ":" + (region.getStart()-this.readLength) + ", length: " + (region.getLength()+this.readLength*2));
+				String refSeq = c2r.getSequence(region.getSeqname(), (int) region.getStart()-this.readLength, (int) region.getLength()+this.readLength*2);
+				
+				SSWAligner ssw = new SSWAligner(refSeq);
+
+				// Map contigs to reference
+				String[] contigSequences = contigs.split("\n");
+				for (String contig : contigSequences) {
+					if (!contig.startsWith(">")) {
+						ssw.align(contig);
+					}
+				}
+				
 				if (!contigs.equals("<ERROR>") && !contigs.equals("<REPEAT>") && !contigs.isEmpty()) {
 					
 					appendContigs(contigs);

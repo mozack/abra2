@@ -70,4 +70,15 @@ public class SimpleMapperTest {
 		assertEquals(SimpleMapper.HOMOLOGOUS_MAPPING, smr.getPos());
 		assertEquals(3, smr.getMismatches());
 	}
+	
+	@Test (groups = "unit" )
+	public void testSimple1Mismatch() {
+		SimpleMapper sm = new SimpleMapper("ATCGAAAAAATTTTTTCCCCCCGGGGGGATCGGCTAATCG");
+		String read =                          "ATAAAATTTTTTCCCCCCGGGGGGATCG";
+	
+		SimpleMapperResult smr = sm.map(read);
+		assertEquals(4, smr.getPos());
+		assertEquals(1, smr.getMismatches());
+		
+	}
 }

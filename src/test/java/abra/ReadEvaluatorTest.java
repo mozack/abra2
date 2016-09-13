@@ -85,10 +85,10 @@ public class ReadEvaluatorTest {
 	}
 	
 	@Test (groups="unit")
-	public void testMapToMultipleContigs() {
+	public void testMapToMultipleContigsSynonymously() {
 		String contig1 = "ATCGAAAAAATTTTTTCCCCCCGGGGGGATCGGCTAATCG";
-		String contig2 = "ATCGAAAAAATTTTTTCCCCCCGGGGGGATCGGCTTATCG";
-		String contig3 = "ATCGAAAAAATTTTTTCCCCCCGGGGGGATCGGCTCATCG";
+		String contig2 = "AATCGAAAAAATTTTTTCCCCCCGGGGGGATCGGCTTATCG";
+		String contig3 = "TCGAAAAAATTTTTTCCCCCCGGGGGGATCGGCTCATCG";
 		String contig4 = "ATCGAAAAAATTTTTTCCCCCCGGGGGGATCGGCTAATCG";
 		String read    =     "ATAAAATTTTTTCCCCCCGGGGGGATCG";  // matches contig at 0 based position 4 with 0 mismatches
 		
@@ -96,13 +96,13 @@ public class ReadEvaluatorTest {
 		SSWAlignerResult swc1 = new SSWAlignerResult(10, "10M1D30M");
 
 		SimpleMapper sm2 = new SimpleMapper(contig2);
-		SSWAlignerResult swc2 = new SSWAlignerResult(20, "10M1D30M");
+		SSWAlignerResult swc2 = new SSWAlignerResult(9, "11M1D31M");
 
 		SimpleMapper sm3 = new SimpleMapper(contig3);
-		SSWAlignerResult swc3 = new SSWAlignerResult(30, "10M1D30M");
+		SSWAlignerResult swc3 = new SSWAlignerResult(11, "9M1D29M");
 
 		SimpleMapper sm4 = new SimpleMapper(contig4);
-		SSWAlignerResult swc4 = new SSWAlignerResult(40, "10M1D30M");
+		SSWAlignerResult swc4 = new SSWAlignerResult(10, "10M1D30M");
 
 		Map<SimpleMapper, SSWAlignerResult> mappedContigs = new HashMap<SimpleMapper, SSWAlignerResult>();
 		mappedContigs.put(sm1, swc1);
@@ -112,9 +112,11 @@ public class ReadEvaluatorTest {
 		
 		ReadEvaluator re = new ReadEvaluator(mappedContigs);
 		
-		// Maps to multiple contigs with a single mismatch - ambiguous
+		// Maps to multiple contigs with a single mismatch, with each contig's
+		// alignment result identical in the context of the reference
 		Alignment alignment = re.getImprovedAlignment(2, read);
-		assertEquals(alignment, null);
+		assertEquals(alignment.pos, 14);  // Alignment pos = 40 + 4
+		assertEquals(alignment.cigar, "6M1D22M");
 	}
 	
 

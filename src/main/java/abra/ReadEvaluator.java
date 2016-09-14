@@ -54,7 +54,7 @@ public class ReadEvaluator {
 			SSWAlignerResult contigAlignment = mappedContigs.get(alignmentHit.mapper); 
 			
 			// Read position in the local reference
-			int readRefPos = contigAlignment.getRefPos() + alignmentHit.mapResult.getPos();
+			int readRefPos = alignmentHit.mapResult.getPos() >= 0 ? contigAlignment.getRefPos() + alignmentHit.mapResult.getPos() : alignmentHit.mapResult.getPos();
 			String cigar = CigarUtils.subsetCigarString(alignmentHit.mapResult.getPos(), read.length(), contigAlignment.getCigar());
 			
 			Alignment readAlignment = new Alignment(readRefPos, cigar, contigAlignment.getRefPos(), contigAlignment.getCigar());
@@ -64,6 +64,10 @@ public class ReadEvaluator {
 		// If there is more than 1 distinct alignment, we have an ambiguous result which will not be used.
 		if (alignments.size() == 1) {
 			result = alignments.iterator().next();
+			// If the result was ambiguously mapped within a single contig, return null.
+			if (result.pos < 0) {
+				result = null;
+			}
 		}
 		
 		return result;

@@ -119,5 +119,22 @@ public class ReadEvaluatorTest {
 		assertEquals(alignment.cigar, "6M1D22M");
 	}
 	
-
+	@Test (groups="unit")
+	public void testMultimapWithinContig() {
+		String contig1 = "ATCGATCGATCGATCGATCGATCGATCGATCGATCG";
+		String read    = "ACCGATCGATCGATCGATCGATCGATCGATCG";  // matches 2 locations with single mismatch
+		
+		SimpleMapper sm1 = new SimpleMapper(contig1);
+		SSWAlignerResult swc1 = new SSWAlignerResult(100, "36M");
+		
+		Map<SimpleMapper, SSWAlignerResult> mappedContigs = new HashMap<SimpleMapper, SSWAlignerResult>();
+		mappedContigs.put(sm1, swc1);
+		
+		ReadEvaluator re = new ReadEvaluator(mappedContigs);
+		
+		// 1 mismatch in alignment to contig versus edit distance 2 in original read
+		// should result in an improved alignment
+		Alignment alignment = re.getImprovedAlignment(2, read);
+		assertEquals(alignment, null);
+	}
 }

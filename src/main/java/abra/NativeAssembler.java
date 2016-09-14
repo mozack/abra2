@@ -160,9 +160,6 @@ public class NativeAssembler {
 		String output = "region_" + reads.get(0).getReferenceName() + "_" + regionStart + "_" + regionEnd;
 		String contigs = "";
 		
-		// Make this set of reads eligible for GC
-//		reads.clear();
-		
 		for (int kmer : kmers) { 
 			
 			String outputFile = output + "_k" + kmer;
@@ -279,8 +276,6 @@ public class NativeAssembler {
 						}
 					}
 					
-					// Make this set of reads eligible for GC
-					reads.clear();
 					sampleId += 1;
 				}
 			}

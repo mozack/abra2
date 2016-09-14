@@ -37,7 +37,6 @@ public class ReadEvaluator {
 		for (SimpleMapper mapper : mappedContigs.keySet()) {
 			SimpleMapperResult mapResult = mapper.map(read);
 			
-			// TODO: Ambiguous alignment within single contig handling??
 			if (mapResult.getMismatches() < bestMismatches) {
 				bestMismatches = mapResult.getMismatches();
 				alignmentHits.clear();
@@ -57,7 +56,7 @@ public class ReadEvaluator {
 			int readRefPos = alignmentHit.mapResult.getPos() >= 0 ? contigAlignment.getRefPos() + alignmentHit.mapResult.getPos() : alignmentHit.mapResult.getPos();
 			String cigar = CigarUtils.subsetCigarString(alignmentHit.mapResult.getPos(), read.length(), contigAlignment.getCigar());
 			
-			Alignment readAlignment = new Alignment(readRefPos, cigar, contigAlignment.getRefPos(), contigAlignment.getCigar());
+			Alignment readAlignment = new Alignment(readRefPos, cigar, bestMismatches, contigAlignment.getRefPos(), contigAlignment.getCigar());
 			alignments.add(readAlignment);
 		}
 		
@@ -88,13 +87,15 @@ public class ReadEvaluator {
 	static class Alignment {
 		int pos;
 		String cigar;
+		int numMismatches;
 		
 		int contigPos;
 		String contigCigar;
 		
-		Alignment(int pos, String cigar, int contigPos, String contigCigar) {
+		Alignment(int pos, String cigar, int numMismatches, int contigPos, String contigCigar) {
 			this.pos = pos;
 			this.cigar = cigar;
+			this.numMismatches = numMismatches;
 			
 			this.contigPos = contigPos;
 			this.contigCigar = contigCigar;

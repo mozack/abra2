@@ -29,6 +29,7 @@ public class ReadEvaluatorTest {
 		Alignment alignment = re.getImprovedAlignment(2, read);
 		assertEquals(alignment.pos, 14);  // Alignment pos = 10 + 4
 		assertEquals(alignment.cigar, "6M1D22M");
+		assertEquals(alignment.numMismatches, 1);
 	}
 	
 	@Test (groups="unit")

@@ -616,17 +616,49 @@ public class ReAligner {
 										
 					// For each sample.
 					for (List<SAMRecord> reads : readsList) {
+						
+						System.err.println("For 1...");
+						
 						// For each read.
 						for (SAMRecord read : reads) {
 							// TODO: Use NM tag if available
+							System.err.println("For 2...");
 							int origEditDist = c2r.numMismatches(read);
+							
+							System.err.println("Read: " + read.getReadName() + ", ed: " + origEditDist);
+							
 							if (origEditDist > 0) {
+								System.err.println("Checking read: " + read.getReadName() + ", ed: " + origEditDist);
 								Alignment alignment = readEvaluator.getImprovedAlignment(origEditDist, read.getReadString());
 								if (alignment != null) {
-									read.setAlignmentStart(alignment.pos + refStart);
-									read.setCigarString(alignment.cigar);
 									
-									System.err.println("REALIGNED: " + read.getSAMString());
+									int readPos = alignment.pos + refStart;
+									
+									// Set contig alignment info for all reads that map to contigs (even if read is unchanged)
+									String ya = region.getSeqname() + ":" + (alignment.contigPos + refStart) + ":" + alignment.contigCigar;
+									read.setAttribute("YA", ya);
+									
+									// If the read has actually moved, updated it
+									if (read.getReadUnmappedFlag() || read.getAlignmentStart() != readPos || !read.getCigarString().equals(alignment.cigar)) {
+
+										// Original alignment info
+										String yo = "N/A";
+										if (!read.getReadUnmappedFlag()) {
+											yo = read.getReferenceName() + ":" + read.getAlignmentStart() + ":" + read.getCigarString();
+										}
+										read.setAttribute("YO", yo);
+										
+										// Number of mismatches to contig
+										read.setAttribute("YM", alignment.numMismatches);
+										
+										read.setAlignmentStart(alignment.pos + refStart);
+										read.setCigarString(alignment.cigar);
+										
+										//TODO: Compute mapq intelligently???
+										read.setMappingQuality(Math.min(read.getMappingQuality(), 45));
+										
+										System.err.println("REALIGNED: " + read.getSAMString());
+									}
 								}
 							}
 						}

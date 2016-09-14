@@ -170,11 +170,13 @@ public class ReAligner {
 					samHeaders[i], false, new File(outputFiles[i]), COMPRESSION_LEVEL);
 		}
 		
+		/*
 		// Start pre-processing reads on separate thread for each input file.
 		// This happens in parallel with assembly, provided there are enough threads.
 		for (int i=0; i<inputSams.length; i++) {
 			preProcessReads(inputSams[i], tempDirs[i], writers[i]);
 		}
+		*/
 		
 		log("Iterating over regions");
 		
@@ -194,7 +196,8 @@ public class ReAligner {
 		contigWriter.close();
 		
 		clock.stopAndPrint();
-		
+
+		/*
 		String cleanContigsFasta = null;
 		
 		if (hasContigs) {
@@ -211,10 +214,7 @@ public class ReAligner {
 			String[] alignedSams = alignReads(cleanContigsFasta, c2r);
 			
 			clock.stopAndPrint();
-			
-			for (SAMFileWriter writer : this.writers) {
-				writer.close();
-			}
+
 			
 			if (rnaSam != null) {
 				processRna();
@@ -232,6 +232,12 @@ public class ReAligner {
 			clock.start();
 			new SVEvaluator().evaluateAndOutput(svContigFasta, this, tempDir, readLength, inputFiles, tempDirs, samHeaders, structuralVariantFile);
 			clock.stopAndPrint();
+		}
+		*/
+		
+		
+		for (SAMFileWriter writer : this.writers) {
+			writer.close();
 		}
 		
 		System.err.println("Done.");
@@ -613,7 +619,8 @@ public class ReAligner {
 					}
 					
 					ReadEvaluator readEvaluator = new ReadEvaluator(mappedContigs);
-										
+					
+					int sampleIdx = 0;
 					// For each sample.
 					for (List<SAMRecord> reads : readsList) {
 						
@@ -666,6 +673,15 @@ public class ReAligner {
 								}
 							}
 						}
+
+						// Output all reads for this sample - synchronize on the current BAM
+						synchronized(this.writers[sampleIdx]) {
+							for (SAMRecord read : reads) {
+								this.writers[sampleIdx].addAlignment(read);
+							}
+						}
+						
+						sampleIdx += 1;
 					}
 				}
 			}

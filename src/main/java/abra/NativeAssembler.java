@@ -285,8 +285,6 @@ public class NativeAssembler {
 				}
 			}
 			
-			readsList.clear();
-			
 			if (isAssemblyCandidate) {
 				for (int kmer : kmers) { 
 				

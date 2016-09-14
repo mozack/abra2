@@ -617,18 +617,13 @@ public class ReAligner {
 					// For each sample.
 					for (List<SAMRecord> reads : readsList) {
 						
-						System.err.println("For 1...");
-						
 						// For each read.
 						for (SAMRecord read : reads) {
-							// TODO: Use NM tag if available
-							System.err.println("For 2...");
-							int origEditDist = c2r.numMismatches(read);
-							
-							System.err.println("Read: " + read.getReadName() + ", ed: " + origEditDist);
+							// TODO: Use NM tag if available (need to handle soft clipping though!)
+							int origEditDist = SAMRecordUtils.getEditDistance(read, null);
+//							int origEditDist = c2r.numMismatches(read);
 							
 							if (origEditDist > 0) {
-								System.err.println("Checking read: " + read.getReadName() + ", ed: " + origEditDist);
 								Alignment alignment = readEvaluator.getImprovedAlignment(origEditDist, read.getReadString());
 								if (alignment != null) {
 									
@@ -645,14 +640,23 @@ public class ReAligner {
 										String yo = "N/A";
 										if (!read.getReadUnmappedFlag()) {
 											yo = read.getReferenceName() + ":" + read.getAlignmentStart() + ":" + read.getCigarString();
+										} else {
+											read.setReadUnmappedFlag(false);
 										}
 										read.setAttribute("YO", yo);
+
+										// Update alignment position and cigar
+										read.setAlignmentStart(alignment.pos + refStart);
+										read.setCigarString(alignment.cigar);
 										
 										// Number of mismatches to contig
 										read.setAttribute("YM", alignment.numMismatches);
+
+										// Original edit distance
+										read.setAttribute("YX",  origEditDist);
 										
-										read.setAlignmentStart(alignment.pos + refStart);
-										read.setCigarString(alignment.cigar);
+										// Updated edit distance
+										read.setAttribute("NM", SAMRecordUtils.getEditDistance(read, c2r));
 										
 										//TODO: Compute mapq intelligently???
 										read.setMappingQuality(Math.min(read.getMappingQuality(), 45));

@@ -52,9 +52,16 @@ public class ReadEvaluator {
 		for (AlignmentHit alignmentHit : alignmentHits) {
 			SSWAlignerResult contigAlignment = mappedContigs.get(alignmentHit.mapper); 
 			
+			int readRefPos = alignmentHit.mapResult.getPos();
+			String cigar = "";
+			
 			// Read position in the local reference
-			int readRefPos = alignmentHit.mapResult.getPos() >= 0 ? contigAlignment.getRefPos() + alignmentHit.mapResult.getPos() : alignmentHit.mapResult.getPos();
-			String cigar = CigarUtils.subsetCigarString(alignmentHit.mapResult.getPos(), read.length(), contigAlignment.getCigar());
+			if (alignmentHit.mapResult.getPos() >= 0) {
+				StringBuffer cigarBuf = new StringBuffer();
+				int readPosInCigarRelativeToRef = CigarUtils.subsetCigarString(alignmentHit.mapResult.getPos(), read.length(), contigAlignment.getCigar(), cigarBuf);
+				readRefPos = contigAlignment.getRefPos() + readPosInCigarRelativeToRef;
+				cigar = cigarBuf.toString();
+			}
 			
 			Alignment readAlignment = new Alignment(readRefPos, cigar, bestMismatches, contigAlignment.getRefPos(), contigAlignment.getCigar());
 			alignments.add(readAlignment);

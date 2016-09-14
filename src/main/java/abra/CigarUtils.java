@@ -9,17 +9,17 @@ public class CigarUtils {
 	/**
 	 * Extract subset of cigar string based upon input position (index) into cigar and length. 
 	 */
-	public static String subsetCigarString(int pos, int length, String cigar) {
+	public static int subsetCigarString(int pos, int length, String cigar, StringBuffer newCigar) {
 		List<CigarBlock> cigarBlocks = getCigarBlocks(cigar);
-		List<CigarBlock> newCigarBlocks = subsetCigarBlocks(cigarBlocks, pos, length);
+		List<CigarBlock> newCigarBlocks = new ArrayList<CigarBlock>();
+		int relativeRefPos = subsetCigarBlocks(cigarBlocks, pos, length, newCigarBlocks);
 		
-		StringBuffer newCigar = new StringBuffer();
 		for (CigarBlock block : newCigarBlocks) {
 			newCigar.append(block.length);
 			newCigar.append(block.type);
 		}
 		
-		return newCigar.toString();
+		return relativeRefPos;
 	}
 	
 	private static List<CigarBlock> getCigarBlocks(String cigar) {
@@ -40,11 +40,12 @@ public class CigarUtils {
 		return cigarBlocks;
 	}
 	
-	private static List<CigarBlock> subsetCigarBlocks(List<CigarBlock> contigBlocks, int pos, int readLength) {
+	private static int subsetCigarBlocks(List<CigarBlock> contigBlocks, int pos, int readLength, List<CigarBlock> readBlocks) {
 		int currLen = 0;
 		int contigPos = 0;
+		int relativeRefPos = 0;
 		boolean isReadPosReached = false;
-		List<CigarBlock> readBlocks = new ArrayList<CigarBlock>();
+//		List<CigarBlock> readBlocks = new ArrayList<CigarBlock>();
 		
 		for (CigarBlock block : contigBlocks) {
 			
@@ -56,10 +57,22 @@ public class CigarUtils {
 					if (contigPos + block.length >= pos) {
 						blockLength = contigPos + block.length - pos;
 						isReadPosReached = true;
+						
+						if (block.type != 'I') {
+							// Include partial block length for matches
+							relativeRefPos += block.length - blockLength;
+						}
 					} else {
 						contigPos += block.length;
+						if (block.type != 'I') {
+							// Include entire block for matches
+							relativeRefPos += block.length;
+						}
 					}
-				}
+				} else {
+					// Include entire block for deletes
+					relativeRefPos += block.length;
+				}				
 			} 
 			
 			if (isReadPosReached && blockLength > 0) {
@@ -67,6 +80,9 @@ public class CigarUtils {
 					// Never start in a deletion
 					if (!readBlocks.isEmpty()) {
 						readBlocks.add(block);
+					} else {
+						// skip over leading deletion in reference position
+						relativeRefPos += block.length;
 					}
 				}
 				else if (blockLength < readLength-currLen) {
@@ -81,7 +97,7 @@ public class CigarUtils {
 			}
 		}
 		
-		return readBlocks;
+		return relativeRefPos;
 	}
 	
 	static class CigarBlock {

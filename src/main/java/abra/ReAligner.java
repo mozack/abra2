@@ -10,8 +10,14 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+
+import abra.ReadEvaluator.Alignment;
+import abra.SSWAligner.SSWAlignerResult;
+import abra.SimpleMapper.SimpleMapperResult;
 
 import picard.sam.BuildBamIndex;
 import picard.sam.SortSam;
@@ -133,10 +139,6 @@ public class ReAligner {
 		
 		readAdjuster = new ReadAdjuster(isPairedEnd, this.maxMapq, c2r, minInsertLength, maxInsertLength);
 		
-		if (shouldReprocessUnaligned) {
-//			processUnaligned();
-		}
-		
 		Clock clock = new Clock("Assembly");
 		clock.start();
 		
@@ -190,11 +192,6 @@ public class ReAligner {
 		threadManager.waitForAllThreadsToComplete();
 		
 		contigWriter.close();
-		svContigWriter.close();
-		
-		if (localRepeatWriter != null) {
-			localRepeatWriter.close();
-		}
 		
 		clock.stopAndPrint();
 		
@@ -588,105 +585,50 @@ public class ReAligner {
 			} else {
 				NativeAssembler assem = (NativeAssembler) newAssembler(region);
 				List<Feature> regions = new ArrayList<Feature>();
-				regions.add(region);
-				String contigs = assem.assembleContigs(bams, contigsFasta, tempDir, regions, region.getDescriptor(), true, this, c2r);
-				
-				// Get reference sequence matching current region
-				System.out.println("Getting reference for: " + region.getSeqname() + ":" + (region.getStart()-this.readLength) + ", length: " + (region.getLength()+this.readLength*2));
-				String refSeq = c2r.getSequence(region.getSeqname(), (int) region.getStart()-this.readLength, (int) region.getLength()+this.readLength*2);
-				
-				SSWAligner ssw = new SSWAligner(refSeq);
-
-				// Map contigs to reference
-				String[] contigSequences = contigs.split("\n");
-				for (String contig : contigSequences) {
-					if (!contig.startsWith(">")) {
-						ssw.align(contig);
-					}
-				}
+				regions.add(region); 
+				List<List<SAMRecord>> readsList = ReadLoader.getReads(bams, regions.get(0), this);
+				String contigs = assem.assembleContigs(bams, contigsFasta, tempDir, regions, region.getDescriptor(), true, this, c2r, readsList);
 				
 				if (!contigs.equals("<ERROR>") && !contigs.equals("<REPEAT>") && !contigs.isEmpty()) {
 					
 					appendContigs(contigs);
-				
-					List<BreakpointCandidate> svCandidates = assem.getSvCandidateRegions();
-					for (BreakpointCandidate svCandidate : svCandidates) {
-						
-						if (isDebug) {
-							System.err.println("SV: " + region.getDescriptor() + "-->" + svCandidate.getRegion().getDescriptor());
-						}
-						List<Feature> svRegions = new ArrayList<Feature>();
-						svRegions.add(region);
-						Feature svCandidateRegion = new Feature(svCandidate.getRegion().getSeqname(), svCandidate.getRegion().getStart(), 
-								Math.min(svCandidate.getRegion().getEnd(), c2r.getReferenceLength(svCandidate.getRegion().getSeqname())-1));
-						
-						svRegions.add(svCandidateRegion);
-						
-						NativeAssembler svAssem = (NativeAssembler) newAssembler(region);
-						String svContigs = svAssem.assembleContigs(bams, contigsFasta, tempDir, svRegions, region.getDescriptor() + "__" + svCandidate.getRegion().getDescriptor() + "_" + svCandidate.getSpanningReadPairCount(), true, this, c2r);
-						
-						if (!svContigs.equals("<ERROR>") && !svContigs.equals("<REPEAT>") && !svContigs.isEmpty()) {
-							svContigWriter.write(svContigs);
+					
+					// Get reference sequence matching current region (TODO: Add extra padding to allow for indels in partially overlapping reads ?)
+					System.out.println("Getting reference for: " + region.getSeqname() + ":" + (region.getStart()-this.readLength) + ", length: " + (region.getLength()+this.readLength*2));
+					
+					int refStart = (int) region.getStart() - this.readLength;
+					String refSeq = c2r.getSequence(region.getSeqname(), refStart, (int) region.getLength()+this.readLength*2);
+					
+					SSWAligner ssw = new SSWAligner(refSeq);
+
+					Map<SimpleMapper, SSWAlignerResult> mappedContigs = new HashMap<SimpleMapper, SSWAlignerResult>();
+					
+					// Map contigs to reference
+					String[] contigSequences = contigs.split("\n");
+					for (String contig : contigSequences) {
+						if (!contig.startsWith(">")) {
+							SSWAlignerResult sswResult = ssw.align(contig);
+							mappedContigs.put(new SimpleMapper(contig), sswResult);
 						}
 					}
-				}
-				
-				if (assem.isCycleExceedingThresholdDetected() && (bams.size() > 1) && this.localRepeatWriter != null) {
-					System.err.println("Attempting cycle detection for: " + region.getDescriptor());
 					
-					// Assemble each region separately looking for cycles
-					List<String> cycleStatus = new ArrayList<String>();
-					
-					int kmer = readLength / 2;
-					if (kmer % 2 == 1) {
-						kmer -= 1;
-					}
-					kmer = Math.min(kmer, NativeAssembler.CYCLE_KMER_LENGTH_THRESHOLD);
-					kmer = Math.max(kmer, region.getKmer());
-					
-					for (String bam : bams) {
-						List<String> bamInput = new ArrayList<String>();
-						bamInput.add(bam);
-						NativeAssembler cycleAssem = (NativeAssembler) newAssembler(region);
-												
-						cycleAssem.setKmer(new int[] { kmer });
-						cycleAssem.setShouldSearchForSv(false);
-						
-						// Double pruning thresholds for repeat discovery
-						cycleAssem.setMinBaseQuality(assemblerSettings.getMinBaseQuality() * 2);
-						cycleAssem.setMinKmerFrequency(assemblerSettings.getMinNodeFrequncy() * 2);
-						
-						cycleAssem.setMinEdgeRatio(assemblerSettings.getMinEdgeRatio());
-						
-						String cycleContigs = cycleAssem.assembleContigs(bamInput, contigsFasta, tempDir, regions, region.getDescriptor(), true, this, c2r);
-						
-						if (!cycleContigs.equals("<ERROR>") && !cycleContigs.equals("<REPEAT>")) {
-							cycleContigs = ".";
-						}
-						
-						cycleStatus.add(cycleContigs);
-					}
-					
-					StringBuffer buf = new StringBuffer("Cycle detection result");
-					for (String status : cycleStatus) {
-						buf.append(status + "\t");
-					}
-					
-					System.err.println("Cycle detection for region: " + region + ".  Result: [" + buf.toString() + "]");
-					
-					if (isAnyElementDifferent(cycleStatus)) {
-						StringBuffer out = new StringBuffer();
-						out.append(region.getDescriptor() + "\t");
-						
-						for (String status : cycleStatus) {
-							out.append(status + "\t");							
-						}
-						
-						out.append(kmer);
-						out.append('\n');
-						
-						synchronized (localRepeatWriter) {
-							localRepeatWriter.write(out.toString());
+					ReadEvaluator readEvaluator = new ReadEvaluator(mappedContigs);
+										
+					// For each sample.
+					for (List<SAMRecord> reads : readsList) {
+						// For each read.
+						for (SAMRecord read : reads) {
+							// TODO: Use NM tag if available
+							int origEditDist = c2r.numMismatches(read);
+							if (origEditDist > 0) {
+								Alignment alignment = readEvaluator.getImprovedAlignment(origEditDist, read.getReadString());
+								if (alignment != null) {
+									read.setAlignmentStart(alignment.pos + refStart);
+									read.setCigarString(alignment.cigar);
+									
+									System.err.println("REALIGNED: " + read.getSAMString());
+								}
+							}
 						}
 					}
 				}

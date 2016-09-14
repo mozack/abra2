@@ -51,15 +51,6 @@ public class NativeAssembler {
 			int kmerSize, int minKmerFreq, int minBaseQuality, double minEdgeRatio, int debug,
 			int maxNodes);
 	
-	private String getIdentifier(SAMRecord read) {
-		String id = read.getReadName();
-		
-		if (read.getReadPairedFlag() && read.getSecondOfPairFlag()) {
-			id += "_2";
-		}
-		
-		return id;
-	}
 	
 	private boolean isHardClipped(SAMRecord read) {
 		return read.getCigarString().contains("H");
@@ -199,74 +190,9 @@ public class NativeAssembler {
 		return contigs;
 	}
 	
-	//
-	//  Returns a downsampled set of reads for each sample.
-	//
-	private List<List<SAMRecord>> getReads(List<String> inputFiles, List<Feature> regions, ReAligner realigner) {
-		
-		int downsampleTarget = desiredNumberOfReads(regions);
-		List<DownsampledReadList> readsList = new ArrayList<DownsampledReadList>();
-
-		for (String input : inputFiles) {
-			Set<String> readIds = new HashSet<String>();
-			DownsampledReadList reads = new DownsampledReadList(downsampleTarget);
-			readsList.add(reads);
-			
-			for (Feature region : regions) {
-				SAMFileReader reader = new SAMFileReader(new File(input));
-				reader.setValidationStringency(ValidationStringency.SILENT);
-				
-				Iterator<SAMRecord> iter;
-				if (region != null) {
-					iter = reader.queryOverlapping(region.getSeqname(), (int) region.getStart(), (int) region.getEnd());
-				} else {
-					iter = reader.iterator();
-				}
-				
-				while (iter.hasNext()) {
-					
-					SAMRecord read = iter.next();
-											
-					// Don't allow same read to be counted twice.
-					if ( (!realigner.isFiltered(read)) && 
-						 (!read.getDuplicateReadFlag()) && 
-						 (!read.getReadFailsVendorQualityCheckFlag()) &&
-						 (read.getMappingQuality() >= realigner.getMinMappingQuality() || read.getReadUnmappedFlag()) &&
-						 (!readIds.contains(getIdentifier(read)))) {
-						
-						if (read.getReadString().length() > readLength) {
-							reader.close();
-							throw new IllegalArgumentException("Maximum read length of: " + readLength +
-									" exceeded for: " + read.getSAMString());
-						}
-						
-						readIds.add(getIdentifier(read));
-												
-						reads.add(read);
-					}
-				}
-				
-				if (reads.getTotalReadCount() != reads.getReads().size()) {
-					if (isDebug) {
-						System.err.println("downsampled: " + regions.get(0).getDescriptor() + ": " + reads.getTotalReadCount() + " -> " + reads.getReads().size());
-					}
-				}
-				
-				reader.close();
-			}
-		}
-		
-		List<List<SAMRecord>> sampleReads = new ArrayList<List<SAMRecord>>();
-		
-		for (DownsampledReadList downsampledReads : readsList) {
-			sampleReads.add(downsampledReads.getReads());
-		}
-		
-		return sampleReads;
-	}
 	
 	public String assembleContigs(List<String> inputFiles, String output, String tempDir, List<Feature> regions, String prefix,
-			boolean checkForDupes, ReAligner realigner, CompareToReference2 c2r) {
+			boolean checkForDupes, ReAligner realigner, CompareToReference2 c2r, List<List<SAMRecord>> readsList) {
 		
 		if ((kmers.length == 0) || (kmers[0] < KmerSizeEvaluator.MIN_KMER)) {
 			KmerSizeEvaluator kmerEval = new KmerSizeEvaluator();
@@ -287,7 +213,7 @@ public class NativeAssembler {
 		
 		try {
 						
-			List<List<SAMRecord>> readsList = getReads(inputFiles, regions, realigner);
+//			List<List<SAMRecord>> readsList = ReadLoader.getReads(inputFiles, regions.get(0), realigner);
 			
 			for (List<SAMRecord> reads : readsList) {
 				int candidateReadCount = 0;
@@ -380,6 +306,8 @@ public class NativeAssembler {
 							minEdgeRatio,
 							isDebug ? 1 : 0,
 							maxNodes);
+					
+					System.out.println("Contigs: [" + contigs + "]");
 					
 					if (!contigs.equals("<REPEAT>")) {
 						break;
@@ -615,6 +543,7 @@ public class NativeAssembler {
 	
 	public static void main(String[] args) throws Exception {
 		
+		/*
 		NativeLibraryLoader l = new NativeLibraryLoader();
 		l.load("/home/lmose/code/abra/target");
 		
@@ -655,6 +584,7 @@ public class NativeAssembler {
 		for (BreakpointCandidate svCandidate : svCandidates) { 
 			System.err.println("SV: " + region.getDescriptor() + "-->" + svCandidate.getRegion().getDescriptor());
 		}
+		*/
 		
 //		assem.assembleContigs(args[0], args[1], "contig");
 		

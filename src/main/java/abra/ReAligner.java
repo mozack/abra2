@@ -620,7 +620,7 @@ public class ReAligner {
 						// For each read.
 						for (SAMRecord read : reads) {
 							// TODO: Use NM tag if available (need to handle soft clipping though!)
-							int origEditDist = SAMRecordUtils.getEditDistance(read, null);
+							int origEditDist = SAMRecordUtils.getEditDistance(read, c2r);
 //							int origEditDist = c2r.numMismatches(read);
 							
 							if (origEditDist > 0) {

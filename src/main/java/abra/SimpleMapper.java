@@ -50,7 +50,7 @@ public class SimpleMapper {
 					int refStartPos = pos - i;
 					
 					// Compare strings only if this position has not already been evaluated
-					if (refStartPos >= 0 && !posMismatches.containsKey(refStartPos) && refStartPos < ref.length() - read.length()) {
+					if (refStartPos >= 0 && !posMismatches.containsKey(refStartPos) && refStartPos <= ref.length() - read.length()) {
 						int mismatches = countMismatches(refStartPos, read);
 						posMismatches.put(refStartPos, mismatches);
 					}

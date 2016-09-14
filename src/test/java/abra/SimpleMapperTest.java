@@ -81,4 +81,15 @@ public class SimpleMapperTest {
 		assertEquals(1, smr.getMismatches());
 		
 	}
+	
+	@Test (groups = "unit")
+	public void testShortAmbiguousMatch() {
+		String contig1 = "ATCGATCGATCGATCGATCGATCGATCGATCGATCG";
+		String read    = "ACCGATCGATCGATCGATCGATCGATCGATCG";
+		
+		SimpleMapper sm = new SimpleMapper(contig1);
+		SimpleMapperResult smr = sm.map(read);
+		assertEquals(smr.getPos(), SimpleMapper.HOMOLOGOUS_MAPPING);
+		assertEquals(1, smr.getMismatches());		
+	}
 }

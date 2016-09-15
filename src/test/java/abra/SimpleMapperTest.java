@@ -2,6 +2,8 @@ package abra;
 
 import static org.testng.Assert.assertEquals;
 import org.testng.annotations.Test;
+
+import abra.SimpleMapper.Orientation;
 import abra.SimpleMapper.SimpleMapperResult;
 
 
@@ -17,6 +19,7 @@ public class SimpleMapperTest {
 		SimpleMapperResult smr = sm.map(read);
 		assertEquals(0, smr.getMismatches());
 		assertEquals(257, smr.getPos());
+		assertEquals(Orientation.FORWARD, smr.getOrientation());
 	}
 	
 	@Test (groups = "unit" )
@@ -26,6 +29,7 @@ public class SimpleMapperTest {
 		SimpleMapperResult smr = sm.map(read);
 		assertEquals(1, smr.getMismatches());
 		assertEquals(257, smr.getPos());
+		assertEquals(Orientation.FORWARD, smr.getOrientation());
 	}
 	
 	@Test (groups = "unit" )
@@ -35,6 +39,7 @@ public class SimpleMapperTest {
 		SimpleMapperResult smr = sm.map(read);
 		assertEquals(5, smr.getMismatches());
 		assertEquals(257, smr.getPos());
+		assertEquals(Orientation.FORWARD, smr.getOrientation());
 	}
 	
 	@Test (groups = "unit" )
@@ -79,7 +84,7 @@ public class SimpleMapperTest {
 		SimpleMapperResult smr = sm.map(read);
 		assertEquals(4, smr.getPos());
 		assertEquals(1, smr.getMismatches());
-		
+		assertEquals(Orientation.FORWARD, smr.getOrientation());
 	}
 	
 	@Test (groups = "unit")
@@ -91,5 +96,25 @@ public class SimpleMapperTest {
 		SimpleMapperResult smr = sm.map(read);
 		assertEquals(smr.getPos(), SimpleMapper.HOMOLOGOUS_MAPPING);
 		assertEquals(1, smr.getMismatches());		
+	}
+	
+	@Test (groups = "unit" )
+	public void testReverseComplementExact() {
+		SimpleMapper sm = new SimpleMapper(contig1);
+		String read = "CCTGAACAGAAACTGCTTTTGGGTTTGCCAGGCACACCCACTGGAATTCAGTTAGTTTCTGAGAAGGAATGAGGGGAGTGGGCAATTCATGTTCTAGAAA";
+		SimpleMapperResult smr = sm.map(read);
+		assertEquals(0, smr.getMismatches());
+		assertEquals(24, smr.getPos());
+		assertEquals(Orientation.REVERSE, smr.getOrientation());
+	}
+	
+	@Test (groups = "unit" )
+	public void testReverseComplement2Mismatches() {
+		SimpleMapper sm = new SimpleMapper(contig1);
+		String read = "CCTGAACAGAAACTGCTTTTGGGAATGCCAGGCACACCCACTGGAATTCAGTTAGTTTCTGAGAAGGAATGAGGGGAGTGGGCAATTCATGTTCTAGAAA";
+		SimpleMapperResult smr = sm.map(read);
+		assertEquals(2, smr.getMismatches());
+		assertEquals(24, smr.getPos());
+		assertEquals(Orientation.REVERSE, smr.getOrientation());
 	}
 }

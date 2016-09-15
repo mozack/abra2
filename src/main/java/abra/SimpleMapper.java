@@ -18,8 +18,16 @@ public class SimpleMapper {
 	static final int UNMAPPED = -1;
 	static final int HOMOLOGOUS_MAPPING = -2;
 	
+	static final char FORWARD_ORIENTATION = 0;
+	static final char REVERSE_ORIENTATION = 1;
+	
+	enum Orientation {
+		UNSET, FORWARD, REVERSE;
+	}
+	
 	// Represents a single contig
 	private String ref;
+	private ReverseComplementor rc = new ReverseComplementor();
 	
 	// kmer -> list of positions
 	private Map<String, List<Integer>> kmerPositions = new HashMap<String, List<Integer>>();
@@ -35,38 +43,59 @@ public class SimpleMapper {
 		}
 	}
 	
-	//TODO: reverse complement?
-	public SimpleMapperResult map(String read) {
-		
+	private Map<Integer, Integer> getPositionMismatches(String bases) {
 		// ref position -> # mismatches
 		Map<Integer, Integer> posMismatches = new HashMap<Integer, Integer>();
 		
 		// Evaluate all reference positions where read and ref share a kmer
-		for (int i=0; i<read.length()-KMER_SIZE; i++) {
-			String kmer = read.substring(i, i+KMER_SIZE);
+		for (int i=0; i<bases.length()-KMER_SIZE; i++) {
+			String kmer = bases.substring(i, i+KMER_SIZE);
 			
 			if (kmerPositions.containsKey(kmer)) {
 				for (int pos : kmerPositions.get(kmer)) {
 					int refStartPos = pos - i;
 					
 					// Compare strings only if this position has not already been evaluated
-					if (refStartPos >= 0 && !posMismatches.containsKey(refStartPos) && refStartPos <= ref.length() - read.length()) {
-						int mismatches = countMismatches(refStartPos, read);
+					if (refStartPos >= 0 && !posMismatches.containsKey(refStartPos) && refStartPos <= ref.length() - bases.length()) {
+						int mismatches = countMismatches(refStartPos, bases);
 						posMismatches.put(refStartPos, mismatches);
 					}
 				}
 			}
 		}
+
+		return posMismatches;
+	}
+	
+	//TODO: reverse complement?
+	public SimpleMapperResult map(String read) {
+		
+		Map<Integer, Integer> forwardMismatches = getPositionMismatches(read);
+		Map<Integer, Integer> reverseMismatches = getPositionMismatches(rc.reverseComplement(read));
 		
 		// Find position with fewest mismatches
 		int bestMismatches = read.length() + 1;
 		int bestPos = UNMAPPED;
+		Orientation bestOrientation = Orientation.UNSET;
 		
-		for (int pos : posMismatches.keySet()) {
-			if (posMismatches.get(pos) < bestMismatches) {
-				bestMismatches = posMismatches.get(pos);
+		// Search for matches to contig in forward orientation
+		for (int pos : forwardMismatches.keySet()) {
+			if (forwardMismatches.get(pos) < bestMismatches) {
+				bestMismatches = forwardMismatches.get(pos);
 				bestPos = pos;
-			} else if (posMismatches.get(pos) == bestMismatches) {
+				bestOrientation = Orientation.FORWARD;;
+			} else if (forwardMismatches.get(pos) == bestMismatches) {
+				bestPos = HOMOLOGOUS_MAPPING;
+			}
+		}
+		
+		// Search for matches to contig in reverse complement
+		for (int pos : reverseMismatches.keySet()) {
+			if (reverseMismatches.get(pos) < bestMismatches) {
+				bestMismatches = reverseMismatches.get(pos);
+				bestPos = pos;
+				bestOrientation = Orientation.REVERSE;
+			} else if (reverseMismatches.get(pos) == bestMismatches) {
 				bestPos = HOMOLOGOUS_MAPPING;
 			}
 		}
@@ -75,7 +104,7 @@ public class SimpleMapper {
 			bestPos = UNMAPPED;
 		}
 		
-		return new SimpleMapperResult(bestPos, bestMismatches);
+		return new SimpleMapperResult(bestPos, bestMismatches, bestOrientation);
 	}
 	
 	private int countMismatches(int refPosition, String read) {
@@ -95,10 +124,12 @@ public class SimpleMapper {
 	static class SimpleMapperResult {
 		private int pos;
 		private int mismatches;
+		private Orientation orientation;
 		
-		SimpleMapperResult(int pos, int mismatches) {
+		SimpleMapperResult(int pos, int mismatches, Orientation orientation) {
 			this.pos = pos;
 			this.mismatches = mismatches;
+			this.orientation = orientation;
 		}
 		
 		public int getPos() {
@@ -107,9 +138,10 @@ public class SimpleMapper {
 		public int getMismatches() {
 			return mismatches;
 		}
+		public Orientation getOrientation() {
+			return orientation;
+		}
 	}
-	
-	
 	
 	@Override
 	public int hashCode() {

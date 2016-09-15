@@ -37,9 +37,6 @@ public class NativeAssembler {
 	private int minBaseQuality;
 	private double minReadCandidateFraction;
 	private int maxAverageDepth;
-	List<Position> svCandidates = new ArrayList<Position>();
-	List<BreakpointCandidate> svCandidateRegions = new ArrayList<BreakpointCandidate>();
-	private boolean shouldSearchForSv = false;
 	private boolean isCycleExceedingThresholdDetected = false;
 	private int averageDepthCeiling;
 	private double minEdgeRatio;
@@ -124,69 +121,7 @@ public class NativeAssembler {
 		}
 
 		return isCandidate;
-	}
-	
-	public String simpleAssemble(List<SAMRecord> reads) {
-		
-		StringBuffer readBuffer = new StringBuffer();
-		
-		for (SAMRecord read : reads) {
-			readBuffer.append((char) 1);
-			readBuffer.append(read.getReadNegativeStrandFlag() ? "1" : "0");
-			
-			if (read.getReadString().length() == readLength) {
-				readBuffer.append(read.getReadString());
-				readBuffer.append(read.getBaseQualityString());
-			} else {
-				StringBuffer basePadding = new StringBuffer();
-				StringBuffer qualPadding = new StringBuffer();
-				
-				for (int i=0; i<readLength-read.getReadString().length(); i++) {
-					basePadding.append('N');
-					qualPadding.append('!');
-				}
-				
-				readBuffer.append(read.getReadString() + basePadding.toString());
-				readBuffer.append(read.getBaseQualityString() + qualPadding.toString());							
-			}
-		}
-		
-
-
-		SAMRecord lastRead = reads.get(reads.size()-1);
-		int regionStart = reads.get(0).getAlignmentStart();
-		int regionEnd = lastRead.getAlignmentEnd() > 0 ? lastRead.getAlignmentEnd() : lastRead.getAlignmentStart();
-		
-		String output = "region_" + reads.get(0).getReferenceName() + "_" + regionStart + "_" + regionEnd;
-		String contigs = "";
-		
-		for (int kmer : kmers) { 
-			
-			String outputFile = output + "_k" + kmer;
-			
-			contigs = assemble(
-					readBuffer.toString(),
-					outputFile, 
-					output, 
-					1, // truncate_on_repeat
-					maxContigs,
-					maxPathsFromRoot,
-					readLength,
-					kmer,
-					minKmerFrequency,
-					minBaseQuality,
-					minEdgeRatio,
-					isDebug ? 1 : 0,
-					maxNodes);
-			
-			if (!contigs.equals("<REPEAT>")) {
-				break;
-			}
-		}
-
-		return contigs;
-	}
-	
+	}	
 	
 	public String assembleContigs(List<String> inputFiles, String output, String tempDir, List<Feature> regions, String prefix,
 			boolean checkForDupes, ReAligner realigner, CompareToReference2 c2r, List<List<SAMRecord>> readsList) {
@@ -209,18 +144,12 @@ public class NativeAssembler {
 		boolean isAssemblyCandidate = c2r == null ? true : false;
 		
 		try {
-						
-//			List<List<SAMRecord>> readsList = ReadLoader.getReads(inputFiles, regions.get(0), realigner);
 			
 			for (List<SAMRecord> reads : readsList) {
 				int candidateReadCount = 0;
 				for (SAMRecord read : reads) {
 					if (!isAssemblyCandidate && isAssemblyTriggerCandidate(read, c2r)) {
 						candidateReadCount++;
-					}
-					
-					if (shouldSearchForSv && isSvCandidate(read)) {
-						svCandidates.add(new Position(read.getMateReferenceName(), read.getMateAlignmentStart()));
 					}
 				}
 				
@@ -318,61 +247,7 @@ public class NativeAssembler {
 			e.printStackTrace();
 			throw new RuntimeException(e);
 		}
-		
-		if (this.shouldSearchForSv) {
-			
-			Collections.sort(this.svCandidates);
-			Position last = null;
-			String currentFeatureChr = null;
-			int currentFeatureStart = -1;
-			int currentFeatureStop = -1;
-			int currentFeatureCount = 0;
-			
-			// TODO: Calc this dynamically
-			int windowSize = 500;
-			
-			for (Position pos : this.svCandidates) {
-				if ((last != null) && pos.getChromosome().equals(last.getChromosome()) && 
-					 Math.abs(pos.getPosition()-last.getPosition()) < windowSize) {
-					
-					if (currentFeatureChr == null) {
-						currentFeatureChr = pos.getChromosome();
-						currentFeatureStart = last.getPosition();
-						currentFeatureStop = pos.getPosition() + readLength;
-						currentFeatureCount = 1;
-					} else {
-						currentFeatureStop = pos.getPosition() + readLength;
-						currentFeatureCount++;
-					}
-				} else {
-					if (currentFeatureChr != null) {
-						if (currentFeatureCount > (minReadCount/MAX_READ_LENGTHS_PER_REGION) * minReadCandidateFraction) {
-							Feature region = new Feature(currentFeatureChr, currentFeatureStart-readLength, currentFeatureStop+readLength);
-							BreakpointCandidate candidate = new BreakpointCandidate(region, currentFeatureCount);
-							this.svCandidateRegions.add(candidate);
-						}
-						currentFeatureChr = null;
-						currentFeatureStart = -1;
-						currentFeatureStop = -1;
-						currentFeatureCount = 0;
-					} else {
-						currentFeatureChr = pos.getChromosome();
-						currentFeatureStart = pos.getPosition();
-						currentFeatureStop = pos.getPosition() + readLength;
-						currentFeatureCount = 1;
-					}
-				}
-				last = pos;
-			}
-			
-			// Don't forget last SV candidate region
-			if (currentFeatureCount > (minReadCount/MAX_READ_LENGTHS_PER_REGION) * minReadCandidateFraction) {
-				Feature region = new Feature(currentFeatureChr, currentFeatureStart-readLength, currentFeatureStop+readLength);
-				BreakpointCandidate candidate = new BreakpointCandidate(region, currentFeatureCount);
-				this.svCandidateRegions.add(candidate);
-			}
-		}
-		
+				
 		long end = System.currentTimeMillis();
 		
 		int kmer = readLength + 1;
@@ -398,30 +273,6 @@ public class NativeAssembler {
 			}
 		}
 		return result;
-	}
-	
-	private boolean isSvCandidate(SAMRecord read) {
-		boolean isCandidate = false;
-		if (!read.getProperPairFlag() && !read.getMateUnmappedFlag()) {
-			if (!read.getReferenceName().equals(read.getMateReferenceName())) {
-				isCandidate = true;
-			} else if (Math.abs(read.getAlignmentStart() - read.getMateAlignmentStart()) > CombineChimera3.MAX_GAP_LENGTH) {
-				isCandidate = true;
-			}
-		}
-		return isCandidate;
-	}
-	
-	public boolean shouldSearchForSv() {
-		return shouldSearchForSv;
-	}
-
-	public void setShouldSearchForSv(boolean shouldSearchForSv) {
-		this.shouldSearchForSv = shouldSearchForSv;
-	}
-	
-	public List<BreakpointCandidate> getSvCandidateRegions() {
-		return this.svCandidateRegions;
 	}
 	
 	private boolean hasLowQualityBase(SAMRecord read) {

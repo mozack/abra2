@@ -38,6 +38,7 @@ public class ReadLoader {
 				SAMRecord read = iter.next();
 										
 				// Don't allow same read to be counted twice.
+				// TODO: Move this logic into the assember (or pass straight along to BAM output)
 				if ( (!realigner.isFiltered(read)) && 
 					 (!read.getDuplicateReadFlag()) && 
 					 (!read.getReadFailsVendorQualityCheckFlag()) &&

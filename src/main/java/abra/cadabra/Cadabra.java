@@ -6,7 +6,6 @@ import java.util.Iterator;
 import java.util.Map;
 
 import abra.CompareToReference2;
-import abra.ReadAdjuster;
 
 import htsjdk.samtools.Cigar;
 import htsjdk.samtools.CigarElement;
@@ -154,7 +153,7 @@ public class Cadabra {
 				IndelInfo readElement = checkForIndelAtLocus(read, position);
 				
 				if (readElement != null) {
-					Integer ymInt = (Integer) read.getAttribute(ReadAdjuster.MISMATCHES_TO_CONTIG_TAG);
+					Integer ymInt = (Integer) read.getAttribute("YM");
 					if (ymInt != null) {
 						int ym = ymInt;
 						if (ym == 0) {
@@ -172,7 +171,8 @@ public class Cadabra {
 				if (tumorIndel == null && readElement != null) {
 					tumorIndel = readElement.getCigarElement();
 					tumorCount = 1;
-					maxContigMapq = Math.max(maxContigMapq, read.getIntegerAttribute(ReadAdjuster.CONTIG_QUALITY_TAG));
+//					maxContigMapq = Math.max(maxContigMapq, read.getIntegerAttribute(ReadAdjuster.CONTIG_QUALITY_TAG));
+					maxContigMapq = 0;
 					if (readElement.getInsertBases() != null) {
 						updateInsertBases(insertBasesMap, readElement.getInsertBases());
 					}
@@ -182,7 +182,8 @@ public class Cadabra {
 					if (tumorIndel.equals(readElement.getCigarElement())) {
 						// Increment tumor indel support count
 						tumorCount += 1;
-						maxContigMapq = Math.max(maxContigMapq, read.getIntegerAttribute(ReadAdjuster.CONTIG_QUALITY_TAG));
+//						maxContigMapq = Math.max(maxContigMapq, read.getIntegerAttribute(ReadAdjuster.CONTIG_QUALITY_TAG));
+						maxContigMapq = 0;
 						if (readElement.getInsertBases() != null) {
 							updateInsertBases(insertBasesMap, readElement.getInsertBases());
 						}

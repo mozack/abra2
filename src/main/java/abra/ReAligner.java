@@ -17,6 +17,7 @@ import java.util.Map;
 
 import abra.ReadEvaluator.Alignment;
 import abra.SSWAligner.SSWAlignerResult;
+import abra.SimpleMapper.Orientation;
 import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.SAMFileReader;
 import htsjdk.samtools.SAMFileWriter;
@@ -277,15 +278,23 @@ public class ReAligner {
 										// Original alignment info
 										String yo = "N/A";
 										if (!read.getReadUnmappedFlag()) {
-											yo = read.getReferenceName() + ":" + read.getAlignmentStart() + ":" + read.getCigarString();
+											String origOrientation = read.getReadNegativeStrandFlag() ? "-" : "+";
+											yo = read.getReferenceName() + ":" + read.getAlignmentStart() + ":" + origOrientation + ":" + read.getCigarString();
 										} else {
 											read.setReadUnmappedFlag(false);
 										}
 										read.setAttribute("YO", yo);
 
-										// Update alignment position and cigar
+										// Update alignment position and cigar and orientation
 										read.setAlignmentStart(alignment.pos + refStart);
 										read.setCigarString(alignment.cigar);
+										
+										// If this is true, the read was already reverse complemented in the original alignment
+										if (read.getReadNegativeStrandFlag()) {
+											read.setReadNegativeStrandFlag(alignment.orientation == Orientation.FORWARD ? true : false);
+										} else {
+											read.setReadNegativeStrandFlag(alignment.orientation == Orientation.FORWARD ? false : true);
+										}
 										
 										// Number of mismatches to contig
 										read.setAttribute("YM", alignment.numMismatches);

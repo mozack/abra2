@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Set;
 
 import abra.SSWAligner.SSWAlignerResult;
+import abra.SimpleMapper.Orientation;
 import abra.SimpleMapper.SimpleMapperResult;
 
 public class ReadEvaluator {
@@ -63,7 +64,7 @@ public class ReadEvaluator {
 				cigar = cigarBuf.toString();
 			}
 			
-			Alignment readAlignment = new Alignment(readRefPos, cigar, bestMismatches, contigAlignment.getRefPos(), contigAlignment.getCigar());
+			Alignment readAlignment = new Alignment(readRefPos, cigar, alignmentHit.mapResult.getOrientation(), bestMismatches, contigAlignment.getRefPos(), contigAlignment.getCigar());
 			alignments.add(readAlignment);
 		}
 		
@@ -90,32 +91,37 @@ public class ReadEvaluator {
 		}
 	}
 	
-	//TODO: Genericize this and share
+	//TODO: Genericize this and share ?
 	static class Alignment {
 		int pos;
 		String cigar;
+		Orientation orientation;
 		int numMismatches;
 		
 		int contigPos;
 		String contigCigar;
 		
-		Alignment(int pos, String cigar, int numMismatches, int contigPos, String contigCigar) {
+		Alignment(int pos, String cigar, Orientation orientation, int numMismatches, int contigPos, String contigCigar) {
 			this.pos = pos;
 			this.cigar = cigar;
+			this.orientation = orientation;
 			this.numMismatches = numMismatches;
 			
 			this.contigPos = contigPos;
 			this.contigCigar = contigCigar;
 		}
-		
+
 		@Override
 		public int hashCode() {
 			final int prime = 31;
 			int result = 1;
 			result = prime * result + ((cigar == null) ? 0 : cigar.hashCode());
+			result = prime * result
+					+ ((orientation == null) ? 0 : orientation.hashCode());
 			result = prime * result + pos;
 			return result;
 		}
+
 		@Override
 		public boolean equals(Object obj) {
 			if (this == obj)
@@ -130,9 +136,12 @@ public class ReadEvaluator {
 					return false;
 			} else if (!cigar.equals(other.cigar))
 				return false;
+			if (orientation != other.orientation)
+				return false;
 			if (pos != other.pos)
 				return false;
 			return true;
 		}
+
 	}
 }

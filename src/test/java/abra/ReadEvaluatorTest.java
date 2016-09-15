@@ -8,6 +8,7 @@ import org.testng.annotations.Test;
 
 import abra.ReadEvaluator.Alignment;
 import abra.SSWAligner.SSWAlignerResult;
+import abra.SimpleMapper.Orientation;
 
 public class ReadEvaluatorTest {
 
@@ -30,6 +31,7 @@ public class ReadEvaluatorTest {
 		assertEquals(alignment.pos, 14);  // Alignment pos = 10 + 4
 		assertEquals(alignment.cigar, "6M1D22M");
 		assertEquals(alignment.numMismatches, 1);
+		assertEquals(alignment.orientation, Orientation.FORWARD);
 	}
 	
 	@Test (groups="unit")
@@ -83,6 +85,7 @@ public class ReadEvaluatorTest {
 		Alignment alignment = re.getImprovedAlignment(2, read);
 		assertEquals(alignment.pos, 44);  // Alignment pos = 40 + 4
 		assertEquals(alignment.cigar, "6M1D22M");
+		assertEquals(alignment.orientation, Orientation.FORWARD);
 	}
 	
 	@Test (groups="unit")
@@ -118,6 +121,7 @@ public class ReadEvaluatorTest {
 		Alignment alignment = re.getImprovedAlignment(2, read);
 		assertEquals(alignment.pos, 14);  // Alignment pos = 40 + 4
 		assertEquals(alignment.cigar, "6M1D22M");
+		assertEquals(alignment.orientation, Orientation.FORWARD);
 	}
 	
 	@Test (groups="unit")
@@ -137,5 +141,27 @@ public class ReadEvaluatorTest {
 		// should result in an improved alignment
 		Alignment alignment = re.getImprovedAlignment(2, read);
 		assertEquals(alignment, null);
+	}
+	
+	@Test (groups="unit")
+	public void testSingleAlignmentSingleContig_reverseComplement() {
+		String contig1 = "ATCGAAAAAATTTTTTCCCCCCGGGGGGATCGGCTAATCG";
+		String read    =     "CGATCCCCCCGGGGGGAAAAAATTTTAT";  // matches contig at 0 based position 4 with 1 mismatch
+		
+		SimpleMapper sm1 = new SimpleMapper(contig1);
+		SSWAlignerResult swc1 = new SSWAlignerResult(10, "10M1D30M");
+		
+		Map<SimpleMapper, SSWAlignerResult> mappedContigs = new HashMap<SimpleMapper, SSWAlignerResult>();
+		mappedContigs.put(sm1, swc1);
+		
+		ReadEvaluator re = new ReadEvaluator(mappedContigs);
+		
+		// 1 mismatch in alignment to contig versus edit distance 2 in original read
+		// should result in an improved alignment
+		Alignment alignment = re.getImprovedAlignment(2, read);
+		assertEquals(alignment.pos, 14);  // Alignment pos = 10 + 4
+		assertEquals(alignment.cigar, "6M1D22M");
+		assertEquals(alignment.numMismatches, 1);
+		assertEquals(alignment.orientation, Orientation.REVERSE);
 	}
 }

@@ -525,25 +525,6 @@ public class ReAligner {
 
 		return assem;
 	}
-	
-	/*
-	private NativeAssembler newUnalignedAssembler(int mnfMultiplier) {
-		//Assembler assem = new JavaAssembler();
-		NativeAssembler assem = new NativeAssembler();
-
-		assem.setMaxContigs(MAX_POTENTIAL_UNALIGNED_CONTIGS);
-		assem.setTruncateOutputOnRepeat(false);
-		assem.setMaxPathsFromRoot(5000);
-		assem.setReadLength(readLength);
-		// Could be smaller for higher sensitivity here?
-		int[] unalignedKmer = new int[1];
-		unalignedKmer[0] = assemblerSettings.getKmerSize()[0];
-		assem.setKmer(unalignedKmer);
-		assem.setMinKmerFrequency(assemblerSettings.getMinUnalignedNodeFrequency());
-		assem.setMinBaseQuality(assemblerSettings.getMinBaseQuality());
-
-		return assem;
-	}*/
 
 	private void init() throws IOException {
 		

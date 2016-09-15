@@ -311,9 +311,7 @@ public class ReAligner {
 										read.setAttribute("NM", SAMRecordUtils.getEditDistance(read, c2r));
 										
 										//TODO: Compute mapq intelligently???
-										read.setMappingQuality(Math.min(read.getMappingQuality(), 45));
-										
-										System.err.println("REALIGNED: " + read.getSAMString());
+										read.setMappingQuality(Math.min(read.getMappingQuality(), 60));
 									}
 								}
 							}

@@ -22,19 +22,12 @@ public class ReAlignerOptions extends Options {
 	private static final String MIN_UNALIGNED_NODE_FREQUENCY = "umnf";
 	private static final String MIN_CONTIG_LENGTH = "mcl";
 	private static final String MAX_POTENTIAL_CONTIGS = "mpc";
-	private static final String MIN_CONTIG_MAPQ = "mc-mapq";
 	private static final String MIN_MAPQ = "mapq";
 	private static final String NUM_THREADS = "threads";
-	private static final String UNALIGNED_ASSEMBLY = "aur";
-	private static final String MAX_UNALIGNED_READS = "mur";
 	private static final String SINGLE_END = "single";
-	private static final String RNA = "rna";
-	private static final String RNA_OUTPUT = "rna-out";
 	private static final String MIN_BASE_QUALITY = "mbq";
 	private static final String MIN_READ_CANDIDATE_FRACTION = "rcf";
 	private static final String MAX_AVERAGE_REGION_DEPTH = "mad";
-	private static final String SEARCH_FOR_STRUCTURAL_VARIATION = "sv";
-	private static final String SEARCH_FOR_LOCAL_REPEATS = "lr";
 	private static final String AVERAGE_DEPTH_CEILING = "adc";
 	private static final String MIN_EDGE_RATIO = "mer";
 	private static final String USE_INTERMEDIATE_BAM = "ib";
@@ -61,18 +54,11 @@ public class ReAlignerOptions extends Options {
             parser.accepts(MIN_CONTIG_LENGTH, "Assembly minimum contig length").withOptionalArg().ofType(Integer.class).defaultsTo(-1);
             parser.accepts(MAX_POTENTIAL_CONTIGS, "Maximum number of potential contigs for a region").withOptionalArg().ofType(Integer.class).defaultsTo(5000);
             parser.accepts(NUM_THREADS, "Number of threads").withRequiredArg().ofType(Integer.class).defaultsTo(4);
-            parser.accepts(MIN_CONTIG_MAPQ, "Minimum contig mapping quality").withOptionalArg().ofType(Integer.class).defaultsTo(25);
             parser.accepts(MIN_MAPQ, "Minimum mapping quality for a read to be used in assembly and be eligible for realignment").withOptionalArg().ofType(Integer.class).defaultsTo(20);
-            parser.accepts(UNALIGNED_ASSEMBLY, "Assemble unaligned reads (currently disabled).");
-            parser.accepts(MAX_UNALIGNED_READS, "Maximum number of unaligned reads to assemble").withOptionalArg().ofType(Integer.class).defaultsTo(50000000);
             parser.accepts(SINGLE_END, "Input is single end");
-            parser.accepts(RNA, "Input RNA sam or bam file (currently disabled)").withOptionalArg().ofType(String.class);
-            parser.accepts(RNA_OUTPUT, "Output RNA sam or bam file (required if RNA input file specified)").withRequiredArg().ofType(String.class);
             parser.accepts(MIN_BASE_QUALITY, "Minimum base quality for inclusion in assembly.  This value is compared against the sum of base qualities per kmer position").withOptionalArg().ofType(Integer.class).defaultsTo(60);
             parser.accepts(MIN_READ_CANDIDATE_FRACTION, "Minimum read candidate fraction for triggering assembly").withRequiredArg().ofType(Double.class).defaultsTo(.01);
             parser.accepts(MAX_AVERAGE_REGION_DEPTH, "Regions with average depth exceeding this value will be downsampled").withRequiredArg().ofType(Integer.class).defaultsTo(250);
-            parser.accepts(SEARCH_FOR_STRUCTURAL_VARIATION, "Enable Structural Variation searching (experimental, only supported for paired end)").withRequiredArg().ofType(String.class);
-            parser.accepts(SEARCH_FOR_LOCAL_REPEATS, "Search for potential larger local repeats and output to specified file (only for multiple samples)").withRequiredArg().ofType(String.class);
             parser.accepts(AVERAGE_DEPTH_CEILING, "Skip regions with average depth greater than this value").withOptionalArg().ofType(Integer.class).defaultsTo(100000);
             parser.accepts(MIN_EDGE_RATIO, "Min edge pruning ratio.  Default value is appropriate for relatively sensitive somatic cases.  May be increased for improved speed in germline only cases.").withRequiredArg().ofType(Double.class).defaultsTo(.02);
             parser.accepts(USE_INTERMEDIATE_BAM, "If specified, write intermediate data to BAM file using the intel deflator when available.  Use this to speed up processing.");
@@ -223,14 +209,6 @@ public class ReAlignerOptions extends Options {
 		return getOptions().hasArgument(NUM_THREADS) ? (Integer) getOptions().valueOf(NUM_THREADS) : 4;
 	}
 	
-	public int getMinContigMapq() {
-		return (Integer) getOptions().valueOf(MIN_CONTIG_MAPQ);
-	}
-	
-	public boolean isSkipUnalignedAssembly() {
-		return !getOptions().has(UNALIGNED_ASSEMBLY);
-	}
-	
 	public boolean isDebug() {
 		return !getOptions().has(NO_DEBUG);
 	}
@@ -239,20 +217,8 @@ public class ReAlignerOptions extends Options {
 		return getOptions().has(USE_INTERMEDIATE_BAM);
 	}
 	
-	public int getMaxUnalignedReads() {
-		return (Integer) getOptions().valueOf(MAX_UNALIGNED_READS);
-	}
-	
 	public boolean isPairedEnd() {
 		return !getOptions().has(SINGLE_END);
-	}
-	
-	public String getRnaSam() {
-		return (String) getOptions().valueOf(RNA);
-	}
-	
-	public String getRnaSamOutput() {
-		return (String) getOptions().valueOf(RNA_OUTPUT);
 	}
 	
 	public int getMinBaseQuality() {
@@ -269,18 +235,6 @@ public class ReAlignerOptions extends Options {
 	
 	public int getMaxAverageRegionDepth() {
 		return (Integer) getOptions().valueOf(MAX_AVERAGE_REGION_DEPTH);
-	}
-	
-	public boolean shouldSearchForStructuralVariation() {
-		return getOptions().has(SEARCH_FOR_STRUCTURAL_VARIATION);
-	}
-	
-	public String getStructuralVariantFile() {
-		return (String) getOptions().valueOf(SEARCH_FOR_STRUCTURAL_VARIATION);
-	}
-	
-	public String getLocalRepeatFile() {
-		return (String) getOptions().valueOf(SEARCH_FOR_LOCAL_REPEATS);
 	}
 	
 	public int getAverageDepthCeiling() {

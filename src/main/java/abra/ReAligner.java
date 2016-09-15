@@ -17,13 +17,6 @@ import java.util.Map;
 
 import abra.ReadEvaluator.Alignment;
 import abra.SSWAligner.SSWAlignerResult;
-import abra.SimpleMapper.SimpleMapperResult;
-
-import picard.sam.BuildBamIndex;
-import picard.sam.SortSam;
-import htsjdk.samtools.Cigar;
-import htsjdk.samtools.CigarElement;
-import htsjdk.samtools.CigarOperator;
 import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.SAMFileReader;
 import htsjdk.samtools.SAMFileWriter;
@@ -43,8 +36,6 @@ public class ReAligner {
 	public static final int MAX_REGION_LENGTH = 400;
 	private static final int MIN_REGION_REMAINDER = 200;
 	public static final int REGION_OVERLAP = 200;
-
-	private static final int MAX_POTENTIAL_UNALIGNED_CONTIGS = 2000000;
 	
 	// Minimum sequence length recommended for use with bwa mem
 	private static final int MIN_CONTIG_LENGTH = 70;
@@ -65,8 +56,6 @@ public class ReAligner {
 	private String reference;
 	
 	private String bwaIndex;
-	
-	private int minContigMapq;
 
 	private AssemblerSettings assemblerSettings;
 	
@@ -76,11 +65,7 @@ public class ReAligner {
 	
 	private boolean shouldReprocessUnaligned = true;
 	
-	private boolean isOutputIntermediateBam = false;
-	
-	private String structuralVariantFile;
 	private String localRepeatFile;
-	private BufferedWriter localRepeatWriter;
 	
 	private String[] inputSams;
 	private SAMFileWriter[] writers;
@@ -562,9 +547,6 @@ public class ReAligner {
 
 	private void init() throws IOException {
 		
-		String javaVersion = System.getProperty("java.version");
-		
-		
 		File workingDir = new File(tempDir);
 		if (workingDir.exists()) {
 			if (!workingDir.delete()) {
@@ -585,19 +567,8 @@ public class ReAligner {
 		new NativeLibraryLoader().load(tempDir);
 		
 		threadManager = new ThreadManager(numThreads);
-		
-		if (this.localRepeatFile != null) {
-			localRepeatWriter = new BufferedWriter(new FileWriter(localRepeatFile, false));
-		}
 	}
 	
-	private void mkdir(String dir) {
-		File directory = new File(dir);
-		if (!directory.mkdir()) {
-			throw new IllegalStateException("Unable to create: " + dir);
-		}
-	}
-
 	public void setReference(String reference) {
 		this.reference = reference;
 	}
@@ -617,11 +588,7 @@ public class ReAligner {
 	public void setNumThreads(int numThreads) {
 		this.numThreads = numThreads;
 	}
-	
-	public void setMinContigMapq(int minContigMapq) {
-		this.minContigMapq = minContigMapq;
-	}
-	
+		
 	public void setShouldReprocessUnaligned(boolean shouldReprocessUnaligned) {
 		this.shouldReprocessUnaligned = shouldReprocessUnaligned;
 	}
@@ -690,15 +657,9 @@ public class ReAligner {
 			realigner.setTempDir(options.getWorkingDir());
 			realigner.setAssemblerSettings(assemblerSettings);
 			realigner.setNumThreads(options.getNumThreads());
-			realigner.setMinContigMapq(options.getMinContigMapq());
-			realigner.setShouldReprocessUnaligned(!options.isSkipUnalignedAssembly());
-			realigner.setMaxUnalignedReads(options.getMaxUnalignedReads());
 			realigner.isPairedEnd = options.isPairedEnd();
-			realigner.structuralVariantFile = options.getStructuralVariantFile();
-			realigner.localRepeatFile = options.getLocalRepeatFile();
 			realigner.minMappingQuality = options.getMinimumMappingQuality();
 			realigner.hasPresetKmers = options.hasPresetKmers();
-			realigner.isOutputIntermediateBam = options.useIntermediateBam();
 			realigner.isDebug = options.isDebug();
 
 			long s = System.currentTimeMillis();

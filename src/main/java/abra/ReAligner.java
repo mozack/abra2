@@ -237,7 +237,7 @@ public class ReAligner {
 				NativeAssembler assem = (NativeAssembler) newAssembler(region);
 				List<Feature> regions = new ArrayList<Feature>();
 				regions.add(region); 
-				List<List<SAMRecord>> readsList = ReadLoader.getReads(bams, regions.get(0), this);
+				List<List<SAMRecordWrapper>> readsList = ReadLoader.getReads(bams, regions.get(0), this);
 				String contigs = assem.assembleContigs(bams, contigsFasta, tempDir, regions, region.getDescriptor(), true, this, c2r, readsList);
 				
 				if (!contigs.equals("<ERROR>") && !contigs.equals("<REPEAT>") && !contigs.isEmpty()) {
@@ -267,10 +267,11 @@ public class ReAligner {
 					
 					int sampleIdx = 0;
 					// For each sample.
-					for (List<SAMRecord> reads : readsList) {
+					for (List<SAMRecordWrapper> reads : readsList) {
 						
 						// For each read.
-						for (SAMRecord read : reads) {
+						for (SAMRecordWrapper readWrapper : reads) {
+							SAMRecord read = readWrapper.getSamRecord();
 							// TODO: Use NM tag if available (need to handle soft clipping though!)
 							int origEditDist = SAMRecordUtils.getEditDistance(read, c2r);
 //							int origEditDist = c2r.numMismatches(read);
@@ -319,8 +320,8 @@ public class ReAligner {
 
 						// Output all reads for this sample - synchronize on the current BAM
 						synchronized(this.writers[sampleIdx]) {
-							for (SAMRecord read : reads) {
-								this.writers[sampleIdx].addAlignment(read);
+							for (SAMRecordWrapper read : reads) {
+								this.writers[sampleIdx].addAlignment(read.getSamRecord());
 							}
 						}
 						

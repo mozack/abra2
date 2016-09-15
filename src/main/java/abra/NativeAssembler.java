@@ -121,10 +121,10 @@ public class NativeAssembler {
 		}
 
 		return isCandidate;
-	}	
+	}
 	
 	public String assembleContigs(List<String> inputFiles, String output, String tempDir, List<Feature> regions, String prefix,
-			boolean checkForDupes, ReAligner realigner, CompareToReference2 c2r, List<List<SAMRecord>> readsList) {
+			boolean checkForDupes, ReAligner realigner, CompareToReference2 c2r, List<List<SAMRecordWrapper>> readsList) {
 		
 		if ((kmers.length == 0) || (kmers[0] < KmerSizeEvaluator.MIN_KMER)) {
 			KmerSizeEvaluator kmerEval = new KmerSizeEvaluator();
@@ -137,31 +137,34 @@ public class NativeAssembler {
 		long start = System.currentTimeMillis();
 		
 		int readCount = 0;
-		
-		int minReadCount = Integer.MAX_VALUE;
 
-		// if c2r is null, this is the unaligned region.
-		boolean isAssemblyCandidate = c2r == null ? true : false;
+		boolean isAssemblyCandidate = false;
 		
 		try {
 			
-			for (List<SAMRecord> reads : readsList) {
+			int[] unfilteredReads = new int[readsList.size()];
+			
+			int sampleIdx = 0;
+			
+			for (List<SAMRecordWrapper> reads : readsList) {
 				int candidateReadCount = 0;
-				for (SAMRecord read : reads) {
-					if (!isAssemblyCandidate && isAssemblyTriggerCandidate(read, c2r)) {
-						candidateReadCount++;
+			
+				for (SAMRecordWrapper read : reads) {
+					
+					if (read.shouldAssemble()) {
+						if (!isAssemblyCandidate && isAssemblyTriggerCandidate(read.getSamRecord(), c2r)) {
+							candidateReadCount++;
+						}
+						unfilteredReads[sampleIdx] += 1;
 					}
 				}
 				
-				if (candidateReadCount > minCandidateCount(reads.size(), regions.get(0))) {
+				if (candidateReadCount > minCandidateCount(unfilteredReads[sampleIdx], regions.get(0))) {
 					isAssemblyCandidate = true;
 				}
 				
-				if (reads.size() < minReadCount) {
-					minReadCount = reads.size();
-				}
-				
-				readCount += reads.size();
+				readCount += unfilteredReads[sampleIdx];
+				sampleIdx += 1;
 			}
 			
 			StringBuffer readBuffer = new StringBuffer();
@@ -172,17 +175,19 @@ public class NativeAssembler {
 				
 				char sampleId = 1;
 				
-				for (List<SAMRecord> reads : readsList) {
+				sampleIdx = 0;
+				for (List<SAMRecordWrapper> reads : readsList) {
 					// Default to always keep
 					double keepProbability = 1.1;
 					
 					if (reads.size() > downsampleTarget) {
-						keepProbability = (double) downsampleTarget / (double) reads.size();
+						keepProbability = (double) downsampleTarget / (double) unfilteredReads[sampleIdx];
 					}
 					
 					Random random = new Random(1);
 					
-					for (SAMRecord read : reads) {
+					for (SAMRecordWrapper readWrapper : reads) {
+						SAMRecord read = readWrapper.getSamRecord();
 						if (random.nextDouble() < keepProbability) {
 							readBuffer.append(sampleId);
 							readBuffer.append(read.getReadNegativeStrandFlag() ? "1" : "0");
@@ -205,6 +210,7 @@ public class NativeAssembler {
 						}
 					}
 					
+					sampleIdx += 1;
 					sampleId += 1;
 				}
 			}

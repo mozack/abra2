@@ -13,14 +13,14 @@ import java.util.Set;
 
 public class ReadLoader {
 
-	public static List<List<SAMRecord>> getReads(List<String> inputFiles, Feature region, ReAligner realigner) {
+	public static List<List<SAMRecordWrapper>> getReads(List<String> inputFiles, Feature region, ReAligner realigner) {
 		
-		List<List<SAMRecord>> sampleReads = new ArrayList<List<SAMRecord>>();
+		List<List<SAMRecordWrapper>> sampleReads = new ArrayList<List<SAMRecordWrapper>>();
 		
 
 		for (String input : inputFiles) {
 			Set<String> readIds = new HashSet<String>();
-			List<SAMRecord> reads = new ArrayList<SAMRecord>();
+			List<SAMRecordWrapper> reads = new ArrayList<SAMRecordWrapper>();
 			sampleReads.add(reads);
 			
 			SAMFileReader reader = new SAMFileReader(new File(input));
@@ -35,25 +35,28 @@ public class ReadLoader {
 			
 			while (iter.hasNext()) {
 				
+				boolean shouldAssemble = false;
 				SAMRecord read = iter.next();
 										
-				// Don't allow same read to be counted twice.
-				// TODO: Move this logic into the assember (or pass straight along to BAM output)
-				if ( (!realigner.isFiltered(read)) && 
-					 (!read.getDuplicateReadFlag()) && 
-					 (!read.getReadFailsVendorQualityCheckFlag()) &&
-					 (read.getMappingQuality() >= realigner.getMinMappingQuality() || read.getReadUnmappedFlag()) &&
-					 (!readIds.contains(getIdentifier(read)))) {
+				// If running in paired end mode, drop single end reads
+				if (!realigner.isFiltered(read)) {
+					// Determine if this read should be included in assembly
+					if ( (!read.getDuplicateReadFlag()) && 
+						 (!read.getReadFailsVendorQualityCheckFlag()) &&
+						 (read.getMappingQuality() >= realigner.getMinMappingQuality() || read.getReadUnmappedFlag()) &&
+						 (!readIds.contains(getIdentifier(read)))) {
+						
+	//					if (read.getReadString().length() > readLength) {
+	//						reader.close();
+	//						throw new IllegalArgumentException("Maximum read length of: " + readLength +
+	//								" exceeded for: " + read.getSAMString());
+	//					}
+						
+						readIds.add(getIdentifier(read));
+						shouldAssemble = true;
+					} 
 					
-//					if (read.getReadString().length() > readLength) {
-//						reader.close();
-//						throw new IllegalArgumentException("Maximum read length of: " + readLength +
-//								" exceeded for: " + read.getSAMString());
-//					}
-					
-					readIds.add(getIdentifier(read));
-											
-					reads.add(read);
+					reads.add(new SAMRecordWrapper(read, shouldAssemble));
 				}
 			}
 						

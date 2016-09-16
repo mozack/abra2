@@ -56,7 +56,7 @@ public class ReadLoader {
 						shouldAssemble = true;
 					} 
 					
-					reads.add(new SAMRecordWrapper(read, shouldAssemble));
+					reads.add(new SAMRecordWrapper(read, false, shouldAssemble, 0));
 				}
 			}
 						

@@ -77,8 +77,7 @@ public class MultiSamReader implements Iterable<SAMRecordWrapper> {
 	
 	@Override
 	public Iterator<SAMRecordWrapper> iterator() {
-		// TODO Auto-generated method stub
-		return null;
+		return clientIterator;
 	}
 	
 	static class MultiSamReaderIterator implements Iterator<SAMRecordWrapper> {

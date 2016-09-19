@@ -132,7 +132,100 @@ public class ReAligner {
 			writers[i] = writerFactory.makeBAMWriter(
 					samHeaders[i], false, new File(outputFiles[i]), COMPRESSION_LEVEL);
 		}
+
+		int currRegionIdx = -1;
 		
+		MultiSamReader reader = new MultiSamReader(this.inputSams, this);
+		
+		List<List<SAMRecordWrapper>> currReads = new ArrayList<List<SAMRecordWrapper>>();
+		for (int i=0; i<this.inputSams.length; i++) {
+			currReads.add(new ArrayList<SAMRecordWrapper>());
+		}
+		
+		Map<Feature, Map<SimpleMapper, SSWAlignerResult>> regionContigs = new HashMap<Feature, Map<SimpleMapper, SSWAlignerResult>>();
+		int readCount = 0;
+		
+		// TODO: Consider parallelizing by chromosome
+		for (SAMRecordWrapper record : reader) {
+			int regionIdx = Feature.findFirstOverlappingRegion(reader.getSAMFileHeader(), record.getSamRecord(), regions, currRegionIdx);
+		
+			
+			if ((regionIdx == -1 && currRegionIdx >= 0) ||
+				(regionIdx > currRegionIdx)) {
+				
+				if (currRegionIdx >= 0) {
+					
+					// We've moved beyond the current region
+					// Assemble reads
+					Feature region = regions.get(currRegionIdx);
+					Map<SimpleMapper, SSWAlignerResult> mappedContigs = processRegion(region, currReads);
+					regionContigs.put(region, mappedContigs);
+				}
+				
+				currRegionIdx = regionIdx;
+			}
+			
+			if (regionIdx >= 0) {
+				// Read is in a target region
+				if (currRegionIdx == regionIdx) {
+					// Read is in the currently tracked region.  Cache it for processing at end of region
+					currReads.get(record.getSampleIdx()).add(record);
+				} else {
+					throw new IllegalStateException("Out of order reads / regions for sample: " + record.getSampleIdx() + 
+							", read: " + record.getSamRecord().getSAMString() + ", region: " + regions.get(regionIdx) + 
+							", curr_region: " + regions.get(currRegionIdx));
+					
+				}
+			}
+			
+			// Todo - make constant or parameterize
+			int MAX_READ_RANGE = 1000 + this.readLength;
+			
+			// Check for out of scope reads every 2500 reads (TODO: is 2500 the best number?)
+			if (readCount % 2500 == 0) {
+				// Remap / output / clear out of scope reads
+				List<List<SAMRecordWrapper>> readsToRemap = new ArrayList<List<SAMRecordWrapper>>();
+				
+				// Initialize per sample lists
+				for (List<SAMRecordWrapper> origSample : currReads) {
+					List<SAMRecordWrapper> sampleReadsToRemap = new ArrayList<SAMRecordWrapper>();
+					readsToRemap.add(sampleReadsToRemap);
+					
+					Iterator<SAMRecordWrapper> iter = origSample.iterator();
+					while (iter.hasNext()) {
+						SAMRecordWrapper read = iter.next();
+						if (record.getSamRecord().getAlignmentStart() - read.getSamRecord().getAlignmentStart() > MAX_READ_RANGE) {
+							sampleReadsToRemap.add(read);
+							iter.remove();
+						}
+					}					
+				}
+
+				// Remap out of scope reads
+				remapReads(regionContigs, readsToRemap);
+				
+				// Remove out of scope region assemblies
+				List<Feature> regionsToRemove = new ArrayList<Feature>();
+				for (Feature region : regionContigs.keySet()) {
+					if (region.getStart() - record.getSamRecord().getAlignmentStart() > MAX_READ_RANGE) {
+						regionsToRemove.add(region);
+					}
+				}
+				
+				for (Feature region : regionsToRemove) {
+					regionContigs.remove(region);
+				}
+			}
+			
+			readCount += 1;
+		}
+		
+		// Remap remaining reads
+		remapReads(regionContigs, currReads);
+		currReads.clear();
+		regionContigs.clear();
+		
+		/*
 		log("Iterating over regions");
 		
 		int count = 0;
@@ -143,6 +236,7 @@ public class ReAligner {
 				System.err.println("Processing region: " + count + " of " + regions.size());
 			}
 		}
+		*/
 		
 		log("Waiting for all threads to complete");
 		threadManager.waitForAllThreadsToComplete();
@@ -203,18 +297,118 @@ public class ReAligner {
 		contigWriter.write(contigs);
 	}
 	
-	public void processRegion(Feature region) throws Exception {
+	private void remapRead(ReadEvaluator readEvaluator, SAMRecord read, int origEditDist) {
+		Alignment alignment = readEvaluator.getImprovedAlignment(origEditDist, read.getReadString(), read);
+		if (alignment != null) {
+			
+			int readPos = alignment.pos;
+			
+			// Set contig alignment info for all reads that map to contigs (even if read is unchanged)
+			String ya = alignment.chromosome + ":" + alignment.contigPos + ":" + alignment.contigCigar;
+			read.setAttribute("YA", ya);
+			
+			// If the read has actually moved, updated it
+			if (read.getReadUnmappedFlag() || read.getAlignmentStart() != readPos || !read.getCigarString().equals(alignment.cigar)) {
+
+				// Original alignment info
+				String yo = "N/A";
+				if (!read.getReadUnmappedFlag()) {
+					String origOrientation = read.getReadNegativeStrandFlag() ? "-" : "+";
+					yo = read.getReferenceName() + ":" + read.getAlignmentStart() + ":" + origOrientation + ":" + read.getCigarString();
+				} else {
+					read.setReadUnmappedFlag(false);
+				}
+				read.setAttribute("YO", yo);
+
+				// Update alignment position and cigar and orientation
+				read.setAlignmentStart(alignment.pos);
+				read.setCigarString(alignment.cigar);
+				
+				// If this is true, the read was already reverse complemented in the original alignment
+				if (read.getReadNegativeStrandFlag()) {
+					read.setReadNegativeStrandFlag(alignment.orientation == Orientation.FORWARD ? true : false);
+				} else {
+					read.setReadNegativeStrandFlag(alignment.orientation == Orientation.FORWARD ? false : true);
+				}
+				
+				// Number of mismatches to contig
+				read.setAttribute("YM", alignment.numMismatches);
+
+				// Original edit distance
+				read.setAttribute("YX",  origEditDist);
+				
+				// Updated edit distance
+				read.setAttribute("NM", SAMRecordUtils.getEditDistance(read, c2r));
+				
+				//TODO: Compute mapq intelligently???
+				read.setMappingQuality(Math.min(read.getMappingQuality(), 60));
+			}
+		}
+
+	}
+	
+	private void remapReads(Map<Feature, Map<SimpleMapper, SSWAlignerResult>> mappedContigs, List<List<SAMRecordWrapper>> readsList) throws Exception {
+		ReadEvaluator readEvaluator = new ReadEvaluator(mappedContigs);
+		
+		int sampleIdx = 0;
+		// For each sample.
+		for (List<SAMRecordWrapper> reads : readsList) {
+			
+			// For each read.
+			for (SAMRecordWrapper readWrapper : reads) {
+				SAMRecord read = readWrapper.getSamRecord();
+				// TODO: Use NM tag if available (need to handle soft clipping though!)
+				int origEditDist = SAMRecordUtils.getEditDistance(read, c2r);
+//				int origEditDist = c2r.numMismatches(read);
+				
+				if (origEditDist > 0) {
+					remapRead(readEvaluator, read, origEditDist);
+				}
+			}
+
+			// Output all reads for this sample - synchronize on the current BAM
+			synchronized(this.writers[sampleIdx]) {
+				for (SAMRecordWrapper read : reads) {
+					this.writers[sampleIdx].addAlignment(read.getSamRecord());
+				}
+			}
+			
+			sampleIdx += 1;
+		}
+	}
+	
+	private List<List<SAMRecordWrapper>> subsetReads(Feature region, List<List<SAMRecordWrapper>> readsList) {
+		List<List<SAMRecordWrapper>> subset = new ArrayList<List<SAMRecordWrapper>>();
+		
+		// Initialize per sample lists
+		for (List<SAMRecordWrapper> origSample : readsList) {
+			List<SAMRecordWrapper> subsetSample = new ArrayList<SAMRecordWrapper>();
+			subset.add(subsetSample);
+			
+			for (SAMRecordWrapper read : origSample) {
+				if (region.overlapsRead(read.getSamRecord())) {
+					subsetSample.add(read);
+				}
+			}
+		}
+		
+		return subset;
+	}
+	
+	public Map<SimpleMapper, SSWAlignerResult> processRegion(Feature region, List<List<SAMRecordWrapper>> reads) throws Exception {
 		if (isDebug) {
 			log("Processing region: " + region.getDescriptor());
 		}
+		
+		Map<SimpleMapper, SSWAlignerResult> mappedContigs = new HashMap<SimpleMapper, SSWAlignerResult>();
+		
+		List<List<SAMRecordWrapper>> readsList = subsetReads(region, reads);
+		
 		
 		try {
 			String contigsFasta = tempDir + "/" + region.getDescriptor() + "_contigs.fasta";
 			
 			List<String> bams = new ArrayList<String>(Arrays.asList(this.inputSams));
-			if (shouldReprocessUnaligned) {
-				bams.add(unalignedRegionSam);
-			}
 			
 			// Assemble contigs
 			if (region.getKmer() > this.readLength-15) {
@@ -223,7 +417,7 @@ public class ReAligner {
 				NativeAssembler assem = (NativeAssembler) newAssembler(region);
 				List<Feature> regions = new ArrayList<Feature>();
 				regions.add(region); 
-				List<List<SAMRecordWrapper>> readsList = ReadLoader.getReads(bams, regions.get(0), this);
+//				List<List<SAMRecordWrapper>> readsList = ReadLoader.getReads(bams, regions.get(0), this);
 				String contigs = assem.assembleContigs(bams, contigsFasta, tempDir, regions, region.getDescriptor(), true, this, c2r, readsList);
 				
 				if (!contigs.equals("<ERROR>") && !contigs.equals("<REPEAT>") && !contigs.isEmpty()) {
@@ -236,91 +430,20 @@ public class ReAligner {
 					int refStart = (int) region.getStart() - this.readLength;
 					String refSeq = c2r.getSequence(region.getSeqname(), refStart, (int) region.getLength()+this.readLength*2);
 					
-					SSWAligner ssw = new SSWAligner(refSeq);
-
-					Map<SimpleMapper, SSWAlignerResult> mappedContigs = new HashMap<SimpleMapper, SSWAlignerResult>();
+					SSWAligner ssw = new SSWAligner(refSeq, region.getSeqname(), refStart);
 					
 					// Map contigs to reference
 					String[] contigSequences = contigs.split("\n");
 					for (String contig : contigSequences) {
 						if (!contig.startsWith(">")) {
 							SSWAlignerResult sswResult = ssw.align(contig);
+							// TODO: In multi-region processing, check to ensure identical contigs have identical mappings
 							mappedContigs.put(new SimpleMapper(contig), sswResult);
 						}
 					}
 					
-					ReadEvaluator readEvaluator = new ReadEvaluator(mappedContigs);
-					
-					int sampleIdx = 0;
-					// For each sample.
-					for (List<SAMRecordWrapper> reads : readsList) {
-						
-						// For each read.
-						for (SAMRecordWrapper readWrapper : reads) {
-							SAMRecord read = readWrapper.getSamRecord();
-							// TODO: Use NM tag if available (need to handle soft clipping though!)
-							int origEditDist = SAMRecordUtils.getEditDistance(read, c2r);
-//							int origEditDist = c2r.numMismatches(read);
-							
-							if (origEditDist > 0) {
-								Alignment alignment = readEvaluator.getImprovedAlignment(origEditDist, read.getReadString());
-								if (alignment != null) {
-									
-									int readPos = alignment.pos + refStart;
-									
-									// Set contig alignment info for all reads that map to contigs (even if read is unchanged)
-									String ya = region.getSeqname() + ":" + (alignment.contigPos + refStart) + ":" + alignment.contigCigar;
-									read.setAttribute("YA", ya);
-									
-									// If the read has actually moved, updated it
-									if (read.getReadUnmappedFlag() || read.getAlignmentStart() != readPos || !read.getCigarString().equals(alignment.cigar)) {
-
-										// Original alignment info
-										String yo = "N/A";
-										if (!read.getReadUnmappedFlag()) {
-											String origOrientation = read.getReadNegativeStrandFlag() ? "-" : "+";
-											yo = read.getReferenceName() + ":" + read.getAlignmentStart() + ":" + origOrientation + ":" + read.getCigarString();
-										} else {
-											read.setReadUnmappedFlag(false);
-										}
-										read.setAttribute("YO", yo);
-
-										// Update alignment position and cigar and orientation
-										read.setAlignmentStart(alignment.pos + refStart);
-										read.setCigarString(alignment.cigar);
-										
-										// If this is true, the read was already reverse complemented in the original alignment
-										if (read.getReadNegativeStrandFlag()) {
-											read.setReadNegativeStrandFlag(alignment.orientation == Orientation.FORWARD ? true : false);
-										} else {
-											read.setReadNegativeStrandFlag(alignment.orientation == Orientation.FORWARD ? false : true);
-										}
-										
-										// Number of mismatches to contig
-										read.setAttribute("YM", alignment.numMismatches);
-
-										// Original edit distance
-										read.setAttribute("YX",  origEditDist);
-										
-										// Updated edit distance
-										read.setAttribute("NM", SAMRecordUtils.getEditDistance(read, c2r));
-										
-										//TODO: Compute mapq intelligently???
-										read.setMappingQuality(Math.min(read.getMappingQuality(), 60));
-									}
-								}
-							}
-						}
-
-						// Output all reads for this sample - synchronize on the current BAM
-						synchronized(this.writers[sampleIdx]) {
-							for (SAMRecordWrapper read : reads) {
-								this.writers[sampleIdx].addAlignment(read.getSamRecord());
-							}
-						}
-						
-						sampleIdx += 1;
-					}
+					// remap reads
+//					remapReads(mappedContigs, readsList, region, refStart);
 				}
 			}
 		}
@@ -328,6 +451,8 @@ public class ReAligner {
 			e.printStackTrace();
 			throw e;
 		}
+		
+		return mappedContigs;
 	}
 	
 	static List<Feature> getRegions(String regionsBed, int readLength, boolean hasPresetKmers) throws IOException {

@@ -1,6 +1,9 @@
 /* Copyright 2013 University of North Carolina at Chapel Hill.  All rights reserved. */
 package abra;
 
+import java.util.List;
+
+import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.SAMRecord;
 
 /**
@@ -73,7 +76,8 @@ public class Feature {
 	}
 	
 	public boolean overlapsRead(SAMRecord read) {
-		return overlaps(read.getReferenceName(), read.getAlignmentStart(), read.getAlignmentEnd());
+		int alignmentEnd = Math.max(read.getAlignmentEnd(), read.getAlignmentStart() + read.getReadLength());
+		return overlaps(read.getReferenceName(), read.getAlignmentStart(), alignmentEnd);
 	}
 	
 	public boolean overlaps(String chromosome, int startPos, int stopPos) {
@@ -86,5 +90,61 @@ public class Feature {
 
 	public void setKmer(int kmer) {
 		this.kmerSize = kmer;
+	}
+	
+	public static int findFirstOverlappingRegion(SAMFileHeader samHeader, SAMRecord read, List<Feature> regions, int start) {
+		if (start < 0) {
+			start = 0;
+		}
+		
+		// Adjust alignment end for soft clipping / unmapped reads
+		int alignmentEnd = Math.max(read.getAlignmentEnd(), read.getAlignmentStart() + read.getReadLength());
+
+		for (int idx=start; idx<regions.size(); idx++) {
+			Feature region = regions.get(idx);
+			if ( (read.getReferenceIndex() < samHeader.getSequenceDictionary().getSequenceIndex(region.getSeqname())) ||
+				 (read.getReferenceName().equals(region.getSeqname()) && alignmentEnd < region.getStart()) ) {
+				
+				// This read is in between regions
+				// TODO: adjust start region here
+				return -1;
+			} else if (region.overlaps(read.getReferenceName(), read.getAlignmentStart(), alignmentEnd)) {
+				return idx;
+			}
+		}
+		
+		// This read is beyond all regions
+		return -1;
+	}
+
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + (int) (end ^ (end >>> 32));
+		result = prime * result + ((seqname == null) ? 0 : seqname.hashCode());
+		result = prime * result + (int) (start ^ (start >>> 32));
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		Feature other = (Feature) obj;
+		if (end != other.end)
+			return false;
+		if (seqname == null) {
+			if (other.seqname != null)
+				return false;
+		} else if (!seqname.equals(other.seqname))
+			return false;
+		if (start != other.start)
+			return false;
+		return true;
 	}
 }

@@ -1,5 +1,7 @@
 package abra;
 
+import htsjdk.samtools.SAMRecord;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -13,10 +15,14 @@ import abra.SimpleMapper.SimpleMapperResult;
 public class ReadEvaluator {
 
 	// key = SimpleMapper with cached contig, value = contig SW alignment result
-	private Map<SimpleMapper, SSWAlignerResult> mappedContigs;
+	private Map<Feature, Map<SimpleMapper, SSWAlignerResult>> mappedContigs;
 	
-	public ReadEvaluator(Map<SimpleMapper, SSWAlignerResult> mappedContigs) {
+	public ReadEvaluator(Map<Feature, Map<SimpleMapper, SSWAlignerResult>> mappedContigs) {
 		this.mappedContigs = mappedContigs;
+	}
+	
+	Alignment getImprovedAlignment(int origEditDist, String read) {
+		return getImprovedAlignment(origEditDist, read, null);
 	}
 	
 	/**
@@ -27,7 +33,7 @@ public class ReadEvaluator {
 	 * A read may align to multiple contigs, but result in the same alignment in
 	 * the context of the reference.  In this case the alignment is considered distinct. 
 	 */
-	public Alignment getImprovedAlignment(int origEditDist, String read) {
+	public Alignment getImprovedAlignment(int origEditDist, String read, SAMRecord samRecord) {
 		Alignment result = null;
 		
 		List<AlignmentHit> alignmentHits = new ArrayList<AlignmentHit>();
@@ -35,15 +41,21 @@ public class ReadEvaluator {
 		int bestMismatches = origEditDist;
 		
 		// Map read to all contigs, caching the hits with the smallest number of mismatches
-		for (SimpleMapper mapper : mappedContigs.keySet()) {
-			SimpleMapperResult mapResult = mapper.map(read);
-			
-			if (mapResult.getMismatches() < bestMismatches) {
-				bestMismatches = mapResult.getMismatches();
-				alignmentHits.clear();
-				alignmentHits.add(new AlignmentHit(mapResult, mapper));
-			} else if (mapResult.getMismatches() == bestMismatches && bestMismatches < origEditDist) {
-				alignmentHits.add(new AlignmentHit(mapResult, mapper));
+		for (Feature region : mappedContigs.keySet()) {
+			if (samRecord == null || region.overlapsRead(samRecord)) {  // Allowing null samRecord for unit test
+				Map<SimpleMapper, SSWAlignerResult> regionContigs = mappedContigs.get(region);
+				
+				for (SimpleMapper mapper : regionContigs.keySet()) {
+					SimpleMapperResult mapResult = mapper.map(read);
+					
+					if (mapResult.getMismatches() < bestMismatches) {
+						bestMismatches = mapResult.getMismatches();
+						alignmentHits.clear();
+						alignmentHits.add(new AlignmentHit(mapResult, mapper, region));
+					} else if (mapResult.getMismatches() == bestMismatches && bestMismatches < origEditDist) {
+						alignmentHits.add(new AlignmentHit(mapResult, mapper, region));
+					}
+				}
 			}
 		}
 		
@@ -51,7 +63,7 @@ public class ReadEvaluator {
 		Set<Alignment> alignments = new HashSet<Alignment>();
 		
 		for (AlignmentHit alignmentHit : alignmentHits) {
-			SSWAlignerResult contigAlignment = mappedContigs.get(alignmentHit.mapper); 
+			SSWAlignerResult contigAlignment = mappedContigs.get(alignmentHit.region).get(alignmentHit.mapper); 
 			
 			int readRefPos = alignmentHit.mapResult.getPos();
 			String cigar = "";
@@ -60,11 +72,12 @@ public class ReadEvaluator {
 			if (alignmentHit.mapResult.getPos() >= 0) {
 				StringBuffer cigarBuf = new StringBuffer();
 				int readPosInCigarRelativeToRef = CigarUtils.subsetCigarString(alignmentHit.mapResult.getPos(), read.length(), contigAlignment.getCigar(), cigarBuf);
-				readRefPos = contigAlignment.getRefPos() + readPosInCigarRelativeToRef;
+//				readRefPos = contigAlignment.getRefPos() + readPosInCigarRelativeToRef;
+				readRefPos = contigAlignment.getGenomicPos() + readPosInCigarRelativeToRef;
 				cigar = cigarBuf.toString();
 			}
 			
-			Alignment readAlignment = new Alignment(readRefPos, cigar, alignmentHit.mapResult.getOrientation(), bestMismatches, contigAlignment.getRefPos(), contigAlignment.getCigar());
+			Alignment readAlignment = new Alignment(contigAlignment.getChromosome(), readRefPos, cigar, alignmentHit.mapResult.getOrientation(), bestMismatches, contigAlignment.getGenomicPos(), contigAlignment.getCigar());
 			alignments.add(readAlignment);
 		}
 		
@@ -84,15 +97,18 @@ public class ReadEvaluator {
 	static class AlignmentHit {
 		SimpleMapperResult mapResult;
 		SimpleMapper mapper;
+		Feature region;
 		
-		AlignmentHit(SimpleMapperResult mapResult, SimpleMapper mapper) {
+		AlignmentHit(SimpleMapperResult mapResult, SimpleMapper mapper, Feature region) {
 			this.mapResult = mapResult;
 			this.mapper = mapper;
+			this.region = region;
 		}
 	}
 	
 	//TODO: Genericize this and share ?
 	static class Alignment {
+		String chromosome;
 		int pos;
 		String cigar;
 		Orientation orientation;
@@ -101,7 +117,8 @@ public class ReadEvaluator {
 		int contigPos;
 		String contigCigar;
 		
-		Alignment(int pos, String cigar, Orientation orientation, int numMismatches, int contigPos, String contigCigar) {
+		Alignment(String chromosome, int pos, String cigar, Orientation orientation, int numMismatches, int contigPos, String contigCigar) {
+			this.chromosome = chromosome;
 			this.pos = pos;
 			this.cigar = cigar;
 			this.orientation = orientation;

@@ -19,6 +19,8 @@ public class SSWAligner {
 	private static final int GAP_OPEN_PENALTY = 6;
 	private static final int GAP_EXTEND_PENALTY = 1;
 	
+	private String refChr;
+	private int refStart;
 	private String ref;
 	
 	private static int [][] score;
@@ -39,8 +41,10 @@ public class SSWAligner {
 		}
 	}
 	
-	public SSWAligner(String ref) {
+	public SSWAligner(String ref, String refChr, int refStart) {
 		this.ref = ref;
+		this.refChr = refChr;
+		this.refStart = refStart;
 	}
 	
 	public SSWAlignerResult align(String seq) {
@@ -55,7 +59,7 @@ public class SSWAligner {
 			
 			// Requiring end to end alignment here...
 			if (aln.read_begin1 == 0 && aln.read_end1 == seq.length()-1) {
-				result = new SSWAlignerResult(aln.ref_begin1, aln.cigar);
+				result = new SSWAlignerResult(aln.ref_begin1, aln.cigar, refChr, refStart);
 			}
 		}
 		
@@ -63,19 +67,37 @@ public class SSWAligner {
 	}
 	
 	public static class SSWAlignerResult {
-		private int refPos;
+		private int localRefPos;
 		private String cigar;
 		
-		SSWAlignerResult(int refPos, String cigar) {
-			this.refPos = refPos;
+		private String chromosome;
+		private int refContextStart;
+		
+		SSWAlignerResult(int refPos, String cigar, String chromosome, int refContextStart) {
+			this.localRefPos = refPos;
 			this.cigar = cigar;
+			this.chromosome = chromosome;
+			this.refContextStart = refContextStart;
 		}
 		
 		public int getRefPos() {
-			return refPos;
+			return localRefPos;
 		}
 		public String getCigar() {
 			return cigar;
+		}
+
+		public String getChromosome() {
+			return chromosome;
+		}
+
+		public int getRefContextStart() {
+			return refContextStart;
+		}
+		
+		// This is the actual genomic position 
+		public int getGenomicPos() {
+			return localRefPos + refContextStart;
 		}
 	}
 }

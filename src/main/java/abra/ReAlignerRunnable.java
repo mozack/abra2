@@ -18,6 +18,6 @@ public class ReAlignerRunnable extends AbraRunnable {
 	
 	@Override
 	public void go() throws Exception {		
-		reAligner.processRegion(region);
+//		reAligner.processRegion(region);
 	}
 }

@@ -4,6 +4,7 @@ import java.io.File;
 import java.util.Iterator;
 import java.util.List;
 
+import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.SAMFileReader;
 import htsjdk.samtools.SAMRecord;
 import htsjdk.samtools.ValidationStringency;
@@ -21,6 +22,7 @@ public class MultiSamReader implements Iterable<SAMRecordWrapper> {
 
 	public MultiSamReader(String[] inputBams, ReAligner realigner) {
 		
+		//TODO: Assert all SAM Headers have same sequence dict
 		readers = new SAMFileReader[inputBams.length];
 		nextRecord = new SAMRecordWrapper[inputBams.length];
 		iterators = new Iterator[inputBams.length];
@@ -40,6 +42,10 @@ public class MultiSamReader implements Iterable<SAMRecordWrapper> {
 		}
 		
 		clientIterator = new MultiSamReaderIterator(this);
+	}
+	
+	public SAMFileHeader getSAMFileHeader() {
+		return readers[0].getFileHeader();
 	}
 	
 	private SAMRecordWrapper getNext(int idx) {

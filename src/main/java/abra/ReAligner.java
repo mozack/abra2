@@ -225,6 +225,8 @@ public class ReAligner {
 		currReads.clear();
 		regionContigs.clear();
 		
+		reader.close();
+		
 		/*
 		log("Iterating over regions");
 		

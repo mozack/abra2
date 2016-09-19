@@ -34,6 +34,7 @@ public class MultiSamReader implements Iterable<SAMRecordWrapper> {
 			reader.setValidationStringency(ValidationStringency.SILENT);
 			
 			readers[idx] = reader;
+			iterators[idx] = readers[idx].iterator();
 			
 			// cache next record
 			nextRecord[idx] = getNext(idx);
@@ -46,6 +47,12 @@ public class MultiSamReader implements Iterable<SAMRecordWrapper> {
 	
 	public SAMFileHeader getSAMFileHeader() {
 		return readers[0].getFileHeader();
+	}
+	
+	public void close() {
+		for (SAMFileReader reader : readers) {
+			reader.close();
+		}
 	}
 	
 	private SAMRecordWrapper getNext(int idx) {

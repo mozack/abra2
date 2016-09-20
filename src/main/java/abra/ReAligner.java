@@ -149,9 +149,6 @@ public class ReAligner {
 		for (SAMRecordWrapper record : reader) {
 			int regionIdx = Feature.findFirstOverlappingRegion(reader.getSAMFileHeader(), record.getSamRecord(), regions, currRegionIdx);
 			
-			System.err.println("currRegionIdx: " + currRegionIdx);
-			System.err.println("regionIdx: " + regionIdx);
-			
 			if ((regionIdx == -1 && currRegionIdx >= 0) ||
 				(regionIdx > currRegionIdx)) {
 				

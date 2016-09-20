@@ -275,7 +275,7 @@ public class ReAligner {
 	private int getFirstStartPos(List<List<SAMRecordWrapper>> readsList) {
 		int minPos = Integer.MAX_VALUE;
 		for (List<SAMRecordWrapper> reads : readsList) {
-			if (reads.get(0).getSamRecord().getAlignmentStart() < minPos) {
+			if (reads.size() > 0 && reads.get(0).getSamRecord().getAlignmentStart() < minPos) {
 				minPos = reads.get(0).getSamRecord().getAlignmentStart(); 
 			}
 		}

@@ -148,7 +148,9 @@ public class ReAligner {
 		// TODO: Consider parallelizing by chromosome
 		for (SAMRecordWrapper record : reader) {
 			int regionIdx = Feature.findFirstOverlappingRegion(reader.getSAMFileHeader(), record.getSamRecord(), regions, currRegionIdx);
-		
+			
+			System.err.println("currRegionIdx: " + currRegionIdx);
+			System.err.println("regionIdx: " + regionIdx);
 			
 			if ((regionIdx == -1 && currRegionIdx >= 0) ||
 				(regionIdx > currRegionIdx)) {
@@ -158,6 +160,7 @@ public class ReAligner {
 					// We've moved beyond the current region
 					// Assemble reads
 					Feature region = regions.get(currRegionIdx);
+					System.err.println("Processing region: " + region);
 					Map<SimpleMapper, SSWAlignerResult> mappedContigs = processRegion(region, currReads);
 					regionContigs.put(region, mappedContigs);
 				}
@@ -207,7 +210,7 @@ public class ReAligner {
 				// Remove out of scope region assemblies
 				List<Feature> regionsToRemove = new ArrayList<Feature>();
 				for (Feature region : regionContigs.keySet()) {
-					if (region.getStart() - record.getSamRecord().getAlignmentStart() > MAX_READ_RANGE) {
+					if (region.getStart() - getFirstStartPos(currReads) > MAX_READ_RANGE) {
 						regionsToRemove.add(region);
 					}
 				}
@@ -220,6 +223,7 @@ public class ReAligner {
 			readCount += 1;
 		}
 		
+		System.err.println("Remapping reads");
 		// Remap remaining reads
 		remapReads(regionContigs, currReads);
 		currReads.clear();
@@ -252,6 +256,17 @@ public class ReAligner {
 		}
 		
 		System.err.println("Done.");
+	}
+	
+	private int getFirstStartPos(List<List<SAMRecordWrapper>> readsList) {
+		int minPos = Integer.MAX_VALUE;
+		for (List<SAMRecordWrapper> reads : readsList) {
+			if (reads.get(0).getSamRecord().getAlignmentStart() < minPos) {
+				minPos = reads.get(0).getSamRecord().getAlignmentStart(); 
+			}
+		}
+		
+		return minPos;
 	}
 	
 	private void logStartupInfo(String[] outputFiles) {
@@ -302,6 +317,8 @@ public class ReAligner {
 	private void remapRead(ReadEvaluator readEvaluator, SAMRecord read, int origEditDist) {
 		Alignment alignment = readEvaluator.getImprovedAlignment(origEditDist, read.getReadString(), read);
 		if (alignment != null) {
+			
+			System.err.println("Updating: " + read);
 			
 			int readPos = alignment.pos;
 			
@@ -364,6 +381,7 @@ public class ReAligner {
 //				int origEditDist = c2r.numMismatches(read);
 				
 				if (origEditDist > 0) {
+					System.err.println("Remapping: " + read.getSAMString());
 					remapRead(readEvaluator, read, origEditDist);
 				}
 			}

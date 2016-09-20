@@ -122,12 +122,14 @@ public class MultiSamReader implements Iterable<SAMRecordWrapper> {
 				
 				SAMRecordWrapper record = multiSamReader.nextRecord[i];
 				
-				if ( (record.getSamRecord().getReferenceIndex() < bestChr) || 
-					 (record.getSamRecord().getReferenceIndex() == bestChr && record.getSamRecord().getAlignmentStart() == bestPos)) {
-					nextRecord = record;
-					bestChr = record.getSamRecord().getReferenceIndex();
-					bestPos = record.getSamRecord().getAlignmentStart();
-					bestSampleIdx = i;
+				if (record != null) {
+					if ( (record.getSamRecord().getReferenceIndex() < bestChr) || 
+						 (record.getSamRecord().getReferenceIndex() == bestChr && record.getSamRecord().getAlignmentStart() < bestPos)) {
+						nextRecord = record;
+						bestChr = record.getSamRecord().getReferenceIndex();
+						bestPos = record.getSamRecord().getAlignmentStart();
+						bestSampleIdx = i;
+					}
 				}
 			}
 

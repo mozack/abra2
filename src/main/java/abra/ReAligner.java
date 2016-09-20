@@ -470,8 +470,10 @@ public class ReAligner {
 					for (String contig : contigSequences) {
 						if (!contig.startsWith(">")) {
 							SSWAlignerResult sswResult = ssw.align(contig);
-							// TODO: In multi-region processing, check to ensure identical contigs have identical mappings
-							mappedContigs.put(new SimpleMapper(contig), sswResult);
+							if (sswResult != null) {
+								// TODO: In multi-region processing, check to ensure identical contigs have identical mappings
+								mappedContigs.put(new SimpleMapper(contig), sswResult);
+							}
 						}
 					}
 					

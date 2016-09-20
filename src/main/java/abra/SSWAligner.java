@@ -17,7 +17,7 @@ public class SSWAligner {
 	private static final int MATCH = 1;
 	private static final int MISMATCH = -4;
 	private static final int GAP_OPEN_PENALTY = 6;
-	private static final int GAP_EXTEND_PENALTY = 1;
+	private static final int GAP_EXTEND_PENALTY = 0;
 	
 	private String refChr;
 	private int refStart;

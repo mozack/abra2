@@ -162,6 +162,7 @@ public class ReAligner {
 					Feature region = regions.get(currRegionIdx);
 					System.err.println("Processing region: " + region);
 					Map<SimpleMapper, SSWAlignerResult> mappedContigs = processRegion(region, currReads);
+					System.err.println("Region: " + region + " assembled: " + mappedContigs.keySet().size() + " contigs");
 					regionContigs.put(region, mappedContigs);
 				}
 				
@@ -216,11 +217,24 @@ public class ReAligner {
 				}
 				
 				for (Feature region : regionsToRemove) {
+					System.err.println("Removing contigs for region: " + region);
 					regionContigs.remove(region);
 				}
 			}
 			
 			readCount += 1;
+		}
+		
+		// Process last region
+		if (currRegionIdx >= 0) {
+			
+			// We've moved beyond the current region
+			// Assemble reads
+			Feature region = regions.get(currRegionIdx);
+			System.err.println("Processing region: " + region);
+			Map<SimpleMapper, SSWAlignerResult> mappedContigs = processRegion(region, currReads);
+			System.err.println("Region: " + region + " assembled: " + mappedContigs.keySet().size() + " contigs");
+			regionContigs.put(region, mappedContigs);
 		}
 		
 		System.err.println("Remapping reads");
@@ -363,7 +377,6 @@ public class ReAligner {
 				read.setMappingQuality(Math.min(read.getMappingQuality(), 60));
 			}
 		}
-
 	}
 	
 	private void remapReads(Map<Feature, Map<SimpleMapper, SSWAlignerResult>> mappedContigs, List<List<SAMRecordWrapper>> readsList) throws Exception {

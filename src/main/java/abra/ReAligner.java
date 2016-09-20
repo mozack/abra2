@@ -135,7 +135,7 @@ public class ReAligner {
 
 		int currRegionIdx = -1;
 		
-		MultiSamReader reader = new MultiSamReader(this.inputSams, this);
+		MultiSamReader reader = new MultiSamReader(this.inputSams, this.minMappingQuality, this.isPairedEnd);
 		
 		List<List<SAMRecordWrapper>> currReads = new ArrayList<List<SAMRecordWrapper>>();
 		for (int i=0; i<this.inputSams.length; i++) {

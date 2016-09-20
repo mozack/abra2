@@ -2,7 +2,6 @@ package abra;
 
 import java.io.File;
 import java.util.Iterator;
-import java.util.List;
 
 import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.SAMFileReader;
@@ -15,18 +14,20 @@ public class MultiSamReader implements Iterable<SAMRecordWrapper> {
 	private SAMFileReader[] readers;
 	private Iterator<SAMRecord>[] iterators;
 	private SAMRecordWrapper[] nextRecord;
-	private ReAligner realigner;
+	private int minMapqForAssembly;
+	private boolean isPairedEnd;
 	
 	// Iterator used by clients
 	private Iterator<SAMRecordWrapper> clientIterator;
 
-	public MultiSamReader(String[] inputBams, ReAligner realigner) {
+	public MultiSamReader(String[] inputBams, int minMapqForAssembly, boolean isPairedEnd) {
 		
 		//TODO: Assert all SAM Headers have same sequence dict
 		readers = new SAMFileReader[inputBams.length];
 		nextRecord = new SAMRecordWrapper[inputBams.length];
 		iterators = new Iterator[inputBams.length];
-		this.realigner = realigner;
+		this.minMapqForAssembly = minMapqForAssembly;
+		this.isPairedEnd = isPairedEnd;
 		
 		int idx = 0;
 		for (String bamFileName : inputBams) {
@@ -37,12 +38,16 @@ public class MultiSamReader implements Iterable<SAMRecordWrapper> {
 			iterators[idx] = readers[idx].iterator();
 			
 			// cache next record
-			nextRecord[idx] = getNext(idx);
+			cacheNextRecord(idx);
 			
 			idx += 1;
 		}
 		
 		clientIterator = new MultiSamReaderIterator(this);
+	}
+	
+	private void cacheNextRecord(int sampleIdx) {
+		nextRecord[sampleIdx] = getNext(sampleIdx);
 	}
 	
 	public SAMFileHeader getSAMFileHeader() {
@@ -55,13 +60,18 @@ public class MultiSamReader implements Iterable<SAMRecordWrapper> {
 		}
 	}
 	
+	private boolean isFiltered(SAMRecord read) {
+		return SAMRecordUtils.isFiltered(isPairedEnd, read);
+	}
+	
 	private SAMRecordWrapper getNext(int idx) {
 		SAMRecordWrapper record = null;
 		if (iterators[idx].hasNext()) {
 			SAMRecord read = iterators[idx].next();
 			// If no genomic location is assigned, we've reached the unmapped read pairs.  Do not continue...
+			// TODO: Need to include these in final bam files
 			if (read.getReferenceIndex() >= 0) {
-				record = new SAMRecordWrapper(read, realigner.isFiltered(read), shouldAssemble(read), idx);
+				record = new SAMRecordWrapper(read, isFiltered(read), shouldAssemble(read), idx);
 			}
 		}
 		
@@ -71,7 +81,7 @@ public class MultiSamReader implements Iterable<SAMRecordWrapper> {
 	private boolean shouldAssemble(SAMRecord read) {
 		return ((!read.getDuplicateReadFlag()) && 
 			(!read.getReadFailsVendorQualityCheckFlag()) &&
-			(read.getMappingQuality() >= realigner.getMinMappingQuality() || read.getReadUnmappedFlag()) &&
+			(read.getMappingQuality() >= this.minMapqForAssembly || read.getReadUnmappedFlag()) &&
 			(!read.getNotPrimaryAlignmentFlag()));  // Was previously an id check, so supplemental / secondary alignments could be included
 	}
 	
@@ -106,15 +116,23 @@ public class MultiSamReader implements Iterable<SAMRecordWrapper> {
 			SAMRecordWrapper nextRecord = null;
 			int bestChr = Integer.MAX_VALUE;
 			int bestPos = Integer.MAX_VALUE;
+			int bestSampleIdx = -1;
 			
-			for (SAMRecordWrapper record : multiSamReader.nextRecord) {
+			for (int i=0; i<multiSamReader.nextRecord.length; i++) {
+				
+				SAMRecordWrapper record = multiSamReader.nextRecord[i];
+				
 				if ( (record.getSamRecord().getReferenceIndex() < bestChr) || 
 					 (record.getSamRecord().getReferenceIndex() == bestChr && record.getSamRecord().getAlignmentStart() == bestPos)) {
 					nextRecord = record;
 					bestChr = record.getSamRecord().getReferenceIndex();
 					bestPos = record.getSamRecord().getAlignmentStart();
+					bestSampleIdx = i;
 				}
 			}
+
+			// Replace current read in cache
+			multiSamReader.cacheNextRecord(bestSampleIdx);
 			
 			return nextRecord;
 		}

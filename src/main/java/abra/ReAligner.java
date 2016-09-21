@@ -286,7 +286,6 @@ public class ReAligner {
 			regionContigs.put(region, mappedContigs);
 		}
 		
-		System.err.println("Remapping reads");
 		// Remap remaining reads
 		remapReads(regionContigs, currReads);
 		currReads.clear();
@@ -305,6 +304,8 @@ public class ReAligner {
 		}
 		
 		reader.close();
+		
+		System.err.println("Chromosome: " + chromosome + " done.");
 	}
 	
 	private int getFirstStartPos(List<List<SAMRecordWrapper>> readsList) {
@@ -368,8 +369,6 @@ public class ReAligner {
 		Alignment alignment = readEvaluator.getImprovedAlignment(origEditDist, read.getReadString(), read);
 		if (alignment != null) {
 			
-			System.err.println("Updating: " + read);
-			
 			int readPos = alignment.pos;
 			
 			// Set contig alignment info for all reads that map to contigs (even if read is unchanged)
@@ -430,7 +429,6 @@ public class ReAligner {
 //				int origEditDist = c2r.numMismatches(read);
 				
 				if (origEditDist > 0) {
-					System.err.println("Remapping: " + read.getSAMString());
 					remapRead(readEvaluator, read, origEditDist);
 				}
 			}
@@ -486,11 +484,11 @@ public class ReAligner {
 				NativeAssembler assem = (NativeAssembler) newAssembler(region);
 				List<Feature> regions = new ArrayList<Feature>();
 				regions.add(region); 
-//				List<List<SAMRecordWrapper>> readsList = ReadLoader.getReads(bams, regions.get(0), this);
 				String contigs = assem.assembleContigs(bams, contigsFasta, tempDir, regions, region.getDescriptor(), true, this, c2r, readsList);
 				
 				if (!contigs.equals("<ERROR>") && !contigs.equals("<REPEAT>") && !contigs.isEmpty()) {
 					
+					// TODO: Turn this off by default
 					appendContigs(contigs);
 					
 					// Get reference sequence matching current region (pad by 2 read lengths on each side)
@@ -507,18 +505,15 @@ public class ReAligner {
 					// Map contigs to reference
 					String[] contigSequences = contigs.split("\n");
 					for (String contig : contigSequences) {
-						if (!contig.startsWith(">")) {
+						// Filter id lines and contigs that match the reference
+						if (!contig.startsWith(">") && (!refSeq.contains(contig))) {
 							SSWAlignerResult sswResult = ssw.align(contig);
 							if (sswResult != null) {
 								// TODO: In multi-region processing, check to ensure identical contigs have identical mappings
-//								mappedContigs.put(new SimpleMapper(contig), sswResult);
 								mappedContigs.put(new SimpleMapper(sswResult.getSequence()), sswResult);
 							}
 						}
 					}
-					
-					// remap reads
-//					remapReads(mappedContigs, readsList, region, refStart);
 				}
 			}
 		}

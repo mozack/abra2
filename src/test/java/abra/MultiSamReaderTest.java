@@ -15,8 +15,9 @@ public class MultiSamReaderTest {
 		String[] bams = new String[] { "test-data/sample1.bam", "test-data/sample2.bam" };
 		int minMapq = 20;
 		boolean isPairedEnd = false;
+		String chromosome = "10";
 		
-		MultiSamReader rdr = new MultiSamReader(bams, minMapq, isPairedEnd);
+		MultiSamReader rdr = new MultiSamReader(bams, minMapq, isPairedEnd, chromosome);
 		
 		List<SAMRecordWrapper> reads = new ArrayList<SAMRecordWrapper>();
 		for (SAMRecordWrapper read : rdr) {

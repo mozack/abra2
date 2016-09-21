@@ -2,22 +2,22 @@
 package abra;
 
 /**
- * Thread entry point for region specific processing.
+ * Thread entry point for chromsome / reference sequence specific processing.
  * 
  * @author Lisle E. Mose (lmose at unc dot edu)
  */
 public class ReAlignerRunnable extends AbraRunnable {
-	private Feature region;
+	private String chromosome;
 	private ReAligner reAligner;
 	
-	public ReAlignerRunnable(ThreadManager threadManager, ReAligner reAligner, Feature region) {
+	public ReAlignerRunnable(ThreadManager threadManager, ReAligner reAligner, String chromosome) {
 		super(threadManager);
-		this.region = region;
+		this.chromosome = chromosome;
 		this.reAligner = reAligner;
 	}
 	
 	@Override
 	public void go() throws Exception {		
-//		reAligner.processRegion(region);
+		reAligner.processChromosome(chromosome);
 	}
 }

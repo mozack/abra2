@@ -16,11 +16,12 @@ public class MultiSamReader implements Iterable<SAMRecordWrapper> {
 	private SAMRecordWrapper[] nextRecord;
 	private int minMapqForAssembly;
 	private boolean isPairedEnd;
+	private String chromosome;
 	
 	// Iterator used by clients
 	private Iterator<SAMRecordWrapper> clientIterator;
-
-	public MultiSamReader(String[] inputBams, int minMapqForAssembly, boolean isPairedEnd) {
+	
+	public MultiSamReader(String[] inputBams, int minMapqForAssembly, boolean isPairedEnd, String chromosome) {
 		
 		//TODO: Assert all SAM Headers have same sequence dict
 		readers = new SAMFileReader[inputBams.length];
@@ -35,7 +36,13 @@ public class MultiSamReader implements Iterable<SAMRecordWrapper> {
 			reader.setValidationStringency(ValidationStringency.SILENT);
 			
 			readers[idx] = reader;
-			iterators[idx] = readers[idx].iterator();
+			
+			if (chromosome == null) {
+				iterators[idx] = readers[idx].iterator();
+			} else {
+				int chromosomeLength = this.getSAMFileHeader().getSequence(chromosome).getSequenceLength();
+				iterators[idx] = readers[idx].queryOverlapping(chromosome, 1, chromosomeLength-1);
+			}
 			
 			// cache next record
 			cacheNextRecord(idx);

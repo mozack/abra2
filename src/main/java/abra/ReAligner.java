@@ -23,6 +23,7 @@ import htsjdk.samtools.SAMFileReader;
 import htsjdk.samtools.SAMFileWriter;
 import htsjdk.samtools.SAMFileWriterFactory;
 import htsjdk.samtools.SAMRecord;
+import htsjdk.samtools.SAMSequenceRecord;
 import htsjdk.samtools.ValidationStringency;
 
 /**
@@ -133,9 +134,31 @@ public class ReAligner {
 					samHeaders[i], false, new File(outputFiles[i]), COMPRESSION_LEVEL);
 		}
 
+		// Spawn thread for each chromosome
+		// TODO: Validate identical sequence dictionary for each input file
+		for (SAMSequenceRecord seqRecord : this.samHeaders[0].getSequenceDictionary().getSequences()) {
+			String chromosome = seqRecord.getSequenceName();
+			this.spawnChromosomeThread(chromosome);
+		}
+		
+		log("Waiting for all threads to complete");
+		threadManager.waitForAllThreadsToComplete();
+		
+		contigWriter.close();
+		
+		clock.stopAndPrint();		
+		
+		for (SAMFileWriter writer : this.writers) {
+			writer.close();
+		}
+		
+		System.err.println("Done.");
+	}
+	
+	void processChromosome(String chromosome) throws Exception {
 		int currRegionIdx = -1;
 		
-		MultiSamReader reader = new MultiSamReader(this.inputSams, this.minMappingQuality, this.isPairedEnd);
+		MultiSamReader reader = new MultiSamReader(this.inputSams, this.minMappingQuality, this.isPairedEnd, chromosome);
 		
 		List<List<SAMRecordWrapper>> currReads = new ArrayList<List<SAMRecordWrapper>>();
 		for (int i=0; i<this.inputSams.length; i++) {
@@ -145,9 +168,15 @@ public class ReAligner {
 		Map<Feature, Map<SimpleMapper, SSWAlignerResult>> regionContigs = new HashMap<Feature, Map<SimpleMapper, SSWAlignerResult>>();
 		int readCount = 0;
 		
-		// TODO: Consider parallelizing by chromosome
+		List<Feature> chromosomeRegions = new ArrayList<Feature>();
+		for (Feature region : regions) {
+			if (region.getSeqname().equals(chromosome)) {
+				chromosomeRegions.add(region);
+			}
+		}
+	
 		for (SAMRecordWrapper record : reader) {
-			int regionIdx = Feature.findFirstOverlappingRegion(reader.getSAMFileHeader(), record.getSamRecord(), regions, currRegionIdx);
+			int regionIdx = Feature.findFirstOverlappingRegion(reader.getSAMFileHeader(), record.getSamRecord(), chromosomeRegions, currRegionIdx);
 			
 			if ((regionIdx == -1 && currRegionIdx >= 0) ||
 				(regionIdx > currRegionIdx)) {
@@ -156,7 +185,7 @@ public class ReAligner {
 					
 					// We've moved beyond the current region
 					// Assemble reads
-					Feature region = regions.get(currRegionIdx);
+					Feature region = chromosomeRegions.get(currRegionIdx);
 					System.err.println("Processing region: " + region);
 					Map<SimpleMapper, SSWAlignerResult> mappedContigs = processRegion(region, currReads);
 					System.err.println("Region: " + region + " assembled: " + mappedContigs.keySet().size() + " contigs");
@@ -173,8 +202,8 @@ public class ReAligner {
 					currReads.get(record.getSampleIdx()).add(record);
 				} else {
 					throw new IllegalStateException("Out of order reads / regions for sample: " + record.getSampleIdx() + 
-							", read: " + record.getSamRecord().getSAMString() + ", region: " + regions.get(regionIdx) + 
-							", curr_region: " + regions.get(currRegionIdx));
+							", read: " + record.getSamRecord().getSAMString() + ", region: " + chromosomeRegions.get(regionIdx) + 
+							", curr_region: " + chromosomeRegions.get(currRegionIdx));
 					
 				}
 			}
@@ -227,7 +256,7 @@ public class ReAligner {
 			
 			// We've moved beyond the current region
 			// Assemble reads
-			Feature region = regions.get(currRegionIdx);
+			Feature region = chromosomeRegions.get(currRegionIdx);
 			System.err.println("Processing region: " + region);
 			Map<SimpleMapper, SSWAlignerResult> mappedContigs = processRegion(region, currReads);
 			System.err.println("Region: " + region + " assembled: " + mappedContigs.keySet().size() + " contigs");
@@ -241,32 +270,6 @@ public class ReAligner {
 		regionContigs.clear();
 		
 		reader.close();
-		
-		/*
-		log("Iterating over regions");
-		
-		int count = 0;
-		for (Feature region : regions) {
-			count += 1;
-			spawnRegionThread(region, null);
-			if ((count % 1000) == 0) {
-				System.err.println("Processing region: " + count + " of " + regions.size());
-			}
-		}
-		*/
-		
-		log("Waiting for all threads to complete");
-		threadManager.waitForAllThreadsToComplete();
-		
-		contigWriter.close();
-		
-		clock.stopAndPrint();		
-		
-		for (SAMFileWriter writer : this.writers) {
-			writer.close();
-		}
-		
-		System.err.println("Done.");
 	}
 	
 	private int getFirstStartPos(List<List<SAMRecordWrapper>> readsList) {
@@ -316,8 +319,8 @@ public class ReAligner {
 		}
 	}
 		
-	private void spawnRegionThread(Feature region, String inputSam) throws InterruptedException {
-		ReAlignerRunnable thread = new ReAlignerRunnable(threadManager, this, region);
+	private void spawnChromosomeThread(String chromosome) throws InterruptedException {
+		ReAlignerRunnable thread = new ReAlignerRunnable(threadManager, this, chromosome);
 		threadManager.spawnThread(thread);
 	}
 	

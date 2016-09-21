@@ -61,20 +61,15 @@ public class SSWAligner {
 			// Requiring end to end alignment here...
 			if (aln.read_begin1 == 0 && aln.read_end1 == seq.length()-1) {
 				
-				if (SSWAlignerResult.PAD_CONTIG) {
-					// Pad with remaining reference sequence
-					String leftPad = ref.substring(0, aln.ref_begin1-1);
-					String rightPad = ref.substring(aln.ref_end1+1,ref.length()-1);
-					String paddedSeq = leftPad + seq + rightPad;
-					String cigar = CigarUtils.extendCigarWithMatches(aln.cigar, leftPad.length(), rightPad.length());
-					
-					System.err.println("padded seq: " + paddedSeq);
-					
-					result = new SSWAlignerResult(aln.ref_begin1-leftPad.length(), cigar, refChr, refStart, paddedSeq);
-				} else {
-					// Testing path only
-					result = new SSWAlignerResult(aln.ref_begin1, aln.cigar, refChr, refStart, seq);
-				}
+				// Pad with remaining reference sequence
+				String leftPad = ref.substring(0, aln.ref_begin1);
+				String rightPad = ref.substring(aln.ref_end1+1,ref.length());
+				String paddedSeq = leftPad + seq + rightPad;
+				String cigar = CigarUtils.extendCigarWithMatches(aln.cigar, leftPad.length(), rightPad.length());
+				
+				System.err.println("padded seq: " + paddedSeq);
+				
+				result = new SSWAlignerResult(aln.ref_begin1-leftPad.length(), cigar, refChr, refStart, paddedSeq);
 			}
 		}
 		

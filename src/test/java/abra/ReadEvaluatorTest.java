@@ -25,16 +25,6 @@ public class ReadEvaluatorTest {
 		regionContigs = new HashMap<Feature, Map<SimpleMapper, SSWAlignerResult>>();
 		regionContigs.put(new Feature("foo", 1, 1000), mappedContigs);
 	}
-	
-	@BeforeTest ()
-	public void beforeTests() {
-		SSWAlignerResult.PAD_CONTIG = false;
-	}
-	
-	@AfterTest ()
-	public void afterTests() {
-		SSWAlignerResult.PAD_CONTIG = true;
-	}
 
 	@Test (groups="unit")
 	public void testSingleAlignmentSingleContig() {

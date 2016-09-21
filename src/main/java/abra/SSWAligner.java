@@ -68,6 +68,8 @@ public class SSWAligner {
 					String paddedSeq = leftPad + seq + rightPad;
 					String cigar = CigarUtils.extendCigarWithMatches(aln.cigar, leftPad.length(), rightPad.length());
 					
+					System.err.println("padded seq: " + paddedSeq);
+					
 					result = new SSWAlignerResult(aln.ref_begin1-leftPad.length(), cigar, refChr, refStart, paddedSeq);
 				} else {
 					// Testing path only

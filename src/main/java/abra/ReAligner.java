@@ -168,6 +168,11 @@ public class ReAligner {
 			currReads.add(new ArrayList<SAMRecordWrapper>());
 		}
 		
+		List<List<SAMRecordWrapper>> outOfRegionReads = new ArrayList<List<SAMRecordWrapper>>();
+		for (int i=0; i<this.inputSams.length; i++) {
+			outOfRegionReads.add(new ArrayList<SAMRecordWrapper>());
+		}
+		
 		Map<Feature, Map<SimpleMapper, SSWAlignerResult>> regionContigs = new HashMap<Feature, Map<SimpleMapper, SSWAlignerResult>>();
 		int readCount = 0;
 		
@@ -208,6 +213,19 @@ public class ReAligner {
 							", read: " + record.getSamRecord().getSAMString() + ", region: " + chromosomeRegions.get(regionIdx) + 
 							", curr_region: " + chromosomeRegions.get(currRegionIdx));
 					
+				}
+			} else {
+				
+				// Process out of region read and output if ready.
+				List<SAMRecordWrapper> outOfRegionReadsForSample = outOfRegionReads.get(record.getSampleIdx());
+				outOfRegionReadsForSample.add(record);
+				
+				if (outOfRegionReads.get(record.getSampleIdx()).size() > 2500) {
+					synchronized(this.writers[record.getSampleIdx()]) {
+						for (SAMRecordWrapper outOfRegionRead : outOfRegionReadsForSample) {
+							this.writers[record.getSampleIdx()].addAlignment(outOfRegionRead.getSamRecord());
+						}
+					}
 				}
 			}
 			
@@ -271,6 +289,16 @@ public class ReAligner {
 		remapReads(regionContigs, currReads);
 		currReads.clear();
 		regionContigs.clear();
+		
+		// Output remaining out of region reads
+		for (int i=0; i<outOfRegionReads.size(); i++) {
+			List<SAMRecordWrapper> outOfRegionReadsForSample = outOfRegionReads.get(i);
+			synchronized(this.writers[i]) {
+				for (SAMRecordWrapper outOfRegionRead : outOfRegionReadsForSample) {
+					this.writers[i].addAlignment(outOfRegionRead.getSamRecord());
+				}
+			}
+		}
 		
 		reader.close();
 	}

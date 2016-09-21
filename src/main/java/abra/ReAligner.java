@@ -156,6 +156,9 @@ public class ReAligner {
 	}
 	
 	void processChromosome(String chromosome) throws Exception {
+		
+		System.err.println("Processing chromosome: " + chromosome);
+		
 		int currRegionIdx = -1;
 		
 		MultiSamReader reader = new MultiSamReader(this.inputSams, this.minMappingQuality, this.isPairedEnd, chromosome);
@@ -321,6 +324,7 @@ public class ReAligner {
 		
 	private void spawnChromosomeThread(String chromosome) throws InterruptedException {
 		ReAlignerRunnable thread = new ReAlignerRunnable(threadManager, this, chromosome);
+		System.err.println("Spawning thread for chromosome: " + chromosome);
 		threadManager.spawnThread(thread);
 	}
 	

@@ -226,6 +226,8 @@ public class ReAligner {
 							this.writers[record.getSampleIdx()].addAlignment(outOfRegionRead.getSamRecord());
 						}
 					}
+					
+					outOfRegionReadsForSample.clear();
 				}
 			}
 			
@@ -298,6 +300,8 @@ public class ReAligner {
 					this.writers[i].addAlignment(outOfRegionRead.getSamRecord());
 				}
 			}
+			
+			outOfRegionReadsForSample.clear();
 		}
 		
 		reader.close();

@@ -472,7 +472,8 @@ public class ReAligner {
 							SSWAlignerResult sswResult = ssw.align(contig);
 							if (sswResult != null) {
 								// TODO: In multi-region processing, check to ensure identical contigs have identical mappings
-								mappedContigs.put(new SimpleMapper(contig), sswResult);
+//								mappedContigs.put(new SimpleMapper(contig), sswResult);
+								mappedContigs.put(new SimpleMapper(sswResult.getSequence()), sswResult);
 							}
 						}
 					}

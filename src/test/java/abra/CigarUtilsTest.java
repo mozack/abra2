@@ -147,4 +147,15 @@ public class CigarUtilsTest {
 		assertEquals(readContig.toString(), "100M");
 		assertEquals(posRelativeToRef, 250);
 	}
+	
+	@Test (groups = "unit")
+	public void testExtendContig() {
+		String cigar = "50M10D50M";
+		String newCigar = CigarUtils.extendCigarWithMatches(cigar, 10, 15);
+		assertEquals(newCigar, "60M10D65M");
+		
+		cigar = "100M";
+		newCigar = CigarUtils.extendCigarWithMatches(cigar, 10, 15);
+		assertEquals(newCigar, "125M");
+	}
 }

@@ -22,6 +22,33 @@ public class CigarUtils {
 		return relativeRefPos;
 	}
 	
+	public static String extendCigarWithMatches(String cigar, int leftPad, int rightPad) {
+		List<CigarBlock> blocks = getCigarBlocks(cigar);
+		
+		if (blocks.get(0).type == 'M') {
+			blocks.get(0).length += leftPad;
+		} else {
+			blocks.add(0, new CigarBlock(leftPad, 'M'));
+		}
+		
+		int lastBlockIdx = blocks.size()-1;
+		
+		if (blocks.get(lastBlockIdx).type == 'M') {
+			blocks.get(lastBlockIdx).length += rightPad;
+		} else {
+			blocks.add(new CigarBlock(rightPad, 'M'));
+		}
+		
+		StringBuffer newCigar = new StringBuffer();
+		
+		for (CigarBlock block : blocks) {
+			newCigar.append(block.length);
+			newCigar.append(block.type);
+		}
+		
+		return newCigar.toString();
+	}
+	
 	private static List<CigarBlock> getCigarBlocks(String cigar) {
 		
 		List<CigarBlock> cigarBlocks = new ArrayList<CigarBlock>();

@@ -48,6 +48,7 @@ public class SSWAligner {
 	}
 	
 	public SSWAlignerResult align(String seq) {
+		
 		SSWAlignerResult result = null;
 		
 		Alignment aln = Aligner.align(seq.getBytes(), ref.getBytes(), score, GAP_OPEN_PENALTY, GAP_EXTEND_PENALTY, true);
@@ -59,7 +60,19 @@ public class SSWAligner {
 			
 			// Requiring end to end alignment here...
 			if (aln.read_begin1 == 0 && aln.read_end1 == seq.length()-1) {
-				result = new SSWAlignerResult(aln.ref_begin1, aln.cigar, refChr, refStart);
+				
+				if (SSWAlignerResult.PAD_CONTIG) {
+					// Pad with remaining reference sequence
+					String leftPad = ref.substring(0, aln.ref_begin1-1);
+					String rightPad = ref.substring(aln.ref_end1+1,ref.length()-1);
+					String paddedSeq = leftPad + seq + rightPad;
+					String cigar = CigarUtils.extendCigarWithMatches(aln.cigar, leftPad.length(), rightPad.length());
+					
+					result = new SSWAlignerResult(aln.ref_begin1-leftPad.length(), cigar, refChr, refStart, paddedSeq);
+				} else {
+					// Testing path only
+					result = new SSWAlignerResult(aln.ref_begin1, aln.cigar, refChr, refStart, seq);
+				}
 			}
 		}
 		
@@ -67,17 +80,24 @@ public class SSWAligner {
 	}
 	
 	public static class SSWAlignerResult {
+		
+		// Used for testing
+		static boolean PAD_CONTIG = true;
+		
 		private int localRefPos;
 		private String cigar;
 		
 		private String chromosome;
 		private int refContextStart;
 		
-		SSWAlignerResult(int refPos, String cigar, String chromosome, int refContextStart) {
+		private String sequence;
+		
+		SSWAlignerResult(int refPos, String cigar, String chromosome, int refContextStart, String sequence) {
 			this.localRefPos = refPos;
 			this.cigar = cigar;
 			this.chromosome = chromosome;
 			this.refContextStart = refContextStart;
+			this.sequence = sequence;
 		}
 		
 		public int getRefPos() {
@@ -98,6 +118,10 @@ public class SSWAligner {
 		// This is the actual genomic position 
 		public int getGenomicPos() {
 			return localRefPos + refContextStart;
+		}
+		
+		public String getSequence() {
+			return sequence;
 		}
 	}
 	

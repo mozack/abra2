@@ -454,13 +454,16 @@ public class ReAligner {
 					
 					appendContigs(contigs);
 					
-					// Get reference sequence matching current region (TODO: Add extra padding to allow for indels in partially overlapping reads ?)
-					System.out.println("Getting reference for: " + region.getSeqname() + ":" + (region.getStart()-this.readLength) + ", length: " + (region.getLength()+this.readLength*2));
+					// Get reference sequence matching current region (pad by 2 read lengths on each side)
+					int chromosomeLength = c2r.getReferenceLength(region.getSeqname());
+					int refSeqStart = Math.max((int) region.getStart() - this.readLength*2, 1);
+					int refSeqLength = Math.min((int) region.getLength() + this.readLength*4, chromosomeLength-1);
 					
-					int refStart = (int) region.getStart() - this.readLength;
-					String refSeq = c2r.getSequence(region.getSeqname(), refStart, (int) region.getLength()+this.readLength*2);
+					System.out.println("Getting reference for: " + region.getSeqname() + ":" + refSeqStart + ", length: " + refSeqLength);
 					
-					SSWAligner ssw = new SSWAligner(refSeq, region.getSeqname(), refStart);
+					String refSeq = c2r.getSequence(region.getSeqname(), refSeqStart, refSeqLength);
+					
+					SSWAligner ssw = new SSWAligner(refSeq, region.getSeqname(), refSeqStart);
 					
 					// Map contigs to reference
 					String[] contigSequences = contigs.split("\n");

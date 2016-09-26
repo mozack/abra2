@@ -50,7 +50,10 @@ public class Cadabra {
 		
 		int count = 0;
 		
+		boolean normalReadsProcessed = false;
+		
 		while (normalIter.hasNext() && tumorIter.hasNext()) {
+			normalReadsProcessed = true;
 			if (normalReads != null && tumorReads != null) {
 				int compare = normalReads.compareLoci(tumorReads, normal.getSamHeader().getSequenceDictionary());
 				
@@ -76,16 +79,18 @@ public class Cadabra {
 		}
 		
 		// Tumor only case
-		if (!normalIter.hasNext() && tumorIter.hasNext()) {
-			tumorReads = tumorIter.next();
-			normalReads = new ReadsAtLocus(tumorReads.getChromosome(), tumorReads.getPosition(), new ArrayList<SAMRecord>());
-			processLocus(normalReads, tumorReads);
-			
-			if ((count % 1000000) == 0) {
-				System.err.println("Position: " + tumorReads.getChromosome() + ":" + tumorReads.getPosition());
+		if (!normalReadsProcessed) {
+			while (tumorIter.hasNext()) {
+				tumorReads = tumorIter.next();
+				normalReads = new ReadsAtLocus(tumorReads.getChromosome(), tumorReads.getPosition(), new ArrayList<SAMRecord>());
+				processLocus(normalReads, tumorReads);
+				
+				if ((count % 1000000) == 0) {
+					System.err.println("Position: " + tumorReads.getChromosome() + ":" + tumorReads.getPosition());
+				}
+				
+				count += 1;
 			}
-			
-			count += 1;
 		}
 	}
 	

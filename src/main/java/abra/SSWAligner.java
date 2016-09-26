@@ -58,6 +58,19 @@ public class SSWAligner {
 		// TODO: Optimize score requirements..
 		if (aln != null && aln.score1 >= MIN_ALIGNMENT_SCORE && aln.score1 > aln.score2) {
 			
+			// TODO: Is this best number?
+			int MAX_CLIP_BASES = 10;
+						
+			// Clip contig and remap if needed.
+			// TODO: Trim sequence and Cigar instead of incurring overhead of remapping
+			if ((aln.read_begin1 > 0 && aln.read_begin1 < MAX_CLIP_BASES) ||
+				(aln.read_end1 < seq.length()-1 && aln.read_end1 > seq.length()-1-MAX_CLIP_BASES)) {
+				
+				seq = seq.substring(aln.read_begin1, aln.read_end1+1);
+				aln = Aligner.align(seq.getBytes(), ref.getBytes(), score, GAP_OPEN_PENALTY, GAP_EXTEND_PENALTY, true);
+				System.err.println("Trimmed Alignment [" + seq + "] :\t" + aln);
+			}
+			
 			// Requiring end to end alignment here...
 			if (aln.read_begin1 == 0 && aln.read_end1 == seq.length()-1) {
 				

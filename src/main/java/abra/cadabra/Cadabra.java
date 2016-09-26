@@ -1,6 +1,7 @@
 package abra.cadabra;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -72,6 +73,19 @@ public class Cadabra {
 				normalReads = normalIter.next();
 				tumorReads = tumorIter.next();
 			}
+		}
+		
+		// Tumor only case
+		if (!normalIter.hasNext() && tumorIter.hasNext()) {
+			tumorReads = tumorIter.next();
+			normalReads = new ReadsAtLocus(tumorReads.getChromosome(), tumorReads.getPosition(), new ArrayList<SAMRecord>());
+			processLocus(normalReads, tumorReads);
+			
+			if ((count % 1000000) == 0) {
+				System.err.println("Position: " + tumorReads.getChromosome() + ":" + tumorReads.getPosition());
+			}
+			
+			count += 1;
 		}
 	}
 	

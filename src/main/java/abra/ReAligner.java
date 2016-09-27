@@ -260,7 +260,7 @@ public class ReAligner {
 				// Remove out of scope region assemblies
 				List<Feature> regionsToRemove = new ArrayList<Feature>();
 				for (Feature region : regionContigs.keySet()) {
-					if (region.getStart() - getFirstStartPos(currReads) > MAX_READ_RANGE) {
+					if (getFirstStartPos(currReads)-region.getStart() > MAX_READ_RANGE) {
 						regionsToRemove.add(region);
 					}
 				}
@@ -269,6 +269,22 @@ public class ReAligner {
 					System.err.println("Removing contigs for region: " + region);
 					regionContigs.remove(region);
 				}
+				
+				System.err.println("regionContigs size: " + regionContigs.size());
+				
+				int currReadsCount = 0;
+				for (List<SAMRecordWrapper> reads : currReads) {
+					currReadsCount += reads.size();
+				}
+				
+				System.err.println("Curr reads size: " + currReadsCount);
+				
+				int outOfRegionCount = 0;
+				for (List<SAMRecordWrapper> reads : outOfRegionReads) {
+					outOfRegionCount += reads.size();
+				}
+				
+				System.err.println("Out of region reads size: " + outOfRegionCount);
 			}
 			
 			readCount += 1;

@@ -34,6 +34,7 @@ public class AltContigGenerator {
 						type = 'D';
 					} else if (elems.get(1).getOperator() == CigarOperator.I) {
 						type = 'I';
+						System.out.println("read: " + read.getSAMString() + ", elem0: " + elems.get(0).getLength() + ", elem1: " + elems.get(1).getLength());
 						insertBases = read.getReadString().substring(elems.get(0).getLength(), elems.get(1).getLength());
 					}
 					

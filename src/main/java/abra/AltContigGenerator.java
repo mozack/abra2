@@ -19,29 +19,33 @@ public class AltContigGenerator {
 			for (SAMRecordWrapper readWrapper : reads) {
 				SAMRecord read = readWrapper.getSamRecord();
 				
-				// For now only use indels bracketed by 2 M elements
-				// TODO: Handle clipping / complex indels
-				List<CigarElement> elems = read.getCigar().getCigarElements();
-				if (elems.size() == 3 && 
-					elems.get(0).getOperator() == CigarOperator.M && 
-					elems.get(2).getOperator() == CigarOperator.M &&
-					(elems.get(1).getOperator() == CigarOperator.D || elems.get(1).getOperator() == CigarOperator.I)) {
+				// TODO: Any other filters here.  Higher MQ threshold?
+				if (read.getMappingQuality() > 0) {
 					
-					
-					String insertBases = null;
-					char type = '0';
-					if (elems.get(1).getOperator() == CigarOperator.D) {
-						type = 'D';
-					} else if (elems.get(1).getOperator() == CigarOperator.I) {
-						type = 'I';
-//						System.out.println("read: " + read.getSAMString() + ", elem0: " + elems.get(0).getLength() + ", elem1: " + elems.get(1).getLength());
-						int start = elems.get(0).getLength();
-						int stop =  start + elems.get(1).getLength();
-						insertBases = read.getReadString().substring(start, stop);
+					// For now only use indels bracketed by 2 M elements
+					// TODO: Handle clipping / complex indels
+					List<CigarElement> elems = read.getCigar().getCigarElements();
+					if (elems.size() == 3 && 
+						elems.get(0).getOperator() == CigarOperator.M && 
+						elems.get(2).getOperator() == CigarOperator.M &&
+						(elems.get(1).getOperator() == CigarOperator.D || elems.get(1).getOperator() == CigarOperator.I)) {
+						
+						
+						String insertBases = null;
+						char type = '0';
+						if (elems.get(1).getOperator() == CigarOperator.D) {
+							type = 'D';
+						} else if (elems.get(1).getOperator() == CigarOperator.I) {
+							type = 'I';
+	//						System.out.println("read: " + read.getSAMString() + ", elem0: " + elems.get(0).getLength() + ", elem1: " + elems.get(1).getLength());
+							int start = elems.get(0).getLength();
+							int stop =  start + elems.get(1).getLength();
+							insertBases = read.getReadString().substring(start, stop);
+						}
+						
+						Indel indel = new Indel(type, read.getReferenceName(), read.getAlignmentStart() + elems.get(0).getLength(), elems.get(1).getLength(), insertBases);
+						indels.add(indel);
 					}
-					
-					Indel indel = new Indel(type, read.getReferenceName(), read.getAlignmentStart() + elems.get(0).getLength(), elems.get(1).getLength(), insertBases);
-					indels.add(indel);
 				}
 			}
 		}

@@ -507,7 +507,8 @@ public class ReAligner {
 
 			
 			// Assemble contigs
-			if (region.getKmer() > this.readLength-15) {
+//			if (region.getKmer() > this.readLength-15) {
+			if (true) {
 				System.err.println("Skipping assembly of region: " + region.getDescriptor() + " - " + region.getKmer());
 			} else {
 				NativeAssembler assem = (NativeAssembler) newAssembler(region);
@@ -529,7 +530,7 @@ public class ReAligner {
 							SSWAlignerResult sswResult = ssw.align(contig);
 							if (sswResult != null) {
 								// TODO: In multi-region processing, check to ensure identical contigs have identical mappings
-//								mappedContigs.put(new SimpleMapper(sswResult.getSequence()), sswResult);
+								mappedContigs.put(new SimpleMapper(sswResult.getSequence()), sswResult);
 							}
 						}
 					}

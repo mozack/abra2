@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -493,6 +494,18 @@ public class ReAligner {
 			
 			List<String> bams = new ArrayList<String>(Arrays.asList(this.inputSams));
 			
+			// Get reference sequence matching current region (pad by 2 read lengths on each side)
+			int chromosomeLength = c2r.getReferenceLength(region.getSeqname());
+			int refSeqStart = Math.max((int) region.getStart() - this.readLength*2, 1);
+			int refSeqLength = Math.min((int) region.getLength() + this.readLength*4, chromosomeLength-1);
+			
+			System.out.println("Getting reference for: " + region.getSeqname() + ":" + refSeqStart + ", length: " + refSeqLength);
+			
+			String refSeq = c2r.getSequence(region.getSeqname(), refSeqStart, refSeqLength);
+			
+			SSWAligner ssw = new SSWAligner(refSeq, region.getSeqname(), refSeqStart);
+
+			
 			// Assemble contigs
 			if (region.getKmer() > this.readLength-15) {
 				System.err.println("Skipping assembly of region: " + region.getDescriptor() + " - " + region.getKmer());
@@ -507,16 +520,6 @@ public class ReAligner {
 					// TODO: Turn this off by default
 					appendContigs(contigs);
 					
-					// Get reference sequence matching current region (pad by 2 read lengths on each side)
-					int chromosomeLength = c2r.getReferenceLength(region.getSeqname());
-					int refSeqStart = Math.max((int) region.getStart() - this.readLength*2, 1);
-					int refSeqLength = Math.min((int) region.getLength() + this.readLength*4, chromosomeLength-1);
-					
-					System.out.println("Getting reference for: " + region.getSeqname() + ":" + refSeqStart + ", length: " + refSeqLength);
-					
-					String refSeq = c2r.getSequence(region.getSeqname(), refSeqStart, refSeqLength);
-					
-					SSWAligner ssw = new SSWAligner(refSeq, region.getSeqname(), refSeqStart);
 					
 					// Map contigs to reference
 					String[] contigSequences = contigs.split("\n");
@@ -530,7 +533,17 @@ public class ReAligner {
 							}
 						}
 					}
-				}
+				} 
+			}
+			
+			// Go through artificial contig generation using indels observed in the original reads
+			AltContigGenerator altContigGenerator = new AltContigGenerator();
+			Collection<String> altContigs = altContigGenerator.getAltContigs(readsList, c2r, readLength);
+			
+			for (String contig : altContigs) {
+				SSWAlignerResult sswResult = ssw.align(contig);
+				//TODO: Introduce penalty for non-assembled contigs?
+				mappedContigs.put(new SimpleMapper(sswResult.getSequence()), sswResult);
 			}
 		}
 		catch (Exception e) {

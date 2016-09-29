@@ -33,7 +33,7 @@ public class Cadabra {
 		Feature region = null;
 		
 		if (target != null) {
-			String[] fields = target.split("\t");
+			String[] fields = target.split(":|-");
 			String chromosome = fields[0];
 			long startPos = Long.valueOf(fields[1]);
 			long endPos = Long.valueOf(fields[2]);

@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import abra.Feature;
+
 import htsjdk.samtools.CigarOperator;
 import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.SAMFileReader;
@@ -14,15 +16,21 @@ import htsjdk.samtools.ValidationStringency;
 public class ReadLocusReader implements Iterable<ReadsAtLocus> {
 
 	private SAMFileReader samReader;
+	private Feature region;
 	
 	public ReadLocusReader(String samFile) {
+		this(samFile, null);
+	}
+	
+	public ReadLocusReader(String samFile, Feature region) {
         samReader = new SAMFileReader(new File(samFile));
         samReader.setValidationStringency(ValidationStringency.SILENT);
+        this.region = region;
 	}
 	
 	@Override
 	public Iterator<ReadsAtLocus> iterator() {
-		return new ReadLocusIterator(samReader);
+		return new ReadLocusIterator(samReader, region);
 	}
 	
 	public SAMFileHeader getSamHeader() {
@@ -37,9 +45,13 @@ public class ReadLocusReader implements Iterable<ReadsAtLocus> {
 		private List<SAMRecord> readCache = new ArrayList<SAMRecord>();
 		private ReadsAtLocus nextCache;
 		
-		public ReadLocusIterator(SAMFileReader samReader) {
+		public ReadLocusIterator(SAMFileReader samReader, Feature region) {
 	        	  
-	        samIter = new ForwardShiftInsertIterator(samReader.iterator());
+			if (region != null) {
+				samIter = samReader.queryOverlapping(region.getSeqname(), (int) region.getStart(), (int) region.getEnd());
+			} else {
+				samIter = new ForwardShiftInsertIterator(samReader.iterator());
+			}
 //	        samIter = samReader.iterator();
 		}
 		
@@ -168,7 +180,7 @@ public class ReadLocusReader implements Iterable<ReadsAtLocus> {
 	public static void main(String[] args) {
 		String file = "/home/lmose/dev/abra/dream/small.sort.bam";
 		
-		ReadLocusReader r = new ReadLocusReader(file);
+		ReadLocusReader r = new ReadLocusReader(file, null);
 		
 		for (ReadsAtLocus readsAtLocus : r) {
 			System.out.println(readsAtLocus);

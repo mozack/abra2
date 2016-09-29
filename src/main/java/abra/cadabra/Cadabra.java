@@ -7,6 +7,7 @@ import java.util.Iterator;
 import java.util.Map;
 
 import abra.CompareToReference2;
+import abra.Feature;
 
 import htsjdk.samtools.Cigar;
 import htsjdk.samtools.CigarElement;
@@ -25,12 +26,22 @@ public class Cadabra {
 	private ReadLocusReader tumor;
 	private CompareToReference2 c2r;
 
-	public void callSomatic(String reference, String normal, String tumor) throws IOException {
+	public void callSomatic(String reference, String normal, String tumor, String target) throws IOException {
 		c2r = new CompareToReference2();
 		c2r.init(reference);
 		
-		this.normal = new ReadLocusReader(normal);
-		this.tumor = new ReadLocusReader(tumor);
+		Feature region = null;
+		
+		if (target != null) {
+			String[] fields = target.split("\t");
+			String chromosome = fields[0];
+			long startPos = Long.valueOf(fields[1]);
+			long endPos = Long.valueOf(fields[2]);
+			region = new Feature(chromosome, startPos, endPos);
+		}
+		
+		this.normal = new ReadLocusReader(normal, region);
+		this.tumor = new ReadLocusReader(tumor, region);
 		
 		outputHeader();
 		process();
@@ -531,7 +542,11 @@ public class Cadabra {
 		String reference = args[0];
 		String normal = args[1];
 		String tumor = args[2];
+		String region = null;
+		if (args.length == 4) {
+			region = args[3];
+		}
 		
-		new Cadabra().callSomatic(reference, normal, tumor);
+		new Cadabra().callSomatic(reference, normal, tumor, region);
 	}
 }

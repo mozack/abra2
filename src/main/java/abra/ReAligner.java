@@ -542,8 +542,10 @@ public class ReAligner {
 			
 			for (String contig : altContigs) {
 				SSWAlignerResult sswResult = ssw.align(contig);
-				//TODO: Introduce penalty for non-assembled contigs?
-				mappedContigs.put(new SimpleMapper(sswResult.getSequence()), sswResult);
+				if (sswResult != null) {
+					//TODO: Introduce penalty for non-assembled contigs?
+					mappedContigs.put(new SimpleMapper(sswResult.getSequence()), sswResult);
+				}
 			}
 		}
 		catch (Exception e) {

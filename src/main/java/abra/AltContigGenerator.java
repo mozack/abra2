@@ -40,7 +40,7 @@ public class AltContigGenerator {
 						insertBases = read.getReadString().substring(start, stop);
 					}
 					
-					Indel indel = new Indel(type, read.getReferenceName(), read.getAlignmentStart() + elems.get(0).getLength(), + elems.get(1).getLength(), insertBases);
+					Indel indel = new Indel(type, read.getReferenceName(), read.getAlignmentStart() + elems.get(0).getLength(), elems.get(1).getLength(), insertBases);
 					indels.add(indel);
 				}
 			}
@@ -52,11 +52,11 @@ public class AltContigGenerator {
 			if (indel.type == 'D') {
 				// Pull in read length sequence from both sides of deletion.
 				int leftStart = indel.pos - readLength;
-				int rightStart = indel.pos;
+				int rightStart = indel.pos + indel.length;
 				String leftSeq = c2r.getSequence(indel.chr, leftStart, readLength);
 				String rightSeq = c2r.getSequence(indel.chr, rightStart, readLength);
 				String seq = leftSeq + rightSeq;
-				System.err.println("INDEL_SEQ: chr: " + indel.chr + "  pos: " + indel.pos + " type: " + indel.type + " bases: " + indel.insert + " seq: [" + seq + "]");
+				System.err.println("INDEL_SEQ: chr: " + indel.chr + "  pos: " + indel.pos + " type: " + indel.type + " length: " + indel.length + " bases: " + indel.insert + " seq: [" + seq + "]");
 				
 				contigs.add(seq);
 			} else if (indel.type == 'I') {
@@ -66,7 +66,7 @@ public class AltContigGenerator {
 				String leftSeq = c2r.getSequence(indel.chr, leftStart, readLength);
 				String rightSeq = c2r.getSequence(indel.chr, rightStart, readLength);
 				String seq = leftSeq + indel.insert + rightSeq;
-				System.err.println("INDEL_SEQ: chr: " + indel.chr + "  pos: " + indel.pos + " type: " + indel.type + " bases: " + indel.insert + " seq: [" + seq + "]");
+				System.err.println("INDEL_SEQ: chr: " + indel.chr + "  pos: " + indel.pos + " type: " + indel.type + " length: " + indel.length + " bases: " + indel.insert + " seq: [" + seq + "]");
 				
 				contigs.add(seq);
 			}

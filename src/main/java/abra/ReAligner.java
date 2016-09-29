@@ -507,8 +507,7 @@ public class ReAligner {
 
 			
 			// Assemble contigs
-//			if (region.getKmer() > this.readLength-15) {
-			if (true) {
+			if (region.getKmer() > this.readLength-15) {
 				System.err.println("Skipping assembly of region: " + region.getDescriptor() + " - " + region.getKmer());
 			} else {
 				NativeAssembler assem = (NativeAssembler) newAssembler(region);
@@ -520,7 +519,6 @@ public class ReAligner {
 					
 					// TODO: Turn this off by default
 					appendContigs(contigs);
-					
 					
 					// Map contigs to reference
 					String[] contigSequences = contigs.split("\n");

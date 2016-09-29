@@ -61,7 +61,7 @@ public class AltContigGenerator {
 				contigs.add(seq);
 			} else if (indel.type == 'I') {
 				// Pull in read length sequence on both sides of insertion
-				int leftStart = indel.pos - readLength - 1;
+				int leftStart = indel.pos - readLength;
 				int rightStart = indel.pos;
 				String leftSeq = c2r.getSequence(indel.chr, leftStart, readLength);
 				String rightSeq = c2r.getSequence(indel.chr, rightStart, readLength);

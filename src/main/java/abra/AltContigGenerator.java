@@ -1,5 +1,6 @@
 package abra;
 
+import htsjdk.samtools.AlignmentBlock;
 import htsjdk.samtools.CigarElement;
 import htsjdk.samtools.CigarOperator;
 import htsjdk.samtools.SAMRecord;
@@ -11,24 +12,30 @@ import java.util.Set;
 
 public class AltContigGenerator {
 	
-	private boolean hasHighQualitySoftClipping(SAMRecordWrapper read) {
+	// TODO: Multiple arbitrary cutoffs here, need to optimize
+	private static int SOFT_CLIPPING_MIN_BASE_QUAL = 13;
+	
+	// Return true if read contains a soft clip element >= 5 bases long with 80% or more of bases exceeding min base qual
+	private boolean hasHighQualitySoftClipping(SAMRecord read) {
 		
-		boolean hasHighQualitySoftClipping = false;
-		
-		for (CigarElement elem : read.getSamRecord().getCigar().getCigarElements()) {
+		for (int i=0; i<read.getCigarLength(); i++) {
+			CigarElement elem = read.getCigar().getCigarElement(i);
 			if (elem.getOperator() == CigarOperator.S && elem.getLength() >= 5) {
-				hasHighQualitySoftClipping = true;
-				
-				for (byte bq : read.getSamRecord().getBaseQualities()) {
-					if (bq < 20) {
-						hasHighQualitySoftClipping = false;
-						break;
+				AlignmentBlock readBlock = read.getAlignmentBlocks().get(i);
+				int numHighQualBases = 0;
+				for (int bq = readBlock.getReadStart()-1; bq< readBlock.getReadStart()-1 + elem.getLength(); bq++) {
+					if (read.getBaseQualities()[bq] >= SOFT_CLIPPING_MIN_BASE_QUAL) {
+						numHighQualBases += 1;
+						
+						if (numHighQualBases >= .8 * elem.getLength()) {
+							return true;
+						}
 					}
-				}				
+				}
 			}
 		}
-		
-		return hasHighQualitySoftClipping;
+
+		return false;
 	}
 
 	public Collection<String> getAltContigs(List<List<SAMRecordWrapper>> readsList, CompareToReference2 c2r, int readLength) {
@@ -69,7 +76,8 @@ public class AltContigGenerator {
 					}
 					
 					// Add high quality soft clipped reads
-					if (hasHighQualitySoftClipping(readWrapper)) {
+					if (hasHighQualitySoftClipping(readWrapper.getSamRecord())) {
+						System.err.println("SOFT_SEQ: " + readWrapper.getSamRecord());
 						contigs.add(read.getReadString());
 					}
 				}

@@ -10,8 +10,30 @@ import java.util.List;
 import java.util.Set;
 
 public class AltContigGenerator {
+	
+	private boolean hasHighQualitySoftClipping(SAMRecordWrapper read) {
+		
+		boolean hasHighQualitySoftClipping = false;
+		
+		for (CigarElement elem : read.getSamRecord().getCigar().getCigarElements()) {
+			if (elem.getOperator() == CigarOperator.S && elem.getLength() >= 5) {
+				hasHighQualitySoftClipping = true;
+				
+				for (byte bq : read.getSamRecord().getBaseQualities()) {
+					if (bq < 20) {
+						hasHighQualitySoftClipping = false;
+						break;
+					}
+				}				
+			}
+		}
+		
+		return hasHighQualitySoftClipping;
+	}
 
 	public Collection<String> getAltContigs(List<List<SAMRecordWrapper>> readsList, CompareToReference2 c2r, int readLength) {
+		
+		Set<String> contigs = new HashSet<String>();
 		
 		HashSet<Indel> indels = new HashSet<Indel>();
 		
@@ -30,7 +52,6 @@ public class AltContigGenerator {
 						elems.get(2).getOperator() == CigarOperator.M &&
 						(elems.get(1).getOperator() == CigarOperator.D || elems.get(1).getOperator() == CigarOperator.I)) {
 						
-						
 						String insertBases = null;
 						char type = '0';
 						if (elems.get(1).getOperator() == CigarOperator.D) {
@@ -46,11 +67,14 @@ public class AltContigGenerator {
 						Indel indel = new Indel(type, read.getReferenceName(), read.getAlignmentStart() + elems.get(0).getLength(), elems.get(1).getLength(), insertBases);
 						indels.add(indel);
 					}
+					
+					// Add high quality soft clipped reads
+					if (hasHighQualitySoftClipping(readWrapper)) {
+						contigs.add(read.getReadString());
+					}
 				}
 			}
 		}
-		
-		Set<String> contigs = new HashSet<String>();
 		
 		for (Indel indel : indels) {
 			if (indel.type == 'D') {

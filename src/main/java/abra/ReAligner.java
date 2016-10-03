@@ -540,6 +540,7 @@ public class ReAligner {
 			Collection<String> altContigs = altContigGenerator.getAltContigs(readsList, c2r, readLength);
 			
 			for (String contig : altContigs) {
+				// TODO: Check to see if this contig is already in the map before aligning
 				SSWAlignerResult sswResult = ssw.align(contig);
 				if (sswResult != null) {
 					//TODO: Introduce penalty for non-assembled contigs?
@@ -609,6 +610,8 @@ public class ReAligner {
 						this.minInsertLength = Math.min(this.minInsertLength, Math.abs(read.getInferredInsertSize()));
 						this.maxInsertLength = Math.max(this.maxInsertLength, Math.abs(read.getInferredInsertSize()));
 					}
+					
+					cnt += 1;
 				}
 				
 				// Allow some fudge in insert length

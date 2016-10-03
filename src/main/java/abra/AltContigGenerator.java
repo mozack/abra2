@@ -1,6 +1,5 @@
 package abra;
 
-import htsjdk.samtools.AlignmentBlock;
 import htsjdk.samtools.CigarElement;
 import htsjdk.samtools.CigarOperator;
 import htsjdk.samtools.SAMRecord;
@@ -13,29 +12,51 @@ import java.util.Set;
 public class AltContigGenerator {
 	
 	// TODO: Multiple arbitrary cutoffs here, need to optimize
+	// Phred 13 is ~5% error rate
 	private static int SOFT_CLIPPING_MIN_BASE_QUAL = 13;
+	
+	private boolean hasHighQualitySoftClipping(SAMRecord read, int start, int length) {
+		
+		int numHighQualBases = 0;
+		int requiredHighQualBases = (int) (.8 * length);
+		
+		for (int bq = start; bq < start+length; bq++) {
+			if (read.getBaseQualities()[bq] >= SOFT_CLIPPING_MIN_BASE_QUAL) {
+				numHighQualBases += 1;
+				
+				if (numHighQualBases >= requiredHighQualBases) {
+					return true;
+				}
+			}
+		}
+		
+		return false;
+	}
 	
 	// Return true if read contains a soft clip element >= 5 bases long with 80% or more of bases exceeding min base qual
 	private boolean hasHighQualitySoftClipping(SAMRecord read) {
 		
-		for (int i=0; i<read.getCigarLength(); i++) {
-			CigarElement elem = read.getCigar().getCigarElement(i);
-			if (elem.getOperator() == CigarOperator.S && elem.getLength() >= 5) {
-				AlignmentBlock readBlock = read.getAlignmentBlocks().get(i);
-				int numHighQualBases = 0;
-				for (int bq = readBlock.getReadStart()-1; bq< readBlock.getReadStart()-1 + elem.getLength(); bq++) {
-					if (read.getBaseQualities()[bq] >= SOFT_CLIPPING_MIN_BASE_QUAL) {
-						numHighQualBases += 1;
-						
-						if (numHighQualBases >= .8 * elem.getLength()) {
-							return true;
-						}
-					}
+		boolean hasHighQualitySoftClipping = false;
+		
+		if (read.getCigarLength() > 1) {
+			// Check first cigar element
+			CigarElement elem = read.getCigar().getCigarElement(0);
+			if (elem.getOperator() == CigarOperator.S) {
+				int elemStart = 0;
+				hasHighQualitySoftClipping = hasHighQualitySoftClipping(read, elemStart, elem.getLength());
+			}
+			
+			// Check last Cigar element
+			if (!hasHighQualitySoftClipping) {
+				elem = read.getCigar().getCigarElement(read.getCigarLength()-1);
+				if (elem.getOperator() == CigarOperator.S) {
+					int elemStart = read.getReadLength() - elem.getLength();
+					hasHighQualitySoftClipping = hasHighQualitySoftClipping(read, elemStart, elem.getLength());
 				}
 			}
 		}
-
-		return false;
+		
+		return hasHighQualitySoftClipping;
 	}
 
 	public Collection<String> getAltContigs(List<List<SAMRecordWrapper>> readsList, CompareToReference2 c2r, int readLength) {

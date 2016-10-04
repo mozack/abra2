@@ -51,9 +51,13 @@ public class SSWAligner {
 		
 		SSWAlignerResult result = null;
 		
+		System.err.println("Aligning: [" + seq + "]");
+		System.err.flush();
+		
 		Alignment aln = Aligner.align(seq.getBytes(), ref.getBytes(), score, GAP_OPEN_PENALTY, GAP_EXTEND_PENALTY, true);
 		
-		System.out.println("Alignment [" +  seq + "] :\t" + aln);
+		System.err.println("Alignment [" +  seq + "] :\t" + aln);
+		System.err.flush();
 		
 		// TODO: Optimize score requirements..
 		if (aln != null && aln.score1 >= MIN_ALIGNMENT_SCORE && aln.score1 > aln.score2) {

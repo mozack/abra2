@@ -269,25 +269,33 @@ public class ReAligner {
 				}
 				
 				for (Feature region : regionsToRemove) {
-					System.err.println("Removing contigs for region: " + region);
+//					System.err.println("Removing contigs for region: " + region);
 					regionContigs.remove(region);
 				}
+
+				String logPrefix = record.getSamRecord().getReferenceName() + ":" + record.getSamRecord().getAlignmentStart() + " : ";
 				
-				System.err.println("regionContigs size: " + regionContigs.size());
+				if (regionContigs.size() > 10) {
+					System.err.println(logPrefix + "regionContigs size: " + regionContigs.size());
+				}
 				
 				int currReadsCount = 0;
 				for (List<SAMRecordWrapper> reads : currReads) {
 					currReadsCount += reads.size();
 				}
-				
-				System.err.println("Curr reads size: " + currReadsCount);
+
+				if (currReadsCount > 10000) {
+					System.err.println(logPrefix + "Curr reads size: " + currReadsCount);
+				}
 				
 				int outOfRegionCount = 0;
 				for (List<SAMRecordWrapper> reads : outOfRegionReads) {
 					outOfRegionCount += reads.size();
 				}
-				
-				System.err.println("Out of region reads size: " + outOfRegionCount);
+
+				if (outOfRegionCount > 10000) {
+					System.err.println(logPrefix + "Out of region reads size: " + outOfRegionCount);
+				}
 			}
 			
 			readCount += 1;
@@ -358,6 +366,8 @@ public class ReAligner {
 		System.err.println("max unaligned reads: " + maxUnalignedReads);
 		System.err.println(assemblerSettings.getDescription());
 		System.err.println("paired end: " + isPairedEnd);
+		System.err.println("isSkipAssembly: " + isSkipAssembly);
+		System.err.println("isSkipNonAssembly: " + isSkipNonAssembly);
 		
 		String javaVersion = System.getProperty("java.version");
 		System.err.println("Java version: " + javaVersion);
@@ -540,6 +550,7 @@ public class ReAligner {
 			}
 			
 			if (!this.isSkipNonAssembly) {
+				System.err.println("Processing non-assembled contigs for region: [" + region + "]");
 				// Go through artificial contig generation using indels observed in the original reads
 				AltContigGenerator altContigGenerator = new AltContigGenerator();
 				Collection<String> altContigs = altContigGenerator.getAltContigs(readsList, c2r, readLength);

@@ -486,10 +486,13 @@ public class ReAligner {
 			log("Processing region: " + region.getDescriptor());
 		}
 		
+		if (region.getLength() > 10000) {
+			throw new IllegalArgumentException("Region too big: [" + region + "]");
+		}
+		
 		Map<SimpleMapper, SSWAlignerResult> mappedContigs = new HashMap<SimpleMapper, SSWAlignerResult>();
 		
 		List<List<SAMRecordWrapper>> readsList = subsetReads(region, reads);
-		
 		
 		try {
 			String contigsFasta = tempDir + "/" + region.getDescriptor() + "_contigs.fasta";

@@ -89,6 +89,8 @@ public class ReAligner {
 	private int minMappingQuality;
 	
 	private boolean isDebug;
+	private boolean isSkipAssembly;
+	private boolean isSkipNonAssembly;
 	
 	// If true, the input target file specifies kmer values
 	private boolean hasPresetKmers = false;
@@ -504,10 +506,9 @@ public class ReAligner {
 			String refSeq = c2r.getSequence(region.getSeqname(), refSeqStart, refSeqLength);
 			
 			SSWAligner ssw = new SSWAligner(refSeq, region.getSeqname(), refSeqStart);
-
 			
 			// Assemble contigs
-			if (region.getKmer() > this.readLength-15) {
+			if (this.isSkipAssembly || region.getKmer() > this.readLength-15) {
 				System.err.println("Skipping assembly of region: " + region.getDescriptor() + " - " + region.getKmer());
 			} else {
 				NativeAssembler assem = (NativeAssembler) newAssembler(region);
@@ -535,16 +536,18 @@ public class ReAligner {
 				} 
 			}
 			
-			// Go through artificial contig generation using indels observed in the original reads
-			AltContigGenerator altContigGenerator = new AltContigGenerator();
-			Collection<String> altContigs = altContigGenerator.getAltContigs(readsList, c2r, readLength);
-			
-			for (String contig : altContigs) {
-				// TODO: Check to see if this contig is already in the map before aligning
-				SSWAlignerResult sswResult = ssw.align(contig);
-				if (sswResult != null) {
-					//TODO: Introduce penalty for non-assembled contigs?
-					mappedContigs.put(new SimpleMapper(sswResult.getSequence()), sswResult);
+			if (!this.isSkipNonAssembly) {
+				// Go through artificial contig generation using indels observed in the original reads
+				AltContigGenerator altContigGenerator = new AltContigGenerator();
+				Collection<String> altContigs = altContigGenerator.getAltContigs(readsList, c2r, readLength);
+				
+				for (String contig : altContigs) {
+					// TODO: Check to see if this contig is already in the map before aligning
+					SSWAlignerResult sswResult = ssw.align(contig);
+					if (sswResult != null) {
+						//TODO: Introduce penalty for non-assembled contigs?
+						mappedContigs.put(new SimpleMapper(sswResult.getSequence()), sswResult);
+					}
 				}
 			}
 		}
@@ -879,6 +882,8 @@ public class ReAligner {
 			realigner.minMappingQuality = options.getMinimumMappingQuality();
 			realigner.hasPresetKmers = options.hasPresetKmers();
 			realigner.isDebug = options.isDebug();
+			realigner.isSkipAssembly = options.isSkipAssembly();
+			realigner.isSkipNonAssembly = options.isSkipNonAssembly();
 
 			long s = System.currentTimeMillis();
 			

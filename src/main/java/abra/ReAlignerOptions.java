@@ -33,6 +33,8 @@ public class ReAlignerOptions extends Options {
 	private static final String USE_INTERMEDIATE_BAM = "ib";
 	private static final String NO_DEBUG = "no-debug";
 	private static final String MAX_NODES = "maxn";
+	private static final String SKIP_ASSEMBLY = "sa";
+	private static final String SKIP_NON_ASSEMBLY = "sna";
 	
 	private OptionParser parser;
 	private boolean isValid;
@@ -64,6 +66,8 @@ public class ReAlignerOptions extends Options {
             parser.accepts(USE_INTERMEDIATE_BAM, "If specified, write intermediate data to BAM file using the intel deflator when available.  Use this to speed up processing.");
             parser.accepts(NO_DEBUG, "Throttle down debug logging");
             parser.accepts(MAX_NODES, "Maximum pre-pruned nodes in regional assembly").withOptionalArg().ofType(Integer.class).defaultsTo(9000);
+            parser.accepts(SKIP_ASSEMBLY, "Skip assembly");
+            parser.accepts(SKIP_NON_ASSEMBLY, "Skip non-assembly contig generation");
     	}
     	
     	return parser;
@@ -219,6 +223,14 @@ public class ReAlignerOptions extends Options {
 	
 	public boolean isPairedEnd() {
 		return !getOptions().has(SINGLE_END);
+	}
+	
+	public boolean isSkipAssembly() {
+		return getOptions().has(SKIP_ASSEMBLY);
+	}
+	
+	public boolean isSkipNonAssembly() {
+		return getOptions().has(SKIP_NON_ASSEMBLY);
 	}
 	
 	public int getMinBaseQuality() {

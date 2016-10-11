@@ -116,6 +116,11 @@ public class Feature {
 		// This read is beyond all regions
 		return -1;
 	}
+	
+	public boolean containsEitherEnd(Feature feature) {
+		return (feature.getStart() >= this.start && feature.getStart() <= this.end) ||
+			   (feature.getEnd() >= this.start && feature.getEnd() <= this.end);
+	}
 
 	@Override
 	public int hashCode() {

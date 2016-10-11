@@ -95,6 +95,9 @@ public class ReAligner {
 	// If true, the input target file specifies kmer values
 	private boolean hasPresetKmers = false;
 	
+	// RNA specific
+	private List<Feature> junctions = new ArrayList<Feature>();
+	
 	public static final int COMPRESSION_LEVEL = 1;
 	
 	public void reAlign(String[] inputFiles, String[] outputFiles) throws Exception {
@@ -185,6 +188,25 @@ public class ReAligner {
 				chromosomeRegions.add(region);
 			}
 		}
+		
+		List<Feature> chromosomeJunctions = new ArrayList<Feature>();
+		for (Feature junction : junctions) {
+			if (junction.getSeqname().equals(chromosome)) {
+				chromosomeJunctions.add(junction);
+			}
+		}
+		
+		// TODO: Brute force matching of regions / junctions
+		// TODO: Match up more efficiently
+		Map<Feature, List<Feature>> regionJunctions = new HashMap<Feature, List<Feature>>();
+		for (Feature region : chromosomeRegions) {
+			regionJunctions.put(region, new ArrayList<Feature>());
+			for (Feature junction : chromosomeJunctions) {
+				if (region.containsEitherEnd(junction)) {
+					regionJunctions.get(region).add(junction);
+				}
+			}
+		}
 	
 		for (SAMRecordWrapper record : reader) {
 			int regionIdx = Feature.findFirstOverlappingRegion(reader.getSAMFileHeader(), record.getSamRecord(), chromosomeRegions, currRegionIdx);
@@ -198,7 +220,7 @@ public class ReAligner {
 					// Assemble reads
 					Feature region = chromosomeRegions.get(currRegionIdx);
 					System.err.println("Processing region: " + region);
-					Map<SimpleMapper, SSWAlignerResult> mappedContigs = processRegion(region, currReads);
+					Map<SimpleMapper, SSWAlignerResult> mappedContigs = processRegion(region, currReads, regionJunctions.get(region));
 					System.err.println("Region: " + region + " assembled: " + mappedContigs.keySet().size() + " contigs");
 					regionContigs.put(region, mappedContigs);
 				}
@@ -308,7 +330,7 @@ public class ReAligner {
 			// Assemble reads
 			Feature region = chromosomeRegions.get(currRegionIdx);
 			System.err.println("Processing region: " + region);
-			Map<SimpleMapper, SSWAlignerResult> mappedContigs = processRegion(region, currReads);
+			Map<SimpleMapper, SSWAlignerResult> mappedContigs = processRegion(region, currReads, regionJunctions.get(region));
 			System.err.println("Region: " + region + " assembled: " + mappedContigs.keySet().size() + " contigs");
 			regionContigs.put(region, mappedContigs);
 		}
@@ -491,7 +513,7 @@ public class ReAligner {
 		return subset;
 	}
 	
-	public Map<SimpleMapper, SSWAlignerResult> processRegion(Feature region, List<List<SAMRecordWrapper>> reads) throws Exception {
+	public Map<SimpleMapper, SSWAlignerResult> processRegion(Feature region, List<List<SAMRecordWrapper>> reads, List<Feature> junctions) throws Exception {
 		if (isDebug) {
 			log("Processing region: " + region.getDescriptor());
 		}

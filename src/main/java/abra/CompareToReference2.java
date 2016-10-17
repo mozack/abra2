@@ -209,7 +209,7 @@ public class CompareToReference2 {
 					}
 				} else if (element.getOperator() == CigarOperator.I) {
 					readIdx += element.getLength();
-				} else if (element.getOperator() == CigarOperator.D) {
+				} else if (element.getOperator() == CigarOperator.D || element.getOperator() == CigarOperator.N) {
 					refIdx += element.getLength();
 				} else if (element.getOperator() == CigarOperator.S) {
 					

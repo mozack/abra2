@@ -158,4 +158,14 @@ public class CigarUtilsTest {
 		newCigar = CigarUtils.extendCigarWithMatches(cigar, 10, 15);
 		assertEquals(newCigar, "125M");
 	}
+	
+	@Test (groups = "unit")
+	public void testInjectSplice() {
+		String cigar = "90M5I5D205M";
+		
+		int junctionPos = 100;
+		int junctionLength = 2000;
+		String newCigar = CigarUtils.injectSplice(cigar, junctionPos, junctionLength);
+		assertEquals(newCigar, "90M5I5D5M2000N200M");
+	}
 }

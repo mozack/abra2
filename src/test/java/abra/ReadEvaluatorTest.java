@@ -30,7 +30,7 @@ public class ReadEvaluatorTest {
 		String read    =     "ATAAAATTTTTTCCCCCCGGGGGGATCG";  // matches contig at 0 based position 4 with 1 mismatch
 		
 		SimpleMapper sm1 = new SimpleMapper(contig1);
-		SSWAlignerResult swc1 = new SSWAlignerResult(10, "10M1D30M", "chr1", 0, contig1);
+		SSWAlignerResult swc1 = new SSWAlignerResult(10, "10M1D30M", "chr1", 0, contig1, (short) 1);
 		
 		mappedContigs.put(sm1, swc1);
 		
@@ -51,7 +51,7 @@ public class ReadEvaluatorTest {
 		String read    =     "ATAAAATTTTTTCCCCCCGGGGGGATCG";  // matches contig at 0 based position 4 with 1 mismatch
 		
 		SimpleMapper sm1 = new SimpleMapper(contig1);
-		SSWAlignerResult swc1 = new SSWAlignerResult(10, "10M1D30M", "chr1", 0, contig1);
+		SSWAlignerResult swc1 = new SSWAlignerResult(10, "10M1D30M", "chr1", 0, contig1, (short) 1);
 		
 		mappedContigs.put(sm1, swc1);
 		
@@ -72,16 +72,16 @@ public class ReadEvaluatorTest {
 		String read    =     "ATAAAATTTTTTCCCCCCGGGGGGATCG";  // matches contig at 0 based position 4 with 0 mismatches
 		
 		SimpleMapper sm1 = new SimpleMapper(contig1);
-		SSWAlignerResult swc1 = new SSWAlignerResult(10, "10M1D30M", "chr1", 0, contig1);
+		SSWAlignerResult swc1 = new SSWAlignerResult(10, "10M1D30M", "chr1", 0, contig1, (short) 1);
 
 		SimpleMapper sm2 = new SimpleMapper(contig2);
-		SSWAlignerResult swc2 = new SSWAlignerResult(20, "10M1D30M", "chr1", 0, contig2);
+		SSWAlignerResult swc2 = new SSWAlignerResult(20, "10M1D30M", "chr1", 0, contig2, (short) 1);
 
 		SimpleMapper sm3 = new SimpleMapper(contig3);
-		SSWAlignerResult swc3 = new SSWAlignerResult(30, "10M1D30M", "chr1", 0, contig3);
+		SSWAlignerResult swc3 = new SSWAlignerResult(30, "10M1D30M", "chr1", 0, contig3, (short) 1);
 
 		SimpleMapper sm4 = new SimpleMapper(contig4);
-		SSWAlignerResult swc4 = new SSWAlignerResult(40, "10M1D30M", "chr1", 0, contig4);
+		SSWAlignerResult swc4 = new SSWAlignerResult(40, "10M1D30M", "chr1", 0, contig4, (short) 1);
 
 		mappedContigs.put(sm1, swc1);
 		mappedContigs.put(sm2, swc2);
@@ -106,16 +106,16 @@ public class ReadEvaluatorTest {
 		String read    =     "ATAAAATTTTTTCCCCCCGGGGGGATCG";  // matches contig at 0 based position 4 with 0 mismatches
 		
 		SimpleMapper sm1 = new SimpleMapper(contig1);
-		SSWAlignerResult swc1 = new SSWAlignerResult(10, "10M1D30M", "chr1", 0, contig1);
+		SSWAlignerResult swc1 = new SSWAlignerResult(10, "10M1D30M", "chr1", 0, contig1, (short) 1);
 
 		SimpleMapper sm2 = new SimpleMapper(contig2);
-		SSWAlignerResult swc2 = new SSWAlignerResult(9, "11M1D31M", "chr1", 0, contig2);
+		SSWAlignerResult swc2 = new SSWAlignerResult(9, "11M1D31M", "chr1", 0, contig2, (short) 1);
 
 		SimpleMapper sm3 = new SimpleMapper(contig3);
-		SSWAlignerResult swc3 = new SSWAlignerResult(11, "9M1D29M", "chr1", 0, contig3);
+		SSWAlignerResult swc3 = new SSWAlignerResult(11, "9M1D29M", "chr1", 0, contig3, (short) 1);
 
 		SimpleMapper sm4 = new SimpleMapper(contig4);
-		SSWAlignerResult swc4 = new SSWAlignerResult(10, "10M1D30M", "chr1", 0, contig4);
+		SSWAlignerResult swc4 = new SSWAlignerResult(10, "10M1D30M", "chr1", 0, contig4, (short) 1);
 
 		mappedContigs.put(sm1, swc1);
 		mappedContigs.put(sm2, swc2);
@@ -138,7 +138,7 @@ public class ReadEvaluatorTest {
 		String read    = "ACCGATCGATCGATCGATCGATCGATCGATCG";  // matches 2 locations with single mismatch
 		
 		SimpleMapper sm1 = new SimpleMapper(contig1);
-		SSWAlignerResult swc1 = new SSWAlignerResult(100, "36M", "chr1", 0, read);
+		SSWAlignerResult swc1 = new SSWAlignerResult(100, "36M", "chr1", 0, read, (short) 1);
 		
 		mappedContigs.put(sm1, swc1);
 		
@@ -156,7 +156,7 @@ public class ReadEvaluatorTest {
 		String read    =     "CGATCCCCCCGGGGGGAAAAAATTTTAT";  // matches contig at 0 based position 4 with 1 mismatch
 		
 		SimpleMapper sm1 = new SimpleMapper(contig1);
-		SSWAlignerResult swc1 = new SSWAlignerResult(10, "10M1D30M", "chr1", 0, read);
+		SSWAlignerResult swc1 = new SSWAlignerResult(10, "10M1D30M", "chr1", 0, read, (short) 1);
 		
 		mappedContigs.put(sm1, swc1);
 		

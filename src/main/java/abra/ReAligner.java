@@ -513,6 +513,36 @@ public class ReAligner {
 		return subset;
 	}
 	
+	// junctionPoint = index into alt reference where junction occurs
+	private void adjustForSplice(SSWAlignerResult sswResult, Feature junction, int junctionPoint) {
+		int junctionIndex = junctionPoint - sswResult.getRefContextStart();
+		if (junctionIndex > 0) {
+			// Find location in cigar where the junction should be injected
+		}
+	}
+	
+	private void alignContig(String contig, SSWAligner ssw, List<SSWAligner> sswJunctions, Map<SimpleMapper, SSWAlignerResult> mappedContigs) {
+		SSWAlignerResult sswResult = ssw.align(contig);
+		SSWAlignerResult bestResult = null;
+		
+		int bestScore = -1;
+		
+		if (sswResult != null) {
+			bestScore = sswResult.getScore();
+			bestResult = sswResult;
+		}
+		
+		for (SSWAligner sswJunc : sswJunctions) {
+			sswResult = sswJunc.align(contig);
+			if (sswResult.getScore() > bestScore) {
+				bestScore = sswResult.getScore();
+				bestResult = sswResult;
+			}
+		}
+		
+		mappedContigs.put(new SimpleMapper(bestResult.getSequence()), bestResult);
+	}
+	
 	public Map<SimpleMapper, SSWAlignerResult> processRegion(Feature region, List<List<SAMRecordWrapper>> reads, List<Feature> junctions) throws Exception {
 		if (isDebug) {
 			log("Processing region: " + region.getDescriptor());
@@ -541,6 +571,24 @@ public class ReAligner {
 			String refSeq = c2r.getSequence(region.getSeqname(), refSeqStart, refSeqLength);
 			
 			SSWAligner ssw = new SSWAligner(refSeq, region.getSeqname(), refSeqStart);
+			
+			List<SSWAligner> sswJunctions = new ArrayList<SSWAligner>();
+			
+			List<Integer> junctionPoints = new ArrayList<Integer>();
+			
+			for (Feature junction : junctions) {
+				int leftJuncStart = Math.max((int) junction.getStart() - (int) region.getLength() - this.readLength*2, 1);
+				int rightJuncStop = Math.min((int) junction.getEnd() + (int) region.getLength() + this.readLength*2, chromosomeLength-1);
+				
+				String leftSeq = c2r.getSequence(region.getSeqname(), leftJuncStart, (int) junction.getStart() - leftJuncStart);
+				String rightSeq = c2r.getSequence(region.getSeqname(), (int) junction.getEnd(), rightJuncStop - (int) junction.getEnd());
+				
+				String juncSeq = leftSeq + rightSeq;
+				
+				SSWAligner sswJunc = new SSWAligner(juncSeq, region.getSeqname(), leftJuncStart, leftSeq.length(), (int) junction.getLength());
+				sswJunctions.add(sswJunc);
+				junctionPoints.add(leftSeq.length());
+			}
 			
 			// Assemble contigs
 			if (this.isSkipAssembly || region.getKmer() > this.readLength-15) {

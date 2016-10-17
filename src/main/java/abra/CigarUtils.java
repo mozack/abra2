@@ -22,6 +22,17 @@ public class CigarUtils {
 		return relativeRefPos;
 	}
 	
+	private static String cigarStringFromCigarBlocks(List<CigarBlock> blocks) {
+		StringBuffer newCigar = new StringBuffer();
+		
+		for (CigarBlock block : blocks) {
+			newCigar.append(block.length);
+			newCigar.append(block.type);
+		}
+		
+		return newCigar.toString();
+	}
+	
 	public static String extendCigarWithMatches(String cigar, int leftPad, int rightPad) {
 		List<CigarBlock> blocks = getCigarBlocks(cigar);
 		
@@ -39,16 +50,42 @@ public class CigarUtils {
 			blocks.add(new CigarBlock(rightPad, 'M'));
 		}
 		
-		StringBuffer newCigar = new StringBuffer();
-		
-		for (CigarBlock block : blocks) {
-			newCigar.append(block.length);
-			newCigar.append(block.type);
-		}
-		
-		return newCigar.toString();
+		return cigarStringFromCigarBlocks(blocks);
 	}
 	
+	public static String injectSplice(String cigar, int junctionPos, int junctionLength) {
+		
+		// Identify pos relative to reference and insert N element
+		List<CigarBlock> blocks = getCigarBlocks(cigar);
+		List<CigarBlock> newBlocks = new ArrayList<CigarBlock>();
+		int refPos = 0;
+
+		for (CigarBlock block : blocks) {
+			if (block.type == 'M' || block.type == 'D') {
+				if (refPos < junctionPos && refPos + block.length >= junctionPos) {
+					// Split up current block into 2 blocks with splice block in between
+					int blockLen1 = junctionPos - refPos;
+					int blockLen2 = block.length - blockLen1;
+					newBlocks.add(new CigarBlock(blockLen1, block.type));
+					newBlocks.add(new CigarBlock(junctionLength, 'N'));
+					if (blockLen2 > 0) {
+						newBlocks.add(new CigarBlock(blockLen2, block.type));
+					}
+					
+					refPos += block.length;
+				} else {
+					newBlocks.add(block);
+					refPos += block.length;
+				}
+			} else {
+				// Do not advance ref pos for insertions
+				newBlocks.add(block);
+			}
+		}
+		
+		return cigarStringFromCigarBlocks(newBlocks);
+	}
+
 	private static List<CigarBlock> getCigarBlocks(String cigar) {
 		
 		List<CigarBlock> cigarBlocks = new ArrayList<CigarBlock>();
@@ -80,7 +117,7 @@ public class CigarUtils {
 			
 			// Identify the start point for subsetting
 			if (!isReadPosReached) {
-				if (block.type != 'D') {  // Never start in a deletion
+				if (!block.isGap()) {  // Never start in a deletion
 					if (contigPos + block.length >= pos) {
 						blockLength = contigPos + block.length - pos;
 						isReadPosReached = true;
@@ -103,7 +140,7 @@ public class CigarUtils {
 			} 
 			
 			if (isReadPosReached && blockLength > 0) {
-				if (block.type == 'D') {
+				if (block.isGap()) {
 					// Never start in a deletion
 					if (!readBlocks.isEmpty()) {
 						readBlocks.add(block);
@@ -134,6 +171,10 @@ public class CigarUtils {
 		CigarBlock(int length, char type) {
 			this.length = length;
 			this.type = type;
+		}
+		
+		boolean isGap() {
+			return type == 'D' || type == 'N';
 		}
 	}
 

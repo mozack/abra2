@@ -22,6 +22,8 @@ public class SSWAligner {
 	private String refChr;
 	private int refStart;
 	private String ref;
+	private int junctionPos;
+	private int junctionLength;
 	
 	private static int [][] score;
 	static {
@@ -42,9 +44,15 @@ public class SSWAligner {
 	}
 	
 	public SSWAligner(String ref, String refChr, int refStart) {
+		this(ref, refChr, refStart, -1, -1);
+	}
+	
+	public SSWAligner(String ref, String refChr, int refStart, int junctionPos, int junctionLength) {
 		this.ref = ref;
 		this.refChr = refChr;
 		this.refStart = refStart;
+		this.junctionPos = junctionPos;
+		this.junctionLength = junctionLength;
 	}
 	
 	public SSWAlignerResult align(String seq) {
@@ -82,7 +90,13 @@ public class SSWAligner {
 				
 				System.err.println("padded seq: " + paddedSeq);
 				
-				result = new SSWAlignerResult(aln.ref_begin1-leftPad.length(), cigar, refChr, refStart, paddedSeq);
+				if (junctionPos > 0) {
+					String oldCigar = cigar;
+					cigar = CigarUtils.injectSplice(cigar, junctionPos, junctionLength);
+					System.err.println("Spliced Cigar.  old: " + oldCigar + ", new: " + cigar);
+				}
+				
+				result = new SSWAlignerResult(aln.ref_begin1-leftPad.length(), cigar, refChr, refStart, paddedSeq, aln.score1);
 			}
 		}
 		
@@ -101,13 +115,15 @@ public class SSWAligner {
 		private int refContextStart;
 		
 		private String sequence;
+		private short score;
 		
-		SSWAlignerResult(int refPos, String cigar, String chromosome, int refContextStart, String sequence) {
+		SSWAlignerResult(int refPos, String cigar, String chromosome, int refContextStart, String sequence, short score) {
 			this.localRefPos = refPos;
 			this.cigar = cigar;
 			this.chromosome = chromosome;
 			this.refContextStart = refContextStart;
 			this.sequence = sequence;
+			this.score = score;
 		}
 		
 		public int getRefPos() {
@@ -132,6 +148,10 @@ public class SSWAligner {
 		
 		public String getSequence() {
 			return sequence;
+		}
+		
+		public short getScore() {
+			return score;
 		}
 	}
 	

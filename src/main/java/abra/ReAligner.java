@@ -15,6 +15,8 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 
 import abra.ReadEvaluator.Alignment;
 import abra.SSWAligner.SSWAlignerResult;
@@ -165,8 +167,6 @@ public class ReAligner {
 		
 		System.err.println("Processing chromosome: " + chromosome);
 		
-		int currRegionIdx = -1;
-		
 		MultiSamReader reader = new MultiSamReader(this.inputSams, this.minMappingQuality, this.isPairedEnd, chromosome);
 		
 		List<List<SAMRecordWrapper>> currReads = new ArrayList<List<SAMRecordWrapper>>();
@@ -207,43 +207,44 @@ public class ReAligner {
 				}
 			}
 		}
+		
+		Set<Integer> regionsToProcess = new TreeSet<Integer>();
 	
+		int currRegionIdx = -1;
+		
 		for (SAMRecordWrapper record : reader) {
-			int regionIdx = Feature.findFirstOverlappingRegion(reader.getSAMFileHeader(), record.getSamRecord(), chromosomeRegions, currRegionIdx);
+			int regionIdx = Feature.findFirstOverlappingRegion(reader.getSAMFileHeader(), record, chromosomeRegions, currRegionIdx);
 			
 			if (record.getSamRecord().getReferenceName().equals("chr10")) {
 				System.err.println("Region: " + regionIdx + " read: " + record.getSamRecord().getSAMString() + " , length: " + record.getSamRecord().getReadLength());
 			}
 			
-			if ((regionIdx == -1 && currRegionIdx >= 0) ||
-				(regionIdx > currRegionIdx)) {
+			// Identify next region that is a candidate for processing
+			// Note: Splicing can cause reads to go in and out of a region
+			if (regionIdx >= 0) {
+				regionsToProcess.add(regionIdx);
 				
-				if (currRegionIdx >= 0) {
-					
-					// We've moved beyond the current region
-					// Assemble reads
-					Feature region = chromosomeRegions.get(currRegionIdx);
-					System.err.println("Processing region: " + region);
-					Map<SimpleMapper, SSWAlignerResult> mappedContigs = processRegion(region, currReads, regionJunctions.get(region));
-					System.err.println("Region: " + region + " assembled: " + mappedContigs.keySet().size() + " contigs");
-					regionContigs.put(region, mappedContigs);
-				}
-				
-				currRegionIdx = regionIdx;
+				// Cache read for processing at end of region
+				currReads.get(record.getSampleIdx()).add(record);
 			}
 			
-			if (regionIdx >= 0) {
-				// Read is in a target region
-				if (currRegionIdx == regionIdx) {
-					// Read is in the currently tracked region.  Cache it for processing at end of region
-					currReads.get(record.getSampleIdx()).add(record);
-				} else {
-					throw new IllegalStateException("Out of order reads / regions for sample: " + record.getSampleIdx() + 
-							", read: " + record.getSamRecord().getSAMString() + ", region: " + chromosomeRegions.get(regionIdx) + 
-							", curr_region: " + chromosomeRegions.get(currRegionIdx));
-					
+			Iterator<Integer> regionIter = regionsToProcess.iterator();
+			if (regionIter.hasNext()) {
+				currRegionIdx = regionIter.next();
+				// If start position for current read is beyond current region, trigger assembly
+				Feature currRegion = chromosomeRegions.get(currRegionIdx);
+				if (record.getAdjustedAlignmentStart() > currRegion.getEnd() + this.readLength*2) {
+					System.err.println("Processing region: " + currRegion);
+					Map<SimpleMapper, SSWAlignerResult> mappedContigs = processRegion(currRegion, currReads, regionJunctions.get(currRegion));
+					System.err.println("Region: " + currRegion + " assembled: " + mappedContigs.keySet().size() + " contigs");
+					regionContigs.put(currRegion, mappedContigs);
+					// Remove curr region from list of regions to process
+					regionIter.remove();
 				}
-			} else {
+			}
+			
+			
+			if (regionIdx < 0) {
 				
 				// Process out of region read and output if ready.
 				List<SAMRecordWrapper> outOfRegionReadsForSample = outOfRegionReads.get(record.getSampleIdx());

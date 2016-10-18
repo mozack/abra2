@@ -328,8 +328,10 @@ public class ReAligner {
 			readCount += 1;
 		}
 		
-		// Process last region
-		if (currRegionIdx >= 0) {
+		// Attempt to process last region if applicable
+		Iterator<Integer> regionIter = regionsToProcess.iterator();
+		if (regionIter.hasNext()) {
+			currRegionIdx = regionIter.next();
 			
 			// We've moved beyond the current region
 			// Assemble reads

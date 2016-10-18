@@ -471,8 +471,10 @@ public class ReAligner {
 		for (Feature region : mappedContigs.keySet()) {
 			numContigs += mappedContigs.get(region).size();
 		}
-		
-		System.err.println("** REMAPPING [" + readsList.get(0).size() + "] reads to [" + numContigs + "] contigs");
+
+		if (readsList.get(0).size() > 0) {
+			System.err.println("** REMAPPING [" + readsList.get(0).size() + "] reads to [" + numContigs + "] contigs");
+		}
 		
 		ReadEvaluator readEvaluator = new ReadEvaluator(mappedContigs);
 		
@@ -488,9 +490,7 @@ public class ReAligner {
 //				int origEditDist = c2r.numMismatches(read);
 				
 				if (origEditDist > 0) {
-					// Temporarily disable read remapping...
-					
-//					remapRead(readEvaluator, read, origEditDist);
+					remapRead(readEvaluator, read, origEditDist);
 				}
 			}
 

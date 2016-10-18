@@ -42,7 +42,8 @@ public class ReadEvaluator {
 		
 		// Map read to all contigs, caching the hits with the smallest number of mismatches
 		for (Feature region : mappedContigs.keySet()) {
-			if (samRecord == null || region.overlapsRead(samRecord)) {  // Allowing null samRecord for unit test
+//			if (samRecord == null || region.overlapsRead(samRecord)) {  // Allowing null samRecord for unit test
+			if (true) {
 				Map<SimpleMapper, SSWAlignerResult> regionContigs = mappedContigs.get(region);
 				
 				for (SimpleMapper mapper : regionContigs.keySet()) {

@@ -92,23 +92,20 @@ public class Feature {
 		this.kmerSize = kmer;
 	}
 	
-	public static int findFirstOverlappingRegion(SAMFileHeader samHeader, SAMRecord read, List<Feature> regions, int start) {
+	public static int findFirstOverlappingRegion(SAMFileHeader samHeader, SAMRecordWrapper read, List<Feature> regions, int start) {
 		if (start < 0) {
 			start = 0;
 		}
-		
-		// Adjust alignment end for soft clipping / unmapped reads
-		int alignmentEnd = Math.max(read.getAlignmentEnd(), read.getAlignmentStart() + read.getReadLength());
 
 		for (int idx=start; idx<regions.size(); idx++) {
 			Feature region = regions.get(idx);
-			if ( (read.getReferenceIndex() < samHeader.getSequenceDictionary().getSequenceIndex(region.getSeqname())) ||
-				 (read.getReferenceName().equals(region.getSeqname()) && alignmentEnd < region.getStart()) ) {
+			if ( (read.getSamRecord().getReferenceIndex() < samHeader.getSequenceDictionary().getSequenceIndex(region.getSeqname())) ||
+				 (read.getSamRecord().getReferenceName().equals(region.getSeqname()) && read.getAdjustedAlignmentEnd() < region.getStart()) ) {
 				
 				// This read is in between regions
 				// TODO: adjust start region here
 				return -1;
-			} else if (region.overlaps(read.getReferenceName(), read.getAlignmentStart(), alignmentEnd)) {
+			} else if (region.overlaps(read.getSamRecord().getReferenceName(), read.getAdjustedAlignmentStart(), read.getAdjustedAlignmentEnd())) {
 				return idx;
 			}
 		}

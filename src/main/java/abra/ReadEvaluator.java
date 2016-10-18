@@ -48,6 +48,10 @@ public class ReadEvaluator {
 				for (SimpleMapper mapper : regionContigs.keySet()) {
 					SimpleMapperResult mapResult = mapper.map(read);
 					
+					if (samRecord.getReadName().equals("D7T4KXP1:400:C5F94ACXX:7:2215:14831:2340")) {
+						System.err.println("MAP_RESULT, pos: " + mapResult.getPos() + ", mismatches: " + mapResult.getMismatches() + ", contig: " + mapper);
+					}
+					
 					if (mapResult.getMismatches() < bestMismatches) {
 						bestMismatches = mapResult.getMismatches();
 						alignmentHits.clear();
@@ -75,6 +79,10 @@ public class ReadEvaluator {
 //				readRefPos = contigAlignment.getRefPos() + readPosInCigarRelativeToRef;
 				readRefPos = contigAlignment.getGenomicPos() + readPosInCigarRelativeToRef;
 				cigar = cigarBuf.toString();
+			}
+			
+			if (samRecord.getReadName().equals("D7T4KXP1:400:C5F94ACXX:7:2215:14831:2340")) {
+				System.err.println("READ_ALIGNMENT: pos: " + readRefPos + ", cigar: " + cigar);
 			}
 			
 			Alignment readAlignment = new Alignment(contigAlignment.getChromosome(), readRefPos, cigar, alignmentHit.mapResult.getOrientation(), bestMismatches, contigAlignment.getGenomicPos(), contigAlignment.getCigar());

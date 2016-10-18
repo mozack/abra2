@@ -214,11 +214,7 @@ public class ReAligner {
 		
 		for (SAMRecordWrapper record : reader) {
 			int regionIdx = Feature.findFirstOverlappingRegion(reader.getSAMFileHeader(), record, chromosomeRegions, currRegionIdx);
-			
-			if (record.getSamRecord().getReferenceName().equals("chr10")) {
-				System.err.println("Region: " + regionIdx + " read: " + record.getSamRecord().getSAMString() + " , length: " + record.getSamRecord().getReadLength());
-			}
-			
+						
 			// Identify next region that is a candidate for processing
 			// Note: Splicing can cause reads to go in and out of a region
 			if (regionIdx >= 0) {

@@ -292,7 +292,7 @@ public class ReAligner {
 				}
 				
 				for (Feature region : regionsToRemove) {
-//					System.err.println("Removing contigs for region: " + region);
+					System.err.println("Removing contigs for region: " + region);
 					regionContigs.remove(region);
 				}
 

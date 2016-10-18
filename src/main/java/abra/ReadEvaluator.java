@@ -48,7 +48,7 @@ public class ReadEvaluator {
 				for (SimpleMapper mapper : regionContigs.keySet()) {
 					SimpleMapperResult mapResult = mapper.map(read);
 					
-					if (samRecord.getReadName().equals("D7T4KXP1:400:C5F94ACXX:7:2215:14831:2340")) {
+					if (samRecord != null && samRecord.getReadName().equals("D7T4KXP1:400:C5F94ACXX:7:2215:14831:2340")) {
 						System.err.println("MAP_RESULT, pos: " + mapResult.getPos() + ", mismatches: " + mapResult.getMismatches() + ", contig: " + mapper);
 					}
 					
@@ -81,7 +81,7 @@ public class ReadEvaluator {
 				cigar = cigarBuf.toString();
 			}
 			
-			if (samRecord.getReadName().equals("D7T4KXP1:400:C5F94ACXX:7:2215:14831:2340")) {
+			if (samRecord != null && samRecord.getReadName().equals("D7T4KXP1:400:C5F94ACXX:7:2215:14831:2340")) {
 				System.err.println("READ_ALIGNMENT: pos: " + readRefPos + ", cigar: " + cigar);
 			}
 			

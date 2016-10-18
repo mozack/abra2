@@ -466,6 +466,14 @@ public class ReAligner {
 	}
 	
 	private void remapReads(Map<Feature, Map<SimpleMapper, SSWAlignerResult>> mappedContigs, List<List<SAMRecordWrapper>> readsList) throws Exception {
+		
+		int numContigs = 0;
+		for (Feature region : mappedContigs.keySet()) {
+			numContigs += mappedContigs.get(region).size();
+		}
+		
+		System.err.println("** REMAPPING [" + readsList.get(0).size() + "] reads to [" + numContigs + "] contigs");
+		
 		ReadEvaluator readEvaluator = new ReadEvaluator(mappedContigs);
 		
 		int sampleIdx = 0;
@@ -480,7 +488,9 @@ public class ReAligner {
 //				int origEditDist = c2r.numMismatches(read);
 				
 				if (origEditDist > 0) {
-					remapRead(readEvaluator, read, origEditDist);
+					// Temporarily disable read remapping...
+					
+//					remapRead(readEvaluator, read, origEditDist);
 				}
 			}
 

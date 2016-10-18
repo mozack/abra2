@@ -211,6 +211,10 @@ public class ReAligner {
 		for (SAMRecordWrapper record : reader) {
 			int regionIdx = Feature.findFirstOverlappingRegion(reader.getSAMFileHeader(), record.getSamRecord(), chromosomeRegions, currRegionIdx);
 			
+			if (record.getSamRecord().getReferenceName().equals("chr10")) {
+				System.err.println("Region: " + regionIdx + " read: " + record.getSamRecord());
+			}
+			
 			if ((regionIdx == -1 && currRegionIdx >= 0) ||
 				(regionIdx > currRegionIdx)) {
 				

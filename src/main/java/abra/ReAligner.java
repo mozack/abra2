@@ -592,11 +592,13 @@ public class ReAligner {
 				int rightJuncStop = Math.min((int) junction.getEnd() + (int) region.getLength() + this.readLength*2, chromosomeLength-1);
 				
 				String leftSeq = c2r.getSequence(region.getSeqname(), leftJuncStart, (int) junction.getStart() - leftJuncStart);
-				String rightSeq = c2r.getSequence(region.getSeqname(), (int) junction.getEnd(), rightJuncStop - (int) junction.getEnd());
+				
+				// Junction stop is exclusive, so add 1 to end
+				String rightSeq = c2r.getSequence(region.getSeqname(), (int) junction.getEnd()+1, rightJuncStop - (int) junction.getEnd());
 				
 				String juncSeq = leftSeq + rightSeq;
 				
-				// Need to add 1 
+				// Junction stop is exclusive, so add 1
 				SSWAligner sswJunc = new SSWAligner(juncSeq, region.getSeqname(), leftJuncStart, leftSeq.length(), (int) junction.getLength()+1);
 				sswJunctions.add(sswJunc);
 				junctionPoints.add(leftSeq.length());

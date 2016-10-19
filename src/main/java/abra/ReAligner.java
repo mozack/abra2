@@ -596,7 +596,8 @@ public class ReAligner {
 				
 				String juncSeq = leftSeq + rightSeq;
 				
-				SSWAligner sswJunc = new SSWAligner(juncSeq, region.getSeqname(), leftJuncStart, leftSeq.length(), (int) junction.getLength());
+				// Need to add 1 
+				SSWAligner sswJunc = new SSWAligner(juncSeq, region.getSeqname(), leftJuncStart, leftSeq.length(), (int) junction.getLength()+1);
 				sswJunctions.add(sswJunc);
 				junctionPoints.add(leftSeq.length());
 			}

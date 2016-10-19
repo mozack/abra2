@@ -100,7 +100,6 @@ public class AltContigGenerator {
 					
 					// Add high quality soft clipped reads
 					if (hasHighQualitySoftClipping(readWrapper.getSamRecord())) {
-						System.err.println("SOFT_SEQ: " + readWrapper.getSamRecord());
 						contigs.add(read.getReadString());
 					}
 				}
@@ -109,7 +108,7 @@ public class AltContigGenerator {
 		
 		// Current set of contigs is from soft clipping.  These can grow to be too big.  Downsample if necessary.
 		// TODO: Is this really the right thing to do?
-		int maxSoftClippedContigs = 100;
+		int maxSoftClippedContigs = 32;
 		if (contigs.size() > maxSoftClippedContigs) {
 			List<String> contigList = new ArrayList<String>(contigs);
 			Collections.shuffle(contigList);
@@ -124,7 +123,6 @@ public class AltContigGenerator {
 				String leftSeq = c2r.getSequence(indel.chr, leftStart, readLength);
 				String rightSeq = c2r.getSequence(indel.chr, rightStart, readLength);
 				String seq = leftSeq + rightSeq;
-				System.err.println("INDEL_SEQ: chr: " + indel.chr + "  pos: " + indel.pos + " type: " + indel.type + " length: " + indel.length + " bases: " + indel.insert + " seq: [" + seq + "]");
 				
 				contigs.add(seq);
 			} else if (indel.type == 'I') {
@@ -134,7 +132,6 @@ public class AltContigGenerator {
 				String leftSeq = c2r.getSequence(indel.chr, leftStart, readLength);
 				String rightSeq = c2r.getSequence(indel.chr, rightStart, readLength);
 				String seq = leftSeq + indel.insert + rightSeq;
-				System.err.println("INDEL_SEQ: chr: " + indel.chr + "  pos: " + indel.pos + " type: " + indel.type + " length: " + indel.length + " bases: " + indel.insert + " seq: [" + seq + "]");
 				
 				contigs.add(seq);
 			}

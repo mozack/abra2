@@ -541,7 +541,7 @@ public class ReAligner {
 		
 		for (SSWAligner sswJunc : sswJunctions) {
 			sswResult = sswJunc.align(contig);
-			if (sswResult.getScore() > bestScore) {
+			if (sswResult != null && sswResult.getScore() > bestScore) {
 				bestScore = sswResult.getScore();
 				bestResult = sswResult;
 			}

@@ -35,6 +35,7 @@ public class ReAlignerOptions extends Options {
 	private static final String MAX_NODES = "maxn";
 	private static final String SKIP_ASSEMBLY = "sa";
 	private static final String SKIP_NON_ASSEMBLY = "sna";
+	private static final String JUNCTIONS = "junctions";
 	
 	private OptionParser parser;
 	private boolean isValid;
@@ -68,6 +69,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(MAX_NODES, "Maximum pre-pruned nodes in regional assembly").withOptionalArg().ofType(Integer.class).defaultsTo(9000);
             parser.accepts(SKIP_ASSEMBLY, "Skip assembly");
             parser.accepts(SKIP_NON_ASSEMBLY, "Skip non-assembly contig generation");
+            parser.accepts(JUNCTIONS, "Splice junctions definition file").withRequiredArg().ofType(String.class);
     	}
     	
     	return parser;
@@ -167,6 +169,16 @@ public class ReAlignerOptions extends Options {
 		}
 		
 		return file;
+	}
+	
+	public String getJunctionFile() {
+		String file = null;
+		
+		if (getOptions().hasArgument(JUNCTIONS)) {
+			file = (String) getOptions().valueOf(JUNCTIONS);
+		}
+		
+		return file;		
 	}
 
 	public boolean hasPresetKmers() {

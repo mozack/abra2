@@ -98,6 +98,7 @@ public class ReAligner {
 	private boolean hasPresetKmers = false;
 	
 	// RNA specific
+	private String junctionFile;
 	private List<Feature> junctions = new ArrayList<Feature>();
 	
 	public static final int COMPRESSION_LEVEL = 1;
@@ -120,6 +121,7 @@ public class ReAligner {
 		
 		log("Loading target regions");
 		loadRegions();
+		loadJunctions();
 		
 		Clock clock = new Clock("Assembly");
 		clock.start();
@@ -526,15 +528,7 @@ public class ReAligner {
 		return subset;
 	}
 	
-	// junctionPoint = index into alt reference where junction occurs
-	private void adjustForSplice(SSWAlignerResult sswResult, Feature junction, int junctionPoint) {
-		int junctionIndex = junctionPoint - sswResult.getRefContextStart();
-		if (junctionIndex > 0) {
-			// Find location in cigar where the junction should be injected
-		}
-	}
-	
-	private void alignContig(String contig, SSWAligner ssw, List<SSWAligner> sswJunctions, Map<SimpleMapper, SSWAlignerResult> mappedContigs) {
+	private SSWAlignerResult alignContig(String contig, SSWAligner ssw, List<SSWAligner> sswJunctions) {
 		SSWAlignerResult sswResult = ssw.align(contig);
 		SSWAlignerResult bestResult = null;
 		
@@ -553,7 +547,11 @@ public class ReAligner {
 			}
 		}
 		
-		mappedContigs.put(new SimpleMapper(bestResult.getSequence()), bestResult);
+		//TODO: Check for tie scores with different final alignment
+		
+		return bestResult;
+		
+//		mappedContigs.put(new SimpleMapper(bestResult.getSequence()), bestResult);
 	}
 	
 	public Map<SimpleMapper, SSWAlignerResult> processRegion(Feature region, List<List<SAMRecordWrapper>> reads, List<Feature> junctions) throws Exception {
@@ -622,6 +620,9 @@ public class ReAligner {
 					for (String contig : contigSequences) {
 						// Filter id lines and contigs that match the reference
 						if (!contig.startsWith(">") && (!refSeq.contains(contig))) {
+							
+							alignContig(contig, ssw, sswJunctions);
+							
 							SSWAlignerResult sswResult = ssw.align(contig);
 							if (sswResult != null) {
 								// TODO: In multi-region processing, check to ensure identical contigs have identical mappings
@@ -675,6 +676,13 @@ public class ReAligner {
 			for (Feature region : regions) {
 				System.err.println(region.getSeqname() + "\t" + region.getStart() + "\t" + region.getEnd() + "\t" + region.getKmer());
 			}
+		}
+	}
+	
+	private void loadJunctions() throws IOException {
+		if (this.junctionFile != null) {
+			RegionLoader loader = new RegionLoader();
+			this.junctions = loader.load(junctionFile, false);
 		}
 	}
 
@@ -981,6 +989,7 @@ public class ReAligner {
 			realigner.isDebug = options.isDebug();
 			realigner.isSkipAssembly = options.isSkipAssembly();
 			realigner.isSkipNonAssembly = options.isSkipNonAssembly();
+			realigner.junctionFile = options.getJunctionFile();
 
 			long s = System.currentTimeMillis();
 			

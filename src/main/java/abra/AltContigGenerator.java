@@ -4,7 +4,9 @@ import htsjdk.samtools.CigarElement;
 import htsjdk.samtools.CigarOperator;
 import htsjdk.samtools.SAMRecord;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -103,6 +105,15 @@ public class AltContigGenerator {
 					}
 				}
 			}
+		}
+		
+		// Current set of contigs is from soft clipping.  These can grow to be too big.  Downsample if necessary.
+		// TODO: Is this really the right thing to do?
+		int maxSoftClippedContigs = 100;
+		if (contigs.size() > maxSoftClippedContigs) {
+			List<String> contigList = new ArrayList<String>(contigs);
+			Collections.shuffle(contigList);
+			contigs = new HashSet<String>(contigList.subList(0, maxSoftClippedContigs));
 		}
 		
 		for (Indel indel : indels) {

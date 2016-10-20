@@ -773,10 +773,11 @@ struct linked_node* identify_root_nodes(sparse_hash_map<const char*, struct node
 
 struct contig {
 	char seq[MAX_CONTIG_SIZE];
-	int size;
-	char is_repeat;
 	struct node* curr_node;
 	sparse_hash_set<const char*, my_hash, eqstr>* visited_nodes;
+	double score;
+	int size;
+	char is_repeat;
 };
 
 struct contig* new_contig() {
@@ -787,6 +788,7 @@ struct contig* new_contig() {
 	curr_contig->size = 0;
 	curr_contig->is_repeat = 0;
 	curr_contig->visited_nodes = new sparse_hash_set<const char*, my_hash, eqstr>();
+	curr_contig->score = 0;
 	return curr_contig;
 }
 
@@ -797,6 +799,7 @@ struct contig* copy_contig(struct contig* orig) {
 	copy->size = orig->size;
 	copy->is_repeat = orig->is_repeat;
 	copy->visited_nodes = new sparse_hash_set<const char*, my_hash, eqstr>(*orig->visited_nodes);
+	copy->score = orig->score;
 	return copy;
 }
 
@@ -826,7 +829,7 @@ void output_contig(struct contig* contig, int& contig_count, const char* prefix,
 			strcat(contigs, contig->seq);
 			strcat(contigs, "\n");
 		} else {
-			sprintf(buf, ">%s_%d\n", prefix, contig_count++);
+			sprintf(buf, ">%s_%d_%f\n", prefix, contig_count++, contig->score);
 			strcat(contigs, buf);
 			strcat(contigs, contig->seq);
 			strcat(contigs, "\n");
@@ -916,6 +919,17 @@ int build_contigs(
 
 			contig->visited_nodes->insert(contig->curr_node->kmer);
 
+			// Count total edges
+			int total_edge_count = 0;
+			struct linked_node* to = contig->curr_node->toNodes;
+
+			while (to != NULL) {
+				total_edge_count = total_edge_count + to->node->frequency;
+				to = to->next;
+			}
+
+			double log10_total_edge_count = log10(total_edge_count);
+
 			// Move current contig to next "to" node.
 			struct linked_node* to_linked_node = contig->curr_node->toNodes;
 			contig->curr_node = to_linked_node->node;
@@ -928,10 +942,13 @@ int build_contigs(
 				struct contig* contig_branch = copy_contig(contig);
 //				fprintf(stderr,"orig size: %d, copy size: %d\n", contig->visited_nodes->size(), contig_branch->visited_nodes->size());
 				contig_branch->curr_node = to_linked_node->node;
+				contig_branch->score = contig_branch->score + log10(contig_branch->curr_node->frequency) - log10_total_edge_count;
 				contigs.push(contig_branch);
 				to_linked_node = to_linked_node->next;
 				paths_from_root++;
 			}
+
+			contig->score = contig->score + log10(contig->curr_node->frequency) - log10_total_edge_count;
 		}
 
 		if (contig_count >= max_contigs) {

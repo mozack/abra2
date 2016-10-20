@@ -623,6 +623,8 @@ public class ReAligner {
 					
 					List<ScoredContig> scoredContigs = ScoredContig.convertAndFilter(contigs);
 					
+					System.err.println("# SCORED CONTIGS: " + scoredContigs.size());
+					
 					// Map contigs to reference
 					for (ScoredContig contig : scoredContigs) {
 						// Filter contigs that match the reference

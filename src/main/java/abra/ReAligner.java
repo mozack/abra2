@@ -621,15 +621,15 @@ public class ReAligner {
 					// TODO: Turn this off by default
 					appendContigs(contigs);
 					
+					List<ScoredContig> scoredContigs = ScoredContig.convertAndFilter(contigs);
+					
 					// Map contigs to reference
-					String[] contigSequences = contigs.split("\n");
-					for (String contig : contigSequences) {
-						// Filter id lines and contigs that match the reference
-						if (!contig.startsWith(">") && (!refSeq.contains(contig))) {
+					for (ScoredContig contig : scoredContigs) {
+						// Filter contigs that match the reference
+						if (!refSeq.contains(contig.getContig())) {
 							
-							SSWAlignerResult sswResult = alignContig(contig, ssw, sswJunctions);
+							SSWAlignerResult sswResult = alignContig(contig.getContig(), ssw, sswJunctions);
 							
-//							SSWAlignerResult sswResult = ssw.align(contig);
 							if (sswResult != null) {
 								// TODO: In multi-region processing, check to ensure identical contigs have identical mappings
 								mappedContigs.put(new SimpleMapper(sswResult.getSequence()), sswResult);

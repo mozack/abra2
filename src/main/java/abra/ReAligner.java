@@ -624,9 +624,9 @@ public class ReAligner {
 						// Filter id lines and contigs that match the reference
 						if (!contig.startsWith(">") && (!refSeq.contains(contig))) {
 							
-							alignContig(contig, ssw, sswJunctions);
+							SSWAlignerResult sswResult = alignContig(contig, ssw, sswJunctions);
 							
-							SSWAlignerResult sswResult = ssw.align(contig);
+//							SSWAlignerResult sswResult = ssw.align(contig);
 							if (sswResult != null) {
 								// TODO: In multi-region processing, check to ensure identical contigs have identical mappings
 								mappedContigs.put(new SimpleMapper(sswResult.getSequence()), sswResult);

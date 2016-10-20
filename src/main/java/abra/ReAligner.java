@@ -529,16 +529,12 @@ public class ReAligner {
 	}
 	
 	private SSWAlignerResult alignContig(String contig, SSWAligner ssw, List<SSWAligner> sswJunctions) {
-		SSWAlignerResult sswResult = ssw.align(contig);
 		SSWAlignerResult bestResult = null;
-		
 		int bestScore = -1;
 		
-		if (sswResult != null) {
-			bestScore = sswResult.getScore();
-			bestResult = sswResult;
-		}
-		
+		// Prioritize junctions over reference sequence.
+		// Allows splice sites to appear in alignments instead of deletions when the splice is assembled.
+		SSWAlignerResult sswResult;
 		for (SSWAligner sswJunc : sswJunctions) {
 			sswResult = sswJunc.align(contig);
 			if (sswResult != null && sswResult.getScore() > bestScore) {
@@ -546,6 +542,13 @@ public class ReAligner {
 				bestResult = sswResult;
 			}
 		}
+		
+		sswResult = ssw.align(contig);
+		if (sswResult != null && sswResult.getScore() > bestScore) {
+			bestScore = sswResult.getScore();
+			bestResult = sswResult;
+		}
+
 		
 		//TODO: Check for tie scores with different final alignment
 		

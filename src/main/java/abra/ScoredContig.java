@@ -7,7 +7,7 @@ import java.util.List;
 public class ScoredContig implements Comparable<ScoredContig> {
 	
 	// TODO: Parameterize and optimize.
-	public static int MAX_CONTIGS = 256;
+	public static int MAX_CONTIGS = 4;
 
 	private double score;
 	private String contig;
@@ -51,6 +51,7 @@ public class ScoredContig implements Comparable<ScoredContig> {
 		}
 		
 		if (contigs.size() > MAX_CONTIGS) {
+			System.err.println("Shrinking eligible contigs from " + contigs.size() + " to " + MAX_CONTIGS);
 			Collections.sort(contigs);
 			// Subset to only the first MAX_CONTIGS
 			contigs = contigs.subList(0, MAX_CONTIGS);

@@ -588,15 +588,15 @@ public class ReAligner {
 			
 			List<SSWAligner> sswJunctions = new ArrayList<SSWAligner>();
 			
-			List<Integer> junctionPoints = new ArrayList<Integer>();
-			
 			for (Feature junction : junctions) {
 				int leftJuncStart = Math.max((int) junction.getStart() - (int) region.getLength() - this.readLength*2, 1);
 				int rightJuncStop = Math.min((int) junction.getEnd() + (int) region.getLength() + this.readLength*2, chromosomeLength-1);
 				
+				// Sequence on left of junction
 				String leftSeq = c2r.getSequence(region.getSeqname(), leftJuncStart, (int) junction.getStart() - leftJuncStart);
 				
-				// Junction stop is exclusive, so add 1 to end
+				// Sequence on right of junction
+				// Junction stop is exclusive, so add 1 to starting position (junction end + 1)
 				String rightSeq = c2r.getSequence(region.getSeqname(), (int) junction.getEnd()+1, rightJuncStop - (int) junction.getEnd());
 				
 				String juncSeq = leftSeq + rightSeq;
@@ -604,7 +604,33 @@ public class ReAligner {
 				// Junction stop is exclusive, so add 1
 				SSWAligner sswJunc = new SSWAligner(juncSeq, region.getSeqname(), leftJuncStart, leftSeq.length(), (int) junction.getLength()+1);
 				sswJunctions.add(sswJunc);
-				junctionPoints.add(leftSeq.length());
+			}
+			
+			List<Pair<Feature, Feature>> junctionPairs = pairJunctions(junctions, this.readLength);
+			for (Pair<Feature, Feature> junctionPair : junctionPairs) {
+				Feature junction1 = junctionPair.getFirst();
+				Feature junction2 = junctionPair.getSecond();
+				
+				int refStart = Math.max((int) junction1.getStart() - (int) region.getLength() - this.readLength*2, 1);
+				
+				// Left of junction1 start (3rd param is length)
+				String leftSeq = c2r.getSequence(region.getSeqname(), refStart, (int) junction1.getStart() - refStart);
+				
+				// Sequence between junction1 stop and junction2 start (should be <= read length)
+				// Junction end is exclusive
+				int midStart = (int) junction1.getEnd()+1;
+				String middleSeq = c2r.getSequence(region.getSeqname(), midStart, (int) junction2.getStart() - midStart);
+				
+				int rightStart = (int) junction2.getEnd()+1;
+				int rightStop = Math.min((int) junction2.getEnd() + (int) region.getLength() + this.readLength*2, chromosomeLength-1);
+				String rightSeq = c2r.getSequence(region.getSeqname(), rightStart, rightStop-rightStart);
+				
+				String juncSeq = leftSeq + middleSeq + rightSeq;
+				List<Integer> junctionPos = Arrays.asList(leftSeq.length(), leftSeq.length() + middleSeq.length());
+				List<Integer> junctionLength = Arrays.asList((int) junction1.getLength()+1, (int) junction2.getLength()+1);
+				
+				SSWAligner sswJunc = new SSWAligner(juncSeq, region.getSeqname(), refStart, junctionPos, junctionLength);
+				sswJunctions.add(sswJunc);
 			}
 			
 			// Assemble contigs
@@ -663,6 +689,21 @@ public class ReAligner {
 		}
 		
 		return mappedContigs;
+	}
+	
+	// Pair up junctions that could be spanned by a single read
+	protected List<Pair<Feature, Feature>> pairJunctions(List<Feature> junctions, int maxDist) {
+		List<Pair<Feature, Feature>> junctionPairs = new ArrayList<Pair<Feature, Feature>>();
+		
+		for (Feature junc1 : junctions) {
+			for (Feature junc2 : junctions) {
+				if (junc1.getEnd() < junc2.getStart() && junc1.getEnd() + maxDist >= junc2.getStart()) {
+					junctionPairs.add(new Pair<Feature, Feature>(junc1, junc2));
+				}
+			}
+		}
+		
+		return junctionPairs;
 	}
 	
 	static List<Feature> getRegions(String regionsBed, int readLength, boolean hasPresetKmers) throws IOException {

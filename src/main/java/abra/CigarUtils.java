@@ -78,12 +78,22 @@ public class CigarUtils {
 					refPos += block.length;
 				}
 			} else {
-				// Do not advance ref pos for insertions
+				// Do not advance ref pos for insertions or introns
 				newBlocks.add(block);
 			}
 		}
 		
 		return cigarStringFromCigarBlocks(newBlocks);
+	}
+	
+	// Assumes input junctions are sorted by coordinate
+	public static String injectSplices(String cigar, List<Integer> junctionPos, List<Integer> junctionLength) {
+		
+		for (int i=0; i<junctionPos.size(); i++) {
+			cigar = injectSplice(cigar, junctionPos.get(i), junctionLength.get(i));
+		}
+		
+		return cigar;
 	}
 
 	private static List<CigarBlock> getCigarBlocks(String cigar) {

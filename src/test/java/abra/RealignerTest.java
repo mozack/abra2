@@ -4,12 +4,15 @@ package abra;
 import static org.testng.Assert.assertEquals;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import htsjdk.samtools.SAMRecord;
 
 import org.testng.Assert;
 import org.testng.annotations.Test;
+
+import abra.ReAligner.Pair;
 
 public class RealignerTest {
 
@@ -45,6 +48,42 @@ public class RealignerTest {
 		validateFeature(features.get(0), 1, 20000);
 		validateFeature(features.get(1), 20100, 20200);
 		validateFeature(features.get(2), 20201, 20300);
+	}
+	
+	@Test (groups = "unit")
+	public void testPairJunctions() {
+		Feature j1 = new Feature("chr8", 27303437, 27308265);
+		Feature j2 = new Feature("chr8", 27308413, 27308559);
+		Feature j3 = new Feature("chr8", 27308596, 27309001);
+		Feature j4 = new Feature("chr8", 27309027, 27310630);
+		Feature j5 = new Feature("chr8", 27309227, 27314630);
+
+		List<Feature> junctions = Arrays.asList(j1, j2, j3, j4, j5);
+		
+		ReAligner r = new ReAligner();
+		List<Pair<Feature, Feature>> junctionPairs = r.pairJunctions(junctions, 50);
+		assertEquals(junctionPairs.size(), 2);
+		
+		// 1st pair
+		assertEquals(j2, junctionPairs.get(0).getFirst());
+		assertEquals(j3, junctionPairs.get(0).getSecond());
+		
+		// 2nd pair
+		assertEquals(j3, junctionPairs.get(1).getFirst());
+		assertEquals(j4, junctionPairs.get(1).getSecond());
+	}
+	
+	@Test (groups = "unit")
+	public void testPairJunctions_cannotAppearInSameContig() {
+		Feature j1 = new Feature("chr1", 755395, 755674);
+		Feature j2 = new Feature("chr1", 755430, 755674);
+		Feature j3 = new Feature("chr1", 755535, 755674);
+		
+		List<Feature> junctions = Arrays.asList(j1, j2, j3);
+		
+		ReAligner r = new ReAligner();
+		List<Pair<Feature, Feature>> junctionPairs = r.pairJunctions(junctions, 5000);
+		assertEquals(junctionPairs.size(), 0);
 	}
 	
 	/*

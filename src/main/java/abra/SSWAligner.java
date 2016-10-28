@@ -1,5 +1,8 @@
 package abra;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import ssw.Aligner;
 import ssw.Alignment;
 
@@ -22,8 +25,9 @@ public class SSWAligner {
 	private String refChr;
 	private int refStart;
 	private String ref;
-	private int junctionPos;
-	private int junctionLength;
+	
+	private List<Integer> junctionPositions = new ArrayList<Integer>();
+	private List<Integer> junctionLengths = new ArrayList<Integer>();
 	
 	private static int [][] score;
 	static {
@@ -51,8 +55,16 @@ public class SSWAligner {
 		this.ref = ref;
 		this.refChr = refChr;
 		this.refStart = refStart;
-		this.junctionPos = junctionPos;
-		this.junctionLength = junctionLength;
+		this.junctionPositions.add(junctionPos);
+		this.junctionLengths.add(junctionLength);
+	}
+	
+	public SSWAligner(String ref, String refChr, int refStart, List<Integer> junctionPositions, List<Integer> junctionLengths) {
+		this.ref = ref;
+		this.refChr = refChr;
+		this.refStart = refStart;
+		this.junctionPositions = junctionPositions;
+		this.junctionLengths = junctionLengths;
 	}
 	
 	public SSWAlignerResult align(String seq) {
@@ -90,9 +102,10 @@ public class SSWAligner {
 				
 				System.err.println("padded seq: " + paddedSeq);
 				
-				if (junctionPos > 0) {
+				if (junctionPositions.size() > 0) {
 					String oldCigar = cigar;
-					cigar = CigarUtils.injectSplice(cigar, junctionPos, junctionLength);
+//					cigar = CigarUtils.injectSplice(cigar, junctionPos, junctionLength);
+					cigar = CigarUtils.injectSplices(cigar, junctionPositions, junctionLengths);
 					System.err.println("Spliced Cigar.  old: " + oldCigar + ", new: " + cigar);
 				}
 				

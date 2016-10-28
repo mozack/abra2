@@ -2,6 +2,10 @@ package abra;
 
 import static org.testng.Assert.assertEquals;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -167,5 +171,16 @@ public class CigarUtilsTest {
 		int junctionLength = 2000;
 		String newCigar = CigarUtils.injectSplice(cigar, junctionPos, junctionLength);
 		assertEquals(newCigar, "90M5I5D5M2000N200M");
+	}
+	
+	@Test (groups = "unit")
+	public void testInjectSplices() {
+		String cigar = "90M5I5D205M";
+
+		List<Integer> junctionPos = Arrays.asList(100, 125);
+		List<Integer> junctionLength = Arrays.asList(2000, 50000);
+		String newCigar = CigarUtils.injectSplices(cigar, junctionPos, junctionLength);
+		assertEquals(newCigar, "90M5I5D5M2000N25M50000N175M");
+
 	}
 }

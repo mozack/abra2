@@ -764,7 +764,7 @@ public class ReAligner {
 			junctionLists = Arrays.asList((List<Feature>) new ArrayList<Feature>(), (List<Feature>) new ArrayList<Feature>());
 			// Return 2 lists, one with the junction and one without.
 			junctionLists.get(1).add(junctions.get(0));
-		} else {
+		} else if (junctions.size() > 1) {
 			
 			Feature currentJunction = junctions.get(0);
 			List<List<Feature>> subJuncs = combineAllJunctions(junctions.subList(1, junctions.size()));

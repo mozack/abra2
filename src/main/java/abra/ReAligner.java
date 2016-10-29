@@ -588,6 +588,44 @@ public class ReAligner {
 			
 			List<SSWAligner> sswJunctions = new ArrayList<SSWAligner>();
 			
+			List<List<Feature>> junctionPermutations = combineJunctions(junctions);
+			for (List<Feature> junctionPerm : junctionPermutations) {
+				// List of junction positions within localized reference
+				List<Integer> junctionPos = new ArrayList<Integer>();
+				// List of junction lengths within localized reference
+				List<Integer> junctionLengths = new ArrayList<Integer>();
+				
+				StringBuffer juncSeq = new StringBuffer();
+				
+				int refStart = Math.max((int) junctionPerm.get(0).getStart() - (int) region.getLength() - this.readLength*2, 1);
+				String leftSeq = c2r.getSequence(region.getSeqname(), refStart, (int) junctionPerm.get(0).getStart() - refStart);
+				juncSeq.append(leftSeq);
+				junctionPos.add(leftSeq.length());
+				junctionLengths.add((int) junctionPerm.get(0).getLength());
+				
+				juncSeq.append(leftSeq);
+				for (int i=1; i<junctionPerm.size(); i++) {
+					int midStart = (int) junctionPerm.get(i-1).getEnd()+1;
+					String middleSeq = c2r.getSequence(region.getSeqname(), midStart, (int) junctionPerm.get(i).getStart() - midStart);
+					juncSeq.append(middleSeq);
+					junctionPos.add(juncSeq.length());
+					junctionLengths.add((int) junctionPerm.get(i).getLength());
+				}
+				
+				// Sequence on right of last junction
+				// Junction stop is exclusive, so add 1 to starting position (junction end + 1)
+				Feature lastJunction = junctionPerm.get(junctionPerm.size()-1);
+				int rightStart = (int) lastJunction.getEnd()+1;
+				int rightStop = Math.min((int) lastJunction.getEnd() + (int) region.getLength() + this.readLength*2, chromosomeLength-1);
+				String rightSeq = c2r.getSequence(region.getSeqname(), rightStart, rightStop-rightStart);
+				juncSeq.append(rightSeq);
+				// Junction pos and length should already be added
+				
+				SSWAligner sswJunc = new SSWAligner(juncSeq.toString(), region.getSeqname(), refStart, junctionPos, junctionLengths);
+				sswJunctions.add(sswJunc);
+			}
+			
+			/*
 			for (Feature junction : junctions) {
 				int leftJuncStart = Math.max((int) junction.getStart() - (int) region.getLength() - this.readLength*2, 1);
 				int rightJuncStop = Math.min((int) junction.getEnd() + (int) region.getLength() + this.readLength*2, chromosomeLength-1);
@@ -632,6 +670,7 @@ public class ReAligner {
 				SSWAligner sswJunc = new SSWAligner(juncSeq, region.getSeqname(), refStart, junctionPos, junctionLength);
 				sswJunctions.add(sswJunc);
 			}
+			*/
 			
 			// Assemble contigs
 			if (this.isSkipAssembly || region.getKmer() > this.readLength-15) {
@@ -689,6 +728,60 @@ public class ReAligner {
 		}
 		
 		return mappedContigs;
+	}
+	
+	// Assuming all inputs on same chromosome
+	protected boolean isJunctionCombinationValid(List<Feature> junctions) {
+		for (int i=0; i<junctions.size()-1; i++) {
+			if (junctions.get(i).getEnd() >= junctions.get(i+1).getStart()) {
+				return false;
+			}
+		}
+		
+		return junctions.size() > 0;
+	}
+	
+	protected List<List<Feature>> combineJunctions(List<Feature> junctions) {
+		List<List<Feature>> combinedJunctions = new ArrayList<List<Feature>>();
+		
+		// Get all possible permutations of junctions regardless of validity
+		List<List<Feature>> junctionLists = combineAllJunctions(junctions);
+		
+		for (List<Feature> currJunctions : junctionLists) {
+			if (isJunctionCombinationValid(currJunctions)) {
+				combinedJunctions.add(currJunctions);
+			}
+		}
+		
+		return combinedJunctions;
+	}
+	
+	// Produce all possible junction permutations from the input list.
+	private List<List<Feature>> combineAllJunctions(List<Feature> junctions) {
+		List<List<Feature>> junctionLists = new ArrayList<List<Feature>>();
+		
+		if (junctions.size() == 1) {
+			junctionLists = Arrays.asList((List<Feature>) new ArrayList<Feature>(), (List<Feature>) new ArrayList<Feature>());
+			// Return 2 lists, one with the junction and one without.
+			junctionLists.get(1).add(junctions.get(0));
+		} else {
+			
+			Feature currentJunction = junctions.get(0);
+			List<List<Feature>> subJuncs = combineAllJunctions(junctions.subList(1, junctions.size()));
+			// For each returned list, create a new list with and without the current junction
+			for (List<Feature> subJuncList : subJuncs) {
+				// Pass along sub list without current junction
+				junctionLists.add(subJuncList);
+				List<Feature> newList = new ArrayList<Feature>();
+				// Add new sublist with current junction
+				newList.add(currentJunction);
+				newList.addAll(subJuncList);
+				
+				junctionLists.add(newList);
+			}
+		}
+		
+		return junctionLists;
 	}
 	
 	// Pair up junctions that could be spanned by a single read

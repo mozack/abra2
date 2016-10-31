@@ -174,6 +174,18 @@ public class SAMRecordUtils {
 				
 		return distance;
 	}
+	
+	public static int getNumSplices(SAMRecord read) {
+		int splices = 0;
+		
+		for (CigarElement element : read.getCigar().getCigarElements()) {
+			if (element.getOperator() == CigarOperator.N) {
+				splices += 1;
+			}
+		}
+		
+		return splices;
+	}
 		
 	/**
 	 *  Returns total length of deletions and insertions for the input read. 

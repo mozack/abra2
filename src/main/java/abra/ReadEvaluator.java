@@ -83,7 +83,7 @@ public class ReadEvaluator {
 			}
 			
 			if (samRecord != null) {
-				System.err.println("READ_ALIGNMENT: pos: " + readRefPos + ", cigar: " + cigar);
+				System.err.println("READ_ALIGNMENT: " + samRecord.getReadName() + " pos: " + readRefPos + ", cigar: " + cigar);
 			}
 			
 			Alignment readAlignment = new Alignment(contigAlignment.getChromosome(), readRefPos, cigar, alignmentHit.mapResult.getOrientation(), bestMismatches, contigAlignment.getGenomicPos(), contigAlignment.getCigar());

@@ -165,6 +165,12 @@ public class ReAligner {
 		System.err.println("Done.");
 	}
 	
+	void debug(SAMRecord read, String msg) {
+		if (read.getReadName().equals("UNC9-SN296:440:C5F7CACXX:5:2108:19995:43952")) {
+			System.err.println(msg);
+		}
+	}
+	
 	void processChromosome(String chromosome) throws Exception {
 		
 		System.err.println("Processing chromosome: " + chromosome);
@@ -223,6 +229,7 @@ public class ReAligner {
 				regionsToProcess.add(regionIdx);
 				
 				// Cache read for processing at end of region
+				debug(record.getSamRecord(), "Adding read.");
 				currReads.get(record.getSampleIdx()).add(record);
 			}
 			
@@ -242,10 +249,12 @@ public class ReAligner {
 			}
 			
 			
+			// TODO: Consider dropping this...  Reads are out of scope when we've moved beyond them via standard processing?
 			if (regionIdx < 0) {
 				
 				// Process out of region read and output if ready.
 				List<SAMRecordWrapper> outOfRegionReadsForSample = outOfRegionReads.get(record.getSampleIdx());
+				debug(record.getSamRecord(), "Out of Region!!!");
 				outOfRegionReadsForSample.add(record);
 				
 				if (outOfRegionReads.get(record.getSampleIdx()).size() > 2500) {
@@ -276,8 +285,11 @@ public class ReAligner {
 					while (iter.hasNext()) {
 						SAMRecordWrapper read = iter.next();
 						if (record.getSamRecord().getAlignmentStart() - read.getSamRecord().getAlignmentStart() > MAX_READ_RANGE) {
+							debug(record.getSamRecord(), "Ready to remap");
 							sampleReadsToRemap.add(read);
 							iter.remove();
+						} else {
+							debug(record.getSamRecord(), "Not ready to remap");
 						}
 					}					
 				}
@@ -423,7 +435,6 @@ public class ReAligner {
 	
 	private void remapRead(ReadEvaluator readEvaluator, SAMRecord read, int origEditDist) {
 		
-		System.err.println("Read edit dist: " + read.getReadName() + " : " + origEditDist);
 		
 		Alignment alignment = readEvaluator.getImprovedAlignment(origEditDist, read.getReadString(), read);
 		if (alignment != null) {
@@ -496,6 +507,8 @@ public class ReAligner {
 				// TODO: Use NM tag if available (need to handle soft clipping though!)
 				int origEditDist = SAMRecordUtils.getEditDistance(read, c2r);
 //				int origEditDist = c2r.numMismatches(read);
+				
+				System.err.println("Read edit dist: " + read.getReadName() + " : " + origEditDist);
 				
 				if (origEditDist > 0) {
 					remapRead(readEvaluator, read, origEditDist);

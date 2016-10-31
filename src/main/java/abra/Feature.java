@@ -114,9 +114,12 @@ public class Feature {
 		return -1;
 	}
 	
-	public boolean containsEitherEnd(Feature feature) {
-		return (feature.getStart() >= this.start && feature.getStart() <= this.end) ||
-			   (feature.getEnd() >= this.start && feature.getEnd() <= this.end);
+	public boolean containsEitherEnd(Feature feature, int fudge) {
+		long fudge_start = Math.max(1, this.start-fudge);
+		long fudge_end = this.end + fudge;
+		
+		return (feature.getStart() >= fudge_start && feature.getStart() <= fudge_end) ||
+			   (feature.getEnd() >= fudge_start && feature.getEnd() <= fudge_end);
 	}
 
 	@Override

@@ -422,6 +422,9 @@ public class ReAligner {
 	}
 	
 	private void remapRead(ReadEvaluator readEvaluator, SAMRecord read, int origEditDist) {
+		
+		System.err.println("Read edit dist: " + read.getReadName() + " : " + origEditDist);
+		
 		Alignment alignment = readEvaluator.getImprovedAlignment(origEditDist, read.getReadString(), read);
 		if (alignment != null) {
 			
@@ -431,7 +434,7 @@ public class ReAligner {
 			String ya = alignment.chromosome + ":" + alignment.contigPos + ":" + alignment.contigCigar;
 			read.setAttribute("YA", ya);
 			
-			// If the read has actually moved, updated it
+			// If the read has actually moved, update it
 			if (read.getReadUnmappedFlag() || read.getAlignmentStart() != readPos || !read.getCigarString().equals(alignment.cigar)) {
 
 				// Original alignment info

@@ -82,7 +82,7 @@ public class ReadEvaluator {
 				cigar = cigarBuf.toString();
 			}
 			
-			if (samRecord != null && samRecord.getReadName().equals("D7T4KXP1:400:C5F94ACXX:7:2215:14831:2340")) {
+			if (samRecord != null) {
 				System.err.println("READ_ALIGNMENT: pos: " + readRefPos + ", cigar: " + cigar);
 			}
 			

@@ -45,9 +45,9 @@ public class ScoredContig implements Comparable<ScoredContig> {
 			if (str.startsWith(">")) {
 				String[] fields = str.split("_");
 				score = Double.parseDouble(fields[4]);
+			} else {
+				contigs.add(new ScoredContig(score, str));
 			}
-			
-			contigs.add(new ScoredContig(score, str));
 		}
 		
 		if (contigs.size() > MAX_CONTIGS) {

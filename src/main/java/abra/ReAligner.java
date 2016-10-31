@@ -167,7 +167,7 @@ public class ReAligner {
 	
 	void debug(SAMRecord read, String msg) {
 		if (read.getReadName().equals("UNC9-SN296:440:C5F7CACXX:5:2108:19995:43952")) {
-			System.err.println(msg);
+			System.err.println("UNC9-SN296:440:C5F7CACXX:5:2108:19995:43952 - " + msg);
 		}
 	}
 	

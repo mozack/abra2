@@ -90,7 +90,8 @@ public class SSWAligner {
 			
 			// Allow lessor of 10 bases or 10% of contig to not map on either end
 			int MAX_CLIP_BASES = Math.min(10, seq.length() / 10);
-						
+			System.err.println("MAX_CLIP: " + MAX_CLIP_BASES);
+			
 			// Clip contig and remap if needed.
 			// TODO: Trim sequence instead of incurring overhead of remapping
 			if ((aln.read_begin1 > 0 || aln.read_end1 < seq.length()-1) &&
@@ -99,6 +100,8 @@ public class SSWAligner {
 				seq = seq.substring(aln.read_begin1, aln.read_end1+1);
 				aln = Aligner.align(seq.getBytes(), ref.getBytes(), score, GAP_OPEN_PENALTY, GAP_EXTEND_PENALTY, true);
 				System.err.println("Trimmed Alignment [" + seq + "] :\t" + aln);
+			} else {
+				System.err.println("Skipping trim...");
 			}
 						
 			// Requiring end to end alignment here...

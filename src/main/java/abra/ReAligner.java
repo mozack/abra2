@@ -204,7 +204,7 @@ public class ReAligner {
 		for (Feature region : chromosomeRegions) {
 			regionJunctions.put(region, new ArrayList<Feature>());
 			for (Feature junction : chromosomeJunctions) {
-				if (region.containsEitherEnd(junction)) {
+				if (region.containsEitherEnd(junction, MAX_REGION_LENGTH)) {
 					regionJunctions.get(region).add(junction);
 				}
 			}

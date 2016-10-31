@@ -551,7 +551,9 @@ public class ReAligner {
 
 
 		if (bestResult != null) {
-			System.err.println("BEST_SSW: " + bestResult.getGenomicPos() + " : " + bestResult.getCigar() + " : " + bestResult.getRefPos() + " : " + bestResult.getScore());
+			System.err.println("BEST_SSW: " + bestResult.getGenomicPos() + " : " + bestResult.getCigar() + " : " + bestResult.getRefPos() + " : " + bestResult.getScore() + " : " + bestResult.getSequence());
+		} else {
+			System.err.println("NO_SSW: " + contig);
 		}
 		
 		//TODO: Check for tie scores with different final alignment

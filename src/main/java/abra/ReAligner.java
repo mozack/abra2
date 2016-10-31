@@ -601,7 +601,7 @@ public class ReAligner {
 				String leftSeq = c2r.getSequence(region.getSeqname(), refStart, (int) junctionPerm.get(0).getStart() - refStart);
 				juncSeq.append(leftSeq);
 				junctionPos.add(leftSeq.length());
-				junctionLengths.add((int) junctionPerm.get(0).getLength());
+				junctionLengths.add((int) junctionPerm.get(0).getLength()+1);
 				
 				juncSeq.append(leftSeq);
 				for (int i=1; i<junctionPerm.size(); i++) {
@@ -609,7 +609,7 @@ public class ReAligner {
 					String middleSeq = c2r.getSequence(region.getSeqname(), midStart, (int) junctionPerm.get(i).getStart() - midStart);
 					juncSeq.append(middleSeq);
 					junctionPos.add(juncSeq.length());
-					junctionLengths.add((int) junctionPerm.get(i).getLength());
+					junctionLengths.add((int) junctionPerm.get(i).getLength()+1);
 				}
 				
 				// Sequence on right of last junction

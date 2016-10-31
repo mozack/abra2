@@ -73,7 +73,15 @@ public class SSWAligner {
 		
 		Alignment aln = Aligner.align(seq.getBytes(), ref.getBytes(), score, GAP_OPEN_PENALTY, GAP_EXTEND_PENALTY, true);
 		
+		StringBuffer juncStr = new StringBuffer();
+		
+		for (int i=0; i<junctionPositions.size(); i++) {
+			juncStr.append(junctionPositions.get(i) + ":" + junctionLengths.get(i) + ",");
+		}
+		
 		System.err.println("Alignment [" +  seq + "] :\t" + aln);
+		System.err.println("Ref: [" + this.ref + "]" + " juncs: [" + juncStr.toString() + "]");
+		
 		
 		// TODO: Optimize score requirements..
 		if (aln != null && aln.score1 >= MIN_ALIGNMENT_SCORE && aln.score1 > aln.score2) {

@@ -603,7 +603,6 @@ public class ReAligner {
 				junctionPos.add(leftSeq.length());
 				junctionLengths.add((int) junctionPerm.get(0).getLength()+1);
 				
-				juncSeq.append(leftSeq);
 				for (int i=1; i<junctionPerm.size(); i++) {
 					int midStart = (int) junctionPerm.get(i-1).getEnd()+1;
 					String middleSeq = c2r.getSequence(region.getSeqname(), midStart, (int) junctionPerm.get(i).getStart() - midStart);

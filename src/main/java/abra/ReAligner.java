@@ -550,6 +550,8 @@ public class ReAligner {
 		}
 
 		
+		System.err.println("BEST_SSW: " + bestResult.getGenomicPos() + " : " + bestResult.getCigar() + " : " + bestResult.getRefPos() + " : " + bestResult.getScore());
+		
 		//TODO: Check for tie scores with different final alignment
 		
 		return bestResult;

@@ -510,7 +510,7 @@ public class ReAligner {
 				
 				System.err.println("Read edit dist: " + read.getReadName() + " : " + origEditDist);
 				
-				if (origEditDist > 0) {
+				if (origEditDist > 0 || SAMRecordUtils.getNumSplices(read) > 0) {
 					remapRead(readEvaluator, read, origEditDist);
 				}
 			}

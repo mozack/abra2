@@ -48,7 +48,9 @@ public class SSWAligner {
 	}
 	
 	public SSWAligner(String ref, String refChr, int refStart) {
-		this(ref, refChr, refStart, -1, -1);
+		this.ref = ref;
+		this.refChr = refChr;
+		this.refStart = refStart;
 	}
 	
 	public SSWAligner(String ref, String refChr, int refStart, int junctionPos, int junctionLength) {

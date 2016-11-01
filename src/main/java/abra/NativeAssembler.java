@@ -101,7 +101,7 @@ public class NativeAssembler {
 		boolean isCandidate = false;
 		
 		// Increment candidate count for indels
-		if (read.getCigarString().contains("I") || read.getCigarString().contains("D")) {
+		if (read.getCigarString().contains("I") || read.getCigarString().contains("D") || read.getCigarString().contains("N")) {
 			isCandidate = true;
 		}
 

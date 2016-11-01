@@ -83,7 +83,8 @@ public class ReadEvaluator {
 			}
 			
 			if (samRecord != null) {
-				System.err.println("READ_ALIGNMENT: " + samRecord.getReadName() + " pos: " + readRefPos + ", cigar: " + cigar);
+				System.err.println("READ_ALIGNMENT: " + samRecord.getReadName() + " pos: " + readRefPos + ", cigar: " + cigar + ", contig: " + contigAlignment.getGenomicPos() + ":" 
+						+ contigAlignment.getCigar() + ":" + contigAlignment.getSequence());
 			}
 			
 			// TODO: Check for synonymous alignments with deletions equivalent to introns.  Favor the intron cases.

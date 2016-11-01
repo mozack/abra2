@@ -97,6 +97,7 @@ public class NativeAssembler {
 		return (int) (readLengthsForAllRegions(regions) * (double) averageDepthCeiling);
 	}
 	
+	//TODO: Consider always assembling regions that contain a junction as specified by input file.
 	private boolean isAssemblyTriggerCandidate(SAMRecord read, CompareToReference2 c2r) {
 		boolean isCandidate = false;
 		

@@ -183,4 +183,30 @@ public class CigarUtilsTest {
 		assertEquals(newCigar, "90M5I5D5M2000N25M50000N175M");
 
 	}
+	
+	@Test (groups = "unit")
+	public void testCompare() {
+		int choice;
+		choice = CigarUtils.testEquivalenceAndSelectIntronPreferred("100M", "50M10D50M");
+		assertEquals(0, choice);
+		
+		choice = CigarUtils.testEquivalenceAndSelectIntronPreferred("50M1000N50M", "50M1000N50M");
+		assertEquals(1, choice);
+		
+		choice = CigarUtils.testEquivalenceAndSelectIntronPreferred("50M1000D50M", "50M1000N50M");
+		assertEquals(2, choice);
+
+		choice = CigarUtils.testEquivalenceAndSelectIntronPreferred("50M1001D50M", "50M1000N50M");
+		assertEquals(0, choice);
+		
+		choice = CigarUtils.testEquivalenceAndSelectIntronPreferred("51M1000D50M", "50M1000N50M");
+		assertEquals(0, choice);
+		
+		choice = CigarUtils.testEquivalenceAndSelectIntronPreferred("100M1000N100M2000D100M3000N", "100M1000N100M2000N100M3000N");;
+		assertEquals(2, choice);
+
+		choice = CigarUtils.testEquivalenceAndSelectIntronPreferred("50M10I50M", "50M10D50M");
+		assertEquals(0, choice);
+
+	}
 }

@@ -86,8 +86,34 @@ public class ReadEvaluator {
 				System.err.println("READ_ALIGNMENT: " + samRecord.getReadName() + " pos: " + readRefPos + ", cigar: " + cigar);
 			}
 			
+			// TODO: Check for synonymous alignments with deletions equivalent to introns.  Favor the intron cases.
 			Alignment readAlignment = new Alignment(contigAlignment.getChromosome(), readRefPos, cigar, alignmentHit.mapResult.getOrientation(), bestMismatches, contigAlignment.getGenomicPos(), contigAlignment.getCigar());
-			alignments.add(readAlignment);
+			
+			if (alignments.size() == 1) {
+				Alignment alignment2 = alignments.iterator().next();
+				
+				int choice = CigarUtils.testEquivalenceAndSelectIntronPreferred(readAlignment.cigar, alignment2.cigar);
+				
+				if (choice == 0) {
+					// Non-equivalent contigs means we have ambiguous alignments.  Break and return null;
+					alignments.clear();
+					break;
+				}
+				
+				// Choose the first alignment
+				if (choice == 1) {
+					alignments.clear();
+					alignments.add(readAlignment);
+				}
+				
+				// Second alignment is already in the Set.
+				
+			} else if (alignments.size() == 0) {
+				alignments.add(readAlignment);
+			} else {
+				alignments.clear();
+				break;
+			}
 		}
 		
 		// If there is more than 1 distinct alignment, we have an ambiguous result which will not be used.

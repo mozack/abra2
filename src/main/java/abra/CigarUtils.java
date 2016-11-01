@@ -3,6 +3,8 @@ package abra;
 import java.util.ArrayList;
 import java.util.List;
 
+import abra.ReadEvaluator.Alignment;
+
 
 public class CigarUtils {
 	
@@ -95,7 +97,47 @@ public class CigarUtils {
 		
 		return cigar;
 	}
-
+	
+	// Return 0 if cigars are not equivalent (treating deletions the same as junctions)
+	// Return 1 if cigar1 has more junctions
+	// Return 2 if cigar2 has more junctions
+	public static int testEquivalenceAndSelectIntronPreferred(String cigar1, String cigar2) {
+		
+		// Cigars are equal, just pick the first one.
+		if (cigar1.equals(cigar2)) {
+			return 1;
+		}
+		
+		// Cigars are different, select neither
+		if (cigar1.length() != cigar2.length()) {
+			return 0;
+		}
+		
+		int cigar1Introns = 0;
+		int cigar2Introns = 0;
+		
+		for (int i=0; i<cigar1.length(); i++) {
+			char ch1 = cigar1.charAt(i);
+			char ch2 = cigar2.charAt(i);
+			if (ch1 != ch2) {
+				if ((ch1 != 'N' && ch1 != 'D') ||
+					(ch2 != 'N' && ch2 != 'D')) {
+					// Non-equivalent cigars
+					return 0;
+				} else {
+					if (ch1 == 'N') {
+						cigar1Introns += 1;
+					}
+					if (ch2 == 'N') {
+						cigar2Introns += 1;
+					}
+				}
+			}
+		}
+		
+		return cigar1Introns >= cigar2Introns ? 1 : 2;
+	}
+	
 	private static List<CigarBlock> getCigarBlocks(String cigar) {
 		
 		List<CigarBlock> cigarBlocks = new ArrayList<CigarBlock>();

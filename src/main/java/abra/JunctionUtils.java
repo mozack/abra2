@@ -81,7 +81,7 @@ public class JunctionUtils {
 			for (int i=0; i<readLength; i++) {
 				int idx = (int) junction.getEnd() + i;
 				if (chromosomeJunctionsByStart.containsKey(idx)) {
-					toAdd.add(chromosomeJunctionsByEnd.get(idx));
+					toAdd.add(chromosomeJunctionsByStart.get(idx));
 				}
 			}
 		}

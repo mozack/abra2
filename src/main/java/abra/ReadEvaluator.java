@@ -49,7 +49,7 @@ public class ReadEvaluator {
 				for (SimpleMapper mapper : regionContigs.keySet()) {
 					SimpleMapperResult mapResult = mapper.map(read);
 					
-					if (samRecord != null && samRecord.getReadName().equals("UNC9-SN296:440:C5F7CACXX:5:2108:19995:43952")) {
+					if (samRecord != null && samRecord.getReadName().equals("UNC9-SN296:440:C5F7CACXX:4:1214:19527:4695")) {
 						System.err.println("MAP_RESULT, pos: " + mapResult.getPos() + ", mismatches: " + mapResult.getMismatches() + ", contig: " + mapper);
 					}
 					

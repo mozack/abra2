@@ -23,14 +23,14 @@ public class JunctionUtils {
 		// key = region, value = junction list
 		Map<Feature, List<Feature>> regionJunctions = new HashMap<Feature, List<Feature>>();
 		
-		Map<Integer, Feature> chromosomeJunctionsByStart = new HashMap<Integer, Feature>();
+		Map<Integer, List<Feature>> chromosomeJunctionsByStart = new HashMap<Integer, List<Feature>>();
 		for (Feature junction : chromosomeJunctions) {
-			chromosomeJunctionsByStart.put((int) junction.getStart(), junction);
+			addToChromosomePositionMap(junction, (int) junction.getStart(), chromosomeJunctionsByStart);
 		}
 
-		Map<Integer, Feature> chromosomeJunctionsByEnd = new HashMap<Integer, Feature>();
+		Map<Integer, List<Feature>> chromosomeJunctionsByEnd = new HashMap<Integer, List<Feature>>();
 		for (Feature junction : chromosomeJunctions) {
-			chromosomeJunctionsByEnd.put((int) junction.getEnd(), junction);
+			addToChromosomePositionMap(junction, (int) junction.getEnd(), chromosomeJunctionsByStart);
 		}
 		
 		for (Feature region : chromosomeRegions) {
@@ -40,11 +40,11 @@ public class JunctionUtils {
 			
 			for (int pos=(int) region.getStart()-maxRegionLength; pos<region.getEnd()+maxRegionLength; pos++) {
 				if (chromosomeJunctionsByStart.containsKey(pos)) {
-					localJunctions.add(chromosomeJunctionsByStart.get(pos));
+					localJunctions.addAll(chromosomeJunctionsByStart.get(pos));
 				}
 				
 				if (chromosomeJunctionsByEnd.containsKey(pos)) {
-					localJunctions.add(chromosomeJunctionsByEnd.get(pos));
+					localJunctions.addAll(chromosomeJunctionsByEnd.get(pos));
 				}
 			}
 			
@@ -62,10 +62,18 @@ public class JunctionUtils {
 		
 		return regionJunctions;
 	}
+	
+	private static void addToChromosomePositionMap(Feature junction, int position, Map<Integer, List<Feature>> chromosomeJunctionsByPosition) {
+		if (!chromosomeJunctionsByPosition.containsKey(position)) {
+			chromosomeJunctionsByPosition.put(position, new ArrayList<Feature>());
+		}
+		
+		chromosomeJunctionsByPosition.get(position).add(junction);
+	}
 
 	// Given the set of current junctions, add any other junctions that may be within a read length distance
-	private static void addNeighboringJunctions(Set<Feature> currJunctions, Map<Integer, Feature> chromosomeJunctionsByStart,
-			Map<Integer, Feature> chromosomeJunctionsByEnd, int readLength) {
+	private static void addNeighboringJunctions(Set<Feature> currJunctions, Map<Integer, List<Feature>> chromosomeJunctionsByStart,
+			Map<Integer, List<Feature>> chromosomeJunctionsByEnd, int readLength) {
 		List<Feature> toAdd = new ArrayList<Feature>();
 		
 		for (Feature junction : currJunctions) {
@@ -73,7 +81,7 @@ public class JunctionUtils {
 			for (int i=0; i<readLength; i++) {
 				int idx = (int) junction.getStart() - i;
 				if (chromosomeJunctionsByEnd.containsKey(idx)) {
-					toAdd.add(chromosomeJunctionsByEnd.get(idx));
+					toAdd.addAll(chromosomeJunctionsByEnd.get(idx));
 				}
 			}
 			
@@ -81,7 +89,7 @@ public class JunctionUtils {
 			for (int i=0; i<readLength; i++) {
 				int idx = (int) junction.getEnd() + i;
 				if (chromosomeJunctionsByStart.containsKey(idx)) {
-					toAdd.add(chromosomeJunctionsByStart.get(idx));
+					toAdd.addAll(chromosomeJunctionsByStart.get(idx));
 				}
 			}
 		}

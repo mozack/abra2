@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -171,6 +172,8 @@ public class ReAligner {
 		}
 	}
 	
+	
+	
 	void processChromosome(String chromosome) throws Exception {
 		
 		System.err.println("Processing chromosome: " + chromosome);
@@ -204,17 +207,17 @@ public class ReAligner {
 			}
 		}
 		
-		// TODO: Brute force matching of regions / junctions
-		// TODO: Match up more efficiently
-		Map<Feature, List<Feature>> regionJunctions = new HashMap<Feature, List<Feature>>();
-		for (Feature region : chromosomeRegions) {
-			regionJunctions.put(region, new ArrayList<Feature>());
-			for (Feature junction : chromosomeJunctions) {
-				if (region.containsEitherEnd(junction, MAX_REGION_LENGTH)) {
-					regionJunctions.get(region).add(junction);
-				}
-			}
-		}
+//		Map<Feature, List<Feature>> regionJunctions = new HashMap<Feature, List<Feature>>();
+//		for (Feature region : chromosomeRegions) {
+//			regionJunctions.put(region, new ArrayList<Feature>());
+//			for (Feature junction : chromosomeJunctions) {
+//				if (region.containsEitherEnd(junction, MAX_REGION_LENGTH)) {
+//					regionJunctions.get(region).add(junction);
+//				}
+//			}
+//		}
+		
+		Map<Feature, List<Feature>> regionJunctions = JunctionUtils.getRegionJunctions(chromosomeRegions, chromosomeJunctions, readLength, MAX_REGION_LENGTH);
 		
 		Set<Integer> regionsToProcess = new TreeSet<Integer>();
 	

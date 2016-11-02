@@ -453,7 +453,7 @@ public class ReAligner {
 			}
 			
 			// If the read has actually moved to an improved alignment, update
-			if (origEditDist < alignment.numMismatches && (read.getReadUnmappedFlag() || read.getAlignmentStart() != readPos || !read.getCigarString().equals(alignment.cigar))) {
+			if (origEditDist > alignment.numMismatches && (read.getReadUnmappedFlag() || read.getAlignmentStart() != readPos || !read.getCigarString().equals(alignment.cigar))) {
 				
 				read.setAttribute("YA", ya);
 

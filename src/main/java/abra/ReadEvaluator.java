@@ -38,7 +38,7 @@ public class ReadEvaluator {
 		
 		List<AlignmentHit> alignmentHits = new ArrayList<AlignmentHit>();
 		
-		int bestMismatches = origEditDist;
+		int bestMismatches = read.length()+1;
 		
 		// Map read to all contigs, caching the hits with the smallest number of mismatches
 		for (Feature region : mappedContigs.keySet()) {

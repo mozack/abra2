@@ -74,7 +74,7 @@ public class ReverseComplementor {
     	
 //    	String rcStr = rc.reverseComplement("AATGATACGGCGACCACC");
 //    	String rcStr = rc.reverseComplement("AATGATACGGCGACCACCGAGATCTAC");
-    	String rcStr = rc.reverseComplement("TGTGCGACAGTGGTCGAGGGATGTGATGTTTCGGGGAGTTTCGAAAACATATTTGACTCCTGG");
+    	String rcStr = rc.reverseComplement("GGCTCCCAGACAGGACAGCCATCATCACAAAAGGAGATATCAAGAGGA");
     	
     	
 //    	AATGATACGGCGACCACCGAGATCTACACTCTTTCCCTACACGACGCTCTTCCGATCT

@@ -446,10 +446,16 @@ public class ReAligner {
 			
 			// Set contig alignment info for all reads that map to contigs (even if read is unchanged)
 			String ya = alignment.chromosome + ":" + alignment.contigPos + ":" + alignment.contigCigar;
-			read.setAttribute("YA", ya);
 			
-			// If the read has actually moved, update it
-			if (read.getReadUnmappedFlag() || read.getAlignmentStart() != readPos || !read.getCigarString().equals(alignment.cigar)) {
+			// If no change to alignment, just record the YA tag
+			if (!read.getReadUnmappedFlag() && read.getAlignmentStart() == readPos && read.getCigarString().equals(alignment.cigar)) {
+				read.setAttribute("YA", ya);
+			}
+			
+			// If the read has actually moved to an improved alignment, update
+			if (origEditDist < alignment.numMismatches && (read.getReadUnmappedFlag() || read.getAlignmentStart() != readPos || !read.getCigarString().equals(alignment.cigar))) {
+				
+				read.setAttribute("YA", ya);
 
 				// Original alignment info
 				String yo = "N/A";

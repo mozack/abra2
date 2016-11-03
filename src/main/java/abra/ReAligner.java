@@ -634,25 +634,35 @@ public class ReAligner {
 				junctionPos.add(leftSeq.length());
 				junctionLengths.add((int) junctionPerm.get(0).getLength()+1);
 				
+				boolean isJunctionGapTooBig = false;
+				
 				for (int i=1; i<junctionPerm.size(); i++) {
 					int midStart = (int) junctionPerm.get(i-1).getEnd()+1;
 					String middleSeq = c2r.getSequence(region.getSeqname(), midStart, (int) junctionPerm.get(i).getStart() - midStart);
+					if (middleSeq.length() > region.getLength()*2) {
+						isJunctionGapTooBig = true;
+						break;
+					}
 					juncSeq.append(middleSeq);
 					junctionPos.add(juncSeq.length());
 					junctionLengths.add((int) junctionPerm.get(i).getLength()+1);
 				}
 				
-				// Sequence on right of last junction
-				// Junction stop is exclusive, so add 1 to starting position (junction end + 1)
-				Feature lastJunction = junctionPerm.get(junctionPerm.size()-1);
-				int rightStart = (int) lastJunction.getEnd()+1;
-				int rightStop = Math.min((int) lastJunction.getEnd() + (int) region.getLength() + this.readLength*2, chromosomeLength-1);
-				String rightSeq = c2r.getSequence(region.getSeqname(), rightStart, rightStop-rightStart);
-				juncSeq.append(rightSeq);
-				// Junction pos and length should already be added
-				
-				SSWAligner sswJunc = new SSWAligner(juncSeq.toString(), region.getSeqname(), refStart, junctionPos, junctionLengths);
-				sswJunctions.add(sswJunc);
+				// TODO: Tighten this up...
+				if (!isJunctionGapTooBig && juncSeq.length() < region.getLength()*10) {
+					
+					// Sequence on right of last junction
+					// Junction stop is exclusive, so add 1 to starting position (junction end + 1)
+					Feature lastJunction = junctionPerm.get(junctionPerm.size()-1);
+					int rightStart = (int) lastJunction.getEnd()+1;
+					int rightStop = Math.min((int) lastJunction.getEnd() + (int) region.getLength() + this.readLength*2, chromosomeLength-1);
+					String rightSeq = c2r.getSequence(region.getSeqname(), rightStart, rightStop-rightStart);
+					juncSeq.append(rightSeq);
+					// Junction pos and length should already be added
+					
+					SSWAligner sswJunc = new SSWAligner(juncSeq.toString(), region.getSeqname(), refStart, junctionPos, junctionLengths);
+					sswJunctions.add(sswJunc);
+				}
 			}
 			
 			/*

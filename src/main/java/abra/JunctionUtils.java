@@ -30,7 +30,7 @@ public class JunctionUtils {
 
 		Map<Integer, List<Feature>> chromosomeJunctionsByEnd = new HashMap<Integer, List<Feature>>();
 		for (Feature junction : chromosomeJunctions) {
-			addToChromosomePositionMap(junction, (int) junction.getEnd(), chromosomeJunctionsByStart);
+			addToChromosomePositionMap(junction, (int) junction.getEnd(), chromosomeJunctionsByEnd);
 		}
 		
 		for (Feature region : chromosomeRegions) {
@@ -49,7 +49,7 @@ public class JunctionUtils {
 			}
 			
 			// Add neighboring junctions (up to 2 additional splices)
-			addNeighboringJunctions(localJunctions, chromosomeJunctionsByStart, chromosomeJunctionsByEnd, readLength);
+			addNeighboringJunctions(localJunctions, chromosomeJunctionsByStart, chromosomeJunctionsByEnd, readLength);			
 			addNeighboringJunctions(localJunctions, chromosomeJunctionsByStart, chromosomeJunctionsByEnd, readLength);
 			
 			List<Feature> localJunctionList = new ArrayList<Feature>(localJunctions);

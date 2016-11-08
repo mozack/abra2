@@ -620,7 +620,9 @@ public class ReAligner {
 			List<List<Feature>> junctionPermutations = combineJunctions(junctions);
 			
 			System.err.println("NUM_JUNCTION_PERMUTATIONS:\t" + junctionPermutations.size() + "\t" + region);
+			
 			for (List<Feature> junctionPerm : junctionPermutations) {
+				System.err.println("NUM_JUNCTIONS:\t" + junctionPerm.size() + "\t" + region);
 				// List of junction positions within localized reference
 				List<Integer> junctionPos = new ArrayList<Integer>();
 				// List of junction lengths within localized reference
@@ -769,8 +771,6 @@ public class ReAligner {
 				// Add new sublist with current junction
 				newList.add(currentJunction);
 				newList.addAll(subJuncList);
-				
-				System.err.println("NUM_JUNCTIONS:\t" + newList.size() + "\t" + newList.get(0).getDescriptor());
 				
 				junctionLists.add(newList);
 			}

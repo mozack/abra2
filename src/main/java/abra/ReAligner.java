@@ -557,8 +557,6 @@ public class ReAligner {
 		SSWAlignerResult bestResult = null;
 		int bestScore = -1;
 		
-		// Prioritize junctions over reference sequence.
-		// Allows splice sites to appear in alignments instead of deletions when the splice is assembled.
 		SSWAlignerResult sswResult;
 		for (SSWAligner sswJunc : sswJunctions) {
 			sswResult = sswJunc.align(contig);
@@ -620,6 +618,8 @@ public class ReAligner {
 			List<SSWAligner> sswJunctions = new ArrayList<SSWAligner>();
 			
 			List<List<Feature>> junctionPermutations = combineJunctions(junctions);
+			
+			System.err.println("NUM_JUNCTION_PERMUTATIONS:\t" + junctionPermutations.size() + "\t" + region);
 			for (List<Feature> junctionPerm : junctionPermutations) {
 				// List of junction positions within localized reference
 				List<Integer> junctionPos = new ArrayList<Integer>();
@@ -664,54 +664,7 @@ public class ReAligner {
 					sswJunctions.add(sswJunc);
 				}
 			}
-			
-			/*
-			for (Feature junction : junctions) {
-				int leftJuncStart = Math.max((int) junction.getStart() - (int) region.getLength() - this.readLength*2, 1);
-				int rightJuncStop = Math.min((int) junction.getEnd() + (int) region.getLength() + this.readLength*2, chromosomeLength-1);
-				
-				// Sequence on left of junction
-				String leftSeq = c2r.getSequence(region.getSeqname(), leftJuncStart, (int) junction.getStart() - leftJuncStart);
-				
-				// Sequence on right of junction
-				// Junction stop is exclusive, so add 1 to starting position (junction end + 1)
-				String rightSeq = c2r.getSequence(region.getSeqname(), (int) junction.getEnd()+1, rightJuncStop - (int) junction.getEnd());
-				
-				String juncSeq = leftSeq + rightSeq;
-				
-				// Junction stop is exclusive, so add 1
-				SSWAligner sswJunc = new SSWAligner(juncSeq, region.getSeqname(), leftJuncStart, leftSeq.length(), (int) junction.getLength()+1);
-				sswJunctions.add(sswJunc);
-			}
-			
-			List<Pair<Feature, Feature>> junctionPairs = pairJunctions(junctions, this.readLength);
-			for (Pair<Feature, Feature> junctionPair : junctionPairs) {
-				Feature junction1 = junctionPair.getFirst();
-				Feature junction2 = junctionPair.getSecond();
-				
-				int refStart = Math.max((int) junction1.getStart() - (int) region.getLength() - this.readLength*2, 1);
-				
-				// Left of junction1 start (3rd param is length)
-				String leftSeq = c2r.getSequence(region.getSeqname(), refStart, (int) junction1.getStart() - refStart);
-				
-				// Sequence between junction1 stop and junction2 start (should be <= read length)
-				// Junction end is exclusive
-				int midStart = (int) junction1.getEnd()+1;
-				String middleSeq = c2r.getSequence(region.getSeqname(), midStart, (int) junction2.getStart() - midStart);
-				
-				int rightStart = (int) junction2.getEnd()+1;
-				int rightStop = Math.min((int) junction2.getEnd() + (int) region.getLength() + this.readLength*2, chromosomeLength-1);
-				String rightSeq = c2r.getSequence(region.getSeqname(), rightStart, rightStop-rightStart);
-				
-				String juncSeq = leftSeq + middleSeq + rightSeq;
-				List<Integer> junctionPos = Arrays.asList(leftSeq.length(), leftSeq.length() + middleSeq.length());
-				List<Integer> junctionLength = Arrays.asList((int) junction1.getLength()+1, (int) junction2.getLength()+1);
-				
-				SSWAligner sswJunc = new SSWAligner(juncSeq, region.getSeqname(), refStart, junctionPos, junctionLength);
-				sswJunctions.add(sswJunc);
-			}
-			*/
-			
+						
 			// Assemble contigs
 			if (this.isSkipAssembly || region.getKmer() > this.readLength-15) {
 				System.err.println("Skipping assembly of region: " + region.getDescriptor() + " - " + region.getKmer());
@@ -816,6 +769,8 @@ public class ReAligner {
 				// Add new sublist with current junction
 				newList.add(currentJunction);
 				newList.addAll(subJuncList);
+				
+				System.err.println("NUM_JUNCTIONS:\t" + newList.size() + "\t" + newList.get(0).getDescriptor());
 				
 				junctionLists.add(newList);
 			}

@@ -138,6 +138,8 @@ public class JunctionUtils {
 					junctionLists.add(newList);
 				}
 			}
+		} else {
+			junctionLists = new ArrayList<List<Feature>>();
 		}
 		
 		return junctionLists;

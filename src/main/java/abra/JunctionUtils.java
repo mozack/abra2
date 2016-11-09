@@ -1,6 +1,7 @@
 package abra;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -95,6 +96,73 @@ public class JunctionUtils {
 		}
 		
 		currJunctions.addAll(toAdd);
+	}
+	
+	public static List<List<Feature>> combineJunctions(List<Feature> junctions, int readLength) {
+		List<List<Feature>> combinedJunctions = new ArrayList<List<Feature>>();
+		
+		// Get all possible permutations of junctions regardless of validity
+		List<List<Feature>> junctionLists = combineAllJunctions(junctions, readLength);
+		
+		for (List<Feature> currJunctions : junctionLists) {
+			if (isJunctionCombinationValid(currJunctions, readLength)) {
+				combinedJunctions.add(currJunctions);
+			}
+		}
+		
+		return combinedJunctions;
+	}
+	
+	// Produce all possible junction permutations from the input list.
+	private static List<List<Feature>> combineAllJunctions(List<Feature> junctions, int readLength) {
+		List<List<Feature>> junctionLists = null;
+		
+		if (junctions.size() == 1) {
+			junctionLists = Arrays.asList((List<Feature>) new ArrayList<Feature>(), (List<Feature>) new ArrayList<Feature>());
+			// Return 2 lists, one with the junction and one without.
+			junctionLists.get(1).add(junctions.get(0));
+		} else if (junctions.size() > 1) {
+			junctionLists = new ArrayList<List<Feature>>();
+			Feature currentJunction = junctions.get(0);
+			List<List<Feature>> subJuncs = combineAllJunctions(junctions.subList(1, junctions.size()), readLength);
+			// For each returned list, create a new list with and without the current junction
+			for (List<Feature> subJuncList : subJuncs) {
+				// Pass along sub list without current junction
+				junctionLists.add(subJuncList);
+				List<Feature> newList = new ArrayList<Feature>();
+				// Add new sublist with current junction
+				newList.add(currentJunction);
+				newList.addAll(subJuncList);
+				
+				if (isJunctionCombinationValid(newList, readLength)) {
+					junctionLists.add(newList);
+				}
+			}
+		}
+		
+		return junctionLists;
+	}
+	
+	// Assuming all inputs on same chromosome
+	protected static boolean isJunctionCombinationValid(List<Feature> junctions, int readLength) {
+//		if (1==1) {
+//			return true;
+//		}
+		
+		for (int i=0; i<junctions.size()-1; i++) {
+			
+			// End of left junction must be less than start of right junction 
+			if (junctions.get(i).getEnd() >= junctions.get(i+1).getStart()) {
+				return false;
+			}
+			
+			// Distance between junctions must be less than readLength*2
+			if (junctions.get(i+1).getStart() - junctions.get(i).getEnd() > readLength*2) {
+				return false;
+			}
+		}
+		
+		return junctions.size() > 0;
 	}
 
 	// Sort strictly based upon start and end pos.  Chromosome ignored.

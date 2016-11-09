@@ -617,7 +617,7 @@ public class ReAligner {
 			
 			List<SSWAligner> sswJunctions = new ArrayList<SSWAligner>();
 			
-			List<List<Feature>> junctionPermutations = combineJunctions(junctions);
+			List<List<Feature>> junctionPermutations = JunctionUtils.combineJunctions(junctions, this.readLength);
 			
 			System.err.println("NUM_JUNCTION_PERMUTATIONS:\t" + junctionPermutations.size() + "\t" + region);
 			
@@ -725,59 +725,8 @@ public class ReAligner {
 		return mappedContigs;
 	}
 	
-	// Assuming all inputs on same chromosome
-	protected boolean isJunctionCombinationValid(List<Feature> junctions) {
-		for (int i=0; i<junctions.size()-1; i++) {
-			if (junctions.get(i).getEnd() >= junctions.get(i+1).getStart()) {
-				return false;
-			}
-		}
-		
-		return junctions.size() > 0;
-	}
 	
-	protected List<List<Feature>> combineJunctions(List<Feature> junctions) {
-		List<List<Feature>> combinedJunctions = new ArrayList<List<Feature>>();
-		
-		// Get all possible permutations of junctions regardless of validity
-		List<List<Feature>> junctionLists = combineAllJunctions(junctions);
-		
-		for (List<Feature> currJunctions : junctionLists) {
-			if (isJunctionCombinationValid(currJunctions)) {
-				combinedJunctions.add(currJunctions);
-			}
-		}
-		
-		return combinedJunctions;
-	}
-	
-	// Produce all possible junction permutations from the input list.
-	private List<List<Feature>> combineAllJunctions(List<Feature> junctions) {
-		List<List<Feature>> junctionLists = new ArrayList<List<Feature>>();
-		
-		if (junctions.size() == 1) {
-			junctionLists = Arrays.asList((List<Feature>) new ArrayList<Feature>(), (List<Feature>) new ArrayList<Feature>());
-			// Return 2 lists, one with the junction and one without.
-			junctionLists.get(1).add(junctions.get(0));
-		} else if (junctions.size() > 1) {
-			
-			Feature currentJunction = junctions.get(0);
-			List<List<Feature>> subJuncs = combineAllJunctions(junctions.subList(1, junctions.size()));
-			// For each returned list, create a new list with and without the current junction
-			for (List<Feature> subJuncList : subJuncs) {
-				// Pass along sub list without current junction
-				junctionLists.add(subJuncList);
-				List<Feature> newList = new ArrayList<Feature>();
-				// Add new sublist with current junction
-				newList.add(currentJunction);
-				newList.addAll(subJuncList);
-				
-				junctionLists.add(newList);
-			}
-		}
-		
-		return junctionLists;
-	}
+
 	
 	// Pair up junctions that could be spanned by a single read
 	protected List<Pair<Feature, Feature>> pairJunctions(List<Feature> junctions, int maxDist) {

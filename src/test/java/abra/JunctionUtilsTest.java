@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertTrue;
 import org.testng.annotations.Test;
 
 public class JunctionUtilsTest {
@@ -17,6 +18,7 @@ public class JunctionUtilsTest {
 
 	@Test (groups = "unit")
 	public void testGetRegionJunctions() throws Exception {
+		
 		RegionLoader loader = new RegionLoader();
 		List<Feature> junctions = loader.load("test-data/junctions1.tab", false);
 		assertEquals(junctions.size(), 29);
@@ -43,5 +45,42 @@ public class JunctionUtilsTest {
 		assertJunctionEquals(regionJunctions.get(10), "chr4", 1803753, 1806550);
 		assertJunctionEquals(regionJunctions.get(11), "chr4", 1808055, 1808272);
 				 
+		
+//		List<List<Feature>> junctionPerms = JunctionUtils.combineJunctions(regionJunctions, readLength);
+//		System.out.println(junctionPerms.size());
+	}
+	
+	@Test (groups = "unit")
+	public void testCombineJunctions() throws Exception {
+		
+		int readLength = 50;
+		
+		Feature j1 = new Feature("chr1", 10000, 10100);
+		Feature j2 = new Feature("chr1", 10110, 10200);
+		Feature j3 = new Feature("chr1", 10110, 10300);
+		Feature j4 = new Feature("chr1", 10330, 10500);
+		
+		List<Feature> inputJunctions = Arrays.asList(j1, j2, j3, j4);
+		List<List<Feature>> junctionPerms = JunctionUtils.combineJunctions(inputJunctions, readLength);
+		assertEquals(junctionPerms.size(), 8);
+		
+		// Expected permutations
+		List<Feature> p1 = Arrays.asList(j1);
+		List<Feature> p2 = Arrays.asList(j2);
+		List<Feature> p3 = Arrays.asList(j3);
+		List<Feature> p4 = Arrays.asList(j4);
+		List<Feature> p5 = Arrays.asList(j1,j2);
+		List<Feature> p6 = Arrays.asList(j1,j3);
+		List<Feature> p7 = Arrays.asList(j3,j4);
+		List<Feature> p8 = Arrays.asList(j1,j3,j4);
+		
+		assertTrue(junctionPerms.contains(p1));
+		assertTrue(junctionPerms.contains(p2));
+		assertTrue(junctionPerms.contains(p3));
+		assertTrue(junctionPerms.contains(p4));
+		assertTrue(junctionPerms.contains(p5));
+		assertTrue(junctionPerms.contains(p6));
+		assertTrue(junctionPerms.contains(p7));
+		assertTrue(junctionPerms.contains(p8));
 	}
 }

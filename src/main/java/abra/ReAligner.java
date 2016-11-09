@@ -728,7 +728,7 @@ public class ReAligner {
 	// Assuming all inputs on same chromosome
 	protected boolean isJunctionCombinationValid(List<Feature> junctions) {
 		for (int i=0; i<junctions.size()-1; i++) {
-			if (junctions.get(i).getEnd() > junctions.get(i+1).getStart()) {
+			if (junctions.get(i).getEnd() >= junctions.get(i+1).getStart()) {
 				return false;
 			}
 		}

@@ -189,6 +189,9 @@ public class CompareToReference2 {
 	private int numDifferences(SAMRecord read, int minBaseQual) {
 		
 		int diffs = 0;
+		
+		try {
+		
 		if (refMap.get(read.getReferenceName().trim()) != null) {
 			int readIdx = 0;
 			int refIdx = read.getAlignmentStart()-1;
@@ -243,6 +246,10 @@ public class CompareToReference2 {
 				
 				elementIdx++;
 			}
+		}
+		} catch (Exception e) {
+			System.err.println("Error on: " + read.getSAMString());
+			e.printStackTrace();
 		}
 		
 		return diffs;

@@ -24,19 +24,27 @@ public class ScoredContig implements Comparable<ScoredContig> {
 	public String getContig() {
 		return contig;
 	}
+	
+	public String toString() {
+		return String.valueOf(score);
+	}
 
 	@Override
 	public int compareTo(ScoredContig o) {
 		if (this.score < o.score) {
-			return -1;
-		} else if (this.score > o.score) {
 			return 1;
+		} else if (this.score > o.score) {
+			return -1;
 		} else {
 			return 0;
 		}
 	}
 	
 	public static List<ScoredContig> convertAndFilter(String contigStrings) {
+		return convertAndFilter(contigStrings, MAX_CONTIGS);
+	}
+	
+	public static List<ScoredContig> convertAndFilter(String contigStrings, int maxContigs) {
 		List<ScoredContig> contigs = new ArrayList<ScoredContig>();
 		
 		double score = Double.NEGATIVE_INFINITY;
@@ -50,11 +58,11 @@ public class ScoredContig implements Comparable<ScoredContig> {
 			}
 		}
 		
-		if (contigs.size() > MAX_CONTIGS) {
-			System.err.println("Shrinking eligible contigs from " + contigs.size() + " to " + MAX_CONTIGS);
+		if (contigs.size() > maxContigs) {
+			System.err.println("Shrinking eligible contigs from " + contigs.size() + " to " + maxContigs);
 			Collections.sort(contigs);
 			// Subset to only the first MAX_CONTIGS
-			contigs = contigs.subList(0, MAX_CONTIGS);
+			contigs = contigs.subList(0, maxContigs);
 		}
 		
 		return contigs;

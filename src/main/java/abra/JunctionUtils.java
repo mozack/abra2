@@ -98,14 +98,14 @@ public class JunctionUtils {
 		currJunctions.addAll(toAdd);
 	}
 	
-	public static List<List<Feature>> combineJunctions(List<Feature> junctions, int readLength) {
+	public static List<List<Feature>> combineJunctions(List<Feature> junctions, int maxJuncDist) {
 		List<List<Feature>> combinedJunctions = new ArrayList<List<Feature>>();
 		
 		// Get all possible permutations of junctions regardless of validity
-		List<List<Feature>> junctionLists = combineAllJunctions(junctions, readLength);
+		List<List<Feature>> junctionLists = combineAllJunctions(junctions, maxJuncDist);
 		
 		for (List<Feature> currJunctions : junctionLists) {
-			if (isJunctionCombinationValid(currJunctions, readLength)) {
+			if (isJunctionCombinationValid(currJunctions, maxJuncDist)) {
 				combinedJunctions.add(currJunctions);
 			}
 		}
@@ -114,7 +114,7 @@ public class JunctionUtils {
 	}
 	
 	// Produce all possible junction permutations from the input list.
-	private static List<List<Feature>> combineAllJunctions(List<Feature> junctions, int readLength) {
+	private static List<List<Feature>> combineAllJunctions(List<Feature> junctions, int maxJuncDist) {
 		List<List<Feature>> junctionLists = null;
 		
 		if (junctions.size() == 1) {
@@ -124,7 +124,7 @@ public class JunctionUtils {
 		} else if (junctions.size() > 1) {
 			junctionLists = new ArrayList<List<Feature>>();
 			Feature currentJunction = junctions.get(0);
-			List<List<Feature>> subJuncs = combineAllJunctions(junctions.subList(1, junctions.size()), readLength);
+			List<List<Feature>> subJuncs = combineAllJunctions(junctions.subList(1, junctions.size()), maxJuncDist);
 			// For each returned list, create a new list with and without the current junction
 			for (List<Feature> subJuncList : subJuncs) {
 				// Pass along sub list without current junction
@@ -134,7 +134,7 @@ public class JunctionUtils {
 				newList.add(currentJunction);
 				newList.addAll(subJuncList);
 				
-				if (isJunctionCombinationValid(newList, readLength)) {
+				if (isJunctionCombinationValid(newList, maxJuncDist)) {
 					junctionLists.add(newList);
 				}
 			}
@@ -146,7 +146,7 @@ public class JunctionUtils {
 	}
 	
 	// Assuming all inputs on same chromosome
-	protected static boolean isJunctionCombinationValid(List<Feature> junctions, int readLength) {
+	protected static boolean isJunctionCombinationValid(List<Feature> junctions, int maxJuncDist) {
 //		if (1==1) {
 //			return true;
 //		}
@@ -159,7 +159,7 @@ public class JunctionUtils {
 			}
 			
 			// Distance between junctions must be less than readLength*2
-			if (junctions.get(i+1).getStart() - junctions.get(i).getEnd() > readLength*2) {
+			if (junctions.get(i+1).getStart() - junctions.get(i).getEnd() > maxJuncDist) {
 				return false;
 			}
 		}

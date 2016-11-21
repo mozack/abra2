@@ -617,7 +617,8 @@ public class ReAligner {
 			
 			List<SSWAligner> sswJunctions = new ArrayList<SSWAligner>();
 			
-			List<List<Feature>> junctionPermutations = JunctionUtils.combineJunctions(junctions, this.readLength);
+//			List<List<Feature>> junctionPermutations = JunctionUtils.combineJunctions(junctions, this.readLength);
+			List<List<Feature>> junctionPermutations = JunctionUtils.combineJunctions(junctions, (int) region.getLength());
 			
 			System.err.println("NUM_JUNCTION_PERMUTATIONS:\t" + junctionPermutations.size() + "\t" + region);
 			

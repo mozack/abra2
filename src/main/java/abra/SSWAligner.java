@@ -82,13 +82,15 @@ public class SSWAligner {
 		System.err.println("Alignment [" +  seq + "] :\t" + aln);
 		System.err.println("Ref: [" + this.ref + "]" + " juncs: [" + juncStr.toString() + "]");
 		
-		
 		// TODO: Optimize score requirements..
 		if (aln != null && aln.score1 >= MIN_ALIGNMENT_SCORE && aln.score1 > aln.score2 && aln.read_end1 - aln.read_begin1 > minContigLength) {
-			
+						
 			// Clip contig and remap if needed.
 			// TODO: Trim sequence instead of incurring overhead of remapping
-			if (aln.read_begin1 > 0 || aln.read_end1 < seq.length()-1) {
+			
+			int MAX_CLIP_BASES = Math.min(10, seq.length() / 10);
+			if ((aln.read_begin1 > 0 || aln.read_end1 < seq.length()-1) &&
+				(aln.read_begin1 < MAX_CLIP_BASES && aln.read_end1 > seq.length()-1-MAX_CLIP_BASES)) {
 				
 				seq = seq.substring(aln.read_begin1, aln.read_end1+1);
 				aln = Aligner.align(seq.getBytes(), ref.getBytes(), score, GAP_OPEN_PENALTY, GAP_EXTEND_PENALTY, true);

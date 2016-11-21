@@ -664,7 +664,7 @@ public class ReAligner {
 					juncSeq.append(rightSeq);
 					// Junction pos and length should already be added
 					
-					SSWAligner sswJunc = new SSWAligner(juncSeq.toString(), region.getSeqname(), this.readLength, refStart, junctionPos, junctionLengths);
+					SSWAligner sswJunc = new SSWAligner(juncSeq.toString(), region.getSeqname(), refStart, this.readLength, junctionPos, junctionLengths);
 					sswJunctions.add(sswJunc);
 				}
 			}

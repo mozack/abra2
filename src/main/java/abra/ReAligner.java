@@ -613,7 +613,7 @@ public class ReAligner {
 			
 			String refSeq = c2r.getSequence(region.getSeqname(), refSeqStart, refSeqLength);
 			
-			SSWAligner ssw = new SSWAligner(refSeq, region.getSeqname(), refSeqStart);
+			SSWAligner ssw = new SSWAligner(refSeq, region.getSeqname(), refSeqStart, this.readLength);
 			
 			List<SSWAligner> sswJunctions = new ArrayList<SSWAligner>();
 			
@@ -662,7 +662,7 @@ public class ReAligner {
 					juncSeq.append(rightSeq);
 					// Junction pos and length should already be added
 					
-					SSWAligner sswJunc = new SSWAligner(juncSeq.toString(), region.getSeqname(), refStart, junctionPos, junctionLengths);
+					SSWAligner sswJunc = new SSWAligner(juncSeq.toString(), region.getSeqname(), this.readLength, refStart, junctionPos, junctionLengths);
 					sswJunctions.add(sswJunc);
 				}
 			}

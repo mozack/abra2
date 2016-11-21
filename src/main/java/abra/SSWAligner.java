@@ -25,6 +25,7 @@ public class SSWAligner {
 	private String refChr;
 	private int refStart;
 	private String ref;
+	private int minContigLength;
 	
 	private List<Integer> junctionPositions = new ArrayList<Integer>();
 	private List<Integer> junctionLengths = new ArrayList<Integer>();
@@ -47,24 +48,21 @@ public class SSWAligner {
 		}
 	}
 	
-	public SSWAligner(String ref, String refChr, int refStart) {
+	public SSWAligner(String ref, String refChr, int refStart, int minContigLength) {
 		this.ref = ref;
 		this.refChr = refChr;
 		this.refStart = refStart;
+		this.minContigLength = minContigLength;
 	}
 	
-	public SSWAligner(String ref, String refChr, int refStart, int junctionPos, int junctionLength) {
-		this.ref = ref;
-		this.refChr = refChr;
-		this.refStart = refStart;
+	public SSWAligner(String ref, String refChr, int refStart, int minContigLength, int junctionPos, int junctionLength) {
+		this(ref, refChr, refStart, minContigLength);
 		this.junctionPositions.add(junctionPos);
 		this.junctionLengths.add(junctionLength);
 	}
 	
-	public SSWAligner(String ref, String refChr, int refStart, List<Integer> junctionPositions, List<Integer> junctionLengths) {
-		this.ref = ref;
-		this.refChr = refChr;
-		this.refStart = refStart;
+	public SSWAligner(String ref, String refChr, int refStart, int minContigLength, List<Integer> junctionPositions, List<Integer> junctionLengths) {
+		this(ref, refChr, refStart, minContigLength);
 		this.junctionPositions = junctionPositions;
 		this.junctionLengths = junctionLengths;
 	}
@@ -86,16 +84,11 @@ public class SSWAligner {
 		
 		
 		// TODO: Optimize score requirements..
-		if (aln != null && aln.score1 >= MIN_ALIGNMENT_SCORE && aln.score1 > aln.score2) {
-			
-			// Allow lessor of 10 bases or 10% of contig to not map on either end
-			int MAX_CLIP_BASES = Math.min(10, seq.length() / 10);
-			System.err.println("MAX_CLIP: " + MAX_CLIP_BASES);
+		if (aln != null && aln.score1 >= MIN_ALIGNMENT_SCORE && aln.score1 > aln.score2 && aln.read_end1 - aln.read_begin1 > minContigLength) {
 			
 			// Clip contig and remap if needed.
 			// TODO: Trim sequence instead of incurring overhead of remapping
-			if ((aln.read_begin1 > 0 || aln.read_end1 < seq.length()-1) &&
-			    (aln.read_begin1 < MAX_CLIP_BASES && aln.read_end1 > seq.length()-1-MAX_CLIP_BASES)) {
+			if (aln.read_begin1 > 0 || aln.read_end1 < seq.length()-1) {
 				
 				seq = seq.substring(aln.read_begin1, aln.read_end1+1);
 				aln = Aligner.align(seq.getBytes(), ref.getBytes(), score, GAP_OPEN_PENALTY, GAP_EXTEND_PENALTY, true);
@@ -185,7 +178,7 @@ public class SSWAligner {
 		String ref = "AACAACAGATAATAACAAGTCCTAACCCTCTAGCTGCTTAGGCTGGCGGAGGCCCAGGGGCTCCCACGAGTTGGGTCCTTTCGCACCAGCACAGACTTACCTGATCTCGGTTGTTGATGTGAGAATAAGGAAGCTCCCCCGTCATCAGTTCATACAATACGATGCCATAGGAGTAGACATCCGACTGGAAACTGAATGGGTTGTTATCCTGCATTCGGATCACCTCTGGGGCCTACATGTATCACCATATGACAAAAGTGCATTTATCACCATATGACAGGCCTCACAGACATCTAGGGGCCAGGCTGTCCCTTTCATTAGTTATGAATGAG";
 		String contig = "AACAACAGATAATAACAAGTCCTAACCCTCTAGCTGCTTAGGCTGGCGGAGGCCCAGGGGCTCCCACGAGTTGGGTCCTTTCGCACCAGCACAGACTTACCTGATCTCGGTTGTTGATGTGAGAATAAGGAAGCTCCCCCGTCATCAGTTCACAAAAGTGCATTTATCACCATATGACAGGCCTCACAGACATCTAGGGGCCAGGCTGTCCCTTTCATTAGTTATGAAT";
 		
-		SSWAligner sw = new SSWAligner(ref, "chr3", 12626521);
+		SSWAligner sw = new SSWAligner(ref, "chr3", 12626521, 50);
 		sw.align(contig);
 	}
 }

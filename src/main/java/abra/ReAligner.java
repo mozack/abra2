@@ -622,99 +622,105 @@ public class ReAligner {
 			
 			System.err.println("NUM_JUNCTION_PERMUTATIONS:\t" + junctionPermutations.size() + "\t" + region);
 			
-			for (List<Feature> junctionPerm : junctionPermutations) {
-				System.err.println("NUM_JUNCTIONS:\t" + junctionPerm.size() + "\t" + region);
-				System.err.println("CURR_JUNCTIONS:\t" + junctionPerm);
-				// List of junction positions within localized reference
-				List<Integer> junctionPos = new ArrayList<Integer>();
-				// List of junction lengths within localized reference
-				List<Integer> junctionLengths = new ArrayList<Integer>();
-				
-				StringBuffer juncSeq = new StringBuffer();
-				
-				int refStart = Math.max((int) junctionPerm.get(0).getStart() - (int) region.getLength() - this.readLength*2, 1);
-				String leftSeq = c2r.getSequence(region.getSeqname(), refStart, (int) junctionPerm.get(0).getStart() - refStart);
-				juncSeq.append(leftSeq);
-				junctionPos.add(leftSeq.length());
-				junctionLengths.add((int) junctionPerm.get(0).getLength()+1);
-				
-				boolean isJunctionGapTooBig = false;
-				
-				for (int i=1; i<junctionPerm.size(); i++) {
-					int midStart = (int) junctionPerm.get(i-1).getEnd()+1;
-					String middleSeq = c2r.getSequence(region.getSeqname(), midStart, (int) junctionPerm.get(i).getStart() - midStart);
-					if (middleSeq.length() > region.getLength()*2) {
-						isJunctionGapTooBig = true;
-						break;
-					}
-					juncSeq.append(middleSeq);
-					junctionPos.add(juncSeq.length());
-					junctionLengths.add((int) junctionPerm.get(i).getLength()+1);
-				}
-				
-				// TODO: Tighten this up...
-				if (!isJunctionGapTooBig && juncSeq.length() < region.getLength()*10) {
-					
-					// Sequence on right of last junction
-					// Junction stop is exclusive, so add 1 to starting position (junction end + 1)
-					Feature lastJunction = junctionPerm.get(junctionPerm.size()-1);
-					int rightStart = (int) lastJunction.getEnd()+1;
-					int rightStop = Math.min((int) lastJunction.getEnd() + (int) region.getLength() + this.readLength*2, chromosomeLength-1);
-					String rightSeq = c2r.getSequence(region.getSeqname(), rightStart, rightStop-rightStart);
-					juncSeq.append(rightSeq);
-					// Junction pos and length should already be added
-					
-					SSWAligner sswJunc = new SSWAligner(juncSeq.toString(), region.getSeqname(), refStart, this.readLength, junctionPos, junctionLengths);
-					sswJunctions.add(sswJunc);
-				}
-			}
-						
-			// Assemble contigs
-			if (this.isSkipAssembly || region.getKmer() > this.readLength-15) {
-				System.err.println("Skipping assembly of region: " + region.getDescriptor() + " - " + region.getKmer());
+			int maxJunctionPermutations = 2056;
+			if (junctionPermutations.size() > maxJunctionPermutations) {
+				System.err.println("TOO_MANY_JUNCTION_PERMUTATIONS: " + region.getDescriptor());
 			} else {
-				NativeAssembler assem = (NativeAssembler) newAssembler(region);
-				List<Feature> regions = new ArrayList<Feature>();
-				regions.add(region); 
-				String contigs = assem.assembleContigs(bams, contigsFasta, tempDir, regions, region.getDescriptor(), true, this, c2r, readsList);
-				
-				if (!contigs.equals("<ERROR>") && !contigs.equals("<REPEAT>") && !contigs.isEmpty()) {
+			
+				for (List<Feature> junctionPerm : junctionPermutations) {
+					System.err.println("NUM_JUNCTIONS:\t" + junctionPerm.size() + "\t" + region);
+					System.err.println("CURR_JUNCTIONS:\t" + junctionPerm);
+					// List of junction positions within localized reference
+					List<Integer> junctionPos = new ArrayList<Integer>();
+					// List of junction lengths within localized reference
+					List<Integer> junctionLengths = new ArrayList<Integer>();
 					
-					// TODO: Turn this off by default
-					appendContigs(contigs);
+					StringBuffer juncSeq = new StringBuffer();
 					
-					List<ScoredContig> scoredContigs = ScoredContig.convertAndFilter(contigs);
+					int refStart = Math.max((int) junctionPerm.get(0).getStart() - (int) region.getLength() - this.readLength*2, 1);
+					String leftSeq = c2r.getSequence(region.getSeqname(), refStart, (int) junctionPerm.get(0).getStart() - refStart);
+					juncSeq.append(leftSeq);
+					junctionPos.add(leftSeq.length());
+					junctionLengths.add((int) junctionPerm.get(0).getLength()+1);
 					
-					System.err.println("# SCORED CONTIGS: " + scoredContigs.size());
+					boolean isJunctionGapTooBig = false;
 					
-					// Map contigs to reference
-					for (ScoredContig contig : scoredContigs) {
-						// Filter contigs that match the reference
-						if (!refSeq.contains(contig.getContig())) {
+					for (int i=1; i<junctionPerm.size(); i++) {
+						int midStart = (int) junctionPerm.get(i-1).getEnd()+1;
+						String middleSeq = c2r.getSequence(region.getSeqname(), midStart, (int) junctionPerm.get(i).getStart() - midStart);
+						if (middleSeq.length() > region.getLength()*2) {
+							isJunctionGapTooBig = true;
+							break;
+						}
+						juncSeq.append(middleSeq);
+						junctionPos.add(juncSeq.length());
+						junctionLengths.add((int) junctionPerm.get(i).getLength()+1);
+					}
+					
+					// TODO: Tighten this up...
+					if (!isJunctionGapTooBig && juncSeq.length() < region.getLength()*10) {
+						
+						// Sequence on right of last junction
+						// Junction stop is exclusive, so add 1 to starting position (junction end + 1)
+						Feature lastJunction = junctionPerm.get(junctionPerm.size()-1);
+						int rightStart = (int) lastJunction.getEnd()+1;
+						int rightStop = Math.min((int) lastJunction.getEnd() + (int) region.getLength() + this.readLength*2, chromosomeLength-1);
+						String rightSeq = c2r.getSequence(region.getSeqname(), rightStart, rightStop-rightStart);
+						juncSeq.append(rightSeq);
+						// Junction pos and length should already be added
+						
+						SSWAligner sswJunc = new SSWAligner(juncSeq.toString(), region.getSeqname(), refStart, this.readLength, junctionPos, junctionLengths);
+						sswJunctions.add(sswJunc);
+					}
+				}
 							
-							SSWAlignerResult sswResult = alignContig(contig.getContig(), ssw, sswJunctions);
-							
-							if (sswResult != null) {
-								// TODO: In multi-region processing, check to ensure identical contigs have identical mappings
-								mappedContigs.put(new SimpleMapper(sswResult.getSequence()), sswResult);
+				// Assemble contigs
+				if (this.isSkipAssembly || region.getKmer() > this.readLength-15) {
+					System.err.println("Skipping assembly of region: " + region.getDescriptor() + " - " + region.getKmer());
+				} else {
+					NativeAssembler assem = (NativeAssembler) newAssembler(region);
+					List<Feature> regions = new ArrayList<Feature>();
+					regions.add(region); 
+					String contigs = assem.assembleContigs(bams, contigsFasta, tempDir, regions, region.getDescriptor(), true, this, c2r, readsList);
+					
+					if (!contigs.equals("<ERROR>") && !contigs.equals("<REPEAT>") && !contigs.isEmpty()) {
+						
+						// TODO: Turn this off by default
+						appendContigs(contigs);
+						
+						List<ScoredContig> scoredContigs = ScoredContig.convertAndFilter(contigs);
+						
+						System.err.println("# SCORED CONTIGS: " + scoredContigs.size());
+						
+						// Map contigs to reference
+						for (ScoredContig contig : scoredContigs) {
+							// Filter contigs that match the reference
+							if (!refSeq.contains(contig.getContig())) {
+								
+								SSWAlignerResult sswResult = alignContig(contig.getContig(), ssw, sswJunctions);
+								
+								if (sswResult != null) {
+									// TODO: In multi-region processing, check to ensure identical contigs have identical mappings
+									mappedContigs.put(new SimpleMapper(sswResult.getSequence()), sswResult);
+								}
 							}
 						}
-					}
-				} 
-			}
-			
-			if (!this.isSkipNonAssembly) {
-				System.err.println("Processing non-assembled contigs for region: [" + region + "]");
-				// Go through artificial contig generation using indels observed in the original reads
-				AltContigGenerator altContigGenerator = new AltContigGenerator();
-				Collection<String> altContigs = altContigGenerator.getAltContigs(readsList, c2r, readLength);
+					} 
+				}
 				
-				for (String contig : altContigs) {
-					// TODO: Check to see if this contig is already in the map before aligning
-					SSWAlignerResult sswResult = ssw.align(contig);
-					if (sswResult != null) {
-						//TODO: Introduce penalty for non-assembled contigs?
-						mappedContigs.put(new SimpleMapper(sswResult.getSequence()), sswResult);
+				if (!this.isSkipNonAssembly) {
+					System.err.println("Processing non-assembled contigs for region: [" + region + "]");
+					// Go through artificial contig generation using indels observed in the original reads
+					AltContigGenerator altContigGenerator = new AltContigGenerator();
+					Collection<String> altContigs = altContigGenerator.getAltContigs(readsList, c2r, readLength);
+					
+					for (String contig : altContigs) {
+						// TODO: Check to see if this contig is already in the map before aligning
+						SSWAlignerResult sswResult = ssw.align(contig);
+						if (sswResult != null) {
+							//TODO: Introduce penalty for non-assembled contigs?
+							mappedContigs.put(new SimpleMapper(sswResult.getSequence()), sswResult);
+						}
 					}
 				}
 			}

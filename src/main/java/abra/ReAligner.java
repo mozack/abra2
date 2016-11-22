@@ -298,7 +298,11 @@ public class ReAligner {
 				}
 
 				// Remap out of scope reads
+				long start = System.currentTimeMillis();
 				remapReads(regionContigs, readsToRemap);
+				long stop = System.currentTimeMillis();
+				System.err.println("REMAP_READS_SECS:\t" + (stop-start)/1000 + "\t" + record.getSamRecord().getReferenceName() + ":" + record.getSamRecord().getAlignmentStart());
+				
 				
 				// Remove out of scope region assemblies
 				List<Feature> regionsToRemove = new ArrayList<Feature>();
@@ -587,6 +591,8 @@ public class ReAligner {
 	}
 	
 	public Map<SimpleMapper, SSWAlignerResult> processRegion(Feature region, List<List<SAMRecordWrapper>> reads, List<Feature> junctions) throws Exception {
+		
+		long start = System.currentTimeMillis();
 		if (isDebug) {
 			log("Processing region: " + region.getDescriptor());
 		}
@@ -729,6 +735,10 @@ public class ReAligner {
 			e.printStackTrace();
 			throw e;
 		}
+		
+		long stop = System.currentTimeMillis();
+		
+		System.err.println("PROCESS_REGION_SECS:\t" + (stop-start)/1000 + "\t" + region.getDescriptor());
 		
 		return mappedContigs;
 	}

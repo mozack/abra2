@@ -102,6 +102,8 @@ public class ReAligner {
 	private String junctionFile;
 	private List<Feature> junctions = new ArrayList<Feature>();
 	
+	private ReverseComplementor rc = new ReverseComplementor();
+	
 	public static final int COMPRESSION_LEVEL = 1;
 	
 	public void reAlign(String[] inputFiles, String[] outputFiles) throws Exception {
@@ -224,6 +226,21 @@ public class ReAligner {
 		int currRegionIdx = -1;
 		
 		for (SAMRecordWrapper record : reader) {
+			
+			// If this is an unmapped read anchored by its mate, check rc flag
+			SAMRecord read1 = record.getSamRecord();
+			if (read1.getReadUnmappedFlag() && !read1.getMateUnmappedFlag()) {
+				if (!read1.getMateNegativeStrandFlag()) {
+					// Mate is not reverse complemented, so RC this read
+					read1.setReadString(rc.reverseComplement(read1.getReadString()));
+					read1.setBaseQualityString(rc.reverse(read1.getBaseQualityString()));
+					read1.setReadNegativeStrandFlag(true);
+					
+					// TODO: Revert read information if not remapped...
+				}
+			}
+			
+			
 			int regionIdx = Feature.findFirstOverlappingRegion(reader.getSAMFileHeader(), record, chromosomeRegions, currRegionIdx);
 						
 			// Identify next region that is a candidate for processing

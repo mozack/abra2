@@ -35,6 +35,9 @@ public class SAMRecordWrapper {
 	}
 	
 	public int getAdjustedAlignmentStart() {
+		
+		//TODO: Adjust unmapped reads by fragment length??
+		
 		int start = samRecord.getAlignmentStart();
 		
 		if (samRecord.getCigar().numCigarElements() > 0) {
@@ -51,12 +54,19 @@ public class SAMRecordWrapper {
 	}
 	
 	public int getAdjustedAlignmentEnd() {
-		int end = samRecord.getAlignmentEnd();
-		
-		if (samRecord.getCigar().numCigarElements() > 0) {
-			CigarElement elem = samRecord.getCigar().getCigarElement(samRecord.getCigar().numCigarElements()-1);
-			if (elem.getOperator() == CigarOperator.S) {
-				end += elem.getLength();
+		int end = -1;
+		if (samRecord.getReadUnmappedFlag()) {
+			// TODO: Pad by fragment length here?
+			end = samRecord.getAlignmentStart() + samRecord.getReadLength();
+		} else {
+			// Use standard alignment end and pad for soft clipping if necessary
+			end = samRecord.getAlignmentEnd();
+			
+			if (samRecord.getCigar().numCigarElements() > 0) {
+				CigarElement elem = samRecord.getCigar().getCigarElement(samRecord.getCigar().numCigarElements()-1);
+				if (elem.getOperator() == CigarOperator.S) {
+					end += elem.getLength();
+				}
 			}
 		}
 

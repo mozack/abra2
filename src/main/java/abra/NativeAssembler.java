@@ -120,6 +120,10 @@ public class NativeAssembler {
 				isCandidate = true;
 			}
 		}
+		
+		if (read.getReadUnmappedFlag() && !read.getMateUnmappedFlag()) {
+			isCandidate = true;
+		}
 
 		return isCandidate;
 	}

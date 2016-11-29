@@ -534,14 +534,16 @@ public class ReAligner {
 			// For each read.
 			for (SAMRecordWrapper readWrapper : reads) {
 				SAMRecord read = readWrapper.getSamRecord();
-				// TODO: Use NM tag if available (need to handle soft clipping though!)
-				int origEditDist = SAMRecordUtils.getEditDistance(read, c2r);
-//				int origEditDist = c2r.numMismatches(read);
-				
-				System.err.println("Read edit dist: " + read.getReadName() + " : " + origEditDist);
-				
-				if (origEditDist > 0 || SAMRecordUtils.getNumSplices(read) > 0) {
-					remapRead(readEvaluator, read, origEditDist);
+				if (read.getMappingQuality() > this.minMappingQuality) {
+					// TODO: Use NM tag if available (need to handle soft clipping though!)
+					int origEditDist = SAMRecordUtils.getEditDistance(read, c2r);
+	//				int origEditDist = c2r.numMismatches(read);
+					
+					System.err.println("Read edit dist: " + read.getReadName() + " : " + origEditDist);
+					
+					if (origEditDist > 0 || SAMRecordUtils.getNumSplices(read) > 0) {
+						remapRead(readEvaluator, read, origEditDist);
+					}
 				}
 			}
 

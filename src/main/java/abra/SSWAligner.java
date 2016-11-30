@@ -35,7 +35,7 @@ public class SSWAligner {
 		try {
 			System.loadLibrary("sswjni");
 		} catch (java.lang.UnsatisfiedLinkError e) {
-			System.out.println(String.format("Cannot find libsswjni.so. Has the library been built and LD_LIBRARY_PATH or -Djava.library.path set appropriately?\n%s", e));
+			Logger.error(String.format("Cannot find libsswjni.so. Has the library been built and LD_LIBRARY_PATH or -Djava.library.path set appropriately?\n%s", e));
 			throw e;
 		}
 		

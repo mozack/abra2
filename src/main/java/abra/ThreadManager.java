@@ -60,7 +60,7 @@ public class ThreadManager {
 	public void waitForAllThreadsToComplete() throws InterruptedException, IOException {
 		executor.shutdown();
 		while (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
-			log("Waiting on " + threads.size() + " threads.");
+			Logger.info("Waiting on " + threads.size() + " threads.");
 		}
 	}
 

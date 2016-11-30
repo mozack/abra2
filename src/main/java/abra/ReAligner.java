@@ -117,12 +117,12 @@ public class ReAligner {
 		c2r = new CompareToReference2();
 		c2r.init(this.reference);
 
-		log("Reading Input SAM Header and identifying read length");
+		Logger.info("Reading Input SAM Header and identifying read length");
 		getSamHeaderAndReadLength();
 		
-		log("Read length: " + readLength);
+		Logger.info("Read length: " + readLength);
 		
-		log("Loading target regions");
+		Logger.info("Loading target regions");
 		loadRegions();
 		loadJunctions();
 		
@@ -154,7 +154,7 @@ public class ReAligner {
 			this.spawnChromosomeThread(chromosome);
 		}
 		
-		log("Waiting for all threads to complete");
+		Logger.info("Waiting for all threads to complete");
 		threadManager.waitForAllThreadsToComplete();
 		
 		contigWriter.close();
@@ -613,7 +613,7 @@ public class ReAligner {
 		
 		long start = System.currentTimeMillis();
 		if (isDebug) {
-			log("Processing region: " + region.getDescriptor());
+			Logger.info("Processing region: " + region.getDescriptor());
 		}
 		
 		if (region.getLength() > 10000) {
@@ -633,8 +633,6 @@ public class ReAligner {
 			int chromosomeLength = c2r.getReferenceLength(region.getSeqname());
 			int refSeqStart = Math.max((int) region.getStart() - this.readLength*2, 1);
 			int refSeqLength = Math.min((int) region.getLength() + this.readLength*4, chromosomeLength-1);
-			
-			System.out.println("Getting reference for: " + region.getSeqname() + ":" + refSeqStart + ", length: " + refSeqLength);
 			
 			String refSeq = c2r.getSequence(region.getSeqname(), refSeqStart, refSeqLength);
 			
@@ -815,7 +813,7 @@ public class ReAligner {
 
 	private void getSamHeaderAndReadLength() {
 		
-		log("Identifying header and determining read length");
+		Logger.info("Identifying header and determining read length");
 		
 		this.samHeaders = new SAMFileHeader[this.inputSams.length];
 		
@@ -857,11 +855,11 @@ public class ReAligner {
 		System.err.println("Min insert length: " + minInsertLength);
 		System.err.println("Max insert length: " + maxInsertLength);
 				
-		log("Max read length is: " + readLength);
+		Logger.info("Max read length is: " + readLength);
 		if (assemblerSettings.getMinContigLength() < 1) {
 			assemblerSettings.setMinContigLength(Math.max(readLength+1, MIN_CONTIG_LENGTH));
 		}
-		log("Min contig length: " + assemblerSettings.getMinContigLength());
+		Logger.info("Min contig length: " + assemblerSettings.getMinContigLength());
 	}
 			
 	static class Pair<T, Y> {

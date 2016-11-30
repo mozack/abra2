@@ -18,41 +18,6 @@ import htsjdk.samtools.SAMRecord;
  * @author Lisle E. Mose (lmose at unc dot edu)
  */
 public class IndelShifter {
-
-	/*
-	public SAMRecord shiftIndelsLeft(SAMRecord read, CompareToReference2 c2r) {
-		try {
-			
-			if (containsIndel(read)) {
-				int indelPos = firstIndelOffset(read);
-				List<Integer> origMismatches = c2r.mismatchPositions(read);
-				
-				SAMRecord clone = cloneRead(read);
-				for (int i=indelPos; i>0; i--) {
-					Cigar newCigar = shiftCigarLeft(read.getCigar(), i);
-					
-//					System.out.println("cigar: " + newCigar.toString());
-					clone.setCigar(newCigar);
-					
-					List<Integer> newMismatches = c2r.mismatchPositions(clone, origMismatches.size());
-					
-					if (origMismatches.equals(newMismatches)) {
-						SAMRecord newRead = cloneRead(read);
-						newRead.setCigar(newCigar);
-						newRead.setAttribute("IS", read.getCigarString());
-						return newRead;
-					}
-				}
-			}
-		} catch (Exception e) {
-			System.out.println("Error processing: " + read.getSAMString());
-			e.printStackTrace();
-			throw new RuntimeException(e);
-		}
-		
-		return read;
-	}
-	*/
 	
 	public SAMRecord shiftIndelsLeft(SAMRecord read, CompareToReference2 c2r) {
 		try {

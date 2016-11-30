@@ -240,8 +240,6 @@ public class NativeAssembler {
 							isDebug ? 1 : 0,
 							maxNodes);
 					
-					System.out.println("Contigs: [" + contigs + "]");
-					
 					if (!contigs.equals("<REPEAT>")) {
 						break;
 					} else {

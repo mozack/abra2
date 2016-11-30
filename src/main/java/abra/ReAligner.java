@@ -534,7 +534,7 @@ public class ReAligner {
 			// For each read.
 			for (SAMRecordWrapper readWrapper : reads) {
 				SAMRecord read = readWrapper.getSamRecord();
-				if (read.getMappingQuality() > this.minMappingQuality) {
+				if (read.getMappingQuality() > this.minMappingQuality || read.getReadUnmappedFlag()) {
 					// TODO: Use NM tag if available (need to handle soft clipping though!)
 					int origEditDist = SAMRecordUtils.getEditDistance(read, c2r);
 	//				int origEditDist = c2r.numMismatches(read);

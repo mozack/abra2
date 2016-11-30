@@ -248,7 +248,7 @@ public class CompareToReference2 {
 			}
 		}
 		} catch (Exception e) {
-			System.err.println("Error on: " + read.getSAMString());
+			Logger.error("Error on: " + read.getSAMString());
 			e.printStackTrace();
 		}
 		
@@ -322,7 +322,7 @@ public class CompareToReference2 {
 	}
 	
 	private void loadRefMap() throws IOException {
-		System.err.println("Loading reference map:  " + this.refFileName);
+		Logger.info("Loading reference map:  " + this.refFileName);
 		long s = System.currentTimeMillis();
 		this.refMap = new HashMap<String, byte[]>();
 		
@@ -334,7 +334,7 @@ public class CompareToReference2 {
 		while (line != null) {
 			if (line.startsWith(">")) {
 				if (currSeqName != null) {
-					System.err.println("\tChromosome: " + currSeqName + " length: " + sequence.length());
+					Logger.debug("Chromosome: %s length: %d", currSeqName, sequence.length());
 					refMap.put(currSeqName, getBytes(sequence));
 				}
 				
@@ -358,7 +358,7 @@ public class CompareToReference2 {
 			line = reader.readLine();
 		}
 		
-		System.err.println("\tChromosome: " + currSeqName + " length: " + sequence.length());
+		Logger.debug("Chromosome: %s length: %d", currSeqName, sequence.length());
 		refMap.put(currSeqName, getBytes(sequence));
 		
 		sequence = null;
@@ -366,7 +366,7 @@ public class CompareToReference2 {
 		reader.close();
 		
 		long e = System.currentTimeMillis();
-		System.err.println("Done loading ref map.  Elapsed secs: " + (e-s)/1000);
+		Logger.info("Done loading ref map.  Elapsed secs: " + (e-s)/1000);
 	}
 	
 	private char getRefBase(int idx, String ref) {
@@ -398,7 +398,7 @@ public class CompareToReference2 {
 		byte[] ref = refMap.get(chromosome);
 		
 		if (ref == null) {
-			System.err.println("No ref for chromosome: " + chromosome);
+			Logger.error("No ref for chromosome: " + chromosome);
 		}
 		
 		position -= 1;

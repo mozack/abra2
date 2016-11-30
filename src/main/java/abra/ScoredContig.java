@@ -59,7 +59,7 @@ public class ScoredContig implements Comparable<ScoredContig> {
 		}
 		
 		if (contigs.size() > maxContigs) {
-			System.err.println("Shrinking eligible contigs from " + contigs.size() + " to " + maxContigs);
+			Logger.debug("Shrinking eligible contigs from %d to %d", contigs.size(), maxContigs);
 			Collections.sort(contigs);
 			// Subset to only the first MAX_CONTIGS
 			contigs = contigs.subList(0, maxContigs);

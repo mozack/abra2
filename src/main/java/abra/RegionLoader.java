@@ -71,11 +71,6 @@ public class RegionLoader {
 				
 				lastChr = chromosome;
 				lastStart = startPos;
-				
-				if ((cnt % 100000) == 0) {
-					System.err.println("Loaded " + cnt + " regions");
-					System.err.flush();
-				}
 			}
 		} finally {
 			reader.close();
@@ -108,7 +103,7 @@ public class RegionLoader {
 			collapsedRegions.add(currentRegion);
 		}
 		
-		System.err.println("Collapsed regions from " + regions.size() + " to " + collapsedRegions.size());
+		Logger.info("Collapsed regions from " + regions.size() + " to " + collapsedRegions.size());
 		
 		return collapsedRegions;
 	}

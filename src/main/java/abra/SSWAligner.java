@@ -79,8 +79,7 @@ public class SSWAligner {
 			juncStr.append(junctionPositions.get(i) + ":" + junctionLengths.get(i) + ",");
 		}
 		
-		System.err.println("Alignment [" +  seq + "] :\t" + aln);
-		System.err.println("Ref: [" + this.ref + "]" + " juncs: [" + juncStr.toString() + "]");
+		Logger.debug("Alignment [%s]:\t%s", seq, aln);
 		
 		// TODO: Optimize score requirements..
 		if (aln != null && aln.score1 >= MIN_ALIGNMENT_SCORE && aln.score1 > aln.score2 && aln.read_end1 - aln.read_begin1 > minContigLength) {
@@ -94,9 +93,6 @@ public class SSWAligner {
 				
 				seq = seq.substring(aln.read_begin1, aln.read_end1+1);
 				aln = Aligner.align(seq.getBytes(), ref.getBytes(), score, GAP_OPEN_PENALTY, GAP_EXTEND_PENALTY, true);
-				System.err.println("Trimmed Alignment [" + seq + "] :\t" + aln);
-			} else {
-				System.err.println("Skipping trim...");
 			}
 						
 			// Requiring end to end alignment here...
@@ -108,13 +104,10 @@ public class SSWAligner {
 				String paddedSeq = leftPad + seq + rightPad;
 				String cigar = CigarUtils.extendCigarWithMatches(aln.cigar, leftPad.length(), rightPad.length());
 				
-				System.err.println("padded seq: " + paddedSeq);
-				
 				if (junctionPositions.size() > 0) {
 					String oldCigar = cigar;
-//					cigar = CigarUtils.injectSplice(cigar, junctionPos, junctionLength);
 					cigar = CigarUtils.injectSplices(cigar, junctionPositions, junctionLengths);
-					System.err.println("Spliced Cigar.  old: " + oldCigar + ", new: " + cigar);
+					Logger.debug("Spliced Cigar.  old: %s, new: %s", oldCigar, cigar);
 				}
 				
 				result = new SSWAlignerResult(aln.ref_begin1-leftPad.length(), cigar, refChr, refStart, paddedSeq, aln.score1);

@@ -14,13 +14,9 @@ public class Logger {
 	public static Level LEVEL = Level.INFO;
 	
 	// For debug messages, use varargs to avoid string concatenation unless necessary
-	public static void debug(Object ... parts) {
+	public static void debug(String format, Object... args) {
 		if (LEVEL == Level.DEBUG) {
-			StringBuffer msg = new StringBuffer();
-			for (Object part : parts) {
-				msg.append(part);
-			}
-			log(msg.toString(), Level.DEBUG);
+			log(String.format(format, args), Level.DEBUG);
 		}
 	}
 	

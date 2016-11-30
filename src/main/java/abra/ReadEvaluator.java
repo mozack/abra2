@@ -49,9 +49,9 @@ public class ReadEvaluator {
 				for (SimpleMapper mapper : regionContigs.keySet()) {
 					SimpleMapperResult mapResult = mapper.map(read);
 					
-					if (samRecord != null && samRecord.getReadName().equals("UNC9-SN296:440:C5F7CACXX:5:1216:12373:72470")) {
-						System.err.println("MAP_RESULT, pos: " + mapResult.getPos() + ", mismatches: " + mapResult.getMismatches() + ", contig: " + mapper);
-					}
+//					if (samRecord != null && samRecord.getReadName().equals("UNC9-SN296:440:C5F7CACXX:5:1216:12373:72470")) {
+//						System.err.println("MAP_RESULT, pos: " + mapResult.getPos() + ", mismatches: " + mapResult.getMismatches() + ", contig: " + mapper);
+//					}
 					
 					if (mapResult.getMismatches() < bestMismatches) {
 						bestMismatches = mapResult.getMismatches();
@@ -82,12 +82,11 @@ public class ReadEvaluator {
 				cigar = cigarBuf.toString();
 			}
 			
-			if (samRecord != null) {
-				System.err.println("READ_ALIGNMENT: " + samRecord.getReadName() + " pos: " + readRefPos + ", cigar: " + cigar + ", contig: " + contigAlignment.getGenomicPos() + ":" 
-						+ contigAlignment.getCigar() + ":" + contigAlignment.getSequence());
-			}
+//			if (samRecord != null) {
+//				System.err.println("READ_ALIGNMENT: " + samRecord.getReadName() + " pos: " + readRefPos + ", cigar: " + cigar + ", contig: " + contigAlignment.getGenomicPos() + ":" 
+//						+ contigAlignment.getCigar() + ":" + contigAlignment.getSequence());
+//			}
 			
-			// TODO: Check for synonymous alignments with deletions equivalent to introns.  Favor the intron cases.
 			Alignment readAlignment = new Alignment(contigAlignment.getChromosome(), readRefPos, cigar, alignmentHit.mapResult.getOrientation(), bestMismatches, contigAlignment.getGenomicPos(), contigAlignment.getCigar());
 			
 			if (alignments.size() == 1) {

@@ -362,7 +362,7 @@ public class ReAligner {
 		
 		reader.close();
 		
-		Logger.debug("Chromosome: %s done.", chromosome);
+		Logger.info("Chromosome: " + chromosome + " done.");
 	}
 	
 	private int getFirstStartPos(List<List<SAMRecordWrapper>> readsList) {

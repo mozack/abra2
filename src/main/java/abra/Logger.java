@@ -1,6 +1,8 @@
 package abra;
 
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Simple logging class.
@@ -12,6 +14,17 @@ public class Logger {
 	enum Level { TRACE, DEBUG, INFO, WARN, ERROR };
 	
 	public static Level LEVEL = Level.INFO;
+	
+	private static Map<String, Level> stringToLevel;
+	
+	static {
+		stringToLevel = new HashMap<String, Level>();
+		stringToLevel.put("TRACE", Level.TRACE);
+		stringToLevel.put("DEBUG", Level.DEBUG);
+		stringToLevel.put("INFO", Level.INFO);
+		stringToLevel.put("WARN", Level.WARN);
+		stringToLevel.put("ERROR", Level.ERROR);
+	}
 	
 	// For trace or debug messages, use varargs to avoid string concatenation unless enabled
 	
@@ -41,6 +54,15 @@ public class Logger {
 	
 	public static void error(String message) {
 		log(message, Level.ERROR);
+	}
+	
+	public static void setLevel(String str) {
+		Level level = stringToLevel.get(str.toUpperCase());
+		if (level == null) {
+			throw new IllegalArgumentException("Log level must be one of trace, debug, info, warn or error.");
+		}
+		
+		Logger.LEVEL = level;
 	}
 	
 	public static void log(String message, Level level) {

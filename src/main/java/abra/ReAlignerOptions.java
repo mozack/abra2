@@ -35,6 +35,7 @@ public class ReAlignerOptions extends Options {
 	private static final String SKIP_ASSEMBLY = "sa";
 	private static final String SKIP_NON_ASSEMBLY = "sna";
 	private static final String JUNCTIONS = "junctions";
+	private static final String LOG_LEVEL = "log";
 	
 	private OptionParser parser;
 	private boolean isValid;
@@ -68,6 +69,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(SKIP_ASSEMBLY, "Skip assembly");
             parser.accepts(SKIP_NON_ASSEMBLY, "Skip non-assembly contig generation");
             parser.accepts(JUNCTIONS, "Splice junctions definition file").withRequiredArg().ofType(String.class);
+            parser.accepts(LOG_LEVEL, "Logging level (trace,debug,info,warn,error)").withRequiredArg().ofType(String.class).defaultsTo("info");
     	}
     	
     	return parser;
@@ -261,6 +263,10 @@ public class ReAlignerOptions extends Options {
 	
 	public int getMinimumMappingQuality() {
 		return (Integer) getOptions().valueOf(MIN_MAPQ);
+	}
+	
+	public String getLoggerLevel() {
+		return (String) getOptions().valueOf(LOG_LEVEL);
 	}
 	
 	public boolean isValid() {

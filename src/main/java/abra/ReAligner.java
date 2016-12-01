@@ -1029,6 +1029,8 @@ public class ReAligner {
 		options.parseOptions(args);
 
 		if (options.isValid()) {
+			
+			Logger.setLevel(options.getLoggerLevel());
 
 			AssemblerSettings assemblerSettings = new AssemblerSettings();
 

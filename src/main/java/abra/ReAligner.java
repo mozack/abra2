@@ -1,8 +1,6 @@
 /* Copyright 2013 University of North Carolina at Chapel Hill.  All rights reserved. */
 package abra;
 
-import static abra.Logger.log;
-
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
@@ -12,7 +10,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -56,8 +53,6 @@ public class ReAligner {
 	private String regionsBed;
 
 	private String tempDir;
-	
-	private String unalignedRegionSam;
 
 	private String reference;
 	
@@ -68,10 +63,6 @@ public class ReAligner {
 	private int numThreads;
 	
 	private int maxUnalignedReads = DEFAULT_MAX_UNALIGNED_READS;
-	
-	private boolean shouldReprocessUnaligned = true;
-	
-	private String localRepeatFile;
 	
 	private String[] inputSams;
 	private SAMFileWriter[] writers;
@@ -165,20 +156,12 @@ public class ReAligner {
 			writer.close();
 		}
 		
-		System.err.println("Done.");
+		Logger.info("Done.");
 	}
-	
-	void debug(SAMRecord read, String msg) {
-		if (read.getReadName().equals("UNC9-SN296:440:C5F7CACXX:5:2108:19995:43952")) {
-			System.err.println("UNC9-SN296:440:C5F7CACXX:5:2108:19995:43952 - " + msg);
-		}
-	}
-	
-	
 	
 	void processChromosome(String chromosome) throws Exception {
 		
-		System.err.println("Processing chromosome: " + chromosome);
+		Logger.info("Processing chromosome: " + chromosome);
 		
 		MultiSamReader reader = new MultiSamReader(this.inputSams, this.minMappingQuality, this.isPairedEnd, chromosome);
 		
@@ -208,16 +191,6 @@ public class ReAligner {
 				chromosomeJunctions.add(junction);
 			}
 		}
-		
-//		Map<Feature, List<Feature>> regionJunctions = new HashMap<Feature, List<Feature>>();
-//		for (Feature region : chromosomeRegions) {
-//			regionJunctions.put(region, new ArrayList<Feature>());
-//			for (Feature junction : chromosomeJunctions) {
-//				if (region.containsEitherEnd(junction, MAX_REGION_LENGTH)) {
-//					regionJunctions.get(region).add(junction);
-//				}
-//			}
-//		}
 		
 		Map<Feature, List<Feature>> regionJunctions = JunctionUtils.getRegionJunctions(chromosomeRegions, chromosomeJunctions, readLength, MAX_REGION_LENGTH);
 		
@@ -249,7 +222,6 @@ public class ReAligner {
 				regionsToProcess.add(regionIdx);
 				
 				// Cache read for processing at end of region
-				debug(record.getSamRecord(), "Adding read.");
 				currReads.get(record.getSampleIdx()).add(record);
 			}
 			
@@ -259,9 +231,9 @@ public class ReAligner {
 				// If start position for current read is beyond current region, trigger assembly
 				Feature currRegion = chromosomeRegions.get(currRegionIdx);
 				if (record.getAdjustedAlignmentStart() > currRegion.getEnd() + this.readLength*2) {
-					System.err.println("Processing region: " + currRegion);
+					Logger.debug("Processing region: %s", currRegion);
 					Map<SimpleMapper, SSWAlignerResult> mappedContigs = processRegion(currRegion, currReads, regionJunctions.get(currRegion));
-					System.err.println("Region: " + currRegion + " assembled: " + mappedContigs.keySet().size() + " contigs");
+					Logger.debug("Region: %s assembled: %d contigs", currRegion, mappedContigs.keySet().size());
 					regionContigs.put(currRegion, mappedContigs);
 					// Remove curr region from list of regions to process
 					regionIter.remove();
@@ -274,7 +246,6 @@ public class ReAligner {
 				
 				// Process out of region read and output if ready.
 				List<SAMRecordWrapper> outOfRegionReadsForSample = outOfRegionReads.get(record.getSampleIdx());
-				debug(record.getSamRecord(), "Out of Region!!!");
 				outOfRegionReadsForSample.add(record);
 				
 				if (outOfRegionReads.get(record.getSampleIdx()).size() > 2500) {
@@ -305,11 +276,8 @@ public class ReAligner {
 					while (iter.hasNext()) {
 						SAMRecordWrapper read = iter.next();
 						if (record.getSamRecord().getAlignmentStart() - read.getSamRecord().getAlignmentStart() > MAX_READ_RANGE) {
-							debug(record.getSamRecord(), "Ready to remap");
 							sampleReadsToRemap.add(read);
 							iter.remove();
-						} else {
-							debug(record.getSamRecord(), "Not ready to remap");
 						}
 					}					
 				}
@@ -318,8 +286,7 @@ public class ReAligner {
 				long start = System.currentTimeMillis();
 				remapReads(regionContigs, readsToRemap);
 				long stop = System.currentTimeMillis();
-				System.err.println("REMAP_READS_SECS:\t" + (stop-start)/1000 + "\t" + record.getSamRecord().getReferenceName() + ":" + record.getSamRecord().getAlignmentStart());
-				
+				Logger.debug("REMAP_READS_SECS:\t%d\t%s:%d", (stop-start)/1000, record.getSamRecord().getReferenceName(), record.getSamRecord().getAlignmentStart());
 				
 				// Remove out of scope region assemblies
 				List<Feature> regionsToRemove = new ArrayList<Feature>();
@@ -330,14 +297,14 @@ public class ReAligner {
 				}
 				
 				for (Feature region : regionsToRemove) {
-					System.err.println("Removing contigs for region: " + region);
+					Logger.debug("Removing contigs for region: %s" + region);
 					regionContigs.remove(region);
 				}
 
 				String logPrefix = record.getSamRecord().getReferenceName() + ":" + record.getSamRecord().getAlignmentStart() + " : ";
 				
 				if (regionContigs.size() > 10) {
-					System.err.println(logPrefix + "regionContigs size: " + regionContigs.size());
+					Logger.debug("%s\tregionContigs size: ", logPrefix, regionContigs.size());
 				}
 				
 				int currReadsCount = 0;
@@ -346,7 +313,7 @@ public class ReAligner {
 				}
 
 				if (currReadsCount > 10000) {
-					System.err.println(logPrefix + "Curr reads size: " + currReadsCount);
+					Logger.debug("%s\t%sCurr reads size: %d", logPrefix, currReadsCount);
 				}
 				
 				int outOfRegionCount = 0;
@@ -355,7 +322,7 @@ public class ReAligner {
 				}
 
 				if (outOfRegionCount > 10000) {
-					System.err.println(logPrefix + "Out of region reads size: " + outOfRegionCount);
+					Logger.debug("%s\tOut of region reads size: ", logPrefix, outOfRegionCount);
 				}
 			}
 			
@@ -370,9 +337,9 @@ public class ReAligner {
 			// We've moved beyond the current region
 			// Assemble reads
 			Feature region = chromosomeRegions.get(currRegionIdx);
-			System.err.println("Processing region: " + region);
+			Logger.debug("Processing region: %s", region);
 			Map<SimpleMapper, SSWAlignerResult> mappedContigs = processRegion(region, currReads, regionJunctions.get(region));
-			System.err.println("Region: " + region + " assembled: " + mappedContigs.keySet().size() + " contigs");
+			Logger.debug("Region: %s assembled: %d contigs", region, mappedContigs.keySet().size());
 			regionContigs.put(region, mappedContigs);
 		}
 		
@@ -395,7 +362,7 @@ public class ReAligner {
 		
 		reader.close();
 		
-		System.err.println("Chromosome: " + chromosome + " done.");
+		Logger.debug("Chromosome: %s done.", chromosome);
 	}
 	
 	private int getFirstStartPos(List<List<SAMRecordWrapper>> readsList) {
@@ -413,27 +380,27 @@ public class ReAligner {
 		
 		int ctr = 0;
 		for (String input : inputSams) {
-			System.err.println("input" + ctr + ": " + input);
+			Logger.info("input" + ctr + ": " + input);
 		}
 
 		ctr = 0;
 		for (String output : outputFiles) {
-			System.err.println("output" + ctr + ": " + output);
+			Logger.info("output" + ctr + ": " + output);
 		}
 		
-		System.err.println("regions: " + regionsBed);
-		System.err.println("reference: " + reference);
-		System.err.println("bwa index: " + bwaIndex);
-		System.err.println("working dir: " + tempDir);
-		System.err.println("num threads: " + numThreads);
-		System.err.println("max unaligned reads: " + maxUnalignedReads);
-		System.err.println(assemblerSettings.getDescription());
-		System.err.println("paired end: " + isPairedEnd);
-		System.err.println("isSkipAssembly: " + isSkipAssembly);
-		System.err.println("isSkipNonAssembly: " + isSkipNonAssembly);
+		Logger.info("regions: " + regionsBed);
+		Logger.info("reference: " + reference);
+		Logger.info("bwa index: " + bwaIndex);
+		Logger.info("working dir: " + tempDir);
+		Logger.info("num threads: " + numThreads);
+		Logger.info("max unaligned reads: " + maxUnalignedReads);
+		Logger.info(assemblerSettings.getDescription());
+		Logger.info("paired end: " + isPairedEnd);
+		Logger.info("isSkipAssembly: " + isSkipAssembly);
+		Logger.info("isSkipNonAssembly: " + isSkipNonAssembly);
 		
 		String javaVersion = System.getProperty("java.version");
-		System.err.println("Java version: " + javaVersion);
+		Logger.info("Java version: " + javaVersion);
 		if (javaVersion.startsWith("1.6") || javaVersion.startsWith("1.5") || javaVersion.startsWith("1.4")) {
 			throw new RuntimeException("Please upgrade to Java 7 or later to run ABRA.");
 		}
@@ -441,15 +408,15 @@ public class ReAligner {
 		try {
 			InetAddress localhost = java.net.InetAddress.getLocalHost();
 			String hostname = localhost.getHostName();
-			System.err.println("hostname: " + hostname);
+			Logger.info("hostname: " + hostname);
 		} catch (Throwable t) {
-			System.err.println("Error getting hostname: " + t.getMessage());
+			Logger.error("Error getting hostname: " + t.getMessage());
 		}
 	}
 		
 	private void spawnChromosomeThread(String chromosome) throws InterruptedException {
 		ReAlignerRunnable thread = new ReAlignerRunnable(threadManager, this, chromosome);
-		System.err.println("Spawning thread for chromosome: " + chromosome);
+		Logger.info("Spawning thread for chromosome: " + chromosome);
 		threadManager.spawnThread(thread);
 	}
 	
@@ -516,15 +483,6 @@ public class ReAligner {
 	
 	private void remapReads(Map<Feature, Map<SimpleMapper, SSWAlignerResult>> mappedContigs, List<List<SAMRecordWrapper>> readsList) throws Exception {
 		
-		int numContigs = 0;
-		for (Feature region : mappedContigs.keySet()) {
-			numContigs += mappedContigs.get(region).size();
-		}
-
-		if (readsList.get(0).size() > 0) {
-			System.err.println("** REMAPPING [" + readsList.get(0).size() + "] reads to [" + numContigs + "] contigs");
-		}
-		
 		ReadEvaluator readEvaluator = new ReadEvaluator(mappedContigs);
 		
 		int sampleIdx = 0;
@@ -538,9 +496,7 @@ public class ReAligner {
 					// TODO: Use NM tag if available (need to handle soft clipping though!)
 					int origEditDist = SAMRecordUtils.getEditDistance(read, c2r);
 	//				int origEditDist = c2r.numMismatches(read);
-					
-					System.err.println("Read edit dist: " + read.getReadName() + " : " + origEditDist);
-					
+										
 					if (origEditDist > 0 || SAMRecordUtils.getNumSplices(read) > 0) {
 						remapRead(readEvaluator, read, origEditDist);
 					}
@@ -597,9 +553,10 @@ public class ReAligner {
 
 
 		if (bestResult != null) {
-			System.err.println("BEST_SSW: " + bestResult.getGenomicPos() + " : " + bestResult.getCigar() + " : " + bestResult.getRefPos() + " : " + bestResult.getScore() + " : " + bestResult.getSequence());
+			Logger.debug("BEST_SSW: %d : %s : %d: %d : %s",
+					bestResult.getGenomicPos(), bestResult.getCigar(), bestResult.getRefPos(), bestResult.getScore(), bestResult.getSequence());
 		} else {
-			System.err.println("NO_SSW: " + contig);
+			Logger.debug("NO_SSW: %s", contig);
 		}
 		
 		//TODO: Check for tie scores with different final alignment
@@ -643,16 +600,14 @@ public class ReAligner {
 //			List<List<Feature>> junctionPermutations = JunctionUtils.combineJunctions(junctions, this.readLength);
 			List<List<Feature>> junctionPermutations = JunctionUtils.combineJunctions(junctions, (int) region.getLength());
 			
-			System.err.println("NUM_JUNCTION_PERMUTATIONS:\t" + junctionPermutations.size() + "\t" + region);
+			Logger.debug("NUM_JUNCTION_PERMUTATIONS:\t%d\t%s", junctionPermutations.size(), region);
 			
 			int maxJunctionPermutations = 2056;
 			if (junctionPermutations.size() > maxJunctionPermutations) {
-				System.err.println("TOO_MANY_JUNCTION_PERMUTATIONS: " + region.getDescriptor());
+				Logger.warn("TOO_MANY_JUNCTION_PERMUTATIONS: " + region.getDescriptor() + "\t" + junctionPermutations.size());
 			} else {
 			
 				for (List<Feature> junctionPerm : junctionPermutations) {
-					System.err.println("NUM_JUNCTIONS:\t" + junctionPerm.size() + "\t" + region);
-					System.err.println("CURR_JUNCTIONS:\t" + junctionPerm);
 					// List of junction positions within localized reference
 					List<Integer> junctionPos = new ArrayList<Integer>();
 					// List of junction lengths within localized reference
@@ -699,7 +654,7 @@ public class ReAligner {
 							
 				// Assemble contigs
 				if (this.isSkipAssembly || region.getKmer() > this.readLength-15) {
-					System.err.println("Skipping assembly of region: " + region.getDescriptor() + " - " + region.getKmer());
+					Logger.debug("Skipping assembly of region: " + region.getDescriptor() + " - " + region.getKmer());
 				} else {
 					NativeAssembler assem = (NativeAssembler) newAssembler(region);
 					List<Feature> regions = new ArrayList<Feature>();
@@ -712,8 +667,6 @@ public class ReAligner {
 						appendContigs(contigs);
 						
 						List<ScoredContig> scoredContigs = ScoredContig.convertAndFilter(contigs);
-						
-						System.err.println("# SCORED CONTIGS: " + scoredContigs.size());
 						
 						// Map contigs to reference
 						for (ScoredContig contig : scoredContigs) {
@@ -732,7 +685,7 @@ public class ReAligner {
 				}
 				
 				if (!this.isSkipNonAssembly) {
-					System.err.println("Processing non-assembled contigs for region: [" + region + "]");
+					Logger.debug("Processing non-assembled contigs for region: [" + region + "]");
 					// Go through artificial contig generation using indels observed in the original reads
 					AltContigGenerator altContigGenerator = new AltContigGenerator();
 					Collection<String> altContigs = altContigGenerator.getAltContigs(readsList, c2r, readLength);
@@ -755,7 +708,7 @@ public class ReAligner {
 		
 		long stop = System.currentTimeMillis();
 		
-		System.err.println("PROCESS_REGION_SECS:\t" + (stop-start)/1000 + "\t" + region.getDescriptor());
+		Logger.debug("PROCESS_REGION_SECS:\t%d\t%s", (stop-start)/1000, region.getDescriptor());
 		
 		return mappedContigs;
 	}
@@ -792,10 +745,11 @@ public class ReAligner {
 	private void loadRegions() throws IOException {
 		this.regions = getRegions(regionsBed, readLength, hasPresetKmers);
 		
-		System.err.println("Num regions: " + regions.size());
-		if (isDebug) {
+		Logger.info("Num regions: " + regions.size());
+		
+		if (Logger.LEVEL == Logger.Level.TRACE) {
 			for (Feature region : regions) {
-				System.err.println(region.getSeqname() + "\t" + region.getStart() + "\t" + region.getEnd() + "\t" + region.getKmer());
+				Logger.trace("%s\t%d\t%d\t%d", region.getSeqname(), region.getStart(), region.getEnd(), region.getKmer());
 			}
 		}
 	}
@@ -852,8 +806,8 @@ public class ReAligner {
 			}
 		}
 		
-		System.err.println("Min insert length: " + minInsertLength);
-		System.err.println("Max insert length: " + maxInsertLength);
+		Logger.info("Min insert length: " + minInsertLength);
+		Logger.info("Max insert length: " + maxInsertLength);
 				
 		Logger.info("Max read length is: " + readLength);
 		if (assemblerSettings.getMinContigLength() < 1) {
@@ -1035,10 +989,6 @@ public class ReAligner {
 	public void setNumThreads(int numThreads) {
 		this.numThreads = numThreads;
 	}
-		
-	public void setShouldReprocessUnaligned(boolean shouldReprocessUnaligned) {
-		this.shouldReprocessUnaligned = shouldReprocessUnaligned;
-	}
 	
 	public void setMaxUnalignedReads(int maxUnalignedReads) {
 		this.maxUnalignedReads = maxUnalignedReads;
@@ -1074,7 +1024,7 @@ public class ReAligner {
 
 	public static void run(String[] args) throws Exception {
 		
-		System.err.println("Starting 0.97 ...");
+		Logger.info("Starting 0.97 ...");
 		
 		ReAlignerOptions options = new ReAlignerOptions();
 		options.parseOptions(args);
@@ -1107,7 +1057,6 @@ public class ReAligner {
 			realigner.isPairedEnd = options.isPairedEnd();
 			realigner.minMappingQuality = options.getMinimumMappingQuality();
 			realigner.hasPresetKmers = options.hasPresetKmers();
-			realigner.isDebug = options.isDebug();
 			realigner.isSkipAssembly = options.isSkipAssembly();
 			realigner.isSkipNonAssembly = options.isSkipNonAssembly();
 			realigner.junctionFile = options.getJunctionFile();
@@ -1118,7 +1067,7 @@ public class ReAligner {
 
 			long e = System.currentTimeMillis();
 
-			System.err.println("Elapsed seconds: " + (e - s) / 1000);
+			Logger.info("Elapsed seconds: " + (e - s) / 1000);
 		} else {
 			System.exit(-1);
 		}

@@ -9,23 +9,34 @@ import java.util.Date;
  */
 public class Logger {
 	
-	enum Level { DEBUG, INFO, WARN, ERROR };
+	enum Level { TRACE, DEBUG, INFO, WARN, ERROR };
 	
 	public static Level LEVEL = Level.INFO;
 	
-	// For debug messages, use varargs to avoid string concatenation unless necessary
+	// For trace or debug messages, use varargs to avoid string concatenation unless enabled
+	
+	public static void trace(String format, Object... args) {
+		if (LEVEL == Level.TRACE) {
+			log(String.format(format, args), Level.TRACE);
+		}
+	}
+	
 	public static void debug(String format, Object... args) {
-		if (LEVEL == Level.DEBUG) {
+		if (LEVEL == Level.DEBUG || LEVEL == Level.TRACE) {
 			log(String.format(format, args), Level.DEBUG);
 		}
 	}
 	
 	public static void info(String message) {
-		log(message, Level.INFO);
+		if (LEVEL == Level.TRACE || LEVEL == Level.DEBUG || LEVEL == Level.INFO) {
+			log(message, Level.INFO);
+		}
 	}
 	
 	public static void warn(String message) {
-		log(message, Level.WARN);
+		if (LEVEL == Level.TRACE || LEVEL == Level.DEBUG || LEVEL == Level.INFO || LEVEL == Level.WARN) {
+			log(message, Level.WARN);
+		}
 	}
 	
 	public static void error(String message) {
@@ -48,6 +59,9 @@ public class Logger {
 				break;
 			case DEBUG:
 				levelStr = "DEBUG";
+				break;
+			case TRACE:
+				levelStr = "TRACE";
 				break;
 		}
 		

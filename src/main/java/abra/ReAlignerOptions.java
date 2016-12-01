@@ -31,7 +31,6 @@ public class ReAlignerOptions extends Options {
 	private static final String AVERAGE_DEPTH_CEILING = "adc";
 	private static final String MIN_EDGE_RATIO = "mer";
 	private static final String USE_INTERMEDIATE_BAM = "ib";
-	private static final String NO_DEBUG = "no-debug";
 	private static final String MAX_NODES = "maxn";
 	private static final String SKIP_ASSEMBLY = "sa";
 	private static final String SKIP_NON_ASSEMBLY = "sna";
@@ -65,7 +64,6 @@ public class ReAlignerOptions extends Options {
             parser.accepts(AVERAGE_DEPTH_CEILING, "Skip regions with average depth greater than this value").withOptionalArg().ofType(Integer.class).defaultsTo(100000);
             parser.accepts(MIN_EDGE_RATIO, "Min edge pruning ratio.  Default value is appropriate for relatively sensitive somatic cases.  May be increased for improved speed in germline only cases.").withRequiredArg().ofType(Double.class).defaultsTo(.02);
             parser.accepts(USE_INTERMEDIATE_BAM, "If specified, write intermediate data to BAM file using the intel deflator when available.  Use this to speed up processing.");
-            parser.accepts(NO_DEBUG, "Throttle down debug logging");
             parser.accepts(MAX_NODES, "Maximum pre-pruned nodes in regional assembly").withOptionalArg().ofType(Integer.class).defaultsTo(9000);
             parser.accepts(SKIP_ASSEMBLY, "Skip assembly");
             parser.accepts(SKIP_NON_ASSEMBLY, "Skip non-assembly contig generation");
@@ -223,10 +221,6 @@ public class ReAlignerOptions extends Options {
 	
 	public int getNumThreads() {
 		return getOptions().hasArgument(NUM_THREADS) ? (Integer) getOptions().valueOf(NUM_THREADS) : 4;
-	}
-	
-	public boolean isDebug() {
-		return !getOptions().has(NO_DEBUG);
 	}
 	
 	public boolean useIntermediateBam() {

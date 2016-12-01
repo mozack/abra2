@@ -941,7 +941,6 @@ public class ReAligner {
 		assem.setMinReadCandidateFraction(assemblerSettings.getMinReadCandidateFraction());
 		assem.setMaxAverageDepth(assemblerSettings.getMaxAverageDepth());
 		assem.setAverageDepthCeiling(assemblerSettings.getAverageDepthCeiling());
-		assem.setDebug(assemblerSettings.isDebug());
 
 		return assem;
 	}
@@ -1044,7 +1043,6 @@ public class ReAligner {
 			assemblerSettings.setMaxAverageDepth(options.getMaxAverageRegionDepth());
 			assemblerSettings.setAverageDepthCeiling(options.getAverageDepthCeiling());
 			assemblerSettings.setMinEdgeRatio(options.getMinEdgeRatio());
-			assemblerSettings.setDebug(options.isDebug());
 			assemblerSettings.setMaxNodes(options.getMaxNodes());
 
 			ReAligner realigner = new ReAligner();

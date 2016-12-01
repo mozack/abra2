@@ -40,7 +40,6 @@ public class NativeAssembler {
 	private boolean isCycleExceedingThresholdDetected = false;
 	private int averageDepthCeiling;
 	private double minEdgeRatio;
-	private boolean isDebug = true;
 	private int maxNodes;
 
 	private native String assemble(String input, String output, String prefix,
@@ -237,7 +236,7 @@ public class NativeAssembler {
 							minKmerFrequency,
 							minBaseQuality,
 							minEdgeRatio,
-							isDebug ? 1 : 0,
+							Logger.LEVEL == Logger.Level.DEBUG || Logger.LEVEL == Logger.Level.TRACE ? 1 : 0,
 							maxNodes);
 					
 					if (!contigs.equals("<REPEAT>")) {
@@ -264,9 +263,8 @@ public class NativeAssembler {
 			kmer = kmers[0];
 		}
 		
-		if (isDebug) {
-			System.err.println("Elapsed_msecs_in_NativeAssembler\tRegion:\t" + regions.get(0).getDescriptor() + "\tLength:\t" + regions.get(0).getLength() + "\tReadCount:\t" + readCount + "\tElapsed\t" + (end-start) + "\tAssembled\t" + isAssemblyCandidate + "\t" + kmer);
-		}
+		Logger.debug("Elapsed_msecs_in_NativeAssembler\tRegion:\t%s\tLength:\t%d\tReadCount:\t%d\tElapsed\t%d\tAssembled\t%s\t%d",
+				regions.get(0).getDescriptor(), regions.get(0).getLength(), readCount, (end-start), isAssemblyCandidate, kmer);
 		
 		return contigs;
 	}
@@ -358,11 +356,7 @@ public class NativeAssembler {
 	public boolean isCycleExceedingThresholdDetected() {
 		return isCycleExceedingThresholdDetected;
 	}
-	
-	public void setDebug(boolean isDebug) {
-		this.isDebug = isDebug;
-	}
-	
+		
 	static class Position implements Comparable<Position> {
 		private String chromosome;
 		private int position;

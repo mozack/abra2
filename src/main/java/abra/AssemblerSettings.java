@@ -18,7 +18,6 @@ public class AssemblerSettings {
 	private int maxAverageDepth;
 	private int averageDepthCeiling;
 	private double minEdgeRatio;
-	private boolean isDebug;
 	private int maxNodes;
 		
 	public int getMaxNodes() {
@@ -108,15 +107,7 @@ public class AssemblerSettings {
 	public void setMaxPotentialContigs(int maxPotentialContigs) {
 		this.maxPotentialContigs = maxPotentialContigs;
 	}
-	
-	public boolean isDebug() {
-		return this.isDebug;
-	}
-	
-	public void setDebug(boolean isDebug) {
-		this.isDebug = isDebug;
-	}
-		
+			
 	public String getDescription() {
 		StringBuffer str = new StringBuffer();
 		

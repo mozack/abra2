@@ -16,13 +16,15 @@ import java.net.URL;
  */
 public class NativeLibraryLoader {
 	
-	public void load(String tempDir) {
-		String urlPath = "/libAbra.so";
+	public void load(String tempDir, String library, boolean isLenient) {
+		//String urlPath = "/libAbra.so";
+		String urlPath = "/" + library;
 		
 		URL url = NativeLibraryLoader.class.getResource(urlPath);
 		
 		if (url != null) {
-			File file = new File(tempDir + "/libAbra.so");
+//			File file = new File(tempDir + "/libAbra.so");
+			File file = new File(tempDir + "/" + library);
 			
 			try {
 		        final InputStream in = url.openStream();
@@ -43,10 +45,8 @@ public class NativeLibraryLoader {
 			
 			System.err.println("Loading native library from: " + file.getAbsolutePath());
 			System.load(file.getAbsolutePath());
-		} else {
-			// Search library path.
-			System.err.println("Searching for native library in standard path");
-			System.loadLibrary("Abra");
+		} else if (!isLenient) {
+			throw new RuntimeException("Unable to load library: " + library + " from path [" + urlPath + "] into tempdir: [" + tempDir + "]");
 		}
 	}
 	

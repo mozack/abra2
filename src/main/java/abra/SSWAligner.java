@@ -32,12 +32,12 @@ public class SSWAligner {
 	
 	private static int [][] score;
 	static {
-		try {
-			System.loadLibrary("sswjni");
-		} catch (java.lang.UnsatisfiedLinkError e) {
-			Logger.error(String.format("Cannot find libsswjni.so. Has the library been built and LD_LIBRARY_PATH or -Djava.library.path set appropriately?\n%s", e));
-			throw e;
-		}
+//		try {
+//			System.loadLibrary("sswjni");
+//		} catch (java.lang.UnsatisfiedLinkError e) {
+//			Logger.error(String.format("Cannot find libsswjni.so. Has the library been built and LD_LIBRARY_PATH or -Djava.library.path set appropriately?\n%s", e));
+//			throw e;
+//		}
 		
 		score = new int[128][128];
 		for (int i = 0; i < 128; i++) {

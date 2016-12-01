@@ -5,7 +5,7 @@
 
   <groupId>abra</groupId>
   <artifactId>abra</artifactId>
-  <version>0.97-SNAPSHOT</version>
+  <version>0.01-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>abra</name>
@@ -48,8 +48,13 @@
 	<dependency>
 	  <groupId>org.testng</groupId>
 	  <artifactId>testng</artifactId>
-	  <version>6.1.1</version>
+	  <version>6.8</version>
 	  <scope>test</scope>
+	</dependency>
+	<dependency>
+    	<groupId>com.beust</groupId>
+    	<artifactId>jcommander</artifactId>
+    	<version>1.48</version>
 	</dependency>
 	
     <dependency>
@@ -124,6 +129,18 @@
        <directory>target</directory>
        <includes>
          <include>libAbra.so</include>
+       </includes>
+     </resource>
+     <resource>
+       <directory>target</directory>
+       <includes>
+         <include>libssw.so</include>
+       </includes>
+     </resource>
+     <resource>
+       <directory>target</directory>
+       <includes>
+         <include>libsswjni.so</include>
        </includes>
      </resource>
    </resources>

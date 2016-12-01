@@ -17,7 +17,6 @@ public class JunctionUtils {
 	 */
 	static Map<Feature, List<Feature>> getRegionJunctions(List<Feature> chromosomeRegions, List<Feature> chromosomeJunctions,
 			int readLength, int maxRegionLength) {
-		System.err.println("Assigning junctions to regions");
 		// TODO: Brute force matching of regions / junctions
 		// TODO: Match up more efficiently
 		
@@ -58,8 +57,6 @@ public class JunctionUtils {
 			
 			regionJunctions.put(region, localJunctionList);
 		}
-		
-		System.err.println("Done assigning junctions to regions");
 		
 		return regionJunctions;
 	}

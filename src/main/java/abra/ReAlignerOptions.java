@@ -36,6 +36,7 @@ public class ReAlignerOptions extends Options {
 	private static final String SKIP_NON_ASSEMBLY = "sna";
 	private static final String JUNCTIONS = "junctions";
 	private static final String LOG_LEVEL = "log";
+	private static final String CONTIG_FILE	 = "contigs";
 	
 	private OptionParser parser;
 	private boolean isValid;
@@ -70,6 +71,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(SKIP_NON_ASSEMBLY, "Skip non-assembly contig generation");
             parser.accepts(JUNCTIONS, "Splice junctions definition file").withRequiredArg().ofType(String.class);
             parser.accepts(LOG_LEVEL, "Logging level (trace,debug,info,warn,error)").withRequiredArg().ofType(String.class).defaultsTo("info");
+            parser.accepts(CONTIG_FILE, "Optional file to which assembled contigs are written").withRequiredArg().ofType(String.class);
     	}
     	
     	return parser;
@@ -267,6 +269,10 @@ public class ReAlignerOptions extends Options {
 	
 	public String getLoggerLevel() {
 		return (String) getOptions().valueOf(LOG_LEVEL);
+	}
+	
+	public String getContigFile() {
+		return (String) getOptions().valueOf(CONTIG_FILE);
 	}
 	
 	public boolean isValid() {

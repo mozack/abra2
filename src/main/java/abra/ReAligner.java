@@ -74,7 +74,7 @@ public class ReAligner {
 	
 	private boolean isPairedEnd = false;
 	
-	private BufferedWriter contigWriter;
+	private BufferedWriter contigWriter = null;
 	
 	private CompareToReference2 c2r;
 	
@@ -88,6 +88,8 @@ public class ReAligner {
 	
 	// If true, the input target file specifies kmer values
 	private boolean hasPresetKmers = false;
+	
+	private String contigFile = null;
 	
 	// RNA specific
 	private String junctionFile;
@@ -120,8 +122,9 @@ public class ReAligner {
 		Clock clock = new Clock("Assembly");
 		clock.start();
 		
-		String contigFasta = tempDir + "/" + "all_contigs.fasta";
-		contigWriter = new BufferedWriter(new FileWriter(contigFasta, false));
+		if (contigFile != null) {
+			contigWriter = new BufferedWriter(new FileWriter(contigFile, false));
+		}
 		
 		SAMFileWriterFactory writerFactory = new SAMFileWriterFactory();
 		
@@ -148,7 +151,9 @@ public class ReAligner {
 		Logger.info("Waiting for all threads to complete");
 		threadManager.waitForAllThreadsToComplete();
 		
-		contigWriter.close();
+		if (contigWriter != null) {
+			contigWriter.close();
+		}
 		
 		clock.stopAndPrint();		
 		
@@ -421,7 +426,9 @@ public class ReAligner {
 	}
 	
 	private synchronized void appendContigs(String contigs) throws IOException {
-		contigWriter.write(contigs);
+		if (contigWriter != null) {
+			contigWriter.write(contigs);
+		}
 	}
 	
 	private void remapRead(ReadEvaluator readEvaluator, SAMRecord read, int origEditDist) {
@@ -663,8 +670,9 @@ public class ReAligner {
 					
 					if (!contigs.equals("<ERROR>") && !contigs.equals("<REPEAT>") && !contigs.isEmpty()) {
 						
-						// TODO: Turn this off by default
-						appendContigs(contigs);
+						if (contigWriter != null) {
+							appendContigs(contigs);
+						}
 						
 						List<ScoredContig> scoredContigs = ScoredContig.convertAndFilter(contigs);
 						
@@ -1062,6 +1070,7 @@ public class ReAligner {
 			realigner.isSkipAssembly = options.isSkipAssembly();
 			realigner.isSkipNonAssembly = options.isSkipNonAssembly();
 			realigner.junctionFile = options.getJunctionFile();
+			realigner.contigFile = options.getContigFile();
 
 			long s = System.currentTimeMillis();
 			

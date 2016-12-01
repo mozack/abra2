@@ -1065,7 +1065,9 @@ char* assemble(const char* input,
 
 	if (nodes->size() >= max_nodes) {
 		status = TOO_MANY_NODES;
-		fprintf(stderr,"Graph too complex for region: %s\n", prefix);
+		if (debug) {
+			fprintf(stderr,"Graph too complex for region: %s\n", prefix);
+		}
 	}
 
 	//TODO: Set this explicitly

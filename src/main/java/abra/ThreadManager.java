@@ -1,14 +1,11 @@
 package abra;
 
-import static abra.Logger.log;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Manages threading
@@ -59,8 +56,8 @@ public class ThreadManager {
 	
 	public void waitForAllThreadsToComplete() throws InterruptedException, IOException {
 		executor.shutdown();
-		while (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
-			Logger.info("Waiting on " + threads.size() + " threads.");
+		while (!executor.awaitTermination(300, TimeUnit.SECONDS)) {
+			Logger.info("Waiting on " + threads.size() + " queued threads.");
 		}
 	}
 

@@ -416,7 +416,7 @@ public class ReAligner {
 		
 	private void spawnChromosomeThread(String chromosome) throws InterruptedException {
 		ReAlignerRunnable thread = new ReAlignerRunnable(threadManager, this, chromosome);
-		Logger.info("Spawning thread for chromosome: " + chromosome);
+		Logger.debug("Queuing thread for chromosome: " + chromosome);
 		threadManager.spawnThread(thread);
 	}
 	

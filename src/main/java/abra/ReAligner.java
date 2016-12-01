@@ -972,9 +972,9 @@ public class ReAligner {
 			throw new IllegalStateException("Unable to create: " + tempDir + "/unaligned");
 		}
 		
-		new NativeLibraryLoader().load(tempDir, "libabra.so", false);
-		new NativeLibraryLoader().load(tempDir, "libssw.so", false);
-		new NativeLibraryLoader().load(tempDir, "libsswjni.so", false);
+		new NativeLibraryLoader().load(tempDir, NativeLibraryLoader.ABRA, false);
+		new NativeLibraryLoader().load(tempDir, NativeLibraryLoader.SSW, false);
+		new NativeLibraryLoader().load(tempDir, NativeLibraryLoader.SSW_JNI, false);
 		
 		threadManager = new ThreadManager(numThreads);
 	}

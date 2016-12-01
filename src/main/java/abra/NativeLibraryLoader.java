@@ -16,14 +16,16 @@ import java.net.URL;
  */
 public class NativeLibraryLoader {
 	
+	public static final String ABRA    = "libAbra.so";
+	public static final String SSW     = "libssw.so";
+	public static final String SSW_JNI = "libsswjni.so";
+	
 	public void load(String tempDir, String library, boolean isLenient) {
-		//String urlPath = "/libAbra.so";
 		String urlPath = "/" + library;
 		
 		URL url = NativeLibraryLoader.class.getResource(urlPath);
 		
 		if (url != null) {
-//			File file = new File(tempDir + "/libAbra.so");
 			File file = new File(tempDir + "/" + library);
 			
 			try {

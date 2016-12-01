@@ -5,7 +5,7 @@
 
   <groupId>abra</groupId>
   <artifactId>abra</artifactId>
-  <version>0.01-SNAPSHOT</version>
+  <version>0.01</version>
   <packaging>jar</packaging>
 
   <name>abra</name>

@@ -32,4 +32,37 @@ public class IndelInfo {
 	public void setInsertBases(String insertBases) {
 		this.insertBases = insertBases;
 	}
+
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result
+				+ ((cigarElement == null) ? 0 : cigarElement.hashCode());
+		result = prime * result
+				+ ((insertBases == null) ? 0 : insertBases.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		IndelInfo other = (IndelInfo) obj;
+		if (cigarElement == null) {
+			if (other.cigarElement != null)
+				return false;
+		} else if (!cigarElement.equals(other.cigarElement))
+			return false;
+		if (insertBases == null) {
+			if (other.insertBases != null)
+				return false;
+		} else if (!insertBases.equals(other.insertBases))
+			return false;
+		return true;
+	}
 }

@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -93,7 +94,8 @@ public class ReAligner {
 	
 	// RNA specific
 	private String junctionFile;
-	private List<Feature> junctions = new ArrayList<Feature>();
+	private String gtfJunctionFile;
+	private Set<Feature> junctions = new HashSet<Feature>();
 	
 	private ReverseComplementor rc = new ReverseComplementor();
 	
@@ -763,10 +765,17 @@ public class ReAligner {
 	}
 	
 	private void loadJunctions() throws IOException {
+		if (this.gtfJunctionFile != null) {
+			this.junctions = JunctionUtils.loadJunctionsFromGtf(gtfJunctionFile);
+		}
+		
 		if (this.junctionFile != null) {
 			RegionLoader loader = new RegionLoader();
-			this.junctions = loader.load(junctionFile, false);
+			List<Feature> observedJunctions = loader.load(junctionFile, false);
+			Logger.info("Loaded " + observedJunctions.size() + " observed junctions");
 		}
+		
+		Logger.info("Total junctions input: " + junctions.size());
 	}
 
 	public void setRegionsBed(String bedFile) {
@@ -1070,6 +1079,7 @@ public class ReAligner {
 			realigner.isSkipAssembly = options.isSkipAssembly();
 			realigner.isSkipNonAssembly = options.isSkipNonAssembly();
 			realigner.junctionFile = options.getJunctionFile();
+			realigner.gtfJunctionFile = options.getGtfJunctionFile();
 			realigner.contigFile = options.getContigFile();
 
 			long s = System.currentTimeMillis();

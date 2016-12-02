@@ -1,5 +1,9 @@
 package abra;
 
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -11,6 +15,66 @@ import java.util.Map;
 import java.util.Set;
 
 public class JunctionUtils {
+	
+	/**
+	 * Load junctions from GTF using exons grouped by transcript_id
+	 * Sort order is unspecified 
+	 */
+	public static Set<Feature> loadJunctionsFromGtf(String filename) throws FileNotFoundException, IOException {
+		Logger.debug("Loading annotated junctions from %s", filename);
+		Set<Exon> exonSet = new HashSet<Exon>();
+		
+		BufferedReader reader = new BufferedReader(new FileReader(filename));
+		
+		try {
+			String line = reader.readLine();
+			while (line != null) {
+				if (!line.startsWith("#")) {
+					String[] fields = line.split("\\t");
+					if (fields.length >= 9 && fields[2].equals("exon")) {
+						String chrom = fields[0];
+						int start = Integer.parseInt(fields[3]);
+						int stop = Integer.parseInt(fields[4]);
+						String attributes = fields[8];
+						String[] attrFields = attributes.split(";");
+						for (String attr : attrFields) {
+							attr = attr.trim();
+							if (attr.startsWith("transcript_id")) {
+								int idx = attr.indexOf("transcript_id") + "transcript_id".length();
+								String transcriptId = attr.substring(idx, attr.length());
+								exonSet.add(new Exon(chrom, start, stop, transcriptId));
+							}
+						}
+					}
+				}
+				
+				line = reader.readLine();
+			}
+		} finally {
+			reader.close();
+		}
+		
+		List<Exon> exons = new ArrayList<Exon>(exonSet);
+		Collections.sort(exons);
+		
+		Set<Feature> junctions = new HashSet<Feature>();
+		Exon prevExon = null;
+		
+		for (Exon exon : exons) {
+			if (prevExon != null && exon.getTranscriptId().equals(prevExon.getTranscriptId())) {
+				// Create junction, adjusting coordinates to match first / last position in intron
+				// similar to STAR's junction output
+				Feature junction = new Feature(exon.getChrom(), prevExon.getStop()+1, exon.getStart()-1);
+				junctions.add(junction);
+			}
+			
+			prevExon = exon;
+		}
+		
+		Logger.info("Loaded " + junctions.size() + " annotated junctions");
+		
+		return junctions;
+	}
 	
 	/**
 	 * Return Map with key=Region, value = Sorted list of junctions that may be relevant to the region
@@ -183,5 +247,84 @@ public class JunctionUtils {
 			
 			return ret;
 		}
+	}
+	
+	static class Exon implements Comparable<Exon> {
+		int start;
+		int stop;
+		String chrom;
+		String transcriptId;
+		
+		Exon(String chrom, int start, int stop, String transcriptId) {
+			this.start = start;
+			this.stop = stop;
+			this.chrom = chrom;
+			this.transcriptId = transcriptId; 
+		}
+		
+		public int getStart() {
+			return start;
+		}
+
+		public int getStop() {
+			return stop;
+		}
+
+		public String getChrom() {
+			return chrom;
+		}
+
+		public String getTranscriptId() {
+			return transcriptId;
+		}
+
+		@Override
+		public int compareTo(Exon that) {
+			int cmp = this.transcriptId.compareTo(that.transcriptId);
+			if (cmp == 0) {
+				cmp = this.start - that.start;
+			}
+			
+			return cmp;
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + ((chrom == null) ? 0 : chrom.hashCode());
+			result = prime * result + start;
+			result = prime * result + stop;
+			result = prime * result + ((transcriptId == null) ? 0 : transcriptId.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			Exon other = (Exon) obj;
+			if (chrom == null) {
+				if (other.chrom != null)
+					return false;
+			} else if (!chrom.equals(other.chrom))
+				return false;
+			if (start != other.start)
+				return false;
+			if (stop != other.stop)
+				return false;
+			if (transcriptId == null) {
+				if (other.transcriptId != null)
+					return false;
+			} else if (!transcriptId.equals(other.transcriptId))
+				return false;
+			return true;
+		}
+		
+		
 	}
 }

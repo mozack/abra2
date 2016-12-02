@@ -158,6 +158,40 @@ public class Cadabra {
 		return isMatch;
 	}
 	
+	// Returns most abundant indel in reads
+	private IndelInfo checkForIndelInReadsAtPosition(ReadsAtLocus tumorReads, int position) {
+		
+		Map<IndelInfo, Integer> indelCounts = new HashMap<IndelInfo, Integer>();
+		int totalIndelCounts = 0;
+		
+		for (SAMRecord read : tumorReads.getReads()) {
+			if (!read.getDuplicateReadFlag()) {
+				IndelInfo indel = checkForIndelAtLocus(read, position);
+				
+				int currCount = 0;
+				if (indelCounts.containsKey(indel)) {
+					currCount = indelCounts.get(indel);
+				}
+				
+				indelCounts.put(indel, currCount + 1);
+				totalIndelCounts += 1;
+			}
+		}
+		
+		
+		IndelInfo maxIndel = null;
+		int max = 0;
+		for (IndelInfo indel : indelCounts.keySet()) {
+			
+			if (indelCounts.get(indel) > max) {
+				
+			}
+		}
+		
+		// TODO: Placeholder to compile
+		return null;
+	}
+	
 	private void processLocus(ReadsAtLocus normalReads, ReadsAtLocus tumorReads) {
 		String chromosome = normalReads.getChromosome();
 		int position = normalReads.getPosition();

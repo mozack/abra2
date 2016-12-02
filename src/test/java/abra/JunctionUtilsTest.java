@@ -25,8 +25,6 @@ public class JunctionUtilsTest {
 		assertTrue(junctions.contains(new Feature("chr7", 55210131, 55210997)));
 		assertTrue(junctions.contains(new Feature("chr7", 55211182, 55218986)));
 		assertTrue(junctions.contains(new Feature("chr7", 55211182, 55214298)));
-		
-		junctions = JunctionUtils.loadJunctionsFromGtf("test-data/gencode.v19.annotation.gtf");
 	}
 
 	@Test (groups = "unit")

@@ -3,6 +3,7 @@ package abra;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
@@ -14,6 +15,18 @@ public class JunctionUtilsTest {
 		assertEquals(actual.getSeqname(), chr, "Junction: " + chr + ":" + start + "-" + end);
 		assertEquals(actual.getStart(), start, "Junction: " + chr + ":" + start + "-" + end);
 		assertEquals(actual.getEnd(), end, "Junction: " + chr + ":" + start + "-" + end);
+	}
+	
+	@Test (groups = "unit")
+	public void testLoadJunctionsFromGtf() throws Exception {
+		Set<Feature> junctions = JunctionUtils.loadJunctionsFromGtf("test-data/annotation1.gtf");
+		assertEquals(junctions.size(), 4);
+		assertTrue(junctions.contains(new Feature("chr7", 55087059, 55209978)));
+		assertTrue(junctions.contains(new Feature("chr7", 55210131, 55210997)));
+		assertTrue(junctions.contains(new Feature("chr7", 55211182, 55218986)));
+		assertTrue(junctions.contains(new Feature("chr7", 55211182, 55214298)));
+		
+		junctions = JunctionUtils.loadJunctionsFromGtf("test-data/gencode.v19.annotation.gtf");
 	}
 
 	@Test (groups = "unit")

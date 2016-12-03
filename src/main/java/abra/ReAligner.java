@@ -773,6 +773,7 @@ public class ReAligner {
 			RegionLoader loader = new RegionLoader();
 			List<Feature> observedJunctions = loader.load(junctionFile, false);
 			Logger.info("Loaded " + observedJunctions.size() + " observed junctions");
+			junctions.addAll(observedJunctions);
 		}
 		
 		Logger.info("Total junctions input: " + junctions.size());

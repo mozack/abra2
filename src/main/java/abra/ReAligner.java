@@ -8,6 +8,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetAddress;
+import java.net.URL;
 import java.security.CodeSource;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -401,7 +402,8 @@ public class ReAligner {
 		String metaFile = "/META-INF/maven/abra/abra/pom.properties";
 		Properties prop = new Properties();
 		try {
-			InputStream input = new FileInputStream(metaFile);
+			URL url = NativeLibraryLoader.class.getResource(metaFile);
+			InputStream input = url.openStream();
 			prop.load(input);
 			input.close();
 			version = prop.getProperty("version");

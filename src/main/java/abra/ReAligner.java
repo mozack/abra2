@@ -8,6 +8,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetAddress;
+import java.security.CodeSource;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -111,8 +112,6 @@ public class ReAligner {
 	public void reAlign(String[] inputFiles, String[] outputFiles) throws Exception {
 		
 		this.inputSams = inputFiles;
-		
-		this.version = getVersion();
 		
 		logStartupInfo(outputFiles);
 				
@@ -397,7 +396,7 @@ public class ReAligner {
 		return minPos;
 	}
 	
-	private String getVersion() throws IOException {
+	private static String getVersion() throws IOException {
 		String version = "unknown";
 		String metaFile = "/META-INF/maven/abra/abra/pom.properties";
 		Properties prop = new Properties();
@@ -410,7 +409,6 @@ public class ReAligner {
 			e.printStackTrace();
 			Logger.error("Error reading version from pom.properties");
 		}
-		
 		
 		return version;
 	}
@@ -1074,17 +1072,32 @@ public class ReAligner {
 	boolean isFiltered(SAMRecord read) {
 		return SAMRecordUtils.isFiltered(isPairedEnd, read);
 	}
-
-	public static void run(String[] args) throws Exception {
+	
+	private static String getCommandLine(String[] args) {
+		String jar = "";
+		CodeSource cs = Abra.class.getProtectionDomain().getCodeSource();
+		if (cs != null) {
+			jar = cs.getLocation().toString();
+		}
 		
 		StringBuffer cl = new StringBuffer();
-		cl.append(Abra.class.getProtectionDomain().getCodeSource().getLocation());
+		cl.append(jar);
 		for (String arg : args) {
 			cl.append(' ');
 			cl.append(arg);
 		}
 		
-		Logger.info("Abra command: [" + cl.toString() + "]");
+		return cl.toString();
+	}
+
+	public static void run(String[] args) throws Exception {
+		
+		String version = getVersion();
+		Logger.info("Abra version: " + version);
+		
+		String cl = getCommandLine(args);
+		
+		Logger.info("Abra params: [" + cl + "]");
 		
 		ReAlignerOptions options = new ReAlignerOptions();
 		options.parseOptions(args);

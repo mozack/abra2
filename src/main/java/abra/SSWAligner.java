@@ -17,10 +17,15 @@ public class SSWAligner {
 	
 	// TODO: Optimize SW scoring
 	// bwa scores
-	private static final int MATCH = 1;
-	private static final int MISMATCH = -4;
-	private static final int GAP_OPEN_PENALTY = 6;
-	private static final int GAP_EXTEND_PENALTY = 0;
+//	private static final int MATCH = 1;
+//	private static final int MISMATCH = -4;
+//	private static final int GAP_OPEN_PENALTY = 6;
+//	private static final int GAP_EXTEND_PENALTY = 0;
+	
+	private static final int MATCH = 4;
+	private static final int MISMATCH = -16;
+	private static final int GAP_OPEN_PENALTY = 24;
+	private static final int GAP_EXTEND_PENALTY = 1;
 	
 	private String refChr;
 	private int refStart;

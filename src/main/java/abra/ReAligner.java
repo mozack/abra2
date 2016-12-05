@@ -397,24 +397,6 @@ public class ReAligner {
 		return minPos;
 	}
 	
-	private static String getVersion() throws IOException {
-		String version = "unknown";
-		String metaFile = "/META-INF/maven/abra/abra/pom.properties";
-		Properties prop = new Properties();
-		try {
-			URL url = NativeLibraryLoader.class.getResource(metaFile);
-			InputStream input = url.openStream();
-			prop.load(input);
-			input.close();
-			version = prop.getProperty("version");
-		} catch (IOException e) {
-			e.printStackTrace();
-			Logger.error("Error reading version from pom.properties");
-		}
-		
-		return version;
-	}
-	
 	private void logStartupInfo(String[] outputFiles) throws IOException {
 		
 		Logger.info("ABRA version: " + this.version);
@@ -1075,11 +1057,32 @@ public class ReAligner {
 		return SAMRecordUtils.isFiltered(isPairedEnd, read);
 	}
 	
+	private static String getVersion() throws IOException {
+		String version = "unknown";
+		String metaFile = "/META-INF/maven/abra/abra/pom.properties";
+		Properties prop = new Properties();
+		try {
+			URL url = NativeLibraryLoader.class.getResource(metaFile);
+			InputStream input = url.openStream();
+			prop.load(input);
+			input.close();
+			version = prop.getProperty("version");
+		} catch (IOException e) {
+			e.printStackTrace();
+			Logger.error("Error reading version from pom.properties");
+		}
+		
+		return version;
+	}
+	
 	private static String getCommandLine(String[] args) {
 		String jar = "";
 		CodeSource cs = Abra.class.getProtectionDomain().getCodeSource();
 		if (cs != null) {
 			jar = cs.getLocation().toString();
+			if (jar.startsWith("file:")) {
+				jar = jar.replaceFirst("file:", "");
+			}
 		}
 		
 		StringBuffer cl = new StringBuffer();

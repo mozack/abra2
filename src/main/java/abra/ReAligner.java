@@ -318,7 +318,7 @@ public class ReAligner {
 				}
 				
 				for (Feature region : regionsToRemove) {
-					Logger.debug("Removing contigs for region: %s" + region.toString());
+					Logger.debug("Removing contigs for region: %s", region.toString());
 					regionContigs.remove(region);
 				}
 

@@ -22,9 +22,9 @@ public class SSWAligner {
 //	private static final int GAP_OPEN_PENALTY = 6;
 //	private static final int GAP_EXTEND_PENALTY = 0;
 	
-	private static final int MATCH = 4;
-	private static final int MISMATCH = -16;
-	private static final int GAP_OPEN_PENALTY = 24;
+	private static final int MATCH = 10;
+	private static final int MISMATCH = -40;
+	private static final int GAP_OPEN_PENALTY = 60;
 	private static final int GAP_EXTEND_PENALTY = 1;
 	
 	private String refChr;

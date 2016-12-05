@@ -146,14 +146,15 @@ public class ReAligner {
 		writers = new SAMFileWriter[inputSams.length];
 		
 		for (int i=0; i<inputSams.length; i++) {
-			// init BAM writer
-			writers[i] = writerFactory.makeBAMWriter(
-					samHeaders[i], false, new File(outputFiles[i]), COMPRESSION_LEVEL);
 			
 			SAMProgramRecord pg = new SAMProgramRecord("ABRA2");
 			pg.setProgramVersion(this.version);
 			pg.setCommandLine(cl);
-			writers[i].getFileHeader().addProgramRecord(pg);
+			samHeaders[i].addProgramRecord(pg);
+			
+			// init BAM writer
+			writers[i] = writerFactory.makeBAMWriter(
+					samHeaders[i], false, new File(outputFiles[i]), COMPRESSION_LEVEL);
 		}
 
 		// Spawn thread for each chromosome

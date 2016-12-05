@@ -3,7 +3,6 @@ package abra;
 
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -1142,6 +1141,7 @@ public class ReAligner {
 			realigner.gtfJunctionFile = options.getGtfJunctionFile();
 			realigner.contigFile = options.getContigFile();
 			realigner.cl = cl.toString();
+			realigner.version = version;
 
 			long s = System.currentTimeMillis();
 			

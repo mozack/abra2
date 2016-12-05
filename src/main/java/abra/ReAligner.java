@@ -318,14 +318,14 @@ public class ReAligner {
 				}
 				
 				for (Feature region : regionsToRemove) {
-					Logger.debug("Removing contigs for region: %s" + region);
+					Logger.debug("Removing contigs for region: %s" + region.toString());
 					regionContigs.remove(region);
 				}
 
 				String logPrefix = record.getSamRecord().getReferenceName() + ":" + record.getSamRecord().getAlignmentStart() + " : ";
 				
 				if (regionContigs.size() > 10) {
-					Logger.debug("%s\tregionContigs size: ", logPrefix, regionContigs.size());
+					Logger.debug("%s\tregionContigs size: %d", logPrefix, regionContigs.size());
 				}
 				
 				int currReadsCount = 0;
@@ -334,7 +334,7 @@ public class ReAligner {
 				}
 
 				if (currReadsCount > 10000) {
-					Logger.debug("%s\t%sCurr reads size: %d", logPrefix, currReadsCount);
+					Logger.debug("%s\tCurr reads size: %d", logPrefix, currReadsCount);
 				}
 				
 				int outOfRegionCount = 0;

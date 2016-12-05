@@ -107,10 +107,10 @@ public class ReAlignerOptions extends Options {
 			System.err.println("Please specifiy only one of: " + TARGET_REGIONS + ", " + TARGET_REGIONS_WITH_KMERS);
 		}		
 		
-		if (!getOptions().hasArgument(TARGET_REGIONS) && !getOptions().hasArgument(TARGET_REGIONS_WITH_KMERS)) {
-			isValid = false;
-			System.err.println("Missing required target regions");
-		}
+//		if (!getOptions().hasArgument(TARGET_REGIONS) && !getOptions().hasArgument(TARGET_REGIONS_WITH_KMERS)) {
+//			isValid = false;
+//			System.err.println("Missing required target regions");
+//		}
 		
 		if (!getOptions().hasArgument(WORKING_DIR)) {
 			isValid = false;

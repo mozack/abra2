@@ -767,9 +767,33 @@ public class ReAligner {
 
 		return regions;
 	}
+	
+	static List<Feature> getRegionsNoBed(int readLength, SAMFileHeader header) throws IOException {
+		
+		List<Feature> regions = new ArrayList<Feature>();
+		
+		List<SAMSequenceRecord> refSeq = header.getSequenceDictionary().getSequences();
+		
+		for (SAMSequenceRecord seq : refSeq) {
+			Feature region = new Feature(seq.getSequenceName(), 1, seq.getSequenceLength());
+			regions.add(region);
+		}
+		
+		regions = RegionLoader.collapseRegions(regions, readLength);
+		regions = splitRegions(regions);
+		
+		return regions;
+	}
 		
 	private void loadRegions() throws IOException {
-		this.regions = getRegions(regionsBed, readLength, hasPresetKmers);
+		
+		if (regionsBed != null) {
+			Logger.info("Loading target regions from : " + regionsBed);
+			this.regions = getRegions(regionsBed, readLength, hasPresetKmers);
+		} else {
+			Logger.info("No target bed file specified.  Gathering regions using SAM header");
+			this.regions = getRegionsNoBed(readLength, this.samHeaders[0]);
+		}
 		
 		Logger.info("Num regions: " + regions.size());
 		

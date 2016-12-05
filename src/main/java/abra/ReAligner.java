@@ -3,8 +3,10 @@ package abra;
 
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -14,6 +16,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -24,6 +27,7 @@ import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.SAMFileReader;
 import htsjdk.samtools.SAMFileWriter;
 import htsjdk.samtools.SAMFileWriterFactory;
+import htsjdk.samtools.SAMProgramRecord;
 import htsjdk.samtools.SAMRecord;
 import htsjdk.samtools.SAMSequenceRecord;
 import htsjdk.samtools.ValidationStringency;
@@ -99,11 +103,16 @@ public class ReAligner {
 	
 	private ReverseComplementor rc = new ReverseComplementor();
 	
+	private String version = "unknown";
+	private String cl = "unknown";
+	
 	public static final int COMPRESSION_LEVEL = 1;
 	
 	public void reAlign(String[] inputFiles, String[] outputFiles) throws Exception {
 		
 		this.inputSams = inputFiles;
+		
+		this.version = getVersion();
 		
 		logStartupInfo(outputFiles);
 				
@@ -141,6 +150,11 @@ public class ReAligner {
 			// init BAM writer
 			writers[i] = writerFactory.makeBAMWriter(
 					samHeaders[i], false, new File(outputFiles[i]), COMPRESSION_LEVEL);
+			
+			SAMProgramRecord pg = new SAMProgramRecord("ABRA2");
+			pg.setProgramVersion(this.version);
+			pg.setCommandLine(cl);
+			writers[i].getFileHeader().addProgramRecord(pg);
 		}
 
 		// Spawn thread for each chromosome
@@ -383,7 +397,27 @@ public class ReAligner {
 		return minPos;
 	}
 	
-	private void logStartupInfo(String[] outputFiles) {
+	private String getVersion() throws IOException {
+		String version = "unknown";
+		String metaFile = "/META-INF/maven/abra/abra/pom.properties";
+		Properties prop = new Properties();
+		try {
+			InputStream input = new FileInputStream(metaFile);
+			prop.load(input);
+			input.close();
+			version = prop.getProperty("version");
+		} catch (IOException e) {
+			e.printStackTrace();
+			Logger.error("Error reading version from pom.properties");
+		}
+		
+		
+		return version;
+	}
+	
+	private void logStartupInfo(String[] outputFiles) throws IOException {
+		
+		Logger.info("ABRA version: " + this.version);
 		
 		int ctr = 0;
 		for (String input : inputSams) {
@@ -1043,7 +1077,14 @@ public class ReAligner {
 
 	public static void run(String[] args) throws Exception {
 		
-		Logger.info("Starting 0.97 ...");
+		StringBuffer cl = new StringBuffer();
+		cl.append(Abra.class.getProtectionDomain().getCodeSource().getLocation());
+		for (String arg : args) {
+			cl.append(' ');
+			cl.append(arg);
+		}
+		
+		Logger.info("Abra command: [" + cl.toString() + "]");
 		
 		ReAlignerOptions options = new ReAlignerOptions();
 		options.parseOptions(args);
@@ -1082,6 +1123,7 @@ public class ReAligner {
 			realigner.junctionFile = options.getJunctionFile();
 			realigner.gtfJunctionFile = options.getGtfJunctionFile();
 			realigner.contigFile = options.getContigFile();
+			realigner.cl = cl.toString();
 
 			long s = System.currentTimeMillis();
 			

@@ -127,7 +127,7 @@ public class NativeAssembler {
 		return isCandidate;
 	}
 	
-	public String assembleContigs(List<String> inputFiles, String output, String tempDir, List<Feature> regions, String prefix,
+	public String assembleContigs(List<String> inputFiles, List<Feature> regions, String prefix,
 			boolean checkForDupes, ReAligner realigner, CompareToReference2 c2r, List<List<SAMRecordWrapper>> readsList) {
 		
 		if ((kmers.length == 0) || (kmers[0] < KmerSizeEvaluator.MIN_KMER)) {
@@ -222,7 +222,8 @@ public class NativeAssembler {
 			if (isAssemblyCandidate) {
 				for (int kmer : kmers) { 
 				
-					String outputFile = output + "_k" + kmer;
+					//TODO: Not really an output file anymore.  Cleanup.
+					String outputFile = prefix + "_k" + kmer;
 					
 					contigs = assemble(
 							readBuffer.toString(),

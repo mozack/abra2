@@ -4,7 +4,6 @@ package abra;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URL;
@@ -16,19 +15,20 @@ import java.net.URL;
  */
 public class NativeLibraryLoader {
 	
-	public static final String ABRA    = "libAbra.so";
-	public static final String SSW     = "libssw.so";
-	public static final String SSW_JNI = "libsswjni.so";
+	public static final String ABRA     = "libAbra.so";
+	public static final String SSW      = "libssw.so";
+	public static final String SSW_JNI  = "libsswjni.so";
+	public static final String DEFLATOR = "libIntelDeflater.so";
 	
 	public void load(String tempDir, String library, boolean isLenient) {
-		String urlPath = "/" + library;
-		
-		URL url = NativeLibraryLoader.class.getResource(urlPath);
-		
-		if (url != null) {
-			File file = new File(tempDir + "/" + library);
+		try {
+			String urlPath = "/" + library;
 			
-			try {
+			URL url = NativeLibraryLoader.class.getResource(urlPath);
+			
+			if (url != null) {
+				File file = new File(tempDir + "/" + library);
+				
 		        final InputStream in = url.openStream();
 		        final OutputStream out = new BufferedOutputStream(new FileOutputStream(file));
 		
@@ -40,16 +40,19 @@ public class NativeLibraryLoader {
 		        
 		        out.close();
 		        in.close();
-			} catch (IOException e) {
-				e.printStackTrace();
-				throw new RuntimeException(e);
+				
+				Logger.info("Loading native library from: " + file.getAbsolutePath());
+				System.load(file.getAbsolutePath());
+			} else if (!isLenient) {
+				throw new RuntimeException("Unable to load library: " + library + " from path [" + urlPath + "] into tempdir: [" + tempDir + "]");
 			}
+		} catch (Throwable t) {
+			Logger.error("Error loading: " + library + " from : " + tempDir);
+			t.printStackTrace();
 			
-			Logger.info("Loading native library from: " + file.getAbsolutePath());
-			System.load(file.getAbsolutePath());
-		} else if (!isLenient) {
-			throw new RuntimeException("Unable to load library: " + library + " from path [" + urlPath + "] into tempdir: [" + tempDir + "]");
+			if (!isLenient) {
+				throw new RuntimeException(t);
+			}
 		}
 	}
-	
 }

@@ -1018,6 +1018,7 @@ public class ReAligner {
 		new NativeLibraryLoader().load(tempDir.toString(), NativeLibraryLoader.ABRA, false);
 		new NativeLibraryLoader().load(tempDir.toString(), NativeLibraryLoader.SSW, false);
 		new NativeLibraryLoader().load(tempDir.toString(), NativeLibraryLoader.SSW_JNI, false);
+		new NativeLibraryLoader().load(tempDir.toString(), NativeLibraryLoader.DEFLATOR, true);
 		
 		threadManager = new ThreadManager(numThreads);
 	}

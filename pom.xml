@@ -3,8 +3,8 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>abra</groupId>
-  <artifactId>abra</artifactId>
+  <groupId>abra2</groupId>
+  <artifactId>abra2</artifactId>
   <version>0.01</version>
   <packaging>jar</packaging>
 
@@ -77,17 +77,6 @@
     	<version>1.129</version>
 	</dependency>
 
-<!--  
-    <dependency>
-    	<artifactId>gatk</artifactId>
-    	<groupId>gatk</groupId>
-    	<scope>system</scope>
-    	<version>3.1</version>
-    <systemPath>/home/lmose/dev/gatk3.1/gatk-protected-3.1/target/GenomeAnalysisTK.jar</systemPath>
-</dependency>
--->
-
-
   </dependencies>
 
   <build>
@@ -141,6 +130,12 @@
        <directory>target</directory>
        <includes>
          <include>libsswjni.so</include>
+       </includes>
+     </resource>
+     <resource>
+       <directory>lib</directory>
+       <includes>
+         <include>libIntelDeflater.so</include>
        </includes>
      </resource>
    </resources>

@@ -13,13 +13,10 @@ public class ReAlignerOptions extends Options {
 	private static final String INPUT_SAM = "in";
 	private static final String OUTPUT_SAM = "out";
 	private static final String REFERENCE = "ref";
-	private static final String BWA_INDEX = "bwa-ref";
 	private static final String TARGET_REGIONS = "targets";
 	private static final String TARGET_REGIONS_WITH_KMERS = "target-kmers";
-	private static final String WORKING_DIR = "working";
 	private static final String KMER_SIZE = "kmer";
 	private static final String MIN_NODE_FREQUENCY = "mnf";
-	private static final String MIN_UNALIGNED_NODE_FREQUENCY = "umnf";
 	private static final String MIN_CONTIG_LENGTH = "mcl";
 	private static final String MAX_POTENTIAL_CONTIGS = "mpc";
 	private static final String MIN_MAPQ = "mapq";
@@ -30,7 +27,6 @@ public class ReAlignerOptions extends Options {
 	private static final String MAX_AVERAGE_REGION_DEPTH = "mad";
 	private static final String AVERAGE_DEPTH_CEILING = "adc";
 	private static final String MIN_EDGE_RATIO = "mer";
-	private static final String USE_INTERMEDIATE_BAM = "ib";
 	private static final String MAX_NODES = "maxn";
 	private static final String SKIP_ASSEMBLY = "sa";
 	private static final String SKIP_NON_ASSEMBLY = "sna";
@@ -49,13 +45,10 @@ public class ReAlignerOptions extends Options {
             parser.accepts(INPUT_SAM, "Required list of input sam or bam file(s) separated by comma").withRequiredArg().ofType(String.class);
             parser.accepts(OUTPUT_SAM, "Required list of output sam or bam file(s) separated by comma").withRequiredArg().ofType(String.class);
             parser.accepts(REFERENCE, "Genome reference location").withRequiredArg().ofType(String.class);
-            parser.accepts(BWA_INDEX, "BWA index prefix.  Use this only if the bwa index prefix does not match the ref option.").withRequiredArg().ofType(String.class);
             parser.accepts(TARGET_REGIONS, "BED file containing target regions").withRequiredArg().ofType(String.class);
             parser.accepts(TARGET_REGIONS_WITH_KMERS, "BED-like file containing target regions with per region kmer sizes in 4th column").withRequiredArg().ofType(String.class);
-            parser.accepts(WORKING_DIR, "Working directory for intermediate output.  Must not already exist").withRequiredArg().ofType(String.class);
             parser.accepts(KMER_SIZE, "Optional assembly kmer size(delimit with commas if multiple sizes specified)").withOptionalArg().ofType(String.class);
             parser.accepts(MIN_NODE_FREQUENCY, "Assembly minimum node frequency").withRequiredArg().ofType(Integer.class).defaultsTo(2);
-            parser.accepts(MIN_UNALIGNED_NODE_FREQUENCY, "Assembly minimum unaligned node frequency").withOptionalArg().ofType(Integer.class).defaultsTo(2);
             parser.accepts(MIN_CONTIG_LENGTH, "Assembly minimum contig length").withOptionalArg().ofType(Integer.class).defaultsTo(-1);
             parser.accepts(MAX_POTENTIAL_CONTIGS, "Maximum number of potential contigs for a region").withOptionalArg().ofType(Integer.class).defaultsTo(5000);
             parser.accepts(NUM_THREADS, "Number of threads").withRequiredArg().ofType(Integer.class).defaultsTo(4);
@@ -66,7 +59,6 @@ public class ReAlignerOptions extends Options {
             parser.accepts(MAX_AVERAGE_REGION_DEPTH, "Regions with average depth exceeding this value will be downsampled").withRequiredArg().ofType(Integer.class).defaultsTo(250);
             parser.accepts(AVERAGE_DEPTH_CEILING, "Skip regions with average depth greater than this value").withOptionalArg().ofType(Integer.class).defaultsTo(100000);
             parser.accepts(MIN_EDGE_RATIO, "Min edge pruning ratio.  Default value is appropriate for relatively sensitive somatic cases.  May be increased for improved speed in germline only cases.").withRequiredArg().ofType(Double.class).defaultsTo(.02);
-            parser.accepts(USE_INTERMEDIATE_BAM, "If specified, write intermediate data to BAM file using the intel deflator when available.  Use this to speed up processing.");
             parser.accepts(MAX_NODES, "Maximum pre-pruned nodes in regional assembly").withOptionalArg().ofType(Integer.class).defaultsTo(9000);
             parser.accepts(SKIP_ASSEMBLY, "Skip assembly");
             parser.accepts(SKIP_NON_ASSEMBLY, "Skip non-assembly contig generation");
@@ -106,17 +98,7 @@ public class ReAlignerOptions extends Options {
 			isValid = false;
 			System.err.println("Please specifiy only one of: " + TARGET_REGIONS + ", " + TARGET_REGIONS_WITH_KMERS);
 		}		
-		
-//		if (!getOptions().hasArgument(TARGET_REGIONS) && !getOptions().hasArgument(TARGET_REGIONS_WITH_KMERS)) {
-//			isValid = false;
-//			System.err.println("Missing required target regions");
-//		}
-		
-		if (!getOptions().hasArgument(WORKING_DIR)) {
-			isValid = false;
-			System.err.println("Missing required working directory");
-		}
-		
+				
 		if ((getOptions().hasArgument(NUM_THREADS) && (Integer) getOptions().valueOf(NUM_THREADS) < 1)) {
 			isValid = false;
 			System.err.println("Num threads must be greater than zero.");
@@ -147,19 +129,6 @@ public class ReAlignerOptions extends Options {
 		
 	public String getReference() {
 		return (String) getOptions().valueOf(REFERENCE);
-	}
-	
-	public String getBwaIndex() {
-		
-		String index = null;
-		
-		if (getOptions().hasArgument(BWA_INDEX)) {
-			index = (String) getOptions().valueOf(BWA_INDEX);
-		} else {
-			index = (String) getOptions().valueOf(REFERENCE);
-		}
-		
-		return index;
 	}
 	
 	public String getTargetRegionFile() {
@@ -199,10 +168,6 @@ public class ReAlignerOptions extends Options {
 		return getOptions().hasArgument(TARGET_REGIONS_WITH_KMERS);
 	}
 	
-	public String getWorkingDir() {
-		return (String) getOptions().valueOf(WORKING_DIR);
-	}
-	
 	public int[] getKmerSizes() {
 		int[] kmers;
 		if (getOptions().has(KMER_SIZE)) {
@@ -223,10 +188,6 @@ public class ReAlignerOptions extends Options {
 		return (Integer) getOptions().valueOf(MIN_NODE_FREQUENCY);
 	}
 	
-	public int getMinUnalignedNodeFrequency() {
-		return (Integer) getOptions().valueOf(MIN_UNALIGNED_NODE_FREQUENCY);
-	}
-	
 	public int getMinContigLength() {
 		return (Integer) getOptions().valueOf(MIN_CONTIG_LENGTH);
 	}
@@ -237,10 +198,6 @@ public class ReAlignerOptions extends Options {
 	
 	public int getNumThreads() {
 		return getOptions().hasArgument(NUM_THREADS) ? (Integer) getOptions().valueOf(NUM_THREADS) : 4;
-	}
-	
-	public boolean useIntermediateBam() {
-		return getOptions().has(USE_INTERMEDIATE_BAM);
 	}
 	
 	public boolean isPairedEnd() {

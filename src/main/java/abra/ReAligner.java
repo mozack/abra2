@@ -8,6 +8,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.security.CodeSource;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -20,6 +24,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.UUID;
 
 import abra.ReadEvaluator.Alignment;
 import abra.SSWAligner.SSWAlignerResult;
@@ -57,8 +62,6 @@ public class ReAligner {
 	private List<Feature> regions;
 
 	private String regionsBed;
-
-	private String tempDir;
 
 	private String reference;
 	
@@ -414,7 +417,6 @@ public class ReAligner {
 		Logger.info("regions: " + regionsBed);
 		Logger.info("reference: " + reference);
 		Logger.info("bwa index: " + bwaIndex);
-		Logger.info("working dir: " + tempDir);
 		Logger.info("num threads: " + numThreads);
 		Logger.info("max unaligned reads: " + maxUnalignedReads);
 		Logger.info(assemblerSettings.getDescription());
@@ -606,9 +608,7 @@ public class ReAligner {
 		
 		List<List<SAMRecordWrapper>> readsList = subsetReads(region, reads);
 		
-		try {
-			String contigsFasta = tempDir + "/" + region.getDescriptor() + "_contigs.fasta";
-			
+		try {		
 			List<String> bams = new ArrayList<String>(Arrays.asList(this.inputSams));
 			
 			// Get reference sequence matching current region (pad by 2 read lengths on each side)
@@ -684,7 +684,7 @@ public class ReAligner {
 					NativeAssembler assem = (NativeAssembler) newAssembler(region);
 					List<Feature> regions = new ArrayList<Feature>();
 					regions.add(region); 
-					String contigs = assem.assembleContigs(bams, contigsFasta, tempDir, regions, region.getDescriptor(), true, this, c2r, readsList);
+					String contigs = assem.assembleContigs(bams, regions, region.getDescriptor(), true, this, c2r, readsList);
 					
 					if (!contigs.equals("<ERROR>") && !contigs.equals("<REPEAT>") && !contigs.isEmpty()) {
 						
@@ -1004,27 +1004,18 @@ public class ReAligner {
 	}
 
 	private void init() throws IOException {
+		Set<PosixFilePermission> perms = new HashSet<PosixFilePermission>();
+        perms.add(PosixFilePermission.OWNER_READ);
+        perms.add(PosixFilePermission.OWNER_WRITE);
+        perms.add(PosixFilePermission.OWNER_EXECUTE);
 		
-		File workingDir = new File(tempDir);
-		if (workingDir.exists()) {
-			if (!workingDir.delete()) {
-				throw new IllegalStateException("Unable to delete: " + tempDir);
-			}
-		}
-
-		if (!workingDir.mkdir()) {
-			throw new IllegalStateException("Unable to create: " + tempDir);
-		}
+		Path tempDir = Files.createTempDirectory("abra_" + UUID.randomUUID(), PosixFilePermissions.asFileAttribute(perms));
 		
-		File unalignedTempDir = new File(tempDir + "/unaligned");
+		Logger.info("Using temp directory: " + tempDir.toString());
 		
-		if (!unalignedTempDir.mkdir()) {
-			throw new IllegalStateException("Unable to create: " + tempDir + "/unaligned");
-		}
-		
-		new NativeLibraryLoader().load(tempDir, NativeLibraryLoader.ABRA, false);
-		new NativeLibraryLoader().load(tempDir, NativeLibraryLoader.SSW, false);
-		new NativeLibraryLoader().load(tempDir, NativeLibraryLoader.SSW_JNI, false);
+		new NativeLibraryLoader().load(tempDir.toString(), NativeLibraryLoader.ABRA, false);
+		new NativeLibraryLoader().load(tempDir.toString(), NativeLibraryLoader.SSW, false);
+		new NativeLibraryLoader().load(tempDir.toString(), NativeLibraryLoader.SSW_JNI, false);
 		
 		threadManager = new ThreadManager(numThreads);
 	}
@@ -1035,10 +1026,6 @@ public class ReAligner {
 	
 	public void setBwaIndex(String bwaIndex) {
 		this.bwaIndex = bwaIndex;
-	}
-
-	public void setTempDir(String temp) {
-		this.tempDir = temp;
 	}
 
 	public void setAssemblerSettings(AssemblerSettings settings) {
@@ -1142,7 +1129,6 @@ public class ReAligner {
 			assemblerSettings.setMinNodeFrequncy(options.getMinNodeFrequency());
 			assemblerSettings.setMaxPotentialContigs(options
 					.getMaxPotentialContigs());
-			assemblerSettings.setMinUnalignedNodeFrequency(options.getMinUnalignedNodeFrequency());
 			assemblerSettings.setMinBaseQuality(options.getMinBaseQuality());
 			assemblerSettings.setMinReadCandidateFraction(options.getMinReadCandidateFraction());
 			assemblerSettings.setMaxAverageDepth(options.getMaxAverageRegionDepth());
@@ -1152,9 +1138,7 @@ public class ReAligner {
 
 			ReAligner realigner = new ReAligner();
 			realigner.setReference(options.getReference());
-			realigner.setBwaIndex(options.getBwaIndex());
 			realigner.setRegionsBed(options.getTargetRegionFile());
-			realigner.setTempDir(options.getWorkingDir());
 			realigner.setAssemblerSettings(assemblerSettings);
 			realigner.setNumThreads(options.getNumThreads());
 			realigner.isPairedEnd = options.isPairedEnd();

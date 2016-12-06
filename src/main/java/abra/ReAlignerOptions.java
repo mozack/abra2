@@ -29,7 +29,7 @@ public class ReAlignerOptions extends Options {
 	private static final String MIN_EDGE_RATIO = "mer";
 	private static final String MAX_NODES = "maxn";
 	private static final String SKIP_ASSEMBLY = "sa";
-	private static final String SKIP_NON_ASSEMBLY = "sna";
+	private static final String SW_SOFT_CLIP = "sws";
 	private static final String JUNCTIONS = "junctions";
 	private static final String LOG_LEVEL = "log";
 	private static final String CONTIG_FILE	 = "contigs";
@@ -61,11 +61,11 @@ public class ReAlignerOptions extends Options {
             parser.accepts(MIN_EDGE_RATIO, "Min edge pruning ratio.  Default value is appropriate for relatively sensitive somatic cases.  May be increased for improved speed in germline only cases.").withRequiredArg().ofType(Double.class).defaultsTo(.02);
             parser.accepts(MAX_NODES, "Maximum pre-pruned nodes in regional assembly").withOptionalArg().ofType(Integer.class).defaultsTo(9000);
             parser.accepts(SKIP_ASSEMBLY, "Skip assembly");
-            parser.accepts(SKIP_NON_ASSEMBLY, "Skip non-assembly contig generation");
             parser.accepts(JUNCTIONS, "Splice junctions definition file").withRequiredArg().ofType(String.class);
             parser.accepts(LOG_LEVEL, "Logging level (trace,debug,info,warn,error)").withRequiredArg().ofType(String.class).defaultsTo("info");
             parser.accepts(CONTIG_FILE, "Optional file to which assembled contigs are written").withRequiredArg().ofType(String.class);
             parser.accepts(GTF_JUNCTIONS, "GTF file defining exons and transcripts").withRequiredArg().ofType(String.class);
+            parser.accepts(SW_SOFT_CLIP, "Enable Smith Waterman alignment of high quality soft clipped sequence (Experimental");
     	}
     	
     	return parser;
@@ -209,7 +209,7 @@ public class ReAlignerOptions extends Options {
 	}
 	
 	public boolean isSkipNonAssembly() {
-		return getOptions().has(SKIP_NON_ASSEMBLY);
+		return !getOptions().has(SW_SOFT_CLIP);
 	}
 	
 	public int getMinBaseQuality() {

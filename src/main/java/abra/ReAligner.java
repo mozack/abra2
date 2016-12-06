@@ -1069,7 +1069,7 @@ public class ReAligner {
 	
 	private static String getVersion() throws IOException {
 		String version = "unknown";
-		String metaFile = "/META-INF/maven/abra/abra/pom.properties";
+		String metaFile = "/META-INF/maven/abra2/abra2/pom.properties";
 		Properties prop = new Properties();
 		try {
 			URL url = NativeLibraryLoader.class.getResource(metaFile);

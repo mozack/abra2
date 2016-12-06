@@ -64,8 +64,6 @@ public class ReAligner {
 	private String regionsBed;
 
 	private String reference;
-	
-	private String bwaIndex;
 
 	private AssemblerSettings assemblerSettings;
 	
@@ -186,6 +184,8 @@ public class ReAligner {
 	void processChromosome(String chromosome) throws Exception {
 		
 		Logger.info("Processing chromosome: " + chromosome);
+		Clock clock = new Clock("Chromosome: " + chromosome);
+		clock.start();
 		
 		MultiSamReader reader = new MultiSamReader(this.inputSams, this.minMappingQuality, this.isPairedEnd, chromosome);
 		
@@ -386,7 +386,7 @@ public class ReAligner {
 		
 		reader.close();
 		
-		Logger.info("Chromosome: " + chromosome + " done.");
+		clock.stopAndPrint();
 	}
 	
 	private int getFirstStartPos(List<List<SAMRecordWrapper>> readsList) {
@@ -416,7 +416,6 @@ public class ReAligner {
 		
 		Logger.info("regions: " + regionsBed);
 		Logger.info("reference: " + reference);
-		Logger.info("bwa index: " + bwaIndex);
 		Logger.info("num threads: " + numThreads);
 		Logger.info("max unaligned reads: " + maxUnalignedReads);
 		Logger.info(assemblerSettings.getDescription());
@@ -1008,8 +1007,11 @@ public class ReAligner {
         perms.add(PosixFilePermission.OWNER_READ);
         perms.add(PosixFilePermission.OWNER_WRITE);
         perms.add(PosixFilePermission.OWNER_EXECUTE);
-		
+        perms.add(PosixFilePermission.GROUP_READ);
+        perms.add(PosixFilePermission.GROUP_EXECUTE);
+
 		Path tempDir = Files.createTempDirectory("abra_" + UUID.randomUUID(), PosixFilePermissions.asFileAttribute(perms));
+		tempDir.toFile().deleteOnExit();
 		
 		Logger.info("Using temp directory: " + tempDir.toString());
 		
@@ -1022,10 +1024,6 @@ public class ReAligner {
 	
 	public void setReference(String reference) {
 		this.reference = reference;
-	}
-	
-	public void setBwaIndex(String bwaIndex) {
-		this.bwaIndex = bwaIndex;
 	}
 
 	public void setAssemblerSettings(AssemblerSettings settings) {

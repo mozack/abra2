@@ -45,7 +45,7 @@ public class NativeLibraryLoader {
 				throw new RuntimeException(e);
 			}
 			
-			System.err.println("Loading native library from: " + file.getAbsolutePath());
+			Logger.info("Loading native library from: " + file.getAbsolutePath());
 			System.load(file.getAbsolutePath());
 		} else if (!isLenient) {
 			throw new RuntimeException("Unable to load library: " + library + " from path [" + urlPath + "] into tempdir: [" + tempDir + "]");

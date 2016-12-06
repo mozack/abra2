@@ -27,6 +27,6 @@ public class Clock {
 	public void stopAndPrint() {
 		this.stopMsecs = System.currentTimeMillis();
 		
-		System.err.println("Clock time in " + descriptor + ": " + elapsedSeconds());
+		Logger.info("Clock time in " + descriptor + ": " + elapsedSeconds());
 	}
 }

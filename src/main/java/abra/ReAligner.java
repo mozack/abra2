@@ -108,6 +108,8 @@ public class ReAligner {
 	private String version = "unknown";
 	private String cl = "unknown";
 	
+	private int[] swScoring;
+	
 	public static final int COMPRESSION_LEVEL = 1;
 	
 	public void reAlign(String[] inputFiles, String[] outputFiles) throws Exception {
@@ -738,9 +740,6 @@ public class ReAligner {
 		return mappedContigs;
 	}
 	
-	
-
-	
 	// Pair up junctions that could be spanned by a single read
 	protected List<Pair<Feature, Feature>> pairJunctions(List<Feature> junctions, int maxDist) {
 		List<Pair<Feature, Feature>> junctionPairs = new ArrayList<Pair<Feature, Feature>>();
@@ -1003,6 +1002,9 @@ public class ReAligner {
 	}
 
 	private void init() throws IOException {
+		
+		SSWAligner.init(swScoring);
+		
 		Set<PosixFilePermission> perms = new HashSet<PosixFilePermission>();
         perms.add(PosixFilePermission.OWNER_READ);
         perms.add(PosixFilePermission.OWNER_WRITE);
@@ -1148,6 +1150,7 @@ public class ReAligner {
 			realigner.junctionFile = options.getJunctionFile();
 			realigner.gtfJunctionFile = options.getGtfJunctionFile();
 			realigner.contigFile = options.getContigFile();
+			realigner.swScoring = options.getSmithWatermanScoring();
 			realigner.cl = cl.toString();
 			realigner.version = version;
 

@@ -34,6 +34,7 @@ public class ReAlignerOptions extends Options {
 	private static final String LOG_LEVEL = "log";
 	private static final String CONTIG_FILE	 = "contigs";
 	private static final String GTF_JUNCTIONS = "gtf";
+	private static final String SW_SCORING = "sw";
 	
 	private OptionParser parser;
 	private boolean isValid;
@@ -66,6 +67,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(CONTIG_FILE, "Optional file to which assembled contigs are written").withRequiredArg().ofType(String.class);
             parser.accepts(GTF_JUNCTIONS, "GTF file defining exons and transcripts").withRequiredArg().ofType(String.class);
             parser.accepts(SW_SOFT_CLIP, "Enable Smith Waterman alignment of high quality soft clipped sequence (Experimental");
+            parser.accepts(SW_SCORING, "Smith Waterman scoring used for contig alignments (match, mismatch_penalty, gap_open_penalty, gap_extend_penalty)").withRequiredArg().ofType(String.class).defaultsTo("4,16,6,1");
     	}
     	
     	return parser;
@@ -234,6 +236,22 @@ public class ReAlignerOptions extends Options {
 	
 	public int getMinimumMappingQuality() {
 		return (Integer) getOptions().valueOf(MIN_MAPQ);
+	}
+	
+	public int[] getSmithWatermanScoring() {
+		String scoring = (String) getOptions().valueOf(SW_SCORING);
+		String[] fields = scoring.split(",");
+		if (fields.length != 4) {
+			Logger.error("4 values record for sw scoring");
+		}
+		
+		int[] scores = new int[4];
+		
+		for (int i=0; i<4; i++) {
+			scores[i] = Integer.parseInt(fields[0].trim());
+		}
+		
+		return scores;
 	}
 	
 	public String getLoggerLevel() {

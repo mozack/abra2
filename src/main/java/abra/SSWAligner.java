@@ -22,10 +22,10 @@ public class SSWAligner {
 //	private static final int GAP_OPEN_PENALTY = 6;
 //	private static final int GAP_EXTEND_PENALTY = 0;
 	
-	private static final int MATCH = 10;
-	private static final int MISMATCH = -40;
-	private static final int GAP_OPEN_PENALTY = 60;
-	private static final int GAP_EXTEND_PENALTY = 1;
+	private static int MATCH;
+	private static int MISMATCH;
+	private static int GAP_OPEN_PENALTY;
+	private static int GAP_EXTEND_PENALTY;
 	
 	private String refChr;
 	private int refStart;
@@ -36,13 +36,24 @@ public class SSWAligner {
 	private List<Integer> junctionLengths = new ArrayList<Integer>();
 	
 	private static int [][] score;
-	static {
-//		try {
-//			System.loadLibrary("sswjni");
-//		} catch (java.lang.UnsatisfiedLinkError e) {
-//			Logger.error(String.format("Cannot find libsswjni.so. Has the library been built and LD_LIBRARY_PATH or -Djava.library.path set appropriately?\n%s", e));
-//			throw e;
-//		}
+	
+	public static void init(int[] scoring) {
+		
+		for (int i=0; i<scoring.length; i++) {
+			if (scoring[i] < 0) {
+				String msg = "Please specify all Smith Waterman scores as positive values";
+				Logger.error(msg);
+				throw new RuntimeException(msg);
+			}
+		}
+		
+		MATCH = scoring[0];
+		MISMATCH = -scoring[1];
+		GAP_OPEN_PENALTY = scoring[2];
+		GAP_EXTEND_PENALTY = scoring[3];
+		
+		Logger.info("SW match,mismatch,gap_open_penalty,gap_extend_penalty: " 
+				+ MATCH + "," + MISMATCH + "," + GAP_OPEN_PENALTY + "," + GAP_EXTEND_PENALTY);
 		
 		score = new int[128][128];
 		for (int i = 0; i < 128; i++) {

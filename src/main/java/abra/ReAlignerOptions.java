@@ -67,7 +67,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(CONTIG_FILE, "Optional file to which assembled contigs are written").withRequiredArg().ofType(String.class);
             parser.accepts(GTF_JUNCTIONS, "GTF file defining exons and transcripts").withRequiredArg().ofType(String.class);
             parser.accepts(SW_SOFT_CLIP, "Enable Smith Waterman alignment of high quality soft clipped sequence (Experimental");
-            parser.accepts(SW_SCORING, "Smith Waterman scoring used for contig alignments (match, mismatch_penalty, gap_open_penalty, gap_extend_penalty)").withRequiredArg().ofType(String.class).defaultsTo("4,16,6,1");
+            parser.accepts(SW_SCORING, "Smith Waterman scoring used for contig alignments (match, mismatch_penalty, gap_open_penalty, gap_extend_penalty)").withRequiredArg().ofType(String.class).defaultsTo("4,16,24,1");
     	}
     	
     	return parser;

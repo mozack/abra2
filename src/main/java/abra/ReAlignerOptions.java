@@ -248,7 +248,7 @@ public class ReAlignerOptions extends Options {
 		int[] scores = new int[4];
 		
 		for (int i=0; i<4; i++) {
-			scores[i] = Integer.parseInt(fields[0].trim());
+			scores[i] = Integer.parseInt(fields[i].trim());
 		}
 		
 		return scores;

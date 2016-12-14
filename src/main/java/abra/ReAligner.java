@@ -686,12 +686,15 @@ public class ReAligner {
 						Feature lastJunction = junctionPerm.get(junctionPerm.size()-1);
 						int rightStart = (int) lastJunction.getEnd()+1;
 						int rightStop = Math.min((int) lastJunction.getEnd() + (int) region.getLength() + this.readLength*2, chromosomeLength-1);
-						String rightSeq = c2r.getSequence(region.getSeqname(), rightStart, rightStop-rightStart);
-						juncSeq.append(rightSeq);
-						// Junction pos and length should already be added
 						
-						SSWAligner sswJunc = new SSWAligner(juncSeq.toString(), region.getSeqname(), refStart, this.readLength, junctionPos, junctionLengths);
-						sswJunctions.add(sswJunc);
+						if (rightStop-rightStart > 0) {
+							String rightSeq = c2r.getSequence(region.getSeqname(), rightStart, rightStop-rightStart);
+							juncSeq.append(rightSeq);
+							// Junction pos and length should already be added
+							
+							SSWAligner sswJunc = new SSWAligner(juncSeq.toString(), region.getSeqname(), refStart, this.readLength, junctionPos, junctionLengths);
+							sswJunctions.add(sswJunc);
+						}
 					}
 				}
 							

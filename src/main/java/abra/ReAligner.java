@@ -112,6 +112,8 @@ public class ReAligner {
 	
 	public static final int COMPRESSION_LEVEL = 1;
 	
+	private int maxCachedReads = 0;
+	
 	public void reAlign(String[] inputFiles, String[] outputFiles) throws Exception {
 		
 		this.inputSams = inputFiles;
@@ -334,12 +336,27 @@ public class ReAligner {
 				}
 				
 				int currReadsCount = 0;
+				int idx = 0;
+				boolean shouldClear = false;
 				for (List<SAMRecordWrapper> reads : currReads) {
 					currReadsCount += reads.size();
+					
+					if (reads.size() >= this.maxCachedReads) {
+						shouldClear = true;
+						Logger.warn(logPrefix + " Too many reads for sample: " + idx + " num_reads: " + reads.size() + ", clearing.");
+					}
+					
+					idx += 1;
+				}
+				
+				if (shouldClear) {
+					for (List<SAMRecordWrapper> reads : currReads) {
+						reads.clear();
+					}
 				}
 
-				if (currReadsCount > 10000) {
-					Logger.debug("%s\tCurr reads size: %d", logPrefix, currReadsCount);
+				if (currReadsCount > 100000) {
+					Logger.info(logPrefix + "\tCurr reads size: " + currReadsCount);
 				}
 				
 				int outOfRegionCount = 0;
@@ -348,7 +365,7 @@ public class ReAligner {
 				}
 
 				if (outOfRegionCount > 10000) {
-					Logger.debug("%s\tOut of region reads size: ", logPrefix, outOfRegionCount);
+					Logger.info(logPrefix + "\tOut of region reads size: " + outOfRegionCount);
 				}
 			}
 			
@@ -1151,6 +1168,7 @@ public class ReAligner {
 			realigner.gtfJunctionFile = options.getGtfJunctionFile();
 			realigner.contigFile = options.getContigFile();
 			realigner.swScoring = options.getSmithWatermanScoring();
+			realigner.maxCachedReads = options.getMaxCachedReads();
 			realigner.cl = cl.toString();
 			realigner.version = version;
 

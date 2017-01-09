@@ -26,6 +26,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
 
+import abra.JunctionUtils.TooManyJunctionPermutationsException;
 import abra.ReadEvaluator.Alignment;
 import abra.SSWAligner.SSWAlignerResult;
 import abra.SimpleMapper.Orientation;
@@ -641,12 +642,17 @@ public class ReAligner {
 			List<SSWAligner> sswJunctions = new ArrayList<SSWAligner>();
 			
 //			List<List<Feature>> junctionPermutations = JunctionUtils.combineJunctions(junctions, this.readLength);
-			List<List<Feature>> junctionPermutations = JunctionUtils.combineJunctions(junctions, (int) region.getLength());
+			
+			List<List<Feature>> junctionPermutations = new ArrayList<List<Feature>>();
+			try {
+				junctionPermutations = JunctionUtils.combineJunctions(junctions, (int) region.getLength());
+			} catch (TooManyJunctionPermutationsException e) {
+				Logger.warn("TOO_MANY_POTENTIAL_JUNCTION_PERMUTATIONS: " + region.getDescriptor());
+			}
 			
 			Logger.debug("NUM_JUNCTION_PERMUTATIONS:\t%d\t%s", junctionPermutations.size(), region);
 			
-			int maxJunctionPermutations = 2056;
-			if (junctionPermutations.size() > maxJunctionPermutations) {
+			if (junctionPermutations.size() > JunctionUtils.MAX_JUNCTION_PERMUTATIONS) {
 				Logger.warn("TOO_MANY_JUNCTION_PERMUTATIONS: " + region.getDescriptor() + "\t" + junctionPermutations.size());
 			} else {
 			
@@ -1089,7 +1095,7 @@ public class ReAligner {
 		return SAMRecordUtils.isFiltered(isPairedEnd, read);
 	}
 	
-	private static String getVersion() throws IOException {
+	private static String getVersion() {
 		String version = "unknown";
 		String metaFile = "/META-INF/maven/abra2/abra2/pom.properties";
 		Properties prop = new Properties();
@@ -1099,7 +1105,7 @@ public class ReAligner {
 			prop.load(input);
 			input.close();
 			version = prop.getProperty("version");
-		} catch (IOException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 			Logger.error("Error reading version from pom.properties");
 		}

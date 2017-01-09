@@ -15,7 +15,9 @@ import java.util.Map;
 import java.util.Set;
 
 public class JunctionUtils {
-	
+
+	public static final int MAX_JUNCTION_PERMUTATIONS = 2056;
+	public static final int MAX_POTENTIAL_PERMUTATIONS = 65536;
 	/**
 	 * Load junctions from GTF using exons grouped by transcript_id
 	 * Sort order is unspecified 
@@ -159,7 +161,7 @@ public class JunctionUtils {
 		currJunctions.addAll(toAdd);
 	}
 	
-	public static List<List<Feature>> combineJunctions(List<Feature> junctions, int maxJuncDist) {
+	public static List<List<Feature>> combineJunctions(List<Feature> junctions, int maxJuncDist) throws TooManyJunctionPermutationsException {
 		List<List<Feature>> combinedJunctions = new ArrayList<List<Feature>>();
 		
 		// Get all possible permutations of junctions regardless of validity
@@ -175,7 +177,7 @@ public class JunctionUtils {
 	}
 	
 	// Produce all possible junction permutations from the input list.
-	private static List<List<Feature>> combineAllJunctions(List<Feature> junctions, int maxJuncDist) {
+	private static List<List<Feature>> combineAllJunctions(List<Feature> junctions, int maxJuncDist) throws TooManyJunctionPermutationsException {
 		List<List<Feature>> junctionLists = null;
 		
 		if (junctions.size() == 1) {
@@ -197,6 +199,10 @@ public class JunctionUtils {
 				
 				if (isJunctionCombinationValid(newList, maxJuncDist)) {
 					junctionLists.add(newList);
+				}
+				
+				if (junctionLists.size() > MAX_POTENTIAL_PERMUTATIONS) {
+					throw new TooManyJunctionPermutationsException();
 				}
 			}
 		} else {
@@ -324,7 +330,9 @@ public class JunctionUtils {
 				return false;
 			return true;
 		}
-		
+	}
+	
+	static class TooManyJunctionPermutationsException extends Exception {
 		
 	}
 }

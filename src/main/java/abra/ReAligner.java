@@ -351,12 +351,19 @@ public class ReAligner {
 				}
 				
 				if (shouldClear) {
-					for (List<SAMRecordWrapper> reads : currReads) {
+					for (int i=0; i<currReads.size(); i++) {
+						List<SAMRecordWrapper> reads = currReads.get(i);
+						synchronized(this.writers[i]) {
+							for (SAMRecordWrapper read : reads) {
+								this.writers[i].addAlignment(read.getSamRecord());
+							}
+						}
+						
 						reads.clear();
 					}
 				}
 
-				if (currReadsCount > 100000) {
+				if (currReadsCount > 250000) {
 					Logger.info(logPrefix + "\tCurr reads size: " + currReadsCount);
 				}
 				

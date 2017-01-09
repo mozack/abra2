@@ -69,7 +69,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(GTF_JUNCTIONS, "GTF file defining exons and transcripts").withRequiredArg().ofType(String.class);
             parser.accepts(SW_SOFT_CLIP, "Enable Smith Waterman alignment of high quality soft clipped sequence (Experimental");
             parser.accepts(SW_SCORING, "Smith Waterman scoring used for contig alignments (match, mismatch_penalty, gap_open_penalty, gap_extend_penalty)").withRequiredArg().ofType(String.class).defaultsTo("8,32,48,1");
-            parser.accepts(MAX_CACHED_READS, "Max number of cached reads per sample per thread").withRequiredArg().ofType(Integer.class).defaultsTo(250000);
+            parser.accepts(MAX_CACHED_READS, "Max number of cached reads per sample per thread").withRequiredArg().ofType(Integer.class).defaultsTo(500000);
     	}
     	
     	return parser;

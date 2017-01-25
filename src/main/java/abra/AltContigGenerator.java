@@ -99,6 +99,7 @@ public class AltContigGenerator {
 					
 					// Add high quality soft clipped reads
 					if (hasHighQualitySoftClipping(readWrapper.getSamRecord())) {
+						System.err.println("Soft clip alt: " + read.getReadString());
 						contigs.add(read.getReadString());
 					}
 				}
@@ -106,8 +107,9 @@ public class AltContigGenerator {
 		}
 		
 		// Current set of contigs is from soft clipping.  These can grow to be too big.  Downsample if necessary.
-		// TODO: Is this really the right thing to do?
-		int maxSoftClippedContigs = 32;
+		// TODO: Is this really the right thing to do?  Is there a way to rank as with the assembly?
+//		int maxSoftClippedContigs = 32;
+		int maxSoftClippedContigs = 128;
 		if (contigs.size() > maxSoftClippedContigs) {
 			List<String> contigList = new ArrayList<String>(contigs);
 			Collections.shuffle(contigList);

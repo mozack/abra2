@@ -97,8 +97,11 @@ public class SSWAligner {
 		
 		Logger.trace("Alignment [%s]:\t%s", seq, aln);
 		
+		// Require minimum of minContigLength or 90% of the input sequence to align
+		int minContigLen = Math.min(minContigLength, (int) (seq.length() * .9));
+		
 		// TODO: Optimize score requirements..
-		if (aln != null && aln.score1 >= MIN_ALIGNMENT_SCORE && aln.score1 > aln.score2 && aln.read_end1 - aln.read_begin1 > minContigLength) {
+		if (aln != null && aln.score1 >= MIN_ALIGNMENT_SCORE && aln.score1 > aln.score2 && aln.read_end1 - aln.read_begin1 > minContigLen) {
 						
 			// Clip contig and remap if needed.
 			// TODO: Trim sequence instead of incurring overhead of remapping
@@ -119,6 +122,7 @@ public class SSWAligner {
 				String rightPad = ref.substring(aln.ref_end1+1,ref.length());
 				String paddedSeq = leftPad + seq + rightPad;
 				String cigar = CigarUtils.extendCigarWithMatches(aln.cigar, leftPad.length(), rightPad.length());
+				Logger.trace("Padded contig: %s\t%s", cigar, paddedSeq);
 				
 				if (junctionPositions.size() > 0) {
 					String oldCigar = cigar;

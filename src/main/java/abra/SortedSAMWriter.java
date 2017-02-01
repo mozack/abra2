@@ -103,7 +103,6 @@ public class SortedSAMWriter {
 			
 			if (read.getAlignmentStart() - reads.get(0).getAlignmentStart() > GENOMIC_RANGE_TO_CACHE*2) {
 				Collections.sort(reads, new SAMCoordinateComparator());
-				reads.sort(new SAMCoordinateComparator());
 				
 				int start = reads.get(0).getAlignmentStart();
 				int i = 0;

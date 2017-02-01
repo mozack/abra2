@@ -2,6 +2,7 @@ package abra;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -101,6 +102,7 @@ public class SortedSAMWriter {
 			reads.add(read);
 			
 			if (read.getAlignmentStart() - reads.get(0).getAlignmentStart() > GENOMIC_RANGE_TO_CACHE*2) {
+				Collections.sort(reads, new SAMCoordinateComparator());
 				reads.sort(new SAMCoordinateComparator());
 				
 				int start = reads.get(0).getAlignmentStart();

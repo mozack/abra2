@@ -24,6 +24,7 @@ public class SortedSAMWriter {
 	
 	private static final int GENOMIC_RANGE_TO_CACHE = 1000000;
 	private static final int UNMAPPED_INDEX = 0;
+	private static final int ASYNC_READ_CACHE_SIZE = 1000000;
 	
 	private Map<String, Integer> chromIdx = new HashMap<String, Integer>();
 	private SAMFileWriterFactory writerFactory = new SAMFileWriterFactory();
@@ -67,11 +68,13 @@ public class SortedSAMWriter {
 	}
 	
 	public void initChromosome(int sampleIdx, String chromosome) {
+		Logger.debug("Writer init: %d, %s", sampleIdx, chromosome);
 		int chrom  = chromIdx.get(chromosome);
 		writers[sampleIdx][chrom] = writerFactory.makeBAMWriter(samHeaders[sampleIdx], false, new File(getTempFilename(sampleIdx, chrom)), TEMP_COMPRESSION_LEVEL);
 	}
 	
 	public void finishChromsome(int sampleIdx, String chromosome) {
+		Logger.debug("Writer finish: %d, %s", sampleIdx, chromosome);
 		int chrom  = chromIdx.get(chromosome);
 		writers[sampleIdx][chrom].close();
 	}
@@ -79,8 +82,9 @@ public class SortedSAMWriter {
 	public void outputFinal() {
 		for (int i=0; i<outputFiles.length; i++) {
 			writerFactory.setUseAsyncIo(true);
+			writerFactory.setAsyncOutputBufferSize(ASYNC_READ_CACHE_SIZE);
 			SAMFileWriter output = writerFactory.makeBAMWriter(samHeaders[i], false, new File(outputFiles[i]));
-
+			
 			for (int chrom=1; chrom<chromIdx.size(); chrom++) {
 				processChromosome(output, i, chrom);
 			}
@@ -93,38 +97,52 @@ public class SortedSAMWriter {
 	
 	private void processChromosome(SAMFileWriter output, int sampleIdx, int chrom) {
 		
+		Logger.debug("Final processing for: %d, %d", sampleIdx, chrom);
+		
 		List<SAMRecord> reads = new ArrayList<SAMRecord>();
 		
-		SAMFileReader reader = new SAMFileReader(new File(getTempFilename(sampleIdx, chrom)));
-		reader.setValidationStringency(ValidationStringency.SILENT);
-
-		for (SAMRecord read : reader) {
-			reads.add(read);
-			
-			if (read.getAlignmentStart() - reads.get(0).getAlignmentStart() > GENOMIC_RANGE_TO_CACHE*2) {
-				Collections.sort(reads, new SAMCoordinateComparator());
-				
-				int start = reads.get(0).getAlignmentStart();
-				int i = 0;
-				while (i < reads.size() && reads.get(i).getAlignmentStart() - start < GENOMIC_RANGE_TO_CACHE) {
-					output.addAlignment(reads.get(i));
-				}
-				reads.subList(0, i).clear();
-			}
-		}
+		File file = new File(getTempFilename(sampleIdx, chrom));
 		
-		reader.close();
+		if (file.exists()) {
+			
+			SAMFileReader reader = new SAMFileReader(file);
+			reader.setValidationStringency(ValidationStringency.SILENT);
+	
+			for (SAMRecord read : reader) {
+				reads.add(read);
+				
+				if (read.getAlignmentStart() - reads.get(0).getAlignmentStart() > GENOMIC_RANGE_TO_CACHE*2) {
+					Collections.sort(reads, new SAMCoordinateComparator());
+					
+					int start = reads.get(0).getAlignmentStart();
+					int i = 0;
+					while (i < reads.size() && reads.get(i).getAlignmentStart() - start < GENOMIC_RANGE_TO_CACHE) {
+						output.addAlignment(reads.get(i));
+						i += 1;
+					}
+					Logger.trace("Reads output: %d", i);
+					reads.subList(0, i).clear();
+				}
+			}
+			
+			reader.close();
+		}
 	}
 	
 	private void processUnmapped(SAMFileWriter output, int sampleIdx) {
-		SAMFileReader reader = new SAMFileReader(new File(getTempFilename(sampleIdx, UNMAPPED_INDEX)));
-		reader.setValidationStringency(ValidationStringency.SILENT);
-
-		for (SAMRecord read : reader) {
-			output.addAlignment(read);
-		}
+		File file = new File(getTempFilename(sampleIdx, UNMAPPED_INDEX));
 		
-		reader.close();
+		if (file.exists()) {
+		
+			SAMFileReader reader = new SAMFileReader(file);
+			reader.setValidationStringency(ValidationStringency.SILENT);
+	
+			for (SAMRecord read : reader) {
+				output.addAlignment(read);
+			}
+			
+			reader.close();
+		}
 	}
 	
 	static class SAMCoordinateComparator implements Comparator<SAMRecord> {
@@ -136,20 +154,30 @@ public class SortedSAMWriter {
 	}
 	
 	public static void main(String[] args) {
-		String in = args[0];
-		String out = args[1];
-		String tempDir = args[2];
+//		String in = args[0];
+//		String out = args[1];
+//		String tempDir = args[2];
+		
+		String in = "/home/lmose/dev/abra2_dev/sort/0.1.bam";
+		String out = "/home/lmose/dev/abra2_dev/sort/output.bam";
+		String tempDir = "/home/lmose/dev/abra2_dev/sort";
+		
+		Logger.setLevel("trace");
 		
 		SAMFileReader reader = new SAMFileReader(new File(in));
 		reader.setValidationStringency(ValidationStringency.SILENT);
 		
-		SortedSAMWriter writer = new SortedSAMWriter(new String[] { out }, tempDir, new SAMFileHeader[] { reader.getFileHeader() });
+//		SortedSAMWriter writer = new SortedSAMWriter(new String[] { "/home/lmose/dev/abra2_dev/sort/output.bam" }, "/home/lmose/dev/abra2_dev/sort", new SAMFileHeader[] { reader.getFileHeader() });
 		
+		SortedSAMWriter writer = new SortedSAMWriter(new String[] { out }, tempDir, new SAMFileHeader[] { reader.getFileHeader() });
+
+		/*
 		Set<String> chromosomes = new HashSet<String>();
 		
 		for (SAMRecord read : reader) {
 			if (!chromosomes.contains(read.getReferenceName())) {
 				writer.initChromosome(0, read.getReferenceName());
+				chromosomes.add(read.getReferenceName());
 			}
 			
 			writer.addAlignment(0, read);
@@ -158,5 +186,8 @@ public class SortedSAMWriter {
 		for (String chromosome : chromosomes) {
 			writer.finishChromsome(0, chromosome);
 		}
+		*/
+		
+		writer.outputFinal();
 	}
 }

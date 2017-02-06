@@ -67,7 +67,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(LOG_LEVEL, "Logging level (trace,debug,info,warn,error)").withRequiredArg().ofType(String.class).defaultsTo("info");
             parser.accepts(CONTIG_FILE, "Optional file to which assembled contigs are written").withRequiredArg().ofType(String.class);
             parser.accepts(GTF_JUNCTIONS, "GTF file defining exons and transcripts").withRequiredArg().ofType(String.class);
-            parser.accepts(SW_SOFT_CLIP, "Enable Smith Waterman alignment of high quality soft clipped sequence (Experimental)").withOptionalArg().ofType(String.class).defaultsTo("16,13,80,8");
+            parser.accepts(SW_SOFT_CLIP, "Enable Smith Waterman alignment of high quality soft clipped sequence (Experimental)").withOptionalArg().ofType(String.class).defaultsTo("32,13,80,8");
             parser.accepts(SW_SCORING, "Smith Waterman scoring used for contig alignments (match, mismatch_penalty, gap_open_penalty, gap_extend_penalty)").withRequiredArg().ofType(String.class).defaultsTo("8,32,48,1");
             parser.accepts(MAX_CACHED_READS, "Max number of cached reads per sample per thread").withRequiredArg().ofType(Integer.class).defaultsTo(500000);
     	}
@@ -265,7 +265,7 @@ public class ReAlignerOptions extends Options {
 		
 		int[] values = new int[4];
 		
-		for (int i=0; i<3; i++) {
+		for (int i=0; i<4; i++) {
 			values[i] = Integer.parseInt(fields[i].trim());
 		}	
 		

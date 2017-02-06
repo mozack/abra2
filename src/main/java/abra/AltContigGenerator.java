@@ -6,7 +6,6 @@ import htsjdk.samtools.SAMRecord;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -15,15 +14,25 @@ public class AltContigGenerator {
 	
 	// TODO: Multiple arbitrary cutoffs here, need to optimize
 	// Phred 13 is ~5% error rate
-	private static int SOFT_CLIPPING_MIN_BASE_QUAL = 13;
+	private int maxSoftClipContigs;
+	private int minBaseQual;
+	private double softClipFraction;
+	private int minSoftClipLength;
+	
+	public AltContigGenerator(int maxSoftClipContigs, int minBaseQual, int softClipFraction, int minSoftClipLength) {
+		this.maxSoftClipContigs = maxSoftClipContigs;
+		this.minBaseQual = minBaseQual;
+		this.softClipFraction = (double) softClipFraction / 100.0;
+		this.minSoftClipLength = minSoftClipLength;
+	}
 	
 	private boolean hasHighQualitySoftClipping(SAMRecord read, int start, int length) {
 		
 		int numHighQualBases = 0;
-		int requiredHighQualBases = (int) (.8 * length);
+		int requiredHighQualBases = (int) (softClipFraction * length);
 		
 		for (int bq = start; bq < start+length; bq++) {
-			if (read.getBaseQualities()[bq] >= SOFT_CLIPPING_MIN_BASE_QUAL) {
+			if (read.getBaseQualities()[bq] >= minBaseQual) {
 				numHighQualBases += 1;
 				
 				if (numHighQualBases >= requiredHighQualBases) {
@@ -43,7 +52,7 @@ public class AltContigGenerator {
 		if (read.getCigarLength() > 1) {
 			// Check first cigar element
 			CigarElement elem = read.getCigar().getCigarElement(0);
-			if (elem.getOperator() == CigarOperator.S) {
+			if (elem.getOperator() == CigarOperator.S  && elem.getLength() > minSoftClipLength) {
 				int elemStart = 0;
 				hasHighQualitySoftClipping = hasHighQualitySoftClipping(read, elemStart, elem.getLength());
 			}
@@ -51,7 +60,7 @@ public class AltContigGenerator {
 			// Check last Cigar element
 			if (!hasHighQualitySoftClipping) {
 				elem = read.getCigar().getCigarElement(read.getCigarLength()-1);
-				if (elem.getOperator() == CigarOperator.S) {
+				if (elem.getOperator() == CigarOperator.S  && elem.getLength() > minSoftClipLength) {
 					int elemStart = read.getReadLength() - elem.getLength();
 					hasHighQualitySoftClipping = hasHighQualitySoftClipping(read, elemStart, elem.getLength());
 				}
@@ -63,7 +72,7 @@ public class AltContigGenerator {
 
 	public Collection<String> getAltContigs(List<List<SAMRecordWrapper>> readsList, CompareToReference2 c2r, int readLength) {
 		
-		Set<String> contigs = new HashSet<String>();
+		Set<ScoredContig> softClipContigs = new HashSet<ScoredContig>();
 		
 		HashSet<Indel> indels = new HashSet<Indel>();
 		
@@ -99,20 +108,18 @@ public class AltContigGenerator {
 					
 					// Add high quality soft clipped reads
 					if (hasHighQualitySoftClipping(readWrapper.getSamRecord())) {
-						contigs.add(read.getReadString());
+						softClipContigs.add(new ScoredContig((double) SAMRecordUtils.sumBaseQuals(read) / (double) read.getReadLength(), read.getReadString()));
 					}
 				}
 			}
 		}
 		
-		// Current set of contigs is from soft clipping.  These can grow to be too big.  Downsample if necessary.
-		// TODO: Is this really the right thing to do?  Is there a way to rank as with the assembly?
-//		int maxSoftClippedContigs = 32;
-		int maxSoftClippedContigs = 10000000;
-		if (contigs.size() > maxSoftClippedContigs) {
-			List<String> contigList = new ArrayList<String>(contigs);
-			Collections.shuffle(contigList);
-			contigs = new HashSet<String>(contigList.subList(0, maxSoftClippedContigs));
+		// Current set of contigs is from soft clipping.  These can grow to be too big.  Downsample if necessary.;
+		List<ScoredContig> filteredContigs = ScoredContig.filter(new ArrayList<ScoredContig>(softClipContigs),  this.maxSoftClipContigs);
+		
+		Set<String> contigs = new HashSet<String>();
+		for (ScoredContig contig : filteredContigs) {
+			contigs.add(contig.getContig());
 		}
 		
 		for (Indel indel : indels) {

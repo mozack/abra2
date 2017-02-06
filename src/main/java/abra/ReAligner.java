@@ -110,6 +110,7 @@ public class ReAligner {
 	private String cl = "unknown";
 	
 	private int[] swScoring;
+	private int[] softClipParams;
 	
 	public static final int COMPRESSION_LEVEL = 1;
 	
@@ -449,6 +450,8 @@ public class ReAligner {
 		Logger.info("paired end: " + isPairedEnd);
 		Logger.info("isSkipAssembly: " + isSkipAssembly);
 		Logger.info("isSkipNonAssembly: " + isSkipNonAssembly);
+		Logger.info("SW scoring: " + swScoring);
+		Logger.info("Soft clip params: " + softClipParams);
 		
 		String javaVersion = System.getProperty("java.version");
 		Logger.info("Java version: " + javaVersion);
@@ -747,7 +750,7 @@ public class ReAligner {
 				if (!this.isSkipNonAssembly) {
 					Logger.debug("Processing non-assembled contigs for region: [" + region + "]");
 					// Go through artificial contig generation using indels observed in the original reads
-					AltContigGenerator altContigGenerator = new AltContigGenerator();
+					AltContigGenerator altContigGenerator = new AltContigGenerator(softClipParams[0], softClipParams[1], softClipParams[2], softClipParams[3]);
 					Collection<String> altContigs = altContigGenerator.getAltContigs(readsList, c2r, readLength);
 					
 					for (String contig : altContigs) {
@@ -1184,6 +1187,7 @@ public class ReAligner {
 			realigner.gtfJunctionFile = options.getGtfJunctionFile();
 			realigner.contigFile = options.getContigFile();
 			realigner.swScoring = options.getSmithWatermanScoring();
+			realigner.softClipParams = options.getSoftClipParams();
 			realigner.maxCachedReads = options.getMaxCachedReads();
 			realigner.cl = cl.toString();
 			realigner.version = version;

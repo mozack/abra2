@@ -67,7 +67,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(LOG_LEVEL, "Logging level (trace,debug,info,warn,error)").withRequiredArg().ofType(String.class).defaultsTo("info");
             parser.accepts(CONTIG_FILE, "Optional file to which assembled contigs are written").withRequiredArg().ofType(String.class);
             parser.accepts(GTF_JUNCTIONS, "GTF file defining exons and transcripts").withRequiredArg().ofType(String.class);
-            parser.accepts(SW_SOFT_CLIP, "Enable Smith Waterman alignment of high quality soft clipped sequence (Experimental");
+            parser.accepts(SW_SOFT_CLIP, "Enable Smith Waterman alignment of high quality soft clipped sequence (Experimental)").withOptionalArg().ofType(String.class).defaultsTo("16,13,80,8");
             parser.accepts(SW_SCORING, "Smith Waterman scoring used for contig alignments (match, mismatch_penalty, gap_open_penalty, gap_extend_penalty)").withRequiredArg().ofType(String.class).defaultsTo("8,32,48,1");
             parser.accepts(MAX_CACHED_READS, "Max number of cached reads per sample per thread").withRequiredArg().ofType(Integer.class).defaultsTo(500000);
     	}
@@ -244,7 +244,7 @@ public class ReAlignerOptions extends Options {
 		String scoring = (String) getOptions().valueOf(SW_SCORING);
 		String[] fields = scoring.split(",");
 		if (fields.length != 4) {
-			Logger.error("4 values record for sw scoring");
+			Logger.error("4 values required for sw scoring");
 		}
 		
 		int[] scores = new int[4];
@@ -254,6 +254,22 @@ public class ReAlignerOptions extends Options {
 		}
 		
 		return scores;
+	}
+	
+	public int[] getSoftClipParams() {
+		String params = (String) getOptions().valueOf(SW_SOFT_CLIP);
+		String[] fields = params.split(",");
+		if (fields.length != 4) {
+			Logger.error("4 values required for SW soft clip params");
+		}
+		
+		int[] values = new int[4];
+		
+		for (int i=0; i<3; i++) {
+			values[i] = Integer.parseInt(fields[i].trim());
+		}	
+		
+		return values;
 	}
 	
 	public String getLoggerLevel() {

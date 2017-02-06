@@ -338,4 +338,11 @@ public class SAMRecordUtils {
 		return ((read.getFlags() & 0x800)  == 0) && (!read.getNotPrimaryAlignmentFlag());
 	}
 
+	public static int sumBaseQuals(SAMRecord read) {
+		int sum = 0;
+		for (byte b : read.getBaseQualities()) {
+			sum += b - '!';
+		}
+		return sum;
+	}
 }

@@ -1,17 +1,18 @@
 package abra;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Iterator;
 
 import htsjdk.samtools.SAMFileHeader;
-import htsjdk.samtools.SAMFileReader;
 import htsjdk.samtools.SAMRecord;
+import htsjdk.samtools.SamReader;
 import htsjdk.samtools.ValidationStringency;
 
 public class MultiSamReader implements Iterable<SAMRecordWrapper> {
 	
 	//TODO: Upgrade to newer implementation
-	private SAMFileReader[] readers;
+	private SamReader[] readers;
 	private Iterator<SAMRecord>[] iterators;
 	private SAMRecordWrapper[] nextRecord;
 	private int minMapqForAssembly;
@@ -24,7 +25,7 @@ public class MultiSamReader implements Iterable<SAMRecordWrapper> {
 	public MultiSamReader(String[] inputBams, int minMapqForAssembly, boolean isPairedEnd, String chromosome) {
 		
 		//TODO: Assert all SAM Headers have same sequence dict
-		readers = new SAMFileReader[inputBams.length];
+		readers = new SamReader[inputBams.length];
 		nextRecord = new SAMRecordWrapper[inputBams.length];
 		iterators = new Iterator[inputBams.length];
 		this.minMapqForAssembly = minMapqForAssembly;
@@ -32,8 +33,7 @@ public class MultiSamReader implements Iterable<SAMRecordWrapper> {
 		
 		int idx = 0;
 		for (String bamFileName : inputBams) {
-			SAMFileReader reader = new SAMFileReader(new File(bamFileName));
-			reader.setValidationStringency(ValidationStringency.SILENT);
+			SamReader reader = SAMRecordUtils.getSamReader(bamFileName);
 			
 			readers[idx] = reader;
 			
@@ -61,8 +61,8 @@ public class MultiSamReader implements Iterable<SAMRecordWrapper> {
 		return readers[0].getFileHeader();
 	}
 	
-	public void close() {
-		for (SAMFileReader reader : readers) {
+	public void close() throws IOException {
+		for (SamReader reader : readers) {
 			reader.close();
 		}
 	}

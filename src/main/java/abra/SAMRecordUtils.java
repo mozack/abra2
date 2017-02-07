@@ -1,13 +1,18 @@
 /* Copyright 2013 University of North Carolina at Chapel Hill.  All rights reserved. */
 package abra;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
 import htsjdk.samtools.Cigar;
 import htsjdk.samtools.CigarElement;
 import htsjdk.samtools.CigarOperator;
+import htsjdk.samtools.DefaultSAMRecordFactory;
 import htsjdk.samtools.SAMRecord;
+import htsjdk.samtools.SamReader;
+import htsjdk.samtools.SamReaderFactory;
+import htsjdk.samtools.ValidationStringency;
 
 /**
  * Utility methods for dealing with SAMRecord
@@ -344,5 +349,13 @@ public class SAMRecordUtils {
 			sum += b - '!';
 		}
 		return sum;
+	}
+	
+	public static SamReader getSamReader(String filename) {
+
+		return SamReaderFactory.make()
+                        .validationStringency(ValidationStringency.SILENT)
+                        .samRecordFactory(DefaultSAMRecordFactory.getInstance())
+                        .open(new File(filename));
 	}
 }

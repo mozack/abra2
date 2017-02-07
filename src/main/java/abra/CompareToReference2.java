@@ -17,8 +17,8 @@ import java.util.Random;
 import htsjdk.samtools.Cigar;
 import htsjdk.samtools.CigarElement;
 import htsjdk.samtools.CigarOperator;
-import htsjdk.samtools.SAMFileReader;
 import htsjdk.samtools.SAMRecord;
+import htsjdk.samtools.SamReader;
 
 /**
  * Utility class used to compare sequence to genomic reference.
@@ -498,7 +498,7 @@ public class CompareToReference2 {
 		c2r.init(ref);
 		
 //		Thread.sleep(100000);	
-		SAMFileReader rdr = new SAMFileReader(new File(sam));
+		SamReader rdr = SAMRecordUtils.getSamReader(sam);
 		
 		for (SAMRecord read : rdr) {
 			int mismatches = c2r.numMismatches(read);

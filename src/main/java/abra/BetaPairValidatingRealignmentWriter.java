@@ -2,15 +2,16 @@
 package abra;
 
 import java.io.File;
+import java.io.IOException;
 
 import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.SAMFileHeader.SortOrder;
 import htsjdk.samtools.DefaultSAMRecordFactory;
-import htsjdk.samtools.SAMFileReader;
 import htsjdk.samtools.SAMFileWriter;
 import htsjdk.samtools.SAMFileWriterFactory;
 import htsjdk.samtools.SAMLineParser;
 import htsjdk.samtools.SAMRecord;
+import htsjdk.samtools.SamReader;
 import htsjdk.samtools.ValidationStringency;
 
 /**
@@ -364,8 +365,8 @@ public class BetaPairValidatingRealignmentWriter implements RealignmentWriter {
 		}
 	}
 	
-	public static void main(String[] args) {
-		SAMFileReader reader = new SAMFileReader(new File("/home/lmose/dev/abra/1076/candidates.bam"));
+	public static void main(String[] args) throws IOException {
+		SamReader reader = SAMRecordUtils.getSamReader("/home/lmose/dev/abra/1076/candidates.bam");
 		SAMFileHeader header = reader.getFileHeader();
 		reader.close();
 		header.setSortOrder(SortOrder.unsorted);

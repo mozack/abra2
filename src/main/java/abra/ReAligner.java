@@ -31,12 +31,12 @@ import abra.ReadEvaluator.Alignment;
 import abra.SSWAligner.SSWAlignerResult;
 import abra.SimpleMapper.Orientation;
 import htsjdk.samtools.SAMFileHeader;
-import htsjdk.samtools.SAMFileReader;
 import htsjdk.samtools.SAMFileWriter;
 import htsjdk.samtools.SAMFileWriterFactory;
 import htsjdk.samtools.SAMProgramRecord;
 import htsjdk.samtools.SAMRecord;
 import htsjdk.samtools.SAMSequenceRecord;
+import htsjdk.samtools.SamReader;
 import htsjdk.samtools.ValidationStringency;
 
 /**
@@ -857,7 +857,7 @@ public class ReAligner {
 		this.regionsBed = bedFile;
 	}
 
-	private void getSamHeaderAndReadLength() {
+	private void getSamHeaderAndReadLength() throws IOException {
 		
 		Logger.info("Identifying header and determining read length");
 		
@@ -865,10 +865,8 @@ public class ReAligner {
 		
 		for (int i=0; i<this.inputSams.length; i++) {
 		
-			SAMFileReader reader = new SAMFileReader(new File(inputSams[i]));
+			SamReader reader = SAMRecordUtils.getSamReader(inputSams[i]);
 			try {
-				reader.setValidationStringency(ValidationStringency.SILENT);
-		
 				samHeaders[i] = reader.getFileHeader();
 				samHeaders[i].setSortOrder(SAMFileHeader.SortOrder.unsorted);
 				

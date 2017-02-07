@@ -1,6 +1,7 @@
 package abra;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -11,11 +12,12 @@ import java.util.Map;
 import java.util.Set;
 
 import htsjdk.samtools.SAMFileHeader;
-import htsjdk.samtools.SAMFileReader;
 import htsjdk.samtools.SAMFileWriter;
 import htsjdk.samtools.SAMFileWriterFactory;
 import htsjdk.samtools.SAMRecord;
 import htsjdk.samtools.SAMSequenceRecord;
+import htsjdk.samtools.SamReader;
+import htsjdk.samtools.SamReaderFactory;
 import htsjdk.samtools.ValidationStringency;
 
 public class SortedSAMWriter {
@@ -28,12 +30,14 @@ public class SortedSAMWriter {
 	
 	private Map<String, Integer> chromIdx = new HashMap<String, Integer>();
 	private SAMFileWriterFactory writerFactory = new SAMFileWriterFactory();
+	
 	private SAMFileWriter writers[][];
 	private String tempDir;
 	private String[] outputFiles;
 	private SAMFileHeader[] samHeaders;
 	
 	public SortedSAMWriter(String[] outputFiles, String tempDir, SAMFileHeader[] samHeaders) {
+	
 		this.samHeaders = samHeaders;
 		this.outputFiles = outputFiles;
 		this.tempDir = tempDir;
@@ -79,7 +83,7 @@ public class SortedSAMWriter {
 		writers[sampleIdx][chrom].close();
 	}
 	
-	public void outputFinal() {
+	public void outputFinal() throws IOException {
 		for (int i=0; i<outputFiles.length; i++) {
 			writerFactory.setUseAsyncIo(true);
 			writerFactory.setAsyncOutputBufferSize(ASYNC_READ_CACHE_SIZE);
@@ -95,18 +99,18 @@ public class SortedSAMWriter {
 		}
 	}
 	
-	private void processChromosome(SAMFileWriter output, int sampleIdx, int chrom) {
+	private void processChromosome(SAMFileWriter output, int sampleIdx, int chrom) throws IOException {
 		
 		Logger.debug("Final processing for: %d, %d", sampleIdx, chrom);
 		
 		List<SAMRecord> reads = new ArrayList<SAMRecord>();
+		String filename = getTempFilename(sampleIdx, chrom);
 		
-		File file = new File(getTempFilename(sampleIdx, chrom));
+		File file = new File(filename);
 		
 		if (file.exists()) {
 			
-			SAMFileReader reader = new SAMFileReader(file);
-			reader.setValidationStringency(ValidationStringency.SILENT);
+			SamReader reader = SAMRecordUtils.getSamReader(filename);
 	
 			for (SAMRecord read : reader) {
 				reads.add(read);
@@ -129,13 +133,13 @@ public class SortedSAMWriter {
 		}
 	}
 	
-	private void processUnmapped(SAMFileWriter output, int sampleIdx) {
-		File file = new File(getTempFilename(sampleIdx, UNMAPPED_INDEX));
+	private void processUnmapped(SAMFileWriter output, int sampleIdx) throws IOException {
+		String filename = getTempFilename(sampleIdx, UNMAPPED_INDEX);
+		File file = new File(filename);
 		
 		if (file.exists()) {
 		
-			SAMFileReader reader = new SAMFileReader(file);
-			reader.setValidationStringency(ValidationStringency.SILENT);
+			SamReader reader = SAMRecordUtils.getSamReader(filename);
 	
 			for (SAMRecord read : reader) {
 				output.addAlignment(read);
@@ -153,19 +157,24 @@ public class SortedSAMWriter {
 		}
 	}
 	
-	public static void main(String[] args) {
-//		String in = args[0];
-//		String out = args[1];
-//		String tempDir = args[2];
+	static {
+		System.load("/datastore/nextgenout2/share/labs/UNCseq/lmose2/abra/releases/v0.91/libIntelDeflater.so");
+	}
+	
+	public static void main(String[] args) throws IOException {
+		String in = args[0];
+		String out = args[1];
+		String tempDir = args[2];
 		
-		String in = "/home/lmose/dev/abra2_dev/sort/0.1.bam";
-		String out = "/home/lmose/dev/abra2_dev/sort/output.bam";
-		String tempDir = "/home/lmose/dev/abra2_dev/sort";
+//		String in = "/home/lmose/dev/abra2_dev/sort/0.1.bam";
+//		String out = "/home/lmose/dev/abra2_dev/sort/output.bam";
+//		String tempDir = "/home/lmose/dev/abra2_dev/sort";
 		
 		Logger.setLevel("trace");
 		
-		SAMFileReader reader = new SAMFileReader(new File(in));
-		reader.setValidationStringency(ValidationStringency.SILENT);
+		
+		
+		SamReader reader = SAMRecordUtils.getSamReader(in);
 		
 //		SortedSAMWriter writer = new SortedSAMWriter(new String[] { "/home/lmose/dev/abra2_dev/sort/output.bam" }, "/home/lmose/dev/abra2_dev/sort", new SAMFileHeader[] { reader.getFileHeader() });
 		

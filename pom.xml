@@ -15,12 +15,14 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 
+<!-- 
   <repositories>
     <repository>
       <id>UBU repository</id>
       <url>http://www.unc.edu/~lmose/maven-repo</url>
     </repository>
   </repositories>
+   -->
 
   <dependencies>
 	<dependency>
@@ -53,10 +55,19 @@
     </dependency>
 
     <!-- In UNC repository (isis.unc.edu) -->
+    <!-- 
     <dependency>
     	<groupId>samtools</groupId>
     	<artifactId>sam</artifactId>
     	<version>1.129</version>
+	</dependency>
+	 -->
+	
+	<!-- https://mvnrepository.com/artifact/com.github.samtools/htsjdk -->
+	<dependency>
+	    <groupId>com.github.samtools</groupId>
+	    <artifactId>htsjdk</artifactId>
+	    <version>2.8.1</version>
 	</dependency>
 
   </dependencies>
@@ -65,7 +76,7 @@
     <plugins>
 		<plugin>
 			<artifactId>maven-compiler-plugin</artifactId>
-			<version>2.3.2</version>
+			<version>3.1</version>
 			<configuration>
 				<source>1.6</source>
 				<target>1.6</target>

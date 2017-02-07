@@ -8,12 +8,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 import htsjdk.samtools.CigarElement;
-import htsjdk.samtools.SAMFileReader;
 import htsjdk.samtools.ValidationStringency;
 import htsjdk.samtools.SAMRecord;
+import htsjdk.samtools.SamReader;
 import htsjdk.samtools.util.CloseableIterator;
 
 import abra.CompareToReference2;
+import abra.SAMRecordUtils;
 
 /**
  * Given a "VCF-like" file of variants to inspect, produces an output file with normal / tumor counts of each variant.
@@ -37,11 +38,9 @@ public class SomaticLocusCaller {
 		
 		System.err.println("Processing positions");
 
-		SAMFileReader normalReader = new SAMFileReader(new File(normal));
-		normalReader.setValidationStringency(ValidationStringency.SILENT);
+		SamReader normalReader = SAMRecordUtils.getSamReader(normal);
 		
-		SAMFileReader tumorReader = new SAMFileReader(new File(tumor));
-		normalReader.setValidationStringency(ValidationStringency.SILENT);
+		SamReader tumorReader = SAMRecordUtils.getSamReader(tumor);
         
 		for (LocusInfo locus : loci) {
 			locus.normalCounts = getCounts(normalReader, locus);
@@ -203,7 +202,7 @@ public class SomaticLocusCaller {
 		return new Object[] { 'N', (int) 0 };
 	}
 
-	private Counts getCounts(SAMFileReader reader, LocusInfo locus) {
+	private Counts getCounts(SamReader reader, LocusInfo locus) {
 		
 		int depth = 0;
 		int altCount = 0;

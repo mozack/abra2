@@ -6,16 +6,16 @@ import java.util.Iterator;
 import java.util.List;
 
 import abra.Feature;
-
+import abra.SAMRecordUtils;
 import htsjdk.samtools.CigarOperator;
 import htsjdk.samtools.SAMFileHeader;
-import htsjdk.samtools.SAMFileReader;
 import htsjdk.samtools.SAMRecord;
+import htsjdk.samtools.SamReader;
 import htsjdk.samtools.ValidationStringency;
 
 public class ReadLocusReader implements Iterable<ReadsAtLocus> {
 
-	private SAMFileReader samReader;
+	private SamReader samReader;
 	private Feature region;
 	
 	public ReadLocusReader(String samFile) {
@@ -23,8 +23,7 @@ public class ReadLocusReader implements Iterable<ReadsAtLocus> {
 	}
 	
 	public ReadLocusReader(String samFile, Feature region) {
-        samReader = new SAMFileReader(new File(samFile));
-        samReader.setValidationStringency(ValidationStringency.SILENT);
+        samReader = SAMRecordUtils.getSamReader(samFile);
         this.region = region;
 	}
 	
@@ -45,7 +44,7 @@ public class ReadLocusReader implements Iterable<ReadsAtLocus> {
 		private List<SAMRecord> readCache = new ArrayList<SAMRecord>();
 		private ReadsAtLocus nextCache;
 		
-		public ReadLocusIterator(SAMFileReader samReader, Feature region) {
+		public ReadLocusIterator(SamReader samReader, Feature region) {
 	        	  
 			if (region != null) {
 				samIter = samReader.queryOverlapping(region.getSeqname(), (int) region.getStart(), (int) region.getEnd());

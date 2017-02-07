@@ -2,14 +2,15 @@
 package abra;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
 import htsjdk.samtools.SAMFileHeader;
-import htsjdk.samtools.SAMFileReader;
 import htsjdk.samtools.ValidationStringency;
 import htsjdk.samtools.SAMRecord;
+import htsjdk.samtools.SamReader;
 
 /**
  * Reader class for SAM or BAM file containing paired reads.
@@ -25,18 +26,15 @@ public class SimpleSamReadPairReader implements Iterable<ReadPair> {
     private SAMRecord lastRead;
     private Iterator<SAMRecord> iter;
     private int lineCnt = 0;
-    private SAMFileReader inputSam;
+    private SamReader inputSam;
     
-    public SimpleSamReadPairReader(String filename) {
-        File inputFile = new File(filename);
-        
-        inputSam = new SAMFileReader(inputFile);
-        inputSam.setValidationStringency(ValidationStringency.SILENT);
+    public SimpleSamReadPairReader(String filename) {      
+        inputSam = SAMRecordUtils.getSamReader(filename);
   
         iter = inputSam.iterator();
     }
     
-    public void close() {
+    public void close() throws IOException {
         inputSam.close();
     }
     

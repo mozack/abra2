@@ -7,10 +7,10 @@ import java.io.IOException;
 import htsjdk.samtools.Cigar;
 import htsjdk.samtools.CigarElement;
 import htsjdk.samtools.CigarOperator;
-import htsjdk.samtools.SAMFileReader;
 import htsjdk.samtools.SAMFileWriter;
 import htsjdk.samtools.SAMFileWriterFactory;
 import htsjdk.samtools.SAMRecord;
+import htsjdk.samtools.SamReader;
 
 /**
  * Utility class for shifting Indels into leftmost position.
@@ -154,7 +154,7 @@ public class IndelShifter {
 //		String out = "/home/lmose/dev/abra/la.out.sam";
 //		String ref = "/home/lmose/reference/chr1/chr1.fa";
 		
-		SAMFileReader reader = new SAMFileReader(new File(in));
+		SamReader reader = SAMRecordUtils.getSamReader(in);
 		
 		SAMFileWriter writer = new SAMFileWriterFactory().makeSAMOrBAMWriter(
 				reader.getFileHeader(), false, new File(out));

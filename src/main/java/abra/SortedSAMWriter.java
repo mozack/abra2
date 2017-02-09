@@ -11,18 +11,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.intel.gkl.compression.IntelDeflaterFactory;
+
 import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.SAMFileWriter;
 import htsjdk.samtools.SAMFileWriterFactory;
 import htsjdk.samtools.SAMRecord;
 import htsjdk.samtools.SAMSequenceRecord;
 import htsjdk.samtools.SamReader;
-import htsjdk.samtools.SamReaderFactory;
-import htsjdk.samtools.ValidationStringency;
 
 public class SortedSAMWriter {
 	
 	private static final int TEMP_COMPRESSION_LEVEL = 1;
+	private static final int FINAL_COMPRESSION_LEVEL = 5;
 	
 	private static final int GENOMIC_RANGE_TO_CACHE = 1000000;
 	private static final int UNMAPPED_INDEX = 0;
@@ -54,6 +55,10 @@ public class SortedSAMWriter {
 		chromIdx.put("*", UNMAPPED_INDEX);
 		
 		writerFactory.setUseAsyncIo(false);
+		IntelDeflaterFactory intelDeflater = new IntelDeflaterFactory();
+		writerFactory.setDeflaterFactory(intelDeflater);
+		
+		Logger.info("Using intel deflator: " + intelDeflater.usingIntelDeflater());
 		
 		writers = new SAMFileWriter[outputFiles.length][];
 		
@@ -87,7 +92,8 @@ public class SortedSAMWriter {
 		for (int i=0; i<outputFiles.length; i++) {
 			writerFactory.setUseAsyncIo(true);
 			writerFactory.setAsyncOutputBufferSize(ASYNC_READ_CACHE_SIZE);
-			SAMFileWriter output = writerFactory.makeBAMWriter(samHeaders[i], false, new File(outputFiles[i]));
+			writerFactory.setCompressionLevel(FINAL_COMPRESSION_LEVEL);
+			SAMFileWriter output = writerFactory.makeBAMWriter(samHeaders[i], false, new File(outputFiles[i]), FINAL_COMPRESSION_LEVEL);
 			
 			for (int chrom=1; chrom<chromIdx.size(); chrom++) {
 				processChromosome(output, i, chrom);
@@ -155,10 +161,6 @@ public class SortedSAMWriter {
 		public int compare(SAMRecord o1, SAMRecord o2) {
 			return o1.getAlignmentStart()-o2.getAlignmentStart();
 		}
-	}
-	
-	static {
-		System.load("/datastore/nextgenout2/share/labs/UNCseq/lmose2/abra/releases/v0.91/libIntelDeflater.so");
 	}
 	
 	public static void main(String[] args) throws IOException {

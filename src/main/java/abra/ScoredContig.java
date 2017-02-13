@@ -64,6 +64,7 @@ public class ScoredContig implements Comparable<ScoredContig> {
 	public static List<ScoredContig> filter(List<ScoredContig> contigs, int maxContigs) {
 		if (contigs.size() > maxContigs) {
 			Logger.debug("Shrinking eligible contigs from %d to %d", contigs.size(), maxContigs);
+			Collections.shuffle(contigs);
 			Collections.sort(contigs);
 			// Subset to only the first MAX_CONTIGS
 			contigs = contigs.subList(0, maxContigs);

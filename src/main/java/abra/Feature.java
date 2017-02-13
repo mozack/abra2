@@ -1,6 +1,7 @@
 /* Copyright 2013 University of North Carolina at Chapel Hill.  All rights reserved. */
 package abra;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import htsjdk.samtools.SAMFileHeader;
@@ -112,6 +113,28 @@ public class Feature {
 		
 		// This read is beyond all regions
 		return -1;
+	}
+	
+	public static List<Integer> findAllOverlappingRegions(SAMFileHeader samHeader, SAMRecordWrapper read, List<Feature> regions, int start) {
+		List<Integer> overlappingRegions = new ArrayList<Integer>();
+		int idx = findFirstOverlappingRegion(samHeader, read, regions, start);
+		if (idx > -1) {
+			overlappingRegions.add(idx);
+			boolean isOverlap = true;
+			idx += 1;
+			//TODO: Skip introns ?
+			while (isOverlap && idx < regions.size()) {
+				Feature region = regions.get(idx);
+				if (region.overlaps(read.getSamRecord().getReferenceName(), read.getAdjustedAlignmentStart(), read.getAdjustedAlignmentEnd())) {
+					overlappingRegions.add(idx);
+				} else {
+					isOverlap = false;
+				}
+				idx += 1;
+			}
+		}
+		
+		return overlappingRegions;
 	}
 	
 	public boolean containsEitherEnd(Feature feature, int fudge) {

@@ -243,13 +243,15 @@ public class ReAligner {
 				}
 			}
 			
+			List<Integer> overlappingRegions = Feature.findAllOverlappingRegions(reader.getSAMFileHeader(), record, chromosomeRegions, currRegionIdx);
 			
-			int regionIdx = Feature.findFirstOverlappingRegion(reader.getSAMFileHeader(), record, chromosomeRegions, currRegionIdx);
+//			int regionIdx = Feature.findFirstOverlappingRegion(reader.getSAMFileHeader(), record, chromosomeRegions, currRegionIdx);
 						
 			// Identify next region that is a candidate for processing
 			// Note: Splicing can cause reads to go in and out of a region
-			if (regionIdx >= 0) {
-				regionsToProcess.add(regionIdx);
+//			if (regionIdx >= 0) {
+			if (!overlappingRegions.isEmpty()) {
+				regionsToProcess.addAll(overlappingRegions);
 				
 				// Cache read for processing at end of region
 				currReads.get(record.getSampleIdx()).add(record);
@@ -272,7 +274,7 @@ public class ReAligner {
 			
 			
 			// TODO: Consider dropping this...  Reads are out of scope when we've moved beyond them via standard processing?
-			if (regionIdx < 0) {
+			if (overlappingRegions.isEmpty()) {
 				
 				// Process out of region read and output if ready.
 				List<SAMRecordWrapper> outOfRegionReadsForSample = outOfRegionReads.get(record.getSampleIdx());

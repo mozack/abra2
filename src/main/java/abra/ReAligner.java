@@ -2,7 +2,6 @@
 package abra;
 
 import java.io.BufferedWriter;
-import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -31,8 +30,6 @@ import abra.ReadEvaluator.Alignment;
 import abra.SSWAligner.SSWAlignerResult;
 import abra.SimpleMapper.Orientation;
 import htsjdk.samtools.SAMFileHeader;
-import htsjdk.samtools.SAMFileWriter;
-import htsjdk.samtools.SAMFileWriterFactory;
 import htsjdk.samtools.SAMProgramRecord;
 import htsjdk.samtools.SAMRecord;
 import htsjdk.samtools.SAMSequenceRecord;
@@ -72,7 +69,6 @@ public class ReAligner {
 	private int maxUnalignedReads = DEFAULT_MAX_UNALIGNED_READS;
 	
 	private String[] inputSams;
-	private SAMFileWriter[] writers;
 	
 	private int readLength = -1;
 	private int maxMapq = -1;
@@ -116,13 +112,15 @@ public class ReAligner {
 	
 	private int maxCachedReads = 0;
 	
+	private SortedSAMWriter writer;
+	
 	public void reAlign(String[] inputFiles, String[] outputFiles) throws Exception {
 		
 		this.inputSams = inputFiles;
 		
 		logStartupInfo(outputFiles);
 				
-		init();
+		Path tempDir = init();
 		
 		c2r = new CompareToReference2();
 		c2r.init(this.reference);
@@ -136,33 +134,22 @@ public class ReAligner {
 		loadRegions();
 		loadJunctions();
 		
-		Clock clock = new Clock("Assembly");
+		Clock clock = new Clock("Realignment");
 		clock.start();
 		
 		if (contigFile != null) {
 			contigWriter = new BufferedWriter(new FileWriter(contigFile, false));
 		}
-		
-		SAMFileWriterFactory writerFactory = new SAMFileWriterFactory();
-		
-//		writerFactory.setUseAsyncIo(true);
-//		writerFactory.setAsyncOutputBufferSize(500000);
-		
-		writerFactory.setUseAsyncIo(false);
-		
-		writers = new SAMFileWriter[inputSams.length];
-		
+				
 		for (int i=0; i<inputSams.length; i++) {
 			
 			SAMProgramRecord pg = new SAMProgramRecord("ABRA2");
 			pg.setProgramVersion(this.version);
 			pg.setCommandLine(cl);
-			samHeaders[i].addProgramRecord(pg);
-			
-			// init BAM writer
-			writers[i] = writerFactory.makeBAMWriter(
-					samHeaders[i], false, new File(outputFiles[i]), COMPRESSION_LEVEL);
+			samHeaders[i].addProgramRecord(pg);			
 		}
+		
+		writer = new SortedSAMWriter(outputFiles, tempDir.toString(), samHeaders);
 
 		// Spawn thread for each chromosome
 		// TODO: Validate identical sequence dictionary for each input file
@@ -178,11 +165,12 @@ public class ReAligner {
 			contigWriter.close();
 		}
 		
-		clock.stopAndPrint();		
+		clock.stopAndPrint();
 		
-		for (SAMFileWriter writer : this.writers) {
-			writer.close();
-		}
+		clock = new Clock("Sort and cleanup");
+		clock.start();
+		writer.outputFinal();
+		clock.stopAndPrint();
 		
 		Logger.info("Done.");
 	}
@@ -192,6 +180,8 @@ public class ReAligner {
 		Logger.info("Processing chromosome: " + chromosome);
 		Clock clock = new Clock("Chromosome: " + chromosome);
 		clock.start();
+		
+		writer.initChromosome(chromosome);
 		
 		MultiSamReader reader = new MultiSamReader(this.inputSams, this.minMappingQuality, this.isPairedEnd, chromosome);
 		
@@ -281,10 +271,9 @@ public class ReAligner {
 				outOfRegionReadsForSample.add(record);
 				
 				if (outOfRegionReads.get(record.getSampleIdx()).size() > 2500) {
-					synchronized(this.writers[record.getSampleIdx()]) {
-						for (SAMRecordWrapper outOfRegionRead : outOfRegionReadsForSample) {
-							this.writers[record.getSampleIdx()].addAlignment(outOfRegionRead.getSamRecord());
-						}
+
+					for (SAMRecordWrapper outOfRegionRead : outOfRegionReadsForSample) {
+						this.writer.addAlignment(record.getSampleIdx(), outOfRegionRead.getSamRecord());
 					}
 					
 					outOfRegionReadsForSample.clear();
@@ -356,10 +345,9 @@ public class ReAligner {
 				if (shouldClear) {
 					for (int i=0; i<currReads.size(); i++) {
 						List<SAMRecordWrapper> reads = currReads.get(i);
-						synchronized(this.writers[i]) {
-							for (SAMRecordWrapper read : reads) {
-								this.writers[i].addAlignment(read.getSamRecord());
-							}
+
+						for (SAMRecordWrapper read : reads) {
+							this.writer.addAlignment(i, read.getSamRecord());
 						}
 						
 						reads.clear();
@@ -405,16 +393,16 @@ public class ReAligner {
 		// Output remaining out of region reads
 		for (int i=0; i<outOfRegionReads.size(); i++) {
 			List<SAMRecordWrapper> outOfRegionReadsForSample = outOfRegionReads.get(i);
-			synchronized(this.writers[i]) {
-				for (SAMRecordWrapper outOfRegionRead : outOfRegionReadsForSample) {
-					this.writers[i].addAlignment(outOfRegionRead.getSamRecord());
-				}
+			for (SAMRecordWrapper outOfRegionRead : outOfRegionReadsForSample) {
+				this.writer.addAlignment(i, outOfRegionRead.getSamRecord());
 			}
 			
 			outOfRegionReadsForSample.clear();
 		}
 		
 		reader.close();
+		
+		writer.finishChromosome(chromosome);
 		
 		clock.stopAndPrint();
 	}
@@ -562,10 +550,8 @@ public class ReAligner {
 			}
 
 			// Output all reads for this sample - synchronize on the current BAM
-			synchronized(this.writers[sampleIdx]) {
-				for (SAMRecordWrapper read : reads) {
-					this.writers[sampleIdx].addAlignment(read.getSamRecord());
-				}
+			for (SAMRecordWrapper read : reads) {
+				this.writer.addAlignment(sampleIdx, read.getSamRecord());
 			}
 			
 			sampleIdx += 1;
@@ -1038,7 +1024,7 @@ public class ReAligner {
 		return assem;
 	}
 
-	private void init() throws IOException {
+	private Path init() throws IOException {
 		
 		SSWAligner.init(swScoring);
 		
@@ -1049,7 +1035,7 @@ public class ReAligner {
         perms.add(PosixFilePermission.GROUP_READ);
         perms.add(PosixFilePermission.GROUP_EXECUTE);
 
-		Path tempDir = Files.createTempDirectory("abra_" + UUID.randomUUID(), PosixFilePermissions.asFileAttribute(perms));
+		Path tempDir = Files.createTempDirectory("abra2_" + UUID.randomUUID(), PosixFilePermissions.asFileAttribute(perms));
 		tempDir.toFile().deleteOnExit();
 		
 		Logger.info("Using temp directory: " + tempDir.toString());
@@ -1060,6 +1046,8 @@ public class ReAligner {
 		new NativeLibraryLoader().load(tempDir.toString(), NativeLibraryLoader.DEFLATOR, true);
 		
 		threadManager = new ThreadManager(numThreads);
+		
+		return tempDir;
 	}
 	
 	public void setReference(String reference) {

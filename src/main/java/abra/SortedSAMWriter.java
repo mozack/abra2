@@ -6,10 +6,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import com.intel.gkl.compression.IntelDeflaterFactory;
 
@@ -76,20 +74,33 @@ public class SortedSAMWriter {
 		writers[sampleIdx][chrom].addAlignment(read);
 	}
 	
-	public void initChromosome(int sampleIdx, String chromosome) {
+	public void initChromosome(String chromosome) {
+		for (int i=0; i<outputFiles.length; i++) {
+			initChromosome(i, chromosome);
+		}
+	}
+	
+	private void initChromosome(int sampleIdx, String chromosome) {
 		Logger.debug("Writer init: %d, %s", sampleIdx, chromosome);
 		int chrom  = chromIdx.get(chromosome);
 		writers[sampleIdx][chrom] = writerFactory.makeBAMWriter(samHeaders[sampleIdx], false, new File(getTempFilename(sampleIdx, chrom)), TEMP_COMPRESSION_LEVEL);
 	}
 	
-	public void finishChromsome(int sampleIdx, String chromosome) {
+	private void finishChromosome(int sampleIdx, String chromosome) {
 		Logger.debug("Writer finish: %d, %s", sampleIdx, chromosome);
 		int chrom  = chromIdx.get(chromosome);
 		writers[sampleIdx][chrom].close();
 	}
 	
+	public void finishChromosome(String chromosome) {
+		for (int i=0; i<outputFiles.length; i++) {
+			finishChromosome(i, chromosome);
+		}
+	}
+	
 	public void outputFinal() throws IOException {
 		for (int i=0; i<outputFiles.length; i++) {
+			Logger.info("Finishing: " + outputFiles[i]);
 			writerFactory.setUseAsyncIo(true);
 			writerFactory.setAsyncOutputBufferSize(ASYNC_READ_CACHE_SIZE);
 			writerFactory.setCompressionLevel(FINAL_COMPRESSION_LEVEL);
@@ -115,6 +126,7 @@ public class SortedSAMWriter {
 		File file = new File(filename);
 		
 		if (file.exists()) {
+			file.deleteOnExit();
 			
 			SamReader reader = SAMRecordUtils.getSamReader(filename);
 	
@@ -133,6 +145,12 @@ public class SortedSAMWriter {
 					Logger.trace("Reads output: %d", i);
 					reads.subList(0, i).clear();
 				}
+			}
+			
+			// Output any remaining reads
+			Collections.sort(reads, new SAMCoordinateComparator());
+			for (SAMRecord read : reads) {
+				output.addAlignment(read);
 			}
 			
 			reader.close();

@@ -34,12 +34,14 @@ public class SortedSAMWriter {
 	private String tempDir;
 	private String[] outputFiles;
 	private SAMFileHeader[] samHeaders;
+	private boolean isKeepTmp;
 	
-	public SortedSAMWriter(String[] outputFiles, String tempDir, SAMFileHeader[] samHeaders) {
+	public SortedSAMWriter(String[] outputFiles, String tempDir, SAMFileHeader[] samHeaders, boolean isKeepTmp) {
 	
 		this.samHeaders = samHeaders;
 		this.outputFiles = outputFiles;
 		this.tempDir = tempDir;
+		this.isKeepTmp = isKeepTmp;
 		
 		// TODO: Compare sequence headers across samples
 		List<SAMSequenceRecord> sequences = samHeaders[0].getSequenceDictionary().getSequences();
@@ -62,6 +64,12 @@ public class SortedSAMWriter {
 		
 		for (int i=0; i<writers.length; i++) {
 			writers[i] = new SAMFileWriter[sequences.size()+1];
+		}
+	}
+	
+	private void deleteOnExit(File file) {
+		if (!isKeepTmp) {
+			file.deleteOnExit();
 		}
 	}
 	
@@ -126,7 +134,7 @@ public class SortedSAMWriter {
 		File file = new File(filename);
 		
 		if (file.exists()) {
-			file.deleteOnExit();
+			deleteOnExit(file);
 			
 			SamReader reader = SAMRecordUtils.getSamReader(filename);
 	
@@ -198,7 +206,7 @@ public class SortedSAMWriter {
 		
 //		SortedSAMWriter writer = new SortedSAMWriter(new String[] { "/home/lmose/dev/abra2_dev/sort/output.bam" }, "/home/lmose/dev/abra2_dev/sort", new SAMFileHeader[] { reader.getFileHeader() });
 		
-		SortedSAMWriter writer = new SortedSAMWriter(new String[] { out }, tempDir, new SAMFileHeader[] { reader.getFileHeader() });
+		SortedSAMWriter writer = new SortedSAMWriter(new String[] { out }, tempDir, new SAMFileHeader[] { reader.getFileHeader() }, false);
 
 		/*
 		Set<String> chromosomes = new HashSet<String>();

@@ -37,7 +37,6 @@ import htsjdk.samtools.SAMProgramRecord;
 import htsjdk.samtools.SAMRecord;
 import htsjdk.samtools.SAMSequenceRecord;
 import htsjdk.samtools.SamReader;
-import htsjdk.samtools.ValidationStringency;
 
 /**
  * ABRA's main entry point
@@ -92,7 +91,8 @@ public class ReAligner {
 	
 	private boolean isDebug;
 	private boolean isSkipAssembly;
-	private boolean isSkipNonAssembly;
+	private boolean useSoftClippedReads;
+	private boolean useObservedIndels;
 	
 	// If true, the input target file specifies kmer values
 	private boolean hasPresetKmers = false;
@@ -451,9 +451,9 @@ public class ReAligner {
 		Logger.info(assemblerSettings.getDescription());
 		Logger.info("paired end: " + isPairedEnd);
 		Logger.info("isSkipAssembly: " + isSkipAssembly);
-		Logger.info("isSkipNonAssembly: " + isSkipNonAssembly);
-		Logger.info("SW scoring: " + swScoring);
-		Logger.info("Soft clip params: " + softClipParams);
+		Logger.info("useSoftClippedReads: " + useSoftClippedReads);
+		Logger.info("SW scoring: " + Arrays.toString(swScoring));
+		Logger.info("Soft clip params: " + Arrays.toString(softClipParams));
 		
 		String javaVersion = System.getProperty("java.version");
 		Logger.info("Java version: " + javaVersion);
@@ -749,10 +749,11 @@ public class ReAligner {
 					} 
 				}
 				
-				if (!this.isSkipNonAssembly) {
+				if (useSoftClippedReads || useObservedIndels) {
 					Logger.debug("Processing non-assembled contigs for region: [" + region + "]");
 					// Go through artificial contig generation using indels observed in the original reads
-					AltContigGenerator altContigGenerator = new AltContigGenerator(softClipParams[0], softClipParams[1], softClipParams[2], softClipParams[3]);
+					AltContigGenerator altContigGenerator = new AltContigGenerator(softClipParams[0], softClipParams[1], softClipParams[2], softClipParams[3],
+							useObservedIndels, useSoftClippedReads);
 					Collection<String> altContigs = altContigGenerator.getAltContigs(readsList, c2r, readLength);
 					
 					for (String contig : altContigs) {
@@ -1182,7 +1183,8 @@ public class ReAligner {
 			realigner.minMappingQuality = options.getMinimumMappingQuality();
 			realigner.hasPresetKmers = options.hasPresetKmers();
 			realigner.isSkipAssembly = options.isSkipAssembly();
-			realigner.isSkipNonAssembly = options.isSkipNonAssembly();
+			realigner.useObservedIndels = options.useObservedIndels();
+			realigner.useSoftClippedReads = options.useSoftClippedReads();
 			realigner.junctionFile = options.getJunctionFile();
 			realigner.gtfJunctionFile = options.getGtfJunctionFile();
 			realigner.contigFile = options.getContigFile();

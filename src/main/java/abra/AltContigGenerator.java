@@ -18,12 +18,17 @@ public class AltContigGenerator {
 	private int minBaseQual;
 	private double softClipFraction;
 	private int minSoftClipLength;
+	private boolean useObservedIndels;
+	private boolean useSoftClippedReads;
 	
-	public AltContigGenerator(int maxSoftClipContigs, int minBaseQual, int softClipFraction, int minSoftClipLength) {
+	public AltContigGenerator(int maxSoftClipContigs, int minBaseQual, int softClipFraction, int minSoftClipLength, 
+			boolean useObservedIndels, boolean useSoftClippedReads) {
 		this.maxSoftClipContigs = maxSoftClipContigs;
 		this.minBaseQual = minBaseQual;
 		this.softClipFraction = (double) softClipFraction / 100.0;
 		this.minSoftClipLength = minSoftClipLength;
+		this.useObservedIndels = useObservedIndels;
+		this.useSoftClippedReads = useSoftClippedReads;
 	}
 	
 	private boolean hasHighQualitySoftClipping(SAMRecord read, int start, int length) {
@@ -83,31 +88,33 @@ public class AltContigGenerator {
 				// TODO: Any other filters here.  Higher MQ threshold?
 				if (read.getMappingQuality() > 0) {
 					
-					// For now only use indels bracketed by 2 M elements
-					// TODO: Handle clipping / complex indels
-					List<CigarElement> elems = read.getCigar().getCigarElements();
-					if (elems.size() == 3 && 
-						elems.get(0).getOperator() == CigarOperator.M && 
-						elems.get(2).getOperator() == CigarOperator.M &&
-						(elems.get(1).getOperator() == CigarOperator.D || elems.get(1).getOperator() == CigarOperator.I)) {
-						
-						String insertBases = null;
-						char type = '0';
-						if (elems.get(1).getOperator() == CigarOperator.D) {
-							type = 'D';
-						} else if (elems.get(1).getOperator() == CigarOperator.I) {
-							type = 'I';
-							int start = elems.get(0).getLength();
-							int stop =  start + elems.get(1).getLength();
-							insertBases = read.getReadString().substring(start, stop);
+					if (useObservedIndels) {
+						// For now only use indels bracketed by 2 M elements
+						// TODO: Handle clipping / complex indels
+						List<CigarElement> elems = read.getCigar().getCigarElements();
+						if (elems.size() == 3 && 
+							elems.get(0).getOperator() == CigarOperator.M && 
+							elems.get(2).getOperator() == CigarOperator.M &&
+							(elems.get(1).getOperator() == CigarOperator.D || elems.get(1).getOperator() == CigarOperator.I)) {
+							
+							String insertBases = null;
+							char type = '0';
+							if (elems.get(1).getOperator() == CigarOperator.D) {
+								type = 'D';
+							} else if (elems.get(1).getOperator() == CigarOperator.I) {
+								type = 'I';
+								int start = elems.get(0).getLength();
+								int stop =  start + elems.get(1).getLength();
+								insertBases = read.getReadString().substring(start, stop);
+							}
+							
+							Indel indel = new Indel(type, read.getReferenceName(), read.getAlignmentStart() + elems.get(0).getLength(), elems.get(1).getLength(), insertBases);
+							indels.add(indel);
 						}
-						
-						Indel indel = new Indel(type, read.getReferenceName(), read.getAlignmentStart() + elems.get(0).getLength(), elems.get(1).getLength(), insertBases);
-						indels.add(indel);
 					}
 					
 					// Add high quality soft clipped reads
-					if (hasHighQualitySoftClipping(readWrapper.getSamRecord())) {
+					if (useSoftClippedReads && hasHighQualitySoftClipping(readWrapper.getSamRecord())) {
 						softClipContigs.add(new ScoredContig((double) SAMRecordUtils.sumBaseQuals(read) / (double) read.getReadLength(), read.getReadString()));
 					}
 				}

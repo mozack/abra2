@@ -2,6 +2,7 @@
 package abra;
 
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -89,6 +90,7 @@ public class ReAligner {
 	private boolean isSkipAssembly;
 	private boolean useSoftClippedReads;
 	private boolean useObservedIndels;
+	private boolean isKeepTmp;
 	
 	// If true, the input target file specifies kmer values
 	private boolean hasPresetKmers = false;
@@ -120,7 +122,7 @@ public class ReAligner {
 		
 		logStartupInfo(outputFiles);
 				
-		Path tempDir = init();
+		String tempDir = init();
 		
 		c2r = new CompareToReference2();
 		c2r.init(this.reference);
@@ -149,7 +151,7 @@ public class ReAligner {
 			samHeaders[i].addProgramRecord(pg);			
 		}
 		
-		writer = new SortedSAMWriter(outputFiles, tempDir.toString(), samHeaders);
+		writer = new SortedSAMWriter(outputFiles, tempDir.toString(), samHeaders, isKeepTmp);
 
 		// Spawn thread for each chromosome
 		// TODO: Validate identical sequence dictionary for each input file
@@ -1023,8 +1025,14 @@ public class ReAligner {
 
 		return assem;
 	}
+	
+	private void deleteOnExit(File file) {
+		if (!isKeepTmp) {
+			file.deleteOnExit();
+		}
+	}
 
-	private Path init() throws IOException {
+	private String init() throws IOException {
 		
 		SSWAligner.init(swScoring);
 		
@@ -1036,7 +1044,7 @@ public class ReAligner {
         perms.add(PosixFilePermission.GROUP_EXECUTE);
 
 		Path tempDir = Files.createTempDirectory("abra2_" + UUID.randomUUID(), PosixFilePermissions.asFileAttribute(perms));
-		tempDir.toFile().deleteOnExit();
+		deleteOnExit(tempDir.toFile());
 		
 		Logger.info("Using temp directory: " + tempDir.toString());
 		
@@ -1047,7 +1055,7 @@ public class ReAligner {
 		
 		threadManager = new ThreadManager(numThreads);
 		
-		return tempDir;
+		return tempDir.toString();
 	}
 	
 	public void setReference(String reference) {
@@ -1172,6 +1180,7 @@ public class ReAligner {
 			realigner.hasPresetKmers = options.hasPresetKmers();
 			realigner.isSkipAssembly = options.isSkipAssembly();
 			realigner.useObservedIndels = options.useObservedIndels();
+			realigner.isKeepTmp = options.isKeepTmp();
 			realigner.useSoftClippedReads = options.useSoftClippedReads();
 			realigner.junctionFile = options.getJunctionFile();
 			realigner.gtfJunctionFile = options.getGtfJunctionFile();

@@ -37,6 +37,7 @@ public class ReAlignerOptions extends Options {
 	private static final String SW_SCORING = "sw";
 	private static final String MAX_CACHED_READS = "mcr";
 	private static final String USE_OBSERVED_INDELS = "obs";
+	private static final String KEEP_TMP = "keep-tmp";
 	
 	private OptionParser parser;
 	private boolean isValid;
@@ -72,6 +73,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(SW_SCORING, "Smith Waterman scoring used for contig alignments (match, mismatch_penalty, gap_open_penalty, gap_extend_penalty)").withRequiredArg().ofType(String.class).defaultsTo("8,32,48,1");
             parser.accepts(MAX_CACHED_READS, "Max number of cached reads per sample per thread").withRequiredArg().ofType(Integer.class).defaultsTo(500000);
             parser.accepts(USE_OBSERVED_INDELS, "Use observed indels in original alignments to generate contigs (Experimental)");
+            parser.accepts(KEEP_TMP, "Do not delete the temporary directory");
     	}
     	
     	return parser;
@@ -212,6 +214,10 @@ public class ReAlignerOptions extends Options {
 	
 	public boolean isSkipAssembly() {
 		return getOptions().has(SKIP_ASSEMBLY);
+	}
+	
+	public boolean isKeepTmp() {
+		return getOptions().has(KEEP_TMP);
 	}
 	
 	public boolean useObservedIndels() {

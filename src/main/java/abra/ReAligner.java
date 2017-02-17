@@ -244,10 +244,10 @@ public class ReAligner {
 //			if (regionIdx >= 0) {
 			if (!overlappingRegions.isEmpty()) {
 				regionsToProcess.addAll(overlappingRegions);
-				
-				// Cache read for processing at end of region
-				currReads.get(record.getSampleIdx()).add(record);
 			}
+			
+			// Cache read for processing at end of region
+			currReads.get(record.getSampleIdx()).add(record);
 			
 			Iterator<Integer> regionIter = regionsToProcess.iterator();
 			if (regionIter.hasNext()) {
@@ -264,6 +264,7 @@ public class ReAligner {
 				}
 			}
 			
+			/*
 			
 			// TODO: Consider dropping this...  Reads are out of scope when we've moved beyond them via standard processing?
 			if (overlappingRegions.isEmpty()) {
@@ -281,6 +282,7 @@ public class ReAligner {
 					outOfRegionReadsForSample.clear();
 				}
 			}
+			*/
 			
 			// Todo - make constant or parameterize
 			int MAX_READ_RANGE = 1000 + this.readLength;

@@ -38,6 +38,7 @@ public class ReAlignerOptions extends Options {
 	private static final String MAX_CACHED_READS = "mcr";
 	private static final String USE_OBSERVED_INDELS = "obs";
 	private static final String KEEP_TMP = "keep-tmp";
+	private static final String TMP_DIR = "tmpdir";
 	
 	private OptionParser parser;
 	private boolean isValid;
@@ -74,6 +75,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(MAX_CACHED_READS, "Max number of cached reads per sample per thread").withRequiredArg().ofType(Integer.class).defaultsTo(500000);
             parser.accepts(USE_OBSERVED_INDELS, "Use observed indels in original alignments to generate contigs (Experimental)");
             parser.accepts(KEEP_TMP, "Do not delete the temporary directory");
+            parser.accepts(TMP_DIR, "Set the temp directory (overrides java.io.tmpdir)").withRequiredArg().ofType(String.class);
     	}
     	
     	return parser;
@@ -218,6 +220,10 @@ public class ReAlignerOptions extends Options {
 	
 	public boolean isKeepTmp() {
 		return getOptions().has(KEEP_TMP);
+	}
+	
+	public String getTmpDir() {
+		return getOptions().has(TMP_DIR) ? (String) getOptions().valueOf(TMP_DIR) : null;
 	}
 	
 	public boolean useObservedIndels() {

@@ -91,6 +91,7 @@ public class ReAligner {
 	private boolean useSoftClippedReads;
 	private boolean useObservedIndels;
 	private boolean isKeepTmp;
+	private String tmpDir;
 	
 	// If true, the input target file specifies kmer values
 	private boolean hasPresetKmers = false;
@@ -1036,6 +1037,12 @@ public class ReAligner {
 
 	private String init() throws IOException {
 		
+		if (tmpDir == null) {
+			tmpDir = System.getProperty("java.io.tmpdir");
+		} else {
+			System.setProperty("java.io.tmpdir", tmpDir);
+		}
+		
 		SSWAligner.init(swScoring);
 		
 		Set<PosixFilePermission> perms = new HashSet<PosixFilePermission>();
@@ -1183,6 +1190,7 @@ public class ReAligner {
 			realigner.isSkipAssembly = options.isSkipAssembly();
 			realigner.useObservedIndels = options.useObservedIndels();
 			realigner.isKeepTmp = options.isKeepTmp();
+			realigner.tmpDir = options.getTmpDir();
 			realigner.useSoftClippedReads = options.useSoftClippedReads();
 			realigner.junctionFile = options.getJunctionFile();
 			realigner.gtfJunctionFile = options.getGtfJunctionFile();

@@ -12,6 +12,7 @@ import java.util.Map;
 import com.intel.gkl.compression.IntelDeflaterFactory;
 
 import htsjdk.samtools.SAMFileHeader;
+import htsjdk.samtools.SAMFileHeader.SortOrder;
 import htsjdk.samtools.SAMFileWriter;
 import htsjdk.samtools.SAMFileWriterFactory;
 import htsjdk.samtools.SAMRecord;
@@ -112,7 +113,8 @@ public class SortedSAMWriter {
 			writerFactory.setUseAsyncIo(true);
 			writerFactory.setAsyncOutputBufferSize(ASYNC_READ_CACHE_SIZE);
 			writerFactory.setCompressionLevel(FINAL_COMPRESSION_LEVEL);
-			SAMFileWriter output = writerFactory.makeBAMWriter(samHeaders[i], false, new File(outputFiles[i]), FINAL_COMPRESSION_LEVEL);
+			samHeaders[i].setSortOrder(SortOrder.coordinate);
+			SAMFileWriter output = writerFactory.makeBAMWriter(samHeaders[i], true, new File(outputFiles[i]), FINAL_COMPRESSION_LEVEL);
 			
 			for (int chrom=1; chrom<chromIdx.size(); chrom++) {
 				processChromosome(output, i, chrom);

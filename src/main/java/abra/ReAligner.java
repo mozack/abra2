@@ -30,11 +30,13 @@ import abra.JunctionUtils.TooManyJunctionPermutationsException;
 import abra.ReadEvaluator.Alignment;
 import abra.SSWAligner.SSWAlignerResult;
 import abra.SimpleMapper.Orientation;
+import htsjdk.samtools.Cigar;
 import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.SAMProgramRecord;
 import htsjdk.samtools.SAMRecord;
 import htsjdk.samtools.SAMSequenceRecord;
 import htsjdk.samtools.SamReader;
+import htsjdk.samtools.TextCigarCodec;
 
 /**
  * ABRA's main entry point
@@ -80,7 +82,7 @@ public class ReAligner {
 	
 	private BufferedWriter contigWriter = null;
 	
-	private CompareToReference2 c2r;
+	public static CompareToReference2 c2r;
 	
 	private ThreadManager threadManager;
 	
@@ -640,7 +642,7 @@ public class ReAligner {
 			
 			String refSeq = c2r.getSequence(region.getSeqname(), refSeqStart, refSeqLength);
 			
-			SSWAligner ssw = new SSWAligner(refSeq, region.getSeqname(), refSeqStart, this.readLength);
+			SSWAligner ssw = new SSWAligner(c2r, refSeq, region.getSeqname(), refSeqStart, this.readLength);
 			
 			List<SSWAligner> sswJunctions = new ArrayList<SSWAligner>();
 			
@@ -701,7 +703,7 @@ public class ReAligner {
 							juncSeq.append(rightSeq);
 							// Junction pos and length should already be added
 							
-							SSWAligner sswJunc = new SSWAligner(juncSeq.toString(), region.getSeqname(), refStart, this.readLength, junctionPos, junctionLengths);
+							SSWAligner sswJunc = new SSWAligner(c2r, juncSeq.toString(), region.getSeqname(), refStart, this.readLength, junctionPos, junctionLengths);
 							sswJunctions.add(sswJunc);
 						}
 					}
@@ -751,7 +753,7 @@ public class ReAligner {
 						// TODO: Check to see if this contig is already in the map before aligning
 						SSWAlignerResult sswResult = ssw.align(contig);
 						if (sswResult != null) {
-							//TODO: Introduce penalty for non-assembled contigs?
+							// Store for read mapping
 							mappedContigs.put(new SimpleMapper(sswResult.getSequence()), sswResult);
 						}
 					}

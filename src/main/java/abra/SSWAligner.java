@@ -3,6 +3,10 @@ package abra;
 import java.util.ArrayList;
 import java.util.List;
 
+import htsjdk.samtools.Cigar;
+import htsjdk.samtools.CigarElement;
+import htsjdk.samtools.CigarOperator;
+import htsjdk.samtools.TextCigarCodec;
 import ssw.Aligner;
 import ssw.Alignment;
 
@@ -28,7 +32,7 @@ public class SSWAligner {
 	private static int GAP_EXTEND_PENALTY;
 	
 	private String refChr;
-	private int refStart;
+	private int refContextStart;
 	private String ref;
 	private int minContigLength;
 	
@@ -36,6 +40,10 @@ public class SSWAligner {
 	private List<Integer> junctionLengths = new ArrayList<Integer>();
 	
 	private static int [][] score;
+	
+	private boolean useSemiGlobal = true;
+	private IndelShifter indelShifter = new IndelShifter();
+	private CompareToReference2 c2r;
 	
 	public static void init(int[] scoring) {
 		
@@ -64,21 +72,22 @@ public class SSWAligner {
 		}
 	}
 	
-	public SSWAligner(String ref, String refChr, int refStart, int minContigLength) {
+	public SSWAligner(CompareToReference2 c2r, String ref, String refChr, int refStart, int minContigLength) {
 		this.ref = ref;
 		this.refChr = refChr;
-		this.refStart = refStart;
+		this.refContextStart = refStart;
 		this.minContigLength = minContigLength;
+		this.c2r = c2r;
 	}
 	
-	public SSWAligner(String ref, String refChr, int refStart, int minContigLength, int junctionPos, int junctionLength) {
-		this(ref, refChr, refStart, minContigLength);
+	public SSWAligner(CompareToReference2 c2r, String ref, String refChr, int refStart, int minContigLength, int junctionPos, int junctionLength) {
+		this(c2r, ref, refChr, refStart, minContigLength);
 		this.junctionPositions.add(junctionPos);
 		this.junctionLengths.add(junctionLength);
 	}
 	
-	public SSWAligner(String ref, String refChr, int refStart, int minContigLength, List<Integer> junctionPositions, List<Integer> junctionLengths) {
-		this(ref, refChr, refStart, minContigLength);
+	public SSWAligner(CompareToReference2 c2r, String ref, String refChr, int refStart, int minContigLength, List<Integer> junctionPositions, List<Integer> junctionLengths) {
+		this(c2r, ref, refChr, refStart, minContigLength);
 		this.junctionPositions = junctionPositions;
 		this.junctionLengths = junctionLengths;
 	}
@@ -87,54 +96,73 @@ public class SSWAligner {
 		
 		SSWAlignerResult result = null;
 		
-		Alignment aln = Aligner.align(seq.getBytes(), ref.getBytes(), score, GAP_OPEN_PENALTY, GAP_EXTEND_PENALTY, true);
-		
-		StringBuffer juncStr = new StringBuffer();
-		
-		for (int i=0; i<junctionPositions.size(); i++) {
-			juncStr.append(junctionPositions.get(i) + ":" + junctionLengths.get(i) + ",");
-		}
-		
-		Logger.trace("Alignment [%s]:\t%s", seq, aln);
-		
-		// Require minimum of minContigLength or 90% of the input sequence to align
-		int minContigLen = Math.min(minContigLength, (int) (seq.length() * .9));
-		
-		// TODO: Optimize score requirements..
-		if (aln != null && aln.score1 >= MIN_ALIGNMENT_SCORE && aln.score1 > aln.score2 && aln.read_end1 - aln.read_begin1 > minContigLen) {
-						
-			// Clip contig and remap if needed.
-			// TODO: Trim sequence instead of incurring overhead of remapping
-			
-			int MAX_CLIP_BASES = Math.min(10, seq.length() / 10);
-			if ((aln.read_begin1 > 0 || aln.read_end1 < seq.length()-1) &&
-				(aln.read_begin1 < MAX_CLIP_BASES && aln.read_end1 > seq.length()-1-MAX_CLIP_BASES)) {
+		if (useSemiGlobal) {
+			SemiGlobalAligner aligner = new SemiGlobalAligner();
+			SemiGlobalAligner.Result sgResult = aligner.align(seq, ref);
+			Logger.trace("SG Alignment [%s]:\t%s", seq, sgResult);
+			if (sgResult.score > MIN_ALIGNMENT_SCORE && sgResult.score > sgResult.secondBest) {
+				Cigar cigar = TextCigarCodec.decode(sgResult.cigar);
 				
-				seq = seq.substring(aln.read_begin1, aln.read_end1+1);
-				aln = Aligner.align(seq.getBytes(), ref.getBytes(), score, GAP_OPEN_PENALTY, GAP_EXTEND_PENALTY, true);
-			}
-						
-			// Requiring end to end alignment here...
-			if (aln.read_begin1 == 0 && aln.read_end1 == seq.length()-1) {
+				CigarElement first = cigar.getFirstCigarElement();
+				CigarElement last = cigar.getLastCigarElement();
 				
-				// Pad with remaining reference sequence
-				String leftPad = ref.substring(0, aln.ref_begin1);
-				String rightPad = ref.substring(aln.ref_end1+1,ref.length());
-				String paddedSeq = leftPad + seq + rightPad;
-				String cigar = CigarUtils.extendCigarWithMatches(aln.cigar, leftPad.length(), rightPad.length());
-				Logger.trace("Padded contig: %s\t%s", cigar, paddedSeq);
-				
-				if (junctionPositions.size() > 0) {
-					String oldCigar = cigar;
-					cigar = CigarUtils.injectSplices(cigar, junctionPositions, junctionLengths);
-					Logger.trace("Spliced Cigar.  old: %s, new: %s", oldCigar, cigar);
+				// Do not allow indels at the edges of contigs.
+				if (first.getOperator() == CigarOperator.M && first.getLength() >= 5 && 
+					last.getOperator() == CigarOperator.M && last.getLength() >=5) {
+					
+					cigar = indelShifter.shiftIndelsLeft(sgResult.position+this.refContextStart+1, sgResult.endPosition+this.refContextStart+1,
+							this.refChr, cigar, seq, c2r);
+					
+					result = finishAlignment(sgResult.position, sgResult.endPosition, TextCigarCodec.encode(cigar), sgResult.score, seq);
 				}
+			}
+		} else {
+			// Require minimum of minContigLength or 90% of the input sequence to align
+			int minContigLen = Math.min(minContigLength, (int) (seq.length() * .9));
+			Alignment aln = Aligner.align(seq.getBytes(), ref.getBytes(), score, GAP_OPEN_PENALTY, GAP_EXTEND_PENALTY, true);
+			
+			Logger.trace("Alignment [%s]:\t%s", seq, aln);
+			
+			// TODO: Optimize score requirements..
+			if (aln != null && aln.score1 >= MIN_ALIGNMENT_SCORE && aln.score1 > aln.score2 && aln.read_end1 - aln.read_begin1 > minContigLen) {
+							
+				// Clip contig and remap if needed.
+				// TODO: Trim sequence instead of incurring overhead of remapping
 				
-				result = new SSWAlignerResult(aln.ref_begin1-leftPad.length(), cigar, refChr, refStart, paddedSeq, aln.score1);
+				int MAX_CLIP_BASES = Math.min(10, seq.length() / 10);
+				if ((aln.read_begin1 > 0 || aln.read_end1 < seq.length()-1) &&
+					(aln.read_begin1 < MAX_CLIP_BASES && aln.read_end1 > seq.length()-1-MAX_CLIP_BASES)) {
+					
+					seq = seq.substring(aln.read_begin1, aln.read_end1+1);
+					aln = Aligner.align(seq.getBytes(), ref.getBytes(), score, GAP_OPEN_PENALTY, GAP_EXTEND_PENALTY, true);
+				}
+							
+				// Requiring end to end alignment here...
+				if (aln.read_begin1 == 0 && aln.read_end1 == seq.length()-1) {
+					
+					result = finishAlignment(aln.ref_begin1, aln.ref_end1, aln.cigar, aln.score1, seq);
+				}
 			}
 		}
 		
 		return result;
+	}
+	
+	SSWAlignerResult finishAlignment(int refStart, int refEnd, String alignedCigar, short score, String seq) {
+		// Pad with remaining reference sequence
+		String leftPad = ref.substring(0, refStart);
+		String rightPad = ref.substring(refEnd+1,ref.length());
+		String paddedSeq = leftPad + seq + rightPad;
+		String cigar = CigarUtils.extendCigarWithMatches(alignedCigar, leftPad.length(), rightPad.length());
+		Logger.trace("Padded contig: %s\t%s", cigar, paddedSeq);
+		
+		if (junctionPositions.size() > 0) {
+			String oldCigar = cigar;
+			cigar = CigarUtils.injectSplices(cigar, junctionPositions, junctionLengths);
+			Logger.trace("Spliced Cigar.  old: %s, new: %s", oldCigar, cigar);
+		}
+		
+		return new SSWAlignerResult(refStart-leftPad.length(), cigar, refChr, refContextStart, paddedSeq, score);		
 	}
 	
 	public static class SSWAlignerResult {
@@ -193,7 +221,7 @@ public class SSWAligner {
 		String ref = "AACAACAGATAATAACAAGTCCTAACCCTCTAGCTGCTTAGGCTGGCGGAGGCCCAGGGGCTCCCACGAGTTGGGTCCTTTCGCACCAGCACAGACTTACCTGATCTCGGTTGTTGATGTGAGAATAAGGAAGCTCCCCCGTCATCAGTTCATACAATACGATGCCATAGGAGTAGACATCCGACTGGAAACTGAATGGGTTGTTATCCTGCATTCGGATCACCTCTGGGGCCTACATGTATCACCATATGACAAAAGTGCATTTATCACCATATGACAGGCCTCACAGACATCTAGGGGCCAGGCTGTCCCTTTCATTAGTTATGAATGAG";
 		String contig = "AACAACAGATAATAACAAGTCCTAACCCTCTAGCTGCTTAGGCTGGCGGAGGCCCAGGGGCTCCCACGAGTTGGGTCCTTTCGCACCAGCACAGACTTACCTGATCTCGGTTGTTGATGTGAGAATAAGGAAGCTCCCCCGTCATCAGTTCACAAAAGTGCATTTATCACCATATGACAGGCCTCACAGACATCTAGGGGCCAGGCTGTCCCTTTCATTAGTTATGAAT";
 		
-		SSWAligner sw = new SSWAligner(ref, "chr3", 12626521, 50);
-		sw.align(contig);
+//		SSWAligner sw = new SSWAligner(ref, "chr3", 12626521, 50);
+//		sw.align(contig);
 	}
 }

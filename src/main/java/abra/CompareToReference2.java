@@ -98,27 +98,28 @@ public class CompareToReference2 {
 		return refMap.get(refName.trim()).length * 4;
 	}
 	
-	public String getAlternateReference(SAMRecord read, Cigar cigar) {
+	// 1 based input
+	public String getAlternateReference(int refStart, int refEnd, String chromosome, String seq, Cigar cigar) {
 		String alt = null;
 		
-		if (read.getAlignmentEnd() < getRefLength(read.getReferenceName())) {
+		if (refEnd < getRefLength(chromosome)) {
 			
-			StringBuffer altBuf = new StringBuffer(read.getReadLength());
+			StringBuffer altBuf = new StringBuffer(seq.length());
 		
 			int readIdx = 0;
-			int refIdx = read.getAlignmentStart()-1;
+			int refIdx = refStart-1;
 			for (CigarElement element : cigar.getCigarElements()) {
 				if (element.getOperator() == CigarOperator.M) {
 					
 					for (int i=0; i<element.getLength(); i++) {
 
-						if (refIdx >= getRefLength(read.getReferenceName())) {
+						if (refIdx >= getRefLength(chromosome)) {
 							// You're off the edge of the map matey.  Monsters be here!
 							// This read has aligned across chromosomes.  Do not proceed.
 							return null;
 						}
 						
-						char refBase = getRefBase(refIdx, read.getReferenceName());
+						char refBase = getRefBase(refIdx, chromosome);
 						
 						altBuf.append(refBase);
 											
@@ -126,7 +127,7 @@ public class CompareToReference2 {
 						refIdx++;
 					}
 				} else if (element.getOperator() == CigarOperator.I) {
-					altBuf.append(read.getReadString().substring(readIdx, readIdx + element.getLength()));
+					altBuf.append(seq.substring(readIdx, readIdx + element.getLength()));
 					readIdx += element.getLength();
 				} else if (element.getOperator() == CigarOperator.D) {
 					refIdx += element.getLength();

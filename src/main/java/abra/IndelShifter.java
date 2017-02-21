@@ -19,36 +19,33 @@ import htsjdk.samtools.SamReader;
  */
 public class IndelShifter {
 	
-	public SAMRecord shiftIndelsLeft(SAMRecord read, CompareToReference2 c2r) {
+	public Cigar shiftIndelsLeft(int refStart, int refEnd, String chromosome, Cigar cigar, String seq, CompareToReference2 c2r) {
 		try {
 			
-			if (containsIndel(read)) {
-				int indelPos = firstIndelOffset(read);
-				String origReadAltRef = c2r.getAlternateReference(read, read.getCigar());
+			if (containsIndel(cigar)) {
+				int indelPos = firstIndelOffset(cigar);
+				String origReadAltRef = c2r.getAlternateReference(refStart, refEnd, chromosome, seq, cigar);
 				
 //				System.out.println("o: " + origReadAltRef);
 				
 				if (origReadAltRef != null) {
 					for (int i=indelPos; i>0; i--) {
-						Cigar newCigar = shiftCigarLeft(read.getCigar(), i);
+						Cigar newCigar = shiftCigarLeft(cigar, i);
 						
-						String shiftedReadAltRef = c2r.getAlternateReference(read, newCigar);
+						String shiftedReadAltRef = c2r.getAlternateReference(refStart, refEnd, chromosome, seq, newCigar);
 						
-						if ((shiftedReadAltRef != null) && (origReadAltRef.equals(shiftedReadAltRef))) {					
-							SAMRecord newRead = cloneRead(read);
-							newRead.setCigar(newCigar);
-							newRead.setAttribute("IS", read.getCigarString());
-							return newRead;
+						if ((shiftedReadAltRef != null) && (origReadAltRef.equals(shiftedReadAltRef))) {
+							return newCigar;
 						}
 					}
 				}
 			}
 		} catch (RuntimeException e) {
-			System.err.println("Error processing: " + read.getSAMString());
+			Logger.error("Error processing: " + seq + ", " + cigar.toString());
 			throw e;
 		}
 		
-		return read;
+		return cigar;
 	}
 	
 	private SAMRecord cloneRead(SAMRecord read) {
@@ -121,8 +118,8 @@ public class IndelShifter {
 		return false;
 	}
 	
-	private boolean containsIndel(SAMRecord read) {
-		for (CigarElement elem : read.getCigar().getCigarElements()) {
+	private boolean containsIndel(Cigar cigar) {
+		for (CigarElement elem : cigar.getCigarElements()) {
 			if ((elem.getOperator() == CigarOperator.D) || (elem.getOperator() == CigarOperator.I)) {
 				return true;
 			}
@@ -131,10 +128,10 @@ public class IndelShifter {
 		return false;
 	}
 	
-	private int firstIndelOffset(SAMRecord read) {
+	private int firstIndelOffset(Cigar cigar) {
 		int pos = 0;
 		
-		for (CigarElement elem : read.getCigar().getCigarElements()) {
+		for (CigarElement elem : cigar.getCigarElements()) {
 			if ((elem.getOperator() == CigarOperator.D) || (elem.getOperator() == CigarOperator.I)) {
 				return pos;
 			} else if (elem.getOperator() != CigarOperator.S) {
@@ -142,7 +139,7 @@ public class IndelShifter {
 			}
 		}
 		
-		throw new IllegalArgumentException("No indel for record: [" + read.getSAMString() + "]");
+		throw new IllegalArgumentException("No indel for record: [" + cigar + "]");
 	}
 	
 	public static void main(String[] args) throws IOException {
@@ -165,8 +162,8 @@ public class IndelShifter {
 		IndelShifter indelShifter = new IndelShifter();
 
 		for (SAMRecord read : reader) {
-			SAMRecord shiftedRead = indelShifter.shiftIndelsLeft(read, c2r);
-			writer.addAlignment(shiftedRead);
+//			SAMRecord shiftedRead = indelShifter.shiftIndelsLeft(read, c2r);
+//			writer.addAlignment(shiftedRead);
 		}
 		
 		writer.close();

@@ -153,7 +153,10 @@ public class SSWAligner {
 		try {
 			// Pad with remaining reference sequence
 			String leftPad = ref.substring(0, refStart);
-			String rightPad = ref.substring(refEnd+1,ref.length());
+			String rightPad = "";
+			if (refEnd < ref.length()-1) {
+				rightPad = ref.substring(refEnd+1,ref.length());
+			}
 			String paddedSeq = leftPad + seq + rightPad;
 			String cigar = CigarUtils.extendCigarWithMatches(alignedCigar, leftPad.length(), rightPad.length());
 			Logger.trace("Padded contig: %s\t%s", cigar, paddedSeq);

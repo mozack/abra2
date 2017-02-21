@@ -150,20 +150,27 @@ public class SSWAligner {
 	}
 	
 	SSWAlignerResult finishAlignment(int refStart, int refEnd, String alignedCigar, short score, String seq) {
-		// Pad with remaining reference sequence
-		String leftPad = ref.substring(0, refStart);
-		String rightPad = ref.substring(refEnd+1,ref.length());
-		String paddedSeq = leftPad + seq + rightPad;
-		String cigar = CigarUtils.extendCigarWithMatches(alignedCigar, leftPad.length(), rightPad.length());
-		Logger.trace("Padded contig: %s\t%s", cigar, paddedSeq);
-		
-		if (junctionPositions.size() > 0) {
-			String oldCigar = cigar;
-			cigar = CigarUtils.injectSplices(cigar, junctionPositions, junctionLengths);
-			Logger.trace("Spliced Cigar.  old: %s, new: %s", oldCigar, cigar);
+		try {
+			// Pad with remaining reference sequence
+			String leftPad = ref.substring(0, refStart);
+			String rightPad = ref.substring(refEnd+1,ref.length());
+			String paddedSeq = leftPad + seq + rightPad;
+			String cigar = CigarUtils.extendCigarWithMatches(alignedCigar, leftPad.length(), rightPad.length());
+			Logger.trace("Padded contig: %s\t%s", cigar, paddedSeq);
+			
+			if (junctionPositions.size() > 0) {
+				String oldCigar = cigar;
+				cigar = CigarUtils.injectSplices(cigar, junctionPositions, junctionLengths);
+				Logger.trace("Spliced Cigar.  old: %s, new: %s", oldCigar, cigar);
+			}
+			
+			return new SSWAlignerResult(refStart-leftPad.length(), cigar, refChr, refContextStart, paddedSeq, score);
+		} catch (StringIndexOutOfBoundsException e) {
+			e.printStackTrace();
+			System.err.println(String.format("index error: %d, %d, %s, %d, %s, %s", refStart, refEnd, alignedCigar, score, seq, ref));
+			
+			throw e;
 		}
-		
-		return new SSWAlignerResult(refStart-leftPad.length(), cigar, refChr, refContextStart, paddedSeq, score);		
 	}
 	
 	public static class SSWAlignerResult {

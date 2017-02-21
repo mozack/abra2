@@ -100,7 +100,7 @@ public class SSWAligner {
 			SemiGlobalAligner aligner = new SemiGlobalAligner();
 			SemiGlobalAligner.Result sgResult = aligner.align(seq, ref);
 			Logger.trace("SG Alignment [%s]:\t%s", seq, sgResult);
-			if (sgResult.score > MIN_ALIGNMENT_SCORE && sgResult.score > sgResult.secondBest) {
+			if (sgResult.score > MIN_ALIGNMENT_SCORE && sgResult.score > sgResult.secondBest && sgResult.endPosition > 0) {
 				Cigar cigar = TextCigarCodec.decode(sgResult.cigar);
 				
 				CigarElement first = cigar.getFirstCigarElement();

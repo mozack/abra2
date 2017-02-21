@@ -84,14 +84,10 @@ public class ReadEvaluator {
 				cigar = cigarBuf.toString();
 			}
 			
-//			if (samRecord != null) {
-//				System.err.println("READ_ALIGNMENT: " + samRecord.getReadName() + " pos: " + readRefPos + ", cigar: " + cigar + ", contig: " + contigAlignment.getGenomicPos() + ":" 
-//						+ contigAlignment.getCigar() + ":" + contigAlignment.getSequence());
-//			}
-			IndelShifter is = new IndelShifter();
-			Cigar samCigar = TextCigarCodec.decode(cigar);
-			samCigar = is.shiftIndelsLeft(readRefPos, readRefPos + samCigar.getReadLength(), contigAlignment.getChromosome(), samCigar, read, ReAligner.c2r);
-			cigar = TextCigarCodec.encode(samCigar);
+//			IndelShifter is = new IndelShifter();
+//			Cigar samCigar = TextCigarCodec.decode(cigar);
+//			samCigar = is.shiftIndelsLeft(readRefPos, readRefPos + samCigar.getReadLength(), contigAlignment.getChromosome(), samCigar, read, ReAligner.c2r);
+//			cigar = TextCigarCodec.encode(samCigar);
 			
 			Alignment readAlignment = new Alignment(contigAlignment.getChromosome(), readRefPos, cigar, alignmentHit.mapResult.getOrientation(), bestMismatches, contigAlignment.getGenomicPos(), contigAlignment.getCigar());
 			

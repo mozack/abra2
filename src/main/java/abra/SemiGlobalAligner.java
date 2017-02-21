@@ -5,7 +5,7 @@ import java.util.List;
 
 public class SemiGlobalAligner {
 	
-	enum Direction { UP, LEFT, DIAG, NONE };
+	public enum Direction { UP, LEFT, DIAG, NONE };
 	
 	private short match = 8;
 	private short mismatch = -32;
@@ -32,12 +32,12 @@ public class SemiGlobalAligner {
 		
 		short col0Init = 0;
 		for (int r=0; r<=seq1.length(); r++) {
-			matrix[r][0] = new Cell((short) col0Init, Direction.NONE);
+			matrix[r][0] = new Cell((short) col0Init, Direction.NONE, false, false);
 			col0Init += gapOpen;
 		}
 		
 		for (int c=0; c<=seq2.length(); c++) {
-			matrix[0][c] = new Cell((short) 0, Direction.NONE);
+			matrix[0][c] = new Cell((short) 0, Direction.NONE, false, false);
 		}
 		
 		for (int r=1; r<=seq1.length(); r++) {
@@ -47,23 +47,33 @@ public class SemiGlobalAligner {
 				short diagScore = (short) (seq1.charAt(r-1) == seq2.charAt(c-1) ? prevCell.score + match : prevCell.score + mismatch);
 
 				prevCell = matrix[r][c-1];
-				short leftScore = (short) (prevCell.prev == Direction.LEFT ? prevCell.score + gapExtend : prevCell.score + gapOpen);
+				short leftScore = (short) (prevCell.leftOpen ? prevCell.score + gapExtend : prevCell.score + gapOpen);
 
 				prevCell = matrix[r-1][c];
-				short upScore   = (short) (prevCell.prev == Direction.UP ? prevCell.score + gapExtend : prevCell.score + gapOpen);
+				short upScore   = (short) (prevCell.upOpen ? prevCell.score + gapExtend : prevCell.score + gapOpen);
 				
 				short max = max(diagScore, leftScore, upScore);				
 				Cell cell = null;
 				
+				Direction dir = null;
+				boolean leftOpen = false;
+				boolean upOpen = false;
+
 				if (diagScore == max) {
-					cell = new Cell(diagScore, Direction.DIAG); 
-				} else if (leftScore == max) {
-					cell = new Cell(leftScore, Direction.LEFT);
-				} else if (upScore == max) {
-					cell = new Cell(upScore, Direction.UP);
-				} else {
-					throw new IllegalStateException(String.format("Somehow no max score found!: %s,%s", seq1, seq2));
+					dir = Direction.DIAG; 
 				}
+				
+				if (upScore == max) {
+					dir = Direction.UP;
+					upOpen = true;
+				}
+				
+				if (leftScore == max) {
+					dir = Direction.LEFT;
+					leftOpen = true;
+				}
+				
+				cell = new Cell(max, dir, leftOpen, upOpen);
 				
 				matrix[r][c] = cell;
 			}
@@ -77,6 +87,19 @@ public class SemiGlobalAligner {
 			StringBuffer line = new StringBuffer();
 			for (int c=0; c<matrix[0].length; c++) {
 				line.append(matrix[r][c].score);
+				line.append(' ');
+				switch(matrix[r][c].prev) {
+					case DIAG:
+						line.append('\\');
+						break;
+					case UP:
+						line.append('^');
+						break;
+					case LEFT:
+						line.append('<');
+					default:
+						break;
+				}
 				line.append('\t');
 			}
 			System.out.println(line);
@@ -192,12 +215,17 @@ public class SemiGlobalAligner {
 	}
 	
 	static class Cell {
-		Cell(short score, Direction prev) {
-			this.score = score;
-			this.prev = prev;
-		}
 		short score;
 		Direction prev;
+		boolean leftOpen;
+		boolean upOpen;
+		
+		Cell(short score, Direction prev, boolean leftOpen, boolean upOpen) {
+			this.score = score;
+			this.prev = prev;
+			this.leftOpen = leftOpen;
+			this.upOpen = upOpen;
+		}
 	}
 	
 	public static void main(String[] args) {

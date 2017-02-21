@@ -111,10 +111,12 @@ public class SSWAligner {
 				if (first.getOperator() == CigarOperator.M && first.getLength() >= 5 && 
 					last.getOperator() == CigarOperator.M && last.getLength() >=5) {
 					
-					cigar = indelShifter.shiftIndelsLeft(sgResult.position+this.refContextStart+1, sgResult.endPosition+this.refContextStart+1,
-							this.refChr, cigar, seq, c2r);
+//					cigar = indelShifter.shiftIndelsLeft(sgResult.position+this.refContextStart+1, sgResult.endPosition+this.refContextStart+1,
+//							this.refChr, cigar, seq, c2r);
 					
-					result = finishAlignment(sgResult.position, sgResult.endPosition, TextCigarCodec.encode(cigar), sgResult.score, seq);
+					int endPos = sgResult.position + cigar.getReferenceLength();
+					
+					result = finishAlignment(sgResult.position, endPos, TextCigarCodec.encode(cigar), sgResult.score, seq);
 				}
 			}
 		} else {
@@ -155,7 +157,7 @@ public class SSWAligner {
 			String leftPad = ref.substring(0, refStart);
 			String rightPad = "";
 			if (refEnd < ref.length()-1) {
-				rightPad = ref.substring(refEnd+1,ref.length());
+				rightPad = ref.substring(refEnd,ref.length());
 			}
 			String paddedSeq = leftPad + seq + rightPad;
 			String cigar = CigarUtils.extendCigarWithMatches(alignedCigar, leftPad.length(), rightPad.length());

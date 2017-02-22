@@ -113,10 +113,13 @@ public class SSWAligner {
 					
 					int endPos = sgResult.position + cigar.getReferenceLength();
 					
-					cigar = indelShifter.shiftIndelsLeft(sgResult.position+this.refContextStart+1, endPos+this.refContextStart+1,
+					cigar = indelShifter.shiftIndelsLeft(sgResult.position+this.refContextStart, endPos+this.refContextStart,
 							this.refChr, cigar, seq, c2r);
 					
-					result = finishAlignment(sgResult.position, endPos, TextCigarCodec.encode(cigar), sgResult.score, seq);
+					String textCigar = TextCigarCodec.encode(cigar);
+					Logger.trace("OLD_CIGAR: %s\tNEW_CIGAR%s", sgResult.cigar, textCigar);
+					
+					result = finishAlignment(sgResult.position, endPos, textCigar, sgResult.score, seq);
 				}
 			}
 		} else {

@@ -111,10 +111,10 @@ public class SSWAligner {
 				if (first.getOperator() == CigarOperator.M && first.getLength() >= 5 && 
 					last.getOperator() == CigarOperator.M && last.getLength() >=5) {
 					
-//					cigar = indelShifter.shiftIndelsLeft(sgResult.position+this.refContextStart+1, sgResult.endPosition+this.refContextStart+1,
-//							this.refChr, cigar, seq, c2r);
-					
 					int endPos = sgResult.position + cigar.getReferenceLength();
+					
+					cigar = indelShifter.shiftIndelsLeft(sgResult.position+this.refContextStart+1, endPos+this.refContextStart+1,
+							this.refChr, cigar, seq, c2r);
 					
 					result = finishAlignment(sgResult.position, endPos, TextCigarCodec.encode(cigar), sgResult.score, seq);
 				}

@@ -7,52 +7,52 @@ public class SemiGlobalAligner {
 	
 	public enum Direction { UP, LEFT, DIAG, NONE };
 	
-	private short match = 8;
-	private short mismatch = -32;
-	private short gapOpen = -48;
-	private short gapExtend = -1;
+	private int match = 8;
+	private int mismatch = -32;
+	private int gapOpen = -48;
+	private int gapExtend = -1;
 
-//	private short match = 1;
-//	private short mismatch = -4;
-//	private short gapOpen = -6;
-//	private short gapExtend = 0;
+//	private int match = 1;
+//	private int mismatch = -4;
+//	private int gapOpen = -6;
+//	private int gapExtend = 0;
 	
 	public SemiGlobalAligner() {
 	}
 	
 	public SemiGlobalAligner(int match, int mismatch, int gapOpen, int gapExtend) {
-		this.match = (short) match;
-		this.mismatch = (short) mismatch;
-		this.gapOpen = (short) gapOpen;
-		this.gapExtend = (short) gapExtend;
+		this.match = match;
+		this.mismatch = mismatch;
+		this.gapOpen = gapOpen;
+		this.gapExtend = gapExtend;
 	}
 
 	public Result align(String seq1, String seq2) {
 		Cell[][] matrix = new Cell[seq1.length()+1][seq2.length()+1];
 		
-		short col0Init = 0;
+		int col0Init = 0;
 		for (int r=0; r<=seq1.length(); r++) {
-			matrix[r][0] = new Cell((short) col0Init, Direction.NONE, false, false);
+			matrix[r][0] = new Cell(col0Init, Direction.NONE, false, false);
 			col0Init += gapOpen;
 		}
 		
 		for (int c=0; c<=seq2.length(); c++) {
-			matrix[0][c] = new Cell((short) 0, Direction.NONE, false, false);
+			matrix[0][c] = new Cell(0, Direction.NONE, false, false);
 		}
 		
 		for (int r=1; r<=seq1.length(); r++) {
 			for (int c=1; c<=seq2.length(); c++) {
 				
 				Cell prevCell = matrix[r-1][c-1];
-				short diagScore = (short) (seq1.charAt(r-1) == seq2.charAt(c-1) ? prevCell.score + match : prevCell.score + mismatch);
+				int diagScore = seq1.charAt(r-1) == seq2.charAt(c-1) ? prevCell.score + match : prevCell.score + mismatch;
 
 				prevCell = matrix[r][c-1];
-				short leftScore = (short) (prevCell.leftOpen ? prevCell.score + gapExtend : prevCell.score + gapOpen);
+				int leftScore = prevCell.leftOpen ? prevCell.score + gapExtend : prevCell.score + gapOpen;
 
 				prevCell = matrix[r-1][c];
-				short upScore   = (short) (prevCell.upOpen ? prevCell.score + gapExtend : prevCell.score + gapOpen);
+				int upScore   = prevCell.upOpen ? prevCell.score + gapExtend : prevCell.score + gapOpen;
 				
-				short max = max(diagScore, leftScore, upScore);				
+				int max = max(diagScore, leftScore, upScore);				
 				Cell cell = null;
 				
 				Direction dir = null;
@@ -187,15 +187,15 @@ public class SemiGlobalAligner {
 			}
 		}
 		
-		return new Result((short) bestScore, (short) secondBestScore, (short) refIdx, (short) refEndIdx, cigar.toString());
+		return new Result(bestScore, secondBestScore, refIdx, refEndIdx, cigar.toString());
 	}
 	
-	short max(short s1, short s2, short s3) {
-		return (short) Math.max(Math.max(s1, s2), s3);
+	int max(int s1, int s2, int s3) {
+		return Math.max(Math.max(s1, s2), s3);
 	}
 	
 	static class Result {
-		Result(short score, short secondBest, short position, short endPosition, String cigar) {
+		Result(int score, int secondBest, int position, int endPosition, String cigar) {
 			this.score = score;
 			this.secondBest = secondBest;
 			this.position = position;
@@ -203,10 +203,10 @@ public class SemiGlobalAligner {
 			this.cigar = cigar;
 		}
 		
-		short score;
-		short secondBest;
-		short position;
-		short endPosition;
+		int score;
+		int secondBest;
+		int position;
+		int endPosition;
 		String cigar;
 		
 		public String toString() {
@@ -215,12 +215,12 @@ public class SemiGlobalAligner {
 	}
 	
 	static class Cell {
-		short score;
+		int score;
 		Direction prev;
 		boolean leftOpen;
 		boolean upOpen;
 		
-		Cell(short score, Direction prev, boolean leftOpen, boolean upOpen) {
+		Cell(int score, Direction prev, boolean leftOpen, boolean upOpen) {
 			this.score = score;
 			this.prev = prev;
 			this.leftOpen = leftOpen;

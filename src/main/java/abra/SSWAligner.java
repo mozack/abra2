@@ -154,7 +154,7 @@ public class SSWAligner {
 		return result;
 	}
 	
-	SSWAlignerResult finishAlignment(int refStart, int refEnd, String alignedCigar, short score, String seq) {
+	SSWAlignerResult finishAlignment(int refStart, int refEnd, String alignedCigar, int score, String seq) {
 		try {
 			// Pad with remaining reference sequence
 			String leftPad = ref.substring(0, refStart);
@@ -193,9 +193,9 @@ public class SSWAligner {
 		private int refContextStart;
 		
 		private String sequence;
-		private short score;
+		private int score;
 		
-		SSWAlignerResult(int refPos, String cigar, String chromosome, int refContextStart, String sequence, short score) {
+		SSWAlignerResult(int refPos, String cigar, String chromosome, int refContextStart, String sequence, int score) {
 			this.localRefPos = refPos;
 			this.cigar = cigar;
 			this.chromosome = chromosome;
@@ -228,7 +228,7 @@ public class SSWAligner {
 			return sequence;
 		}
 		
-		public short getScore() {
+		public int getScore() {
 			return score;
 		}
 	}

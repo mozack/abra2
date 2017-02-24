@@ -11,9 +11,7 @@ import java.util.Map;
  */
 public class SimpleMapper {
 	
-	//TODO: Parameterize
 	private static final int KMER_SIZE = 25;
-	private static final int MAX_MISMATCHES = 5;
 	
 	static final int UNMAPPED = -1;
 	static final int HOMOLOGOUS_MAPPING = -2;
@@ -28,12 +26,19 @@ public class SimpleMapper {
 	// Represents a single contig
 	private String ref;
 	private ReverseComplementor rc = new ReverseComplementor();
+	private double maxMismatchRate;
 	
 	// kmer -> list of positions
 	private Map<String, List<Integer>> kmerPositions = new HashMap<String, List<Integer>>();
-
+	
 	public SimpleMapper(String ref) {
+		this(ref, .05);
+	}
+	
+	public SimpleMapper(String ref, double maxMismatchRate) {
 		this.ref = ref;
+		this.maxMismatchRate = maxMismatchRate;
+		
 		for (int i=0; i<ref.length()-KMER_SIZE; i++) {
 			String kmer = ref.substring(i, i+KMER_SIZE);
 			if (!kmerPositions.containsKey(kmer)) {
@@ -67,7 +72,6 @@ public class SimpleMapper {
 		return posMismatches;
 	}
 	
-	//TODO: reverse complement?
 	public SimpleMapperResult map(String read) {
 		
 		Map<Integer, Integer> forwardMismatches = getPositionMismatches(read);
@@ -100,7 +104,7 @@ public class SimpleMapper {
 			}
 		}
 		
-		if (bestMismatches > MAX_MISMATCHES) {
+		if (bestMismatches > read.length() * maxMismatchRate) {
 			bestPos = UNMAPPED;
 		}
 		
@@ -112,7 +116,7 @@ public class SimpleMapper {
 		for (int i=0; i<read.length(); i++) {
 			if (read.charAt(i) != ref.charAt(refPosition+i)) {
 				mismatches += 1;
-				if (mismatches > MAX_MISMATCHES) {
+				if (mismatches > read.length() * maxMismatchRate) {
 					break;
 				}
 			}
@@ -176,7 +180,7 @@ public class SimpleMapper {
 		String contig = "TTCAACTAGAGAGAGGTAAAAATTTTTCTAGAACATGAATTGCCCACTCCCCTCATTCCTTCTCAGAAACTAACTGAATTCCAGTGGGTGTGCCTGGCAAACCCAAAAGCAGTTTCTGTTCAGGATGCTGGTCTTACCTGTGAAGGCGTTCATGAACGTGGAGAGGGACCGGTTCAACATTTTGAAGAAAGGGTCTCTGCACGGATATTTCTGAGACCCACAAAGGACGGTATGCTCAAGAATGTGAGGAACACCAGTACTGTCCATGGGAGTGGTACGGAACTGCACGCTAGGGAAGAGAGAGGAATGGCACGCTAGGGAAGGCGAATGACCAGAACGCAAAAGGTTCAGCTTAGTGCTGCGGACACAGTTCCCAGATGCATCATCACCTCAGGCTACTAGAAATCATCATTCTGACACCACAATCCTCCAGCACAGGGTTTTCCAACTATA";
 		String read = "TACTGTCCATGGGAGTGGTACGGAACTGCACGCTAGGGAAGAGAGAGGAATGGCACGCTAGGGAAGGCGAATGACCAGAACGCAAAAGGTTCAGCTTAGTG";
 		
-		SimpleMapper sm = new SimpleMapper(contig);
+		SimpleMapper sm = new SimpleMapper(contig, .05);
 		
 		SimpleMapperResult result = sm.map(read);
 		System.out.println("pos: " + result.getPos() + ". mismatches: " + result.getMismatches());

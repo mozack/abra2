@@ -29,7 +29,7 @@ public class ReadEvaluatorTest {
 		String contig1 = "ATCGAAAAAATTTTTTCCCCCCGGGGGGATCGGCTAATCG";
 		String read    =     "ATAAAATTTTTTCCCCCCGGGGGGATCG";  // matches contig at 0 based position 4 with 1 mismatch
 		
-		SimpleMapper sm1 = new SimpleMapper(contig1);
+		SimpleMapper sm1 = new SimpleMapper(contig1, .05);
 		SSWAlignerResult swc1 = new SSWAlignerResult(10, "10M1D30M", "chr1", 0, contig1, (short) 1);
 		
 		mappedContigs.put(sm1, swc1);

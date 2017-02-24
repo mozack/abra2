@@ -40,6 +40,7 @@ public class ReAlignerOptions extends Options {
 	private static final String KEEP_TMP = "keep-tmp";
 	private static final String TMP_DIR = "tmpdir";
 	private static final String CONSENSUS_SEQ = "cons";
+	private static final String MAX_MISMATCH_RATE = "mmr";
 	
 	private OptionParser parser;
 	private boolean isValid;
@@ -78,6 +79,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(KEEP_TMP, "Do not delete the temporary directory");
             parser.accepts(TMP_DIR, "Set the temp directory (overrides java.io.tmpdir)").withRequiredArg().ofType(String.class);
             parser.accepts(CONSENSUS_SEQ, "Use positional consensus sequence when aligning high quality soft clipping");
+            parser.accepts(MAX_MISMATCH_RATE, "Max allowed mismatch rate when mapping reads back to contigs").withRequiredArg().ofType(Double.class).defaultsTo(.05);
     	}
     	
     	return parser;
@@ -210,6 +212,10 @@ public class ReAlignerOptions extends Options {
 	
 	public int getNumThreads() {
 		return getOptions().hasArgument(NUM_THREADS) ? (Integer) getOptions().valueOf(NUM_THREADS) : 4;
+	}
+	
+	public double getMaxMismatchRate() {
+		return (Double) getOptions().valueOf(MAX_MISMATCH_RATE);
 	}
 	
 	public boolean isPairedEnd() {

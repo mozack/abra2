@@ -30,13 +30,11 @@ import abra.JunctionUtils.TooManyJunctionPermutationsException;
 import abra.ReadEvaluator.Alignment;
 import abra.SSWAligner.SSWAlignerResult;
 import abra.SimpleMapper.Orientation;
-import htsjdk.samtools.Cigar;
 import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.SAMProgramRecord;
 import htsjdk.samtools.SAMRecord;
 import htsjdk.samtools.SAMSequenceRecord;
 import htsjdk.samtools.SamReader;
-import htsjdk.samtools.TextCigarCodec;
 
 /**
  * ABRA's main entry point
@@ -44,8 +42,6 @@ import htsjdk.samtools.TextCigarCodec;
  * @author Lisle E. Mose (lmose at unc dot edu)
  */
 public class ReAligner {
-
-	private static final int DEFAULT_MAX_UNALIGNED_READS = 1000000;
 	
 	public static final int MAX_REGION_LENGTH = 400;
 	private static final int MIN_REGION_REMAINDER = 200;
@@ -69,8 +65,6 @@ public class ReAligner {
 	
 	private int numThreads;
 	
-	private int maxUnalignedReads = DEFAULT_MAX_UNALIGNED_READS;
-	
 	private String[] inputSams;
 	
 	private int readLength = -1;
@@ -87,6 +81,7 @@ public class ReAligner {
 	private ThreadManager threadManager;
 	
 	private int minMappingQuality;
+	private double maxMismatchRate;
 	
 	private boolean isDebug;
 	private boolean isSkipAssembly;
@@ -443,7 +438,6 @@ public class ReAligner {
 		Logger.info("regions: " + regionsBed);
 		Logger.info("reference: " + reference);
 		Logger.info("num threads: " + numThreads);
-		Logger.info("max unaligned reads: " + maxUnalignedReads);
 		Logger.info(assemblerSettings.getDescription());
 		Logger.info("paired end: " + isPairedEnd);
 		Logger.info("isSkipAssembly: " + isSkipAssembly);
@@ -736,7 +730,7 @@ public class ReAligner {
 								
 								if (sswResult != null) {
 									// TODO: In multi-region processing, check to ensure identical contigs have identical mappings
-									mappedContigs.put(new SimpleMapper(sswResult.getSequence()), sswResult);
+									mappedContigs.put(new SimpleMapper(sswResult.getSequence(), maxMismatchRate), sswResult);
 								}
 							}
 						}
@@ -755,7 +749,7 @@ public class ReAligner {
 						SSWAlignerResult sswResult = ssw.align(contig);
 						if (sswResult != null) {
 							// Store for read mapping
-							mappedContigs.put(new SimpleMapper(sswResult.getSequence()), sswResult);
+							mappedContigs.put(new SimpleMapper(sswResult.getSequence(), maxMismatchRate), sswResult);
 						}
 					}
 				}
@@ -1082,10 +1076,6 @@ public class ReAligner {
 		this.numThreads = numThreads;
 	}
 	
-	public void setMaxUnalignedReads(int maxUnalignedReads) {
-		this.maxUnalignedReads = maxUnalignedReads;
-	}
-	
 	public CompareToReference2 getC2r() {
 		return this.c2r;
 	}
@@ -1189,6 +1179,7 @@ public class ReAligner {
 			realigner.setNumThreads(options.getNumThreads());
 			realigner.isPairedEnd = options.isPairedEnd();
 			realigner.minMappingQuality = options.getMinimumMappingQuality();
+			realigner.maxMismatchRate = options.getMaxMismatchRate();
 			realigner.hasPresetKmers = options.hasPresetKmers();
 			realigner.isSkipAssembly = options.isSkipAssembly();
 			realigner.useObservedIndels = options.useObservedIndels();

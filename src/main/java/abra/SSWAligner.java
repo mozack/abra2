@@ -116,10 +116,18 @@ public class SSWAligner {
 					cigar = indelShifter.shiftIndelsLeft(sgResult.position+this.refContextStart, endPos+this.refContextStart,
 							this.refChr, cigar, seq, c2r);
 					
+					first = cigar.getFirstCigarElement();
+					last = cigar.getLastCigarElement();
+					
 					String textCigar = TextCigarCodec.encode(cigar);
 					Logger.trace("OLD_CIGAR: %s\tNEW_CIGAR%s", sgResult.cigar, textCigar);
 					
-					result = finishAlignment(sgResult.position, endPos, textCigar, sgResult.score, seq);
+					//TODO: Just do this once?
+					if (first.getOperator() == CigarOperator.M && first.getLength() >= 5 && 
+							last.getOperator() == CigarOperator.M && last.getLength() >=5) {
+						
+						result = finishAlignment(sgResult.position, endPos, textCigar, sgResult.score, seq);
+					}
 				}
 			}
 		} else {

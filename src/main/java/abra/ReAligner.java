@@ -92,6 +92,7 @@ public class ReAligner {
 	private boolean isSkipAssembly;
 	private boolean useSoftClippedReads;
 	private boolean useObservedIndels;
+	private boolean useConsensusSeq;
 	private boolean isKeepTmp;
 	private String tmpDir;
 	
@@ -746,7 +747,7 @@ public class ReAligner {
 					Logger.debug("Processing non-assembled contigs for region: [" + region + "]");
 					// Go through artificial contig generation using indels observed in the original reads
 					AltContigGenerator altContigGenerator = new AltContigGenerator(softClipParams[0], softClipParams[1], softClipParams[2], softClipParams[3],
-							useObservedIndels, useSoftClippedReads);
+							useObservedIndels, useSoftClippedReads, useConsensusSeq);
 					Collection<String> altContigs = altContigGenerator.getAltContigs(readsList, c2r, readLength);
 					
 					for (String contig : altContigs) {
@@ -1191,6 +1192,7 @@ public class ReAligner {
 			realigner.hasPresetKmers = options.hasPresetKmers();
 			realigner.isSkipAssembly = options.isSkipAssembly();
 			realigner.useObservedIndels = options.useObservedIndels();
+			realigner.useConsensusSeq = options.useConsensusSequence();
 			realigner.isKeepTmp = options.isKeepTmp();
 			realigner.tmpDir = options.getTmpDir();
 			realigner.useSoftClippedReads = options.useSoftClippedReads();

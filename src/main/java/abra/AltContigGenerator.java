@@ -6,8 +6,10 @@ import htsjdk.samtools.SAMRecord;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class AltContigGenerator {
@@ -20,15 +22,17 @@ public class AltContigGenerator {
 	private int minSoftClipLength;
 	private boolean useObservedIndels;
 	private boolean useSoftClippedReads;
+	private boolean useConsensusSeq;
 	
 	public AltContigGenerator(int maxSoftClipContigs, int minBaseQual, int softClipFraction, int minSoftClipLength, 
-			boolean useObservedIndels, boolean useSoftClippedReads) {
+			boolean useObservedIndels, boolean useSoftClippedReads, boolean useConsensusSeq) {
 		this.maxSoftClipContigs = maxSoftClipContigs;
 		this.minBaseQual = minBaseQual;
 		this.softClipFraction = (double) softClipFraction / 100.0;
 		this.minSoftClipLength = minSoftClipLength;
 		this.useObservedIndels = useObservedIndels;
 		this.useSoftClippedReads = useSoftClippedReads;
+		this.useConsensusSeq = useConsensusSeq;
 	}
 	
 	private boolean hasHighQualitySoftClipping(SAMRecord read, int start, int length) {
@@ -77,9 +81,11 @@ public class AltContigGenerator {
 
 	public Collection<String> getAltContigs(List<List<SAMRecordWrapper>> readsList, CompareToReference2 c2r, int readLength) {
 		
-		Set<ScoredContig> softClipContigs = new HashSet<ScoredContig>();
+		List<ScoredContig> softClipContigs = new ArrayList<ScoredContig>();
 		
 		HashSet<Indel> indels = new HashSet<Indel>();
+		
+		Map<String, List<ScoredContig>> softClipByPos = new HashMap<String, List<ScoredContig>>();
 		
 		for (List<SAMRecordWrapper> reads : readsList) {
 			for (SAMRecordWrapper readWrapper : reads) {
@@ -115,18 +121,38 @@ public class AltContigGenerator {
 					
 					// Add high quality soft clipped reads
 					if (useSoftClippedReads && hasHighQualitySoftClipping(readWrapper.getSamRecord())) {
-						softClipContigs.add(new ScoredContig((double) SAMRecordUtils.sumBaseQuals(read) / (double) read.getReadLength(), read.getReadString()));
+						
+						ScoredContig sc = new ScoredContig((double) SAMRecordUtils.sumBaseQuals(read) / (double) read.getReadLength(), read.getReadString());
+						
+						if (useConsensusSeq) {
+							// Group by position and read length
+							int start = readWrapper.getAdjustedAlignmentStart();
+							int end = readWrapper.getAdjustedAlignmentEnd();
+							String pos = "" + start + ":" + end + ":" + readWrapper.getSamRecord().getReadLength();
+							if (!softClipByPos.containsKey(pos)) {
+								softClipByPos.put(pos, new ArrayList<ScoredContig>());
+							}
+							softClipByPos.get(pos).add(sc);
+							
+						} else {
+							softClipContigs.add(sc);
+						}						
 					}
 				}
 			}
 		}
-		
+
 		// Current set of contigs is from soft clipping.  These can grow to be too big.  Downsample if necessary.;
 		List<ScoredContig> filteredContigs = ScoredContig.filter(new ArrayList<ScoredContig>(softClipContigs),  this.maxSoftClipContigs);
 		
 		Set<String> contigs = new HashSet<String>();
 		for (ScoredContig contig : filteredContigs) {
 			contigs.add(contig.getContig());
+		}
+		
+		ConsensusSequence cs = new ConsensusSequence();
+		for (List<ScoredContig> posList : softClipByPos.values()) {
+			contigs.add(cs.buildConsensus(posList));
 		}
 		
 		for (Indel indel : indels) {

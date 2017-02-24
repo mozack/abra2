@@ -39,6 +39,7 @@ public class ReAlignerOptions extends Options {
 	private static final String USE_OBSERVED_INDELS = "obs";
 	private static final String KEEP_TMP = "keep-tmp";
 	private static final String TMP_DIR = "tmpdir";
+	private static final String CONSENSUS_SEQ = "cons";
 	
 	private OptionParser parser;
 	private boolean isValid;
@@ -76,6 +77,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(USE_OBSERVED_INDELS, "Use observed indels in original alignments to generate contigs (Experimental)");
             parser.accepts(KEEP_TMP, "Do not delete the temporary directory");
             parser.accepts(TMP_DIR, "Set the temp directory (overrides java.io.tmpdir)").withRequiredArg().ofType(String.class);
+            parser.accepts(CONSENSUS_SEQ, "Use positional consensus sequence when aligning high quality soft clipping");
     	}
     	
     	return parser;
@@ -232,6 +234,10 @@ public class ReAlignerOptions extends Options {
 	
 	public boolean useSoftClippedReads() {
 		return getOptions().has(SW_SOFT_CLIP);
+	}
+	
+	public boolean useConsensusSequence() {
+		return getOptions().has(CONSENSUS_SEQ);
 	}
 	
 	public int getMinBaseQuality() {

@@ -43,9 +43,9 @@ import htsjdk.samtools.SamReader;
  */
 public class ReAligner {
 	
-	public static final int MAX_REGION_LENGTH = 400;
-	private static final int MIN_REGION_REMAINDER = 200;
-	public static final int REGION_OVERLAP = 200;
+	public static int MAX_REGION_LENGTH = 400;
+	private static int MIN_REGION_REMAINDER = 200;
+	public static int REGION_OVERLAP = 200;
 	
 	// Minimum sequence length recommended for use with bwa mem
 	private static final int MIN_CONTIG_LENGTH = 70;
@@ -1198,8 +1198,13 @@ public class ReAligner {
 			realigner.swScoring = options.getSmithWatermanScoring();
 			realigner.softClipParams = options.getSoftClipParams();
 			realigner.maxCachedReads = options.getMaxCachedReads();
+			MAX_REGION_LENGTH = options.getWindowSize();
+			MIN_REGION_REMAINDER = options.getWindowOverlap();
+			REGION_OVERLAP = options.getWindowOverlap();
+			
 			realigner.cl = cl.toString();
 			realigner.version = version;
+			
 
 			long s = System.currentTimeMillis();
 			

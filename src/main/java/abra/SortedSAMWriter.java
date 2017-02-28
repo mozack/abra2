@@ -56,10 +56,10 @@ public class SortedSAMWriter {
 		chromIdx.put("*", UNMAPPED_INDEX);
 		
 		writerFactory.setUseAsyncIo(false);
-		IntelDeflaterFactory intelDeflater = new IntelDeflaterFactory();
-		writerFactory.setDeflaterFactory(intelDeflater);
+//		IntelDeflaterFactory intelDeflater = new IntelDeflaterFactory();
+//		writerFactory.setDeflaterFactory(intelDeflater);
 		
-		Logger.info("Using intel deflator: " + intelDeflater.usingIntelDeflater());
+//		Logger.info("Using intel deflator: " + intelDeflater.usingIntelDeflater());
 		
 		writers = new SAMFileWriter[outputFiles.length][];
 		

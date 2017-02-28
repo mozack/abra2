@@ -57,8 +57,8 @@ public class SSWAligner {
 		
 		MATCH = scoring[0];
 		MISMATCH = -scoring[1];
-		GAP_OPEN_PENALTY = scoring[2];
-		GAP_EXTEND_PENALTY = scoring[3];
+		GAP_OPEN_PENALTY = -scoring[2];
+		GAP_EXTEND_PENALTY = -scoring[3];
 		
 		Logger.info("SW match,mismatch,gap_open_penalty,gap_extend_penalty: " 
 				+ MATCH + "," + MISMATCH + "," + GAP_OPEN_PENALTY + "," + GAP_EXTEND_PENALTY);
@@ -97,7 +97,7 @@ public class SSWAligner {
 		SSWAlignerResult result = null;
 		
 		if (useSemiGlobal) {
-			SemiGlobalAligner aligner = new SemiGlobalAligner();
+			SemiGlobalAligner aligner = new SemiGlobalAligner(MATCH, MISMATCH, GAP_OPEN_PENALTY, GAP_EXTEND_PENALTY);
 			SemiGlobalAligner.Result sgResult = aligner.align(seq, ref);
 			Logger.trace("SG Alignment [%s]:\t%s", seq, sgResult);
 			if (sgResult.score > MIN_ALIGNMENT_SCORE && sgResult.score > sgResult.secondBest && sgResult.endPosition > 0) {

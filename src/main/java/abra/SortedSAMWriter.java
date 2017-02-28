@@ -24,7 +24,7 @@ public class SortedSAMWriter {
 	private static final int TEMP_COMPRESSION_LEVEL = 1;
 	private static final int FINAL_COMPRESSION_LEVEL = 5;
 	
-	private static final int GENOMIC_RANGE_TO_CACHE = 1000000;
+	public static final int GENOMIC_RANGE_TO_CACHE = 1000000;
 	private static final int UNMAPPED_INDEX = 0;
 	private static final int ASYNC_READ_CACHE_SIZE = 1000000;
 	

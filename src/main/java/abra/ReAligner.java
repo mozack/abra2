@@ -478,53 +478,58 @@ public class ReAligner {
 		Alignment alignment = readEvaluator.getImprovedAlignment(origEditDist, read.getReadString(), read);
 		if (alignment != null) {
 			
-			int readPos = alignment.pos;
+			if (Math.abs(read.getAlignmentStart() - alignment.pos) > SortedSAMWriter.GENOMIC_RANGE_TO_CACHE / 2) {
+				Logger.warn("Not moving read: " + read.getReadName() + " from: " + read.getAlignmentStart() + " to: " + alignment.pos);
+			} else {
 			
-			// Set contig alignment info for all reads that map to contigs (even if read is unchanged)
-			String ya = alignment.chromosome + ":" + alignment.contigPos + ":" + alignment.contigCigar;
-			
-			// If no change to alignment, just record the YA tag
-			if (!read.getReadUnmappedFlag() && read.getAlignmentStart() == readPos && read.getCigarString().equals(alignment.cigar)) {
-				read.setAttribute("YA", ya);
-			}
-			
-			// If the read has actually moved to an improved alignment, update
-			if (origEditDist > alignment.numMismatches && (read.getReadUnmappedFlag() || read.getAlignmentStart() != readPos || !read.getCigarString().equals(alignment.cigar))) {
+				int readPos = alignment.pos;
 				
-				read.setAttribute("YA", ya);
-
-				// Original alignment info
-				String yo = "N/A";
-				if (!read.getReadUnmappedFlag()) {
-					String origOrientation = read.getReadNegativeStrandFlag() ? "-" : "+";
-					yo = read.getReferenceName() + ":" + read.getAlignmentStart() + ":" + origOrientation + ":" + read.getCigarString();
-				} else {
-					read.setReadUnmappedFlag(false);
-				}
-				read.setAttribute("YO", yo);
-
-				// Update alignment position and cigar and orientation
-				read.setAlignmentStart(alignment.pos);
-				read.setCigarString(alignment.cigar);
+				// Set contig alignment info for all reads that map to contigs (even if read is unchanged)
+				String ya = alignment.chromosome + ":" + alignment.contigPos + ":" + alignment.contigCigar;
 				
-				// If this is true, the read was already reverse complemented in the original alignment
-				if (read.getReadNegativeStrandFlag()) {
-					read.setReadNegativeStrandFlag(alignment.orientation == Orientation.FORWARD ? true : false);
-				} else {
-					read.setReadNegativeStrandFlag(alignment.orientation == Orientation.FORWARD ? false : true);
+				// If no change to alignment, just record the YA tag
+				if (!read.getReadUnmappedFlag() && read.getAlignmentStart() == readPos && read.getCigarString().equals(alignment.cigar)) {
+					read.setAttribute("YA", ya);
 				}
 				
-				// Number of mismatches to contig
-				read.setAttribute("YM", alignment.numMismatches);
-
-				// Original edit distance
-				read.setAttribute("YX",  origEditDist);
-				
-				// Updated edit distance
-				read.setAttribute("NM", SAMRecordUtils.getEditDistance(read, c2r));
-				
-				//TODO: Compute mapq intelligently???
-				read.setMappingQuality(Math.min(read.getMappingQuality()+10, 60));
+				// If the read has actually moved to an improved alignment, update
+				if (origEditDist > alignment.numMismatches && (read.getReadUnmappedFlag() || read.getAlignmentStart() != readPos || !read.getCigarString().equals(alignment.cigar))) {
+					
+					read.setAttribute("YA", ya);
+	
+					// Original alignment info
+					String yo = "N/A";
+					if (!read.getReadUnmappedFlag()) {
+						String origOrientation = read.getReadNegativeStrandFlag() ? "-" : "+";
+						yo = read.getReferenceName() + ":" + read.getAlignmentStart() + ":" + origOrientation + ":" + read.getCigarString();
+					} else {
+						read.setReadUnmappedFlag(false);
+					}
+					read.setAttribute("YO", yo);
+	
+					// Update alignment position and cigar and orientation
+					read.setAlignmentStart(alignment.pos);
+					read.setCigarString(alignment.cigar);
+					
+					// If this is true, the read was already reverse complemented in the original alignment
+					if (read.getReadNegativeStrandFlag()) {
+						read.setReadNegativeStrandFlag(alignment.orientation == Orientation.FORWARD ? true : false);
+					} else {
+						read.setReadNegativeStrandFlag(alignment.orientation == Orientation.FORWARD ? false : true);
+					}
+					
+					// Number of mismatches to contig
+					read.setAttribute("YM", alignment.numMismatches);
+	
+					// Original edit distance
+					read.setAttribute("YX",  origEditDist);
+					
+					// Updated edit distance
+					read.setAttribute("NM", SAMRecordUtils.getEditDistance(read, c2r));
+					
+					//TODO: Compute mapq intelligently???
+					read.setMappingQuality(Math.min(read.getMappingQuality()+10, 60));
+				}
 			}
 		}
 	}
@@ -1055,8 +1060,8 @@ public class ReAligner {
 		Logger.info("Using temp directory: " + tempDir.toString());
 		
 		new NativeLibraryLoader().load(tempDir.toString(), NativeLibraryLoader.ABRA, false);
-		new NativeLibraryLoader().load(tempDir.toString(), NativeLibraryLoader.SSW, false);
-		new NativeLibraryLoader().load(tempDir.toString(), NativeLibraryLoader.SSW_JNI, false);
+//		new NativeLibraryLoader().load(tempDir.toString(), NativeLibraryLoader.SSW, false);
+//		new NativeLibraryLoader().load(tempDir.toString(), NativeLibraryLoader.SSW_JNI, false);
 		new NativeLibraryLoader().load(tempDir.toString(), NativeLibraryLoader.DEFLATOR, true);
 		
 		threadManager = new ThreadManager(numThreads);

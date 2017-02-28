@@ -41,6 +41,7 @@ public class ReAlignerOptions extends Options {
 	private static final String TMP_DIR = "tmpdir";
 	private static final String CONSENSUS_SEQ = "cons";
 	private static final String MAX_MISMATCH_RATE = "mmr";
+	private static final String WINDOW_SIZE = "ws";
 	
 	private OptionParser parser;
 	private boolean isValid;
@@ -80,6 +81,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(TMP_DIR, "Set the temp directory (overrides java.io.tmpdir)").withRequiredArg().ofType(String.class);
             parser.accepts(CONSENSUS_SEQ, "Use positional consensus sequence when aligning high quality soft clipping");
             parser.accepts(MAX_MISMATCH_RATE, "Max allowed mismatch rate when mapping reads back to contigs").withRequiredArg().ofType(Double.class).defaultsTo(.05);
+            parser.accepts(WINDOW_SIZE, "Processing window size and overlap (size,overlap)").withRequiredArg().ofType(String.class).defaultsTo("400,200");
     	}
     	
     	return parser;
@@ -275,6 +277,7 @@ public class ReAlignerOptions extends Options {
 		String[] fields = scoring.split(",");
 		if (fields.length != 4) {
 			Logger.error("4 values required for sw scoring");
+			throw new IllegalArgumentException("4 values required for sw scoring");
 		}
 		
 		int[] scores = new int[4];
@@ -284,6 +287,28 @@ public class ReAlignerOptions extends Options {
 		}
 		
 		return scores;
+	}
+	
+	public int getWindowSize() {
+		String win = (String) getOptions().valueOf(WINDOW_SIZE);
+		String[] fields = win.split(",");
+		if (fields.length != 2) {
+			Logger.error("Please specify window size and overlap");
+			throw new IllegalArgumentException("Window size and overlap must be specified");
+		}
+		
+		return Integer.parseInt(fields[0].trim());
+	}
+	
+	public int getWindowOverlap() {
+		String win = (String) getOptions().valueOf(WINDOW_SIZE);
+		String[] fields = win.split(",");
+		if (fields.length != 2) {
+			Logger.error("Please specify window size and overlap");
+			throw new IllegalArgumentException("Window size and overlap must be specified");
+		}
+		
+		return Integer.parseInt(fields[1].trim());
 	}
 	
 	public int[] getSoftClipParams() {

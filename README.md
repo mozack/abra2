@@ -8,7 +8,7 @@ ABRA2 is an updated implementation of ABRA (https://github.com/mozack/abra) feat
 
 ## Running
 
-ABRA2 requires Java 7 or newer.
+ABRA2 requires Java 8.
 
 ### RNA
 

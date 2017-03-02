@@ -376,7 +376,7 @@ public class ReAligner {
 		
 		// Attempt to process last region if applicable
 		Iterator<Integer> regionIter = regionsToProcess.iterator();
-		if (regionIter.hasNext()) {
+		while (regionIter.hasNext()) {
 			currRegionIdx = regionIter.next();
 			
 			// We've moved beyond the current region

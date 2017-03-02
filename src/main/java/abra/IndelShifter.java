@@ -4,9 +4,8 @@ package abra;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
-
-import org.testng.collections.Lists;
 
 import htsjdk.samtools.Cigar;
 import htsjdk.samtools.CigarElement;
@@ -47,7 +46,7 @@ public class IndelShifter {
 				prev.getOperator() == CigarOperator.MATCH_OR_MISMATCH && next.getOperator() == CigarOperator.MATCH_OR_MISMATCH) {
 				
 				// subset cigar here and attempt to shift
-				Cigar subCigar = new Cigar(Lists.newArrayList(prev, elem, next));
+				Cigar subCigar = new Cigar(Arrays.asList(prev, elem, next));
 				String subSeq = seq.substring(readOffset, readOffset+subCigar.getReadLength());
 				Cigar newCigar = shiftIndelsLeft(refStart + refOffset, refStart + refOffset + subCigar.getReferenceLength(),
 						chromosome, subCigar, subSeq, c2r);

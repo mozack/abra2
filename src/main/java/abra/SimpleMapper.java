@@ -111,6 +111,10 @@ public class SimpleMapper {
 		return new SimpleMapperResult(bestPos, bestMismatches, bestOrientation);
 	}
 	
+	public String getSeq() {
+		return this.ref;
+	}
+	
 	private int countMismatches(int refPosition, String read) {
 		int mismatches = 0;
 		for (int i=0; i<read.length(); i++) {

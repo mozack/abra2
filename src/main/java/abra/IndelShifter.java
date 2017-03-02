@@ -3,6 +3,10 @@ package abra;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.testng.collections.Lists;
 
 import htsjdk.samtools.Cigar;
 import htsjdk.samtools.CigarElement;
@@ -18,6 +22,83 @@ import htsjdk.samtools.SamReader;
  * @author Lisle E. Mose (lmose at unc dot edu)
  */
 public class IndelShifter {
+	
+	public Cigar shiftAllIndelsLeft(int refStart, int refEnd, String chromosome, Cigar cigar, String seq, CompareToReference2 c2r) {
+		
+		List<CigarElement> elems = new ArrayList<CigarElement>(cigar.getCigarElements());
+		
+		int elemSize = elems.size();
+		
+		for (int i=1; i<elemSize-1; i++) {
+			
+			int refOffset = 0;
+			int readOffset = 0;
+			
+			for (int j=0; j<i-1; j++) {
+				refOffset += getRefOffset(elems.get(j));
+				readOffset += getReadOffset(elems.get(j));
+			}
+			
+			CigarElement prev = elems.get(i-1);
+			CigarElement elem = elems.get(i);
+			CigarElement next = elems.get(i+1);
+			
+			if ((elem.getOperator() == CigarOperator.DELETION || elem.getOperator() == CigarOperator.INSERTION) &&
+				prev.getOperator() == CigarOperator.MATCH_OR_MISMATCH && next.getOperator() == CigarOperator.MATCH_OR_MISMATCH) {
+				
+				// subset cigar here and attempt to shift
+				Cigar subCigar = new Cigar(Lists.newArrayList(prev, elem, next));
+				String subSeq = seq.substring(readOffset, readOffset+subCigar.getReadLength());
+				Cigar newCigar = shiftIndelsLeft(refStart + refOffset, refStart + refOffset + subCigar.getReferenceLength(),
+						chromosome, subCigar, subSeq, c2r);
+				
+				//TODO: Merge abutting indels if applicable
+				elems.set(i-1, newCigar.getCigarElement(0));
+				elems.set(i, newCigar.getCigarElement(1));
+				if (newCigar.getCigarElements().size() == 3) {
+					elems.set(i+1, newCigar.getCigarElement(2));
+				} else {
+					elemSize -= 1;
+				}
+			}
+		}
+		
+		return new Cigar(elems);
+	}
+	
+	private int getRefOffset(CigarElement elem) {
+		int offset = -1;
+		switch(elem.getOperator()) {
+			case M:
+			case D:
+				offset = elem.getLength();
+				break;
+			case I:
+				offset = 0;
+				break;
+			default:
+				throw new IllegalArgumentException("Unexpected Cigar operator: " + elem.getOperator());
+		}
+		
+		return offset;
+	}
+
+	private int getReadOffset(CigarElement elem) {
+		int offset = -1;
+		switch(elem.getOperator()) {
+			case M:
+			case I:
+				offset = elem.getLength();
+				break;
+			case D:
+				offset = 0;
+				break;
+			default:
+				throw new IllegalArgumentException("Unexpected Cigar operator: " + elem.getOperator());
+		}
+		
+		return offset;
+	}
 	
 	public Cigar shiftIndelsLeft(int refStart, int refEnd, String chromosome, Cigar cigar, String seq, CompareToReference2 c2r) {
 		try {

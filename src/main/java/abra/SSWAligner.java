@@ -113,8 +113,12 @@ public class SSWAligner {
 					
 					int endPos = sgResult.position + cigar.getReferenceLength();
 					
-					cigar = indelShifter.shiftIndelsLeft(sgResult.position+this.refContextStart, endPos+this.refContextStart,
+//					cigar = indelShifter.shiftIndelsLeft(sgResult.position+this.refContextStart, endPos+this.refContextStart,
+//							this.refChr, cigar, seq, c2r);
+					
+					cigar = indelShifter.shiftAllIndelsLeft(sgResult.position+this.refContextStart, endPos+this.refContextStart,
 							this.refChr, cigar, seq, c2r);
+
 					
 					first = cigar.getFirstCigarElement();
 					last = cigar.getLastCigarElement();

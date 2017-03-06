@@ -24,45 +24,52 @@ public class IndelShifter {
 	
 	public Cigar shiftAllIndelsLeft(int refStart, int refEnd, String chromosome, Cigar cigar, String seq, CompareToReference2 c2r) {
 		
-		List<CigarElement> elems = new ArrayList<CigarElement>(cigar.getCigarElements());
+		try {
 		
-		int elemSize = elems.size();
-		
-		for (int i=1; i<elemSize-1; i++) {
+			List<CigarElement> elems = new ArrayList<CigarElement>(cigar.getCigarElements());
 			
-			int refOffset = 0;
-			int readOffset = 0;
+			int elemSize = elems.size();
 			
-			for (int j=0; j<i-1; j++) {
-				refOffset += getRefOffset(elems.get(j));
-				readOffset += getReadOffset(elems.get(j));
-			}
-			
-			CigarElement prev = elems.get(i-1);
-			CigarElement elem = elems.get(i);
-			CigarElement next = elems.get(i+1);
-			
-			if ((elem.getOperator() == CigarOperator.DELETION || elem.getOperator() == CigarOperator.INSERTION) &&
-				prev.getOperator() == CigarOperator.MATCH_OR_MISMATCH && next.getOperator() == CigarOperator.MATCH_OR_MISMATCH) {
+			for (int i=1; i<elemSize-1; i++) {
 				
-				// subset cigar here and attempt to shift
-				Cigar subCigar = new Cigar(Arrays.asList(prev, elem, next));
-				String subSeq = seq.substring(readOffset, readOffset+subCigar.getReadLength());
-				Cigar newCigar = shiftIndelsLeft(refStart + refOffset, refStart + refOffset + subCigar.getReferenceLength(),
-						chromosome, subCigar, subSeq, c2r);
+				int refOffset = 0;
+				int readOffset = 0;
 				
-				//TODO: Merge abutting indels if applicable
-				elems.set(i-1, newCigar.getCigarElement(0));
-				elems.set(i, newCigar.getCigarElement(1));
-				if (newCigar.getCigarElements().size() == 3) {
-					elems.set(i+1, newCigar.getCigarElement(2));
-				} else {
-					elemSize -= 1;
+				for (int j=0; j<i-1; j++) {
+					refOffset += getRefOffset(elems.get(j));
+					readOffset += getReadOffset(elems.get(j));
+				}
+				
+				CigarElement prev = elems.get(i-1);
+				CigarElement elem = elems.get(i);
+				CigarElement next = elems.get(i+1);
+				
+				if ((elem.getOperator() == CigarOperator.DELETION || elem.getOperator() == CigarOperator.INSERTION) &&
+					prev.getOperator() == CigarOperator.MATCH_OR_MISMATCH && next.getOperator() == CigarOperator.MATCH_OR_MISMATCH) {
+					
+					// subset cigar here and attempt to shift
+					Cigar subCigar = new Cigar(Arrays.asList(prev, elem, next));
+					String subSeq = seq.substring(readOffset, readOffset+subCigar.getReadLength());
+					Cigar newCigar = shiftIndelsLeft(refStart + refOffset, refStart + refOffset + subCigar.getReferenceLength(),
+							chromosome, subCigar, subSeq, c2r);
+					
+					//TODO: Merge abutting indels if applicable
+					elems.set(i-1, newCigar.getCigarElement(0));
+					elems.set(i, newCigar.getCigarElement(1));
+					if (newCigar.getCigarElements().size() == 3) {
+						elems.set(i+1, newCigar.getCigarElement(2));
+					} else {
+						elemSize -= 1;
+					}
 				}
 			}
+			
+			return new Cigar(elems);
+		} catch (RuntimeException e) {
+			e.printStackTrace();
+			Logger.error("Error on: " + refStart + ", " + refEnd + "," + chromosome + ", " + cigar + ", " + seq);
+			throw e;
 		}
-		
-		return new Cigar(elems);
 	}
 	
 	private int getRefOffset(CigarElement elem) {

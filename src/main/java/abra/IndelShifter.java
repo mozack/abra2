@@ -14,6 +14,7 @@ import htsjdk.samtools.SAMFileWriter;
 import htsjdk.samtools.SAMFileWriterFactory;
 import htsjdk.samtools.SAMRecord;
 import htsjdk.samtools.SamReader;
+import htsjdk.samtools.TextCigarCodec;
 
 /**
  * Utility class for shifting Indels into leftmost position.
@@ -59,6 +60,7 @@ public class IndelShifter {
 					if (newCigar.getCigarElements().size() == 3) {
 						elems.set(i+1, newCigar.getCigarElement(2));
 					} else {
+						elems.remove(i+1);
 						elemSize -= 1;
 					}
 				}
@@ -229,6 +231,7 @@ public class IndelShifter {
 		throw new IllegalArgumentException("No indel for record: [" + cigar + "]");
 	}
 	
+	/*
 	public static void main(String[] args) throws IOException {
 		String in = args[0];
 		String out = args[1];
@@ -255,5 +258,23 @@ public class IndelShifter {
 		
 		writer.close();
 		reader.close();
+	}
+	*/
+	
+	public static void main(String[] args) throws IOException {
+		CompareToReference2 c2r = new CompareToReference2();
+		c2r.init("/home/lmose/dev/reference/hg19/chr7.fa");
+		
+		String seq = "CGCTGGCGGCCTTCCTGCCCGACCTGTCCCTGGCCAAGAGGAAGACCTGGCGGAACCCTTGGCGGCGTTCCTACCACAAGCGCAAGAAGGCCGAGTGGGAGGTGGACCCTGACAACTGCGAGGAGGTGAAGCAGACACCGCCCTACGACAGCAGCCACCGCATCCTGGACGTCATGGACATGACGATCTTCGACTTCCTCATGGGAAACATGGACCGTCACCACTACGAGACTTGTGAGAAGTTTGGGAATGAAACGTTCATCATCCACTTAGACAATGGAAGAGGGATCCGGA";
+		IndelShifter is = new IndelShifter();
+		Cigar orig = TextCigarCodec.decode("7M88I1M10D109M241D82M60D7M");
+		
+		Cigar cigar = is.shiftAllIndelsLeft(296604, 297121, "chr7", orig, 
+				seq, 
+				c2r);
+		
+		System.out.println("old: " + orig + ", " + orig.getReadLength());
+		System.out.println("new: " + cigar + ", " + cigar.getReadLength());
+		//296604, 297121,chr7, 7M88I1M10D109M241D82M60D7M, CGCTGGCGGCCTTCCTGCCCGACCTGTCCCTGGCCAAGAGGAAGACCTGGCGGAACCCTTGGCGGCGTTCCTACCACAAGCGCAAGAAGGCCGAGTGGGAGGTGGACCCTGACAACTGCGAGGAGGTGAAGCAGACACCGCCCTACGACAGCAGCCACCGCATCCTGGACGTCATGGACATGACGATCTTCGACTTCCTCATGGGAAACATGGACCGTCACCACTACGAGACTTGTGAGAAGTTTGGGAATGAAACGTTCATCATCCACTTAGACAATGGAAGAGGGATCCGGA
 	}
 }

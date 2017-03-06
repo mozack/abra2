@@ -5,6 +5,9 @@ package abra;
 import htsjdk.samtools.Cigar;
 import htsjdk.samtools.CigarElement;
 import htsjdk.samtools.CigarOperator;
+import htsjdk.samtools.TextCigarCodec;
+
+import static org.testng.Assert.assertEquals;
 
 import org.testng.Assert;
 import org.testng.annotations.Test;
@@ -132,6 +135,35 @@ public class IndelShifterTest {
 		Cigar newCigar;
 		
 		newCigar = indelShifter.shiftCigarLeft(cigar, 1);
-		Assert.assertEquals(newCigar.toString(), "3S68M1I18M1D10M");
+		assertEquals(newCigar.toString(), "3S68M1I18M1D10M");
+	}
+	
+	@Test (groups = "unit" )
+	public void testShiftDelLeft() throws Exception {
+		Cigar cigar = TextCigarCodec.decode("6M2D8M");
+		Cigar newCigar = indelShifter.shiftCigarLeft(cigar, 4);
+		assertEquals(TextCigarCodec.encode(newCigar), "2M2D12M");
+	}
+
+	@Test (groups = "unit" )
+	public void testShiftIndelsLeft() throws Exception {
+		
+		CompareToReference2 c2r = new CompareToReference2();
+		c2r.init("test-data/test.fa");
+		/*
+		TCGAATCGATATATTTCCGGAACAGACTCAG
+		------CGATAT--TTCCGGAA--------- <-- orig
+		------CG--ATATTTCCGGAA--------- <-- new
+		1234567890123456789012
+		*/
+		
+		int refStart = 7;
+		int refEnd = 22;
+		Cigar cigar = TextCigarCodec.decode("6M2D8M");
+		String seq = "CGATATTTCCGGAA";
+		
+		// 1 based input
+		Cigar newCigar = indelShifter.shiftIndelsLeft(refStart, refEnd, "seq1", cigar, seq, c2r);
+		assertEquals(TextCigarCodec.encode(newCigar), "2M2D12M");
 	}
 }

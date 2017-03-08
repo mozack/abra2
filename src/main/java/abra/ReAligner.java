@@ -504,6 +504,7 @@ public class ReAligner {
 						yo = read.getReferenceName() + ":" + read.getAlignmentStart() + ":" + origOrientation + ":" + read.getCigarString();
 					} else {
 						read.setReadUnmappedFlag(false);
+						read.setMappingQuality(this.maxMapq);
 					}
 					read.setAttribute("YO", yo);
 	
@@ -528,7 +529,7 @@ public class ReAligner {
 					read.setAttribute("NM", SAMRecordUtils.getEditDistance(read, c2r));
 					
 					//TODO: Compute mapq intelligently???
-					read.setMappingQuality(Math.min(read.getMappingQuality()+10, 60));
+					read.setMappingQuality(Math.min(read.getMappingQuality()+10, this.maxMapq));
 				}
 			}
 		}

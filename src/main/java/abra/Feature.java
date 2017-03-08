@@ -4,6 +4,7 @@ package abra;
 import java.util.ArrayList;
 import java.util.List;
 
+import abra.SAMRecordWrapper.Span;
 import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.SAMRecord;
 
@@ -93,7 +94,7 @@ public class Feature {
 		this.kmerSize = kmer;
 	}
 	
-	public static int findFirstOverlappingRegion(SAMFileHeader samHeader, SAMRecordWrapper read, List<Feature> regions, int start) {
+	public static int findFirstOverlappingRegion(SAMFileHeader samHeader, SAMRecordWrapper read, int readStart, int readEnd, List<Feature> regions, int start) {
 		if (start < 0) {
 			start = 0;
 		}
@@ -101,12 +102,12 @@ public class Feature {
 		for (int idx=start; idx<regions.size(); idx++) {
 			Feature region = regions.get(idx);
 			if ( (read.getSamRecord().getReferenceIndex() < samHeader.getSequenceDictionary().getSequenceIndex(region.getSeqname())) ||
-				 (read.getSamRecord().getReferenceName().equals(region.getSeqname()) && read.getAdjustedAlignmentEnd() < region.getStart()) ) {
+				 (read.getSamRecord().getReferenceName().equals(region.getSeqname()) && readStart < region.getStart()) ) {
 				
 				// This read is in between regions
 				// TODO: adjust start region here
 				return -1;
-			} else if (region.overlaps(read.getSamRecord().getReferenceName(), read.getAdjustedAlignmentStart(), read.getAdjustedAlignmentEnd())) {
+			} else if (region.overlaps(read.getSamRecord().getReferenceName(), readStart, readEnd)) {
 				return idx;
 			}
 		}
@@ -117,20 +118,24 @@ public class Feature {
 	
 	public static List<Integer> findAllOverlappingRegions(SAMFileHeader samHeader, SAMRecordWrapper read, List<Feature> regions, int start) {
 		List<Integer> overlappingRegions = new ArrayList<Integer>();
-		int idx = findFirstOverlappingRegion(samHeader, read, regions, start);
-		if (idx > -1) {
-			overlappingRegions.add(idx);
-			boolean isOverlap = true;
-			idx += 1;
-			//TODO: Skip introns ?
-			while (isOverlap && idx < regions.size()) {
-				Feature region = regions.get(idx);
-				if (region.overlaps(read.getSamRecord().getReferenceName(), read.getAdjustedAlignmentStart(), read.getAdjustedAlignmentEnd())) {
-					overlappingRegions.add(idx);
-				} else {
-					isOverlap = false;
-				}
+		
+		for (Span span : read.getSpanningRegions()) {
+		
+			int idx = findFirstOverlappingRegion(samHeader, read, span.start, span.end, regions, start);
+			if (idx > -1) {
+				overlappingRegions.add(idx);
+				boolean isOverlap = true;
 				idx += 1;
+				
+				while (isOverlap && idx < regions.size()) {
+					Feature region = regions.get(idx);
+					if (region.overlaps(read.getSamRecord().getReferenceName(), span.start, span.end)) {
+						overlappingRegions.add(idx);
+					} else {
+						isOverlap = false;
+					}
+					idx += 1;
+				}
 			}
 		}
 		

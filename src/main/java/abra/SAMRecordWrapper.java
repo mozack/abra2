@@ -1,5 +1,8 @@
 package abra;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import htsjdk.samtools.CigarElement;
 import htsjdk.samtools.CigarOperator;
 import htsjdk.samtools.SAMRecord;
@@ -71,5 +74,53 @@ public class SAMRecordWrapper {
 		}
 
 		return end;
+	}
+	
+	public List<Span> getSpanningRegions() {
+		
+		List<Span> spans = new ArrayList<Span>();
+		
+		int start = getAdjustedAlignmentStart();
+		
+		if (samRecord.getReadUnmappedFlag()) {
+			spans.add(new Span(start, getAdjustedAlignmentEnd()));
+		} else {
+			int end = start;
+			for (CigarElement elem : samRecord.getCigar().getCigarElements()) {
+				switch (elem.getOperator()) {
+				case M:
+				case S:
+				case D:
+					end += elem.getLength();
+					break;
+				case I:
+					break;
+				case H:
+					break;
+				case N:
+					spans.add(new Span(start, end));
+					start = end + elem.getLength();
+					end = start;
+					break;
+				default:
+					throw new UnsupportedOperationException("Unhandled cigar operator: " + elem.getOperator() + " in: " + 
+							samRecord.getReadName() + " : " + samRecord.getCigarString());
+				}
+			}
+			
+			spans.add(new Span(start, end));
+		}
+		
+		return spans;
+	}
+	
+	static class Span {
+		int start;
+		int end;
+		
+		public Span(int start, int end) {
+			this.start = start;
+			this.end = end;
+		}
 	}
 }

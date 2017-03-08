@@ -754,6 +754,8 @@ public class ReAligner {
 						// TODO: Check to see if this contig is already in the map before aligning
 						SSWAlignerResult sswResult = ssw.align(contig);
 						if (sswResult != null) {
+							// Set as secondary for remap prioritization
+							sswResult.setSecondary(true);
 							// Store for read mapping
 							mappedContigs.put(new SimpleMapper(sswResult.getSequence(), maxMismatchRate), sswResult);
 						}

@@ -89,12 +89,13 @@ public class ReadEvaluator {
 //			samCigar = is.shiftIndelsLeft(readRefPos, readRefPos + samCigar.getReadLength(), contigAlignment.getChromosome(), samCigar, read, ReAligner.c2r);
 //			cigar = TextCigarCodec.encode(samCigar);
 			
-			Alignment readAlignment = new Alignment(contigAlignment.getChromosome(), readRefPos, cigar, alignmentHit.mapResult.getOrientation(), bestMismatches, contigAlignment.getGenomicPos(), contigAlignment.getCigar());
+			Alignment readAlignment = new Alignment(contigAlignment.getChromosome(), readRefPos, cigar, alignmentHit.mapResult.getOrientation(), bestMismatches, 
+					contigAlignment.getGenomicPos(), contigAlignment.getCigar(), contigAlignment.isSecondary());
 			
 			if (alignments.size() == 1) {
 				Alignment alignment2 = alignments.iterator().next();
 				
-				int choice = CigarUtils.testEquivalenceAndSelectIntronPreferred(readAlignment.cigar, alignment2.cigar);
+				int choice = CigarUtils.testEquivalenceAndSelectIntronPreferred(readAlignment, alignment2);
 				
 				if (choice == 0) {
 					// Non-equivalent contigs means we have ambiguous alignments.  Break and return null;
@@ -153,8 +154,13 @@ public class ReadEvaluator {
 		
 		int contigPos;
 		String contigCigar;
+		boolean isSecondary;
 		
-		Alignment(String chromosome, int pos, String cigar, Orientation orientation, int numMismatches, int contigPos, String contigCigar) {
+		Alignment() {
+			
+		}
+		
+		Alignment(String chromosome, int pos, String cigar, Orientation orientation, int numMismatches, int contigPos, String contigCigar, boolean isSecondary) {
 			this.chromosome = chromosome;
 			this.pos = pos;
 			this.cigar = cigar;
@@ -163,6 +169,7 @@ public class ReadEvaluator {
 			
 			this.contigPos = contigPos;
 			this.contigCigar = contigCigar;
+			this.isSecondary = isSecondary;
 		}
 
 		@Override

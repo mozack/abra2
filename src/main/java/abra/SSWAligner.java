@@ -210,7 +210,8 @@ public class SSWAligner {
 		
 		private String sequence;
 		private int score;
-		
+		private boolean isSecondary = false;
+
 		SSWAlignerResult(int refPos, String cigar, String chromosome, int refContextStart, String sequence, int score) {
 			this.localRefPos = refPos;
 			this.cigar = cigar;
@@ -246,6 +247,14 @@ public class SSWAligner {
 		
 		public int getScore() {
 			return score;
+		}
+		
+		public boolean isSecondary() {
+			return isSecondary;
+		}
+
+		public void setSecondary(boolean isSecondary) {
+			this.isSecondary = isSecondary;
 		}
 	}
 	

@@ -98,19 +98,34 @@ public class CigarUtils {
 		return cigar;
 	}
 	
+	private static int selectPrimaryAlignment(Alignment alignment1, Alignment alignment2, int def) {
+		int selection = def;
+
+		if (!alignment1.isSecondary && alignment2.isSecondary) {
+			selection = 1;
+		} else if (alignment1.isSecondary && !alignment2.isSecondary) {
+			selection = 2;
+		}
+		
+		return selection;
+	}
+	
 	// Return 0 if cigars are not equivalent (treating deletions the same as junctions)
 	// Return 1 if cigar1 has more junctions
 	// Return 2 if cigar2 has more junctions
-	public static int testEquivalenceAndSelectIntronPreferred(String cigar1, String cigar2) {
+	public static int testEquivalenceAndSelectIntronPreferred(Alignment alignment1, Alignment alignment2) {
 		
-		// Cigars are equal, just pick the first one.
+		String cigar1 = alignment1.cigar;
+		String cigar2 = alignment2.cigar;
+		
+		// Cigars are equal, pick non-secondary or just the first.
 		if (cigar1.equals(cigar2)) {
-			return 1;
+			return (selectPrimaryAlignment(alignment1, alignment2, 1));
 		}
 		
-		// Cigars are different, select neither
+		// Cigars are different, pick non-secondary one or neither
 		if (cigar1.length() != cigar2.length()) {
-			return 0;
+			return (selectPrimaryAlignment(alignment1, alignment2, 0));
 		}
 		
 		int cigar1Introns = 0;
@@ -123,7 +138,7 @@ public class CigarUtils {
 				if ((ch1 != 'N' && ch1 != 'D') ||
 					(ch2 != 'N' && ch2 != 'D')) {
 					// Non-equivalent cigars
-					return 0;
+					return (selectPrimaryAlignment(alignment1, alignment2, 0));
 				} else {
 					if (ch1 == 'N') {
 						cigar1Introns += 1;
@@ -135,7 +150,12 @@ public class CigarUtils {
 			}
 		}
 		
-		return cigar1Introns >= cigar2Introns ? 1 : 2;
+		if (cigar1Introns != cigar2Introns) {
+			return cigar1Introns >= cigar2Introns ? 1 : 2;
+		}
+		
+		// Equivalent cigars.  Pick non-secondary or just the first.
+		return (selectPrimaryAlignment(alignment1, alignment2, 0));		
 	}
 	
 	private static List<CigarBlock> getCigarBlocks(String cigar) {

@@ -9,6 +9,8 @@ import java.util.List;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import abra.ReadEvaluator.Alignment;
+
 public class CigarUtilsTest {
 	
 	private StringBuffer readContig;
@@ -184,28 +186,38 @@ public class CigarUtilsTest {
 
 	}
 	
+	private int testEquivalenceAndSelectIntronPreferred(String cigar1, String cigar2) {
+		Alignment a1 = new Alignment();
+		Alignment a2 = new Alignment();
+		a1.cigar = cigar1;
+		a2.cigar = cigar2;
+		
+		return CigarUtils.testEquivalenceAndSelectIntronPreferred(a1, a2);
+	}
+	
 	@Test (groups = "unit")
 	public void testCompare() {
+		
 		int choice;
-		choice = CigarUtils.testEquivalenceAndSelectIntronPreferred("100M", "50M10D50M");
+		choice = testEquivalenceAndSelectIntronPreferred("100M", "50M10D50M");
 		assertEquals(0, choice);
 		
-		choice = CigarUtils.testEquivalenceAndSelectIntronPreferred("50M1000N50M", "50M1000N50M");
+		choice = testEquivalenceAndSelectIntronPreferred("50M1000N50M", "50M1000N50M");
 		assertEquals(1, choice);
 		
-		choice = CigarUtils.testEquivalenceAndSelectIntronPreferred("50M1000D50M", "50M1000N50M");
+		choice = testEquivalenceAndSelectIntronPreferred("50M1000D50M", "50M1000N50M");
 		assertEquals(2, choice);
 
-		choice = CigarUtils.testEquivalenceAndSelectIntronPreferred("50M1001D50M", "50M1000N50M");
+		choice = testEquivalenceAndSelectIntronPreferred("50M1001D50M", "50M1000N50M");
 		assertEquals(0, choice);
 		
-		choice = CigarUtils.testEquivalenceAndSelectIntronPreferred("51M1000D50M", "50M1000N50M");
+		choice = testEquivalenceAndSelectIntronPreferred("51M1000D50M", "50M1000N50M");
 		assertEquals(0, choice);
 		
-		choice = CigarUtils.testEquivalenceAndSelectIntronPreferred("100M1000N100M2000D100M3000N", "100M1000N100M2000N100M3000N");;
+		choice = testEquivalenceAndSelectIntronPreferred("100M1000N100M2000D100M3000N", "100M1000N100M2000N100M3000N");;
 		assertEquals(2, choice);
 
-		choice = CigarUtils.testEquivalenceAndSelectIntronPreferred("50M10I50M", "50M10D50M");
+		choice = testEquivalenceAndSelectIntronPreferred("50M10I50M", "50M10D50M");
 		assertEquals(0, choice);
 
 	}

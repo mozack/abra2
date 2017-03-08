@@ -166,4 +166,27 @@ public class IndelShifterTest {
 		Cigar newCigar = indelShifter.shiftIndelsLeft(refStart, refEnd, "seq1", cigar, seq, c2r);
 		assertEquals(TextCigarCodec.encode(newCigar), "2M2D12M");
 	}
+	
+	@Test (groups = "unit" )
+	public void testShiftIndelsLeft_LocalRef() throws Exception {
+		
+		CompareToReference2 c2r = new CompareToReference2();
+		c2r.initLocal("seq1", "TCGAATCGATATATTTCCGGAACAGACTCAG");
+		//c2r.init("test-data/test.fa");
+		/*
+		TCGAATCGATATATTTCCGGAACAGACTCAG
+		------CGATAT--TTCCGGAA--------- <-- orig
+		------CG--ATATTTCCGGAA--------- <-- new
+		1234567890123456789012
+		*/
+		
+		int refStart = 7;
+		int refEnd = 22;
+		Cigar cigar = TextCigarCodec.decode("6M2D8M");
+		String seq = "CGATATTTCCGGAA";
+		
+		// 1 based input
+		Cigar newCigar = indelShifter.shiftIndelsLeft(refStart, refEnd, "seq1", cigar, seq, c2r);
+		assertEquals(TextCigarCodec.encode(newCigar), "2M2D12M");
+	}
 }

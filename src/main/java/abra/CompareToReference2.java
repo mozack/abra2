@@ -2,7 +2,6 @@
 package abra;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
@@ -50,6 +49,12 @@ public class CompareToReference2 {
 		is2Bit = false;
 		this.refFileName = reference;
 		loadRefMap();
+	}
+	
+	public void initLocal(String chrom, String sequence) {
+//		is2Bit = false;
+		this.refMap = new HashMap<String, byte[]>();
+		refMap.put(chrom, getBytes(sequence));
 	}
 	
 	public boolean containsChromosome(String chromosome) {
@@ -257,7 +262,7 @@ public class CompareToReference2 {
 	}
 	
 	// Convert input StringBuffer to 2 bit representation.
-	private byte[] getBytes(StringBuffer buf) {
+	private byte[] getBytes(CharSequence buf) {
 		if (is2Bit) {
 			int numBytes = buf.length()/4;
 			if (buf.length() % 4 > 0) {

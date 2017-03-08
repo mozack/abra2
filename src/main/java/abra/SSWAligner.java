@@ -43,7 +43,7 @@ public class SSWAligner {
 	
 	private boolean useSemiGlobal = true;
 	private IndelShifter indelShifter = new IndelShifter();
-	private CompareToReference2 c2r;
+	private CompareToReference2 localC2r;
 	
 	public static void init(int[] scoring) {
 		
@@ -72,22 +72,23 @@ public class SSWAligner {
 		}
 	}
 	
-	public SSWAligner(CompareToReference2 c2r, String ref, String refChr, int refStart, int minContigLength) {
+	public SSWAligner(String ref, String refChr, int refStart, int minContigLength) {
 		this.ref = ref;
 		this.refChr = refChr;
 		this.refContextStart = refStart;
 		this.minContigLength = minContigLength;
-		this.c2r = c2r;
+		this.localC2r = new CompareToReference2();
+		localC2r.initLocal(refChr, ref);
 	}
 	
-	public SSWAligner(CompareToReference2 c2r, String ref, String refChr, int refStart, int minContigLength, int junctionPos, int junctionLength) {
-		this(c2r, ref, refChr, refStart, minContigLength);
+	public SSWAligner(String ref, String refChr, int refStart, int minContigLength, int junctionPos, int junctionLength) {
+		this(ref, refChr, refStart, minContigLength);
 		this.junctionPositions.add(junctionPos);
 		this.junctionLengths.add(junctionLength);
 	}
 	
-	public SSWAligner(CompareToReference2 c2r, String ref, String refChr, int refStart, int minContigLength, List<Integer> junctionPositions, List<Integer> junctionLengths) {
-		this(c2r, ref, refChr, refStart, minContigLength);
+	public SSWAligner(String ref, String refChr, int refStart, int minContigLength, List<Integer> junctionPositions, List<Integer> junctionLengths) {
+		this(ref, refChr, refStart, minContigLength);
 		this.junctionPositions = junctionPositions;
 		this.junctionLengths = junctionLengths;
 	}
@@ -116,9 +117,12 @@ public class SSWAligner {
 //					cigar = indelShifter.shiftIndelsLeft(sgResult.position+this.refContextStart, endPos+this.refContextStart,
 //							this.refChr, cigar, seq, c2r);
 					
-					cigar = indelShifter.shiftAllIndelsLeft(sgResult.position+this.refContextStart, endPos+this.refContextStart,
-							this.refChr, cigar, seq, c2r);
+					
+//					cigar = indelShifter.shiftAllIndelsLeft(sgResult.position+this.refContextStart, endPos+this.refContextStart,
+//							this.refChr, cigar, seq, localC2r);
 
+					cigar = indelShifter.shiftAllIndelsLeft(sgResult.position+1, endPos+1,
+							this.refChr, cigar, seq, localC2r);
 					
 					first = cigar.getFirstCigarElement();
 					last = cigar.getLastCigarElement();

@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import abra.Logger.Level;
 import htsjdk.samtools.Cigar;
 import htsjdk.samtools.CigarElement;
 import htsjdk.samtools.CigarOperator;
@@ -66,11 +67,34 @@ public class IndelShifter {
 				}
 			}
 			
+			mergeAbuttingElements(elems);
 			return new Cigar(elems);
 		} catch (RuntimeException e) {
 			e.printStackTrace();
 			Logger.error("Error on: " + refStart + ", " + refEnd + "," + chromosome + ", " + cigar + ", " + seq);
 			throw e;
+		}
+	}
+	
+	// Merge neighboring Cigar elements of same type
+	// mutates input
+	private void mergeAbuttingElements(List<CigarElement> elems) {
+		int origSize = elems.size();
+		List<CigarElement> orig = Logger.LEVEL == Level.TRACE ? new ArrayList<CigarElement>(elems) : null;
+		
+		for (int i=1; i<elems.size(); i++) {
+			if (elems.get(i).getOperator() == elems.get(i-1).getOperator()) {
+				int length = elems.get(i).getLength() + elems.get(i-1).getLength();
+				elems.set(i-1, new CigarElement(length, elems.get(i-1).getOperator()));
+				elems.remove(i);
+				i = i-1;
+			}
+		}
+		
+		if (Logger.LEVEL == Level.TRACE && origSize != elems.size()) {
+			Cigar old = new Cigar(orig);
+			Cigar curr = new Cigar(elems);
+			Logger.trace("Cigar abutting elements merged: [%s] -> [%s]", old, curr);
 		}
 	}
 	

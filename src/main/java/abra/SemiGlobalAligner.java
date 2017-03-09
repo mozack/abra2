@@ -1,6 +1,7 @@
 package abra;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class SemiGlobalAligner {
@@ -11,11 +12,6 @@ public class SemiGlobalAligner {
 	private int mismatch = -32;
 	private int gapOpen = -48;
 	private int gapExtend = -1;
-
-//	private int match = 1;
-//	private int mismatch = -4;
-//	private int gapOpen = -6;
-//	private int gapExtend = 0;
 	
 	public SemiGlobalAligner() {
 	}
@@ -30,6 +26,11 @@ public class SemiGlobalAligner {
 	public Result align(String seq1, String seq2) {
 		Cell[][] matrix = new Cell[seq1.length()+1][seq2.length()+1];
 		
+		populate(matrix, seq1, seq2);
+		return backtrack(matrix, seq1, seq2);
+	}
+	
+	private void populate(Cell[][] matrix, String seq1, String seq2) {
 		int col0Init = 0;
 		for (int r=0; r<=seq1.length(); r++) {
 			matrix[r][0] = new Cell(col0Init, Direction.NONE, false, false);
@@ -78,8 +79,6 @@ public class SemiGlobalAligner {
 				matrix[r][c] = cell;
 			}
 		}
-		
-		return backtrack(matrix, seq1, seq2);
 	}
 	
 	private void dumpMatrix(Cell matrix[][]) {
@@ -106,6 +105,17 @@ public class SemiGlobalAligner {
 		}
 	}
 	
+	private Element updateCurrElem(char op, Element currElem, List<Element> elems) {
+		if (currElem.operator == op) {
+			currElem.length += 1;
+		} else {
+			currElem = new Element(op, 1);
+			elems.add(currElem);
+		}
+		
+		return currElem;
+	}
+	
 	private Result backtrack(Cell matrix[][], String seq1, String seq2) {
 //		dumpMatrix(matrix);
 		// Find best score in last row (end of seq1)
@@ -127,18 +137,22 @@ public class SemiGlobalAligner {
 		int c = bestIdx;
 		int refEndIdx = c;
 		
-		List<Cell> path = new ArrayList<Cell>();
+		List<Element> elems = new ArrayList<Element>();
+		Element currElem = new Element('0', 0);
 		
 		while (r > 0 && c > 0) {
 			Cell cell = matrix[r][c]; 
-			path.add(cell);
+
 			if (cell.prev == Direction.DIAG) {
 				r -= 1;
 				c -= 1;
+				currElem = updateCurrElem('M', currElem, elems);
 			} else if (cell.prev == Direction.LEFT) {
 				c -= 1;
+				currElem = updateCurrElem('D', currElem, elems);
 			} else if (cell.prev == Direction.UP) {
 				r -= 1;
+				currElem = updateCurrElem('I', currElem, elems);
 			} else {
 				break;
 			}
@@ -146,45 +160,11 @@ public class SemiGlobalAligner {
 		
 		int refIdx = c;
 		
+		Collections.reverse(elems);
 		StringBuffer cigar = new StringBuffer();
-		Direction dir = Direction.NONE;
-		int elemLength = 0;
-
-		for (int i=path.size()-1; i>=0; i--) {
-			Cell cell = path.get(i);
-			if (cell.prev == dir) {
-				elemLength += 1;
-			} else {
-				if (elemLength > 0) {
-					cigar.append(elemLength);
-					if (dir == Direction.DIAG) {
-						cigar.append('M');
-					} else if (dir == Direction.LEFT) {
-						cigar.append('D');
-					} else if (dir == Direction.UP) {
-						cigar.append('I');
-					} else {
-						cigar.append('Z');
-					}
-				}
-				
-				dir = cell.prev;
-				elemLength = 1;
-			}
-		}
-		
-		// Get last element
-		if (elemLength > 0) {
-			cigar.append(elemLength);
-			if (dir == Direction.DIAG) {
-				cigar.append('M');
-			} else if (dir == Direction.LEFT) {
-				cigar.append('D');
-			} else if (dir == Direction.UP) {
-				cigar.append('I');
-			} else {
-				cigar.append('Z');
-			}
+		for (Element elem : elems) {
+			cigar.append(elem.length);
+			cigar.append(elem.operator);
 		}
 		
 		return new Result(bestScore, secondBestScore, refIdx, refEndIdx, cigar.toString());
@@ -228,12 +208,27 @@ public class SemiGlobalAligner {
 		}
 	}
 	
-	public static void main(String[] args) {
-		String ref = "CCAGATCAGCCTAGGCAACATGGTGAAACCCCGTCTCTACCAAAAATAAAAAACTTAGCTGAGCGTGGTGGTGCACGCCTGTAGCCCCAGCTGCTGAGGAGCCTGAGCCCAGGGGGTGGAGGCTGCAGTGAGCCATGATCACACTACTGTACTCCAGCCTAGGTGACAGAGTGAGACCCTGTCTCAAAAAAATAAAAGAAAATAAAAATAAACAAAGAGAGAAGTGGAAGAAGAGGTGGAGTTTTGTATTTATGACTTGAATTTTGTATTCATGACTGGGTTGACACCCCAATCCACTCCATTTTTAGCCTTGAAACATGGCAAACAGTAACCATTAAAAGGATGGAAAAGAGAAGAAGGCATGGGTGGGAAACTGTGCCTCCCATTTTTGTGCATCTTTGTTGCTGTCCTTCCACTATACTGTACCTTTCAGCATTTTGACGGCAACCTGGATTGAGACTCCTGTTTTGCTAATTCCATAAGCTGTTGCGTTCATCACTTTTCCAAAAGCACCTGATCCTAGTACCTTCCCTGCAAAGACAAATGGTGAGTACGTGCATTTTAAAGATTTTCCAATGGAAAAGAAATGCTGCAGAAACATTTGGCACATTCCATTCTTACCAAACTCTAAATTTTCTCTTGGAAACTCCCATTTGAGATCATATTCATATTCTCTGAAATCAACGTAGAAGTACTCATTATCTGAGGAGCCGGTCACCTGTACCATCTGTAGCTGGCTTTCATACCTAAATTGCTTCAGAGATGAAATGATGAGTCAGTTAGGAATAGGCAGTTCTGCAGATAGAGGAAAGAATAATGAATTTTTACCTTTGCTTTTACCTTTTTGTACTTGTGACAAATTAGCAGGGTTAAAACGACAATGAAGAGGAGACAAACACCAATTGTTGCATAGAATGAGATGTTGTCTTGGATGAAAGGGAAGGGGCCTGCAACAAAAGAGTGTCACTCAGCGATGAAACAGAATTCCTGTGTGACATTATAAATAGTGGACAACTCATTATAATCTCTCACATCCTGTTTCAGTAATAATCATTTTCAGTCCTAACAACCACTCTACATATACTCTACTCCCCACAGACAATCAGGCAATGTCCCTGTAAAGGATACATTTCCTCCCTAGAAAATTGCGGATTATTCTCAATCCATTCTTTAAAACCATTTACTAGGGTAAATTTACAAGAATTACATCTGGTCCAGGCACGATGGCTCACGCCTGTAGTCCCAGCACTTTGGGAGGCCAAGATGGGAGGATCACTTGAGTCCAAGAATTAGACACCAGCCCAGGCAACACAGTGAAATCCCGTCTCTAAAAAAATTCAAAAATTAGCTGGGCGTGGTGGCAGGTGCCTGTAATCCCAGCTGCTCGGGAGGCTGAGGCAGGAG";
-		String seq = "CCATTCTTACCAAACTCTAAATTTTCTCTTGGAAACTCCCATTTGAGATCATATTCATATTCTCTGAAATCAACGTAGAAGTACTCATTATCTGAGGAGCCGCACATTCCATTCTTGCCAAACTCTAGATTTTCTCTTGGAAACTCCCATTTGAGATCACATTCATATTCTCTGAAATCAACGTAGAAGTACTCATTATCTGAGGAGCCGGTCACCCGTACCATCTGTAGC";
+	static class Element {
+		char operator;
+		int length;
 		
-		SemiGlobalAligner sga = new SemiGlobalAligner(8, -32, -48, -1);
-		Result res = sga.align(seq, ref);
-		System.out.println(String.format("score: %d, second: %d, position: %d, cigar: %s", res.score, res.secondBest, res.position, res.cigar)); 
+		Element(char operator, int length) {
+			this.operator = operator;
+			this.length = length;
+		}
+	}
+	
+	public static void main(String[] args) {
+
+		Result res = null;
+//		for (int i=0; i<1000; i++) {
+			String ref = "CCAGATCAGCCTAGGCAACATGGTGAAACCCCGTCTCTACCAAAAATAAAAAACTTAGCTGAGCGTGGTGGTGCACGCCTGTAGCCCCAGCTGCTGAGGAGCCTGAGCCCAGGGGGTGGAGGCTGCAGTGAGCCATGATCACACTACTGTACTCCAGCCTAGGTGACAGAGTGAGACCCTGTCTCAAAAAAATAAAAGAAAATAAAAATAAACAAAGAGAGAAGTGGAAGAAGAGGTGGAGTTTTGTATTTATGACTTGAATTTTGTATTCATGACTGGGTTGACACCCCAATCCACTCCATTTTTAGCCTTGAAACATGGCAAACAGTAACCATTAAAAGGATGGAAAAGAGAAGAAGGCATGGGTGGGAAACTGTGCCTCCCATTTTTGTGCATCTTTGTTGCTGTCCTTCCACTATACTGTACCTTTCAGCATTTTGACGGCAACCTGGATTGAGACTCCTGTTTTGCTAATTCCATAAGCTGTTGCGTTCATCACTTTTCCAAAAGCACCTGATCCTAGTACCTTCCCTGCAAAGACAAATGGTGAGTACGTGCATTTTAAAGATTTTCCAATGGAAAAGAAATGCTGCAGAAACATTTGGCACATTCCATTCTTACCAAACTCTAAATTTTCTCTTGGAAACTCCCATTTGAGATCATATTCATATTCTCTGAAATCAACGTAGAAGTACTCATTATCTGAGGAGCCGGTCACCTGTACCATCTGTAGCTGGCTTTCATACCTAAATTGCTTCAGAGATGAAATGATGAGTCAGTTAGGAATAGGCAGTTCTGCAGATAGAGGAAAGAATAATGAATTTTTACCTTTGCTTTTACCTTTTTGTACTTGTGACAAATTAGCAGGGTTAAAACGACAATGAAGAGGAGACAAACACCAATTGTTGCATAGAATGAGATGTTGTCTTGGATGAAAGGGAAGGGGCCTGCAACAAAAGAGTGTCACTCAGCGATGAAACAGAATTCCTGTGTGACATTATAAATAGTGGACAACTCATTATAATCTCTCACATCCTGTTTCAGTAATAATCATTTTCAGTCCTAACAACCACTCTACATATACTCTACTCCCCACAGACAATCAGGCAATGTCCCTGTAAAGGATACATTTCCTCCCTAGAAAATTGCGGATTATTCTCAATCCATTCTTTAAAACCATTTACTAGGGTAAATTTACAAGAATTACATCTGGTCCAGGCACGATGGCTCACGCCTGTAGTCCCAGCACTTTGGGAGGCCAAGATGGGAGGATCACTTGAGTCCAAGAATTAGACACCAGCCCAGGCAACACAGTGAAATCCCGTCTCTAAAAAAATTCAAAAATTAGCTGGGCGTGGTGGCAGGTGCCTGTAATCCCAGCTGCTCGGGAGGCTGAGGCAGGAG";
+			String seq = "CCATTCTTACCAAACTCTAAATTTTCTCTTGGAAACTCCCATTTGAGATCATATTCATATTCTCTGAAATCAACGTAGAAGTACTCATTATCTGAGGAGCCGCACATTCCATTCTTGCCAAACTCTAGATTTTCTCTTGGAAACTCCCATTTGAGATCACATTCATATTCTCTGAAATCAACGTAGAAGTACTCATTATCTGAGGAGCCGGTCACCCGTACCATCTGTAGC";
+			
+			SemiGlobalAligner sga = new SemiGlobalAligner(8, -32, -48, -1);
+			res = sga.align(seq, ref);
+//		}
+		System.out.println(String.format("score: %d, second: %d, position: %d, cigar: %s", res.score, res.secondBest, res.position, res.cigar));
+
 	}
 }

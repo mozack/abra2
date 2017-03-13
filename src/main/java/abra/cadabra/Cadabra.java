@@ -3,8 +3,10 @@ package abra.cadabra;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 
 import abra.CompareToReference2;
 import abra.Feature;
@@ -211,8 +213,12 @@ public class Cadabra {
 		
 		Map<String, Integer> insertBasesMap = new HashMap<String, Integer>();
 		
+		// Don't double count overlapping reads.
+		// TODO: Determine consensus?  What about normal?
+		Set<String> tumorReadIds = new HashSet<String>();
+		
 		for (SAMRecord read : tumorReads.getReads()) {
-			if (!read.getDuplicateReadFlag()) {
+			if (!read.getDuplicateReadFlag() && !tumorReadIds.contains(read.getReadName())) {
 			
 				IndelInfo readElement = checkForIndelAtLocus(read, position);
 				

@@ -218,7 +218,7 @@ public class Cadabra {
 		Set<String> tumorReadIds = new HashSet<String>();
 		
 		for (SAMRecord read : tumorReads.getReads()) {
-			if (!read.getDuplicateReadFlag() && !tumorReadIds.contains(read.getReadName())) {
+			if (!read.getDuplicateReadFlag()) {
 			
 				IndelInfo readElement = checkForIndelAtLocus(read, position);
 				
@@ -235,7 +235,9 @@ public class Cadabra {
 						totalMismatchCount += ym;
 					}
 				} else if (matchesReference(read, position)) {
-					tumorRefCount += 1;
+					if (!tumorReadIds.contains(read.getReadName())) {
+						tumorRefCount += 1;
+					}
 				}
 				
 				if (tumorIndel == null && readElement != null) {
@@ -251,7 +253,11 @@ public class Cadabra {
 				} else if (tumorIndel != null && readElement != null) {
 					if (tumorIndel.equals(readElement.getCigarElement())) {
 						// Increment tumor indel support count
-						tumorCount += 1;
+						// Do not allow single fragment to contribute multiple reads
+						// TODO: Identify consensus
+						if (!tumorReadIds.contains(read.getReadName())) {
+							tumorCount += 1;
+						}
 //						maxContigMapq = Math.max(maxContigMapq, read.getIntegerAttribute(ReadAdjuster.CONTIG_QUALITY_TAG));
 						maxContigMapq = 0;
 						if (readElement.getInsertBases() != null) {
@@ -271,22 +277,32 @@ public class Cadabra {
 				if (!hasSufficientDistanceFromReadEnd && tumorIndel != null && readElement != null && readElement.getCigarElement().equals(tumorIndel)) {
 					hasSufficientDistanceFromReadEnd = sufficientDistanceFromReadEnd(read, readElement.getReadIndex());
 				}
+				
+				tumorReadIds.add(read.getReadName());
 			}
 		}
 		
-		float tumorFraction = (float) tumorCount / (float) tumorReads.getReads().size();
+//		float tumorFraction = (float) tumorCount / (float) tumorReads.getReads().size();
+		float tumorFraction = (float) tumorCount / (float) tumorReadIds.size();
 		
 		if (tumorCount >= MIN_SUPPORTING_READS && hasSufficientDistanceFromReadEnd && tumorFraction >= MIN_TUMOR_FRACTION) {
-			
+
+			Set<String> normalReadIds = new HashSet<String>();
 			for (SAMRecord read : normalReads.getReads()) {
 				if (!read.getDuplicateReadFlag()) {
 					IndelInfo normalInfo = checkForIndelAtLocus(read.getAlignmentStart(), read.getCigar(), position);
 					
 					if (normalInfo != null && sufficientDistanceFromReadEnd(read, normalInfo.getReadIndex())) {
-						normalCount += 1;					
+						if (!normalReadIds.contains(read.getReadName())) {
+							normalCount += 1;
+						}
 					} else if (normalInfo == null && matchesReference(read, position)) {
-						normalRefCount += 1;
+						if (!normalReadIds.contains(read.getReadName())) {
+							normalRefCount += 1;
+						}
 					}
+					
+					normalReadIds.add(read.getReadName());
 				}
 			}
 		}

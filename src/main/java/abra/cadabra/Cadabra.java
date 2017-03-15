@@ -210,6 +210,14 @@ public class Cadabra {
 		int maxReadIndex = Integer.MIN_VALUE;
 		int normalCount = 0;
 		int normalRefCount = 0;
+		int tumorRefFwd = 0;
+		int tumorRefRev = 0;
+		int tumorAltFwd = 0;
+		int tumorAltRev = 0;
+		int normalRefFwd = 0;
+		int normalRefRev = 0;
+		int normalAltFwd = 0;
+		int normalAltRev = 0;
 		
 		Map<String, Integer> insertBasesMap = new HashMap<String, Integer>();
 		
@@ -237,12 +245,22 @@ public class Cadabra {
 				} else if (matchesReference(read, position)) {
 					if (!tumorReadIds.contains(read.getReadName())) {
 						tumorRefCount += 1;
+						if (read.getReadNegativeStrandFlag()) {
+							tumorRefRev += 1;
+						} else {
+							tumorRefFwd += 1;
+						}
 					}
 				}
 				
 				if (tumorIndel == null && readElement != null) {
 					tumorIndel = readElement.getCigarElement();
 					tumorCount = 1;
+					if (read.getReadNegativeStrandFlag()) {
+						tumorAltRev += 1;
+					} else {
+						tumorAltFwd += 1;
+					}
 //					maxContigMapq = Math.max(maxContigMapq, read.getIntegerAttribute(ReadAdjuster.CONTIG_QUALITY_TAG));
 					maxContigMapq = 0;
 					if (readElement.getInsertBases() != null) {
@@ -257,6 +275,11 @@ public class Cadabra {
 						// TODO: Identify consensus
 						if (!tumorReadIds.contains(read.getReadName())) {
 							tumorCount += 1;
+							if (read.getReadNegativeStrandFlag()) {
+								tumorAltRev += 1;
+							} else {
+								tumorAltFwd += 1;
+							}
 						}
 //						maxContigMapq = Math.max(maxContigMapq, read.getIntegerAttribute(ReadAdjuster.CONTIG_QUALITY_TAG));
 						maxContigMapq = 0;
@@ -295,10 +318,20 @@ public class Cadabra {
 					if (normalInfo != null && sufficientDistanceFromReadEnd(read, normalInfo.getReadIndex())) {
 						if (!normalReadIds.contains(read.getReadName())) {
 							normalCount += 1;
+							if (read.getReadNegativeStrandFlag()) {
+								normalAltRev += 1;
+							} else {
+								normalAltFwd += 1;
+							}
 						}
 					} else if (normalInfo == null && matchesReference(read, position)) {
 						if (!normalReadIds.contains(read.getReadName())) {
 							normalRefCount += 1;
+							if (read.getReadNegativeStrandFlag()) {
+								normalRefRev += 1;
+							} else {
+								normalRefFwd += 1;
+							}
 						}
 					}
 					
@@ -324,7 +357,8 @@ public class Cadabra {
 			
 			outputRecord(chromosome, position, normalReads, tumorReads, tumorIndel,
 					tumorCount, tumorRefCount, insertBases, maxContigMapq, mismatch0Count, mismatch1Count, totalMismatchCount, minReadIndex, maxReadIndex,
-					normalCount, normalRefCount, repeatPeriod, qual);
+					normalCount, normalRefCount, repeatPeriod, qual, tumorRefFwd, tumorRefRev, tumorAltFwd, tumorAltRev,
+					normalRefFwd, normalRefRev, normalAltFwd, normalAltRev);
 		}
 	}
 	
@@ -432,7 +466,8 @@ public class Cadabra {
 			ReadsAtLocus normalReads, ReadsAtLocus tumorReads, CigarElement indel,
 			int tumorObs, int tumorRefObs, String insertBases, int maxContigMapq, int ym0, int ym1, int totalYm,
 			int minReadIndex, int maxReadIndex, int normalObs, int normalRefObs, int repeatPeriod,
-			double qual) {
+			double qual, int tumorRefFwd, int tumorRefRev, int tumorAltFwd, int tumorAltRev,
+			int normalRefFwd, int normalRefRev, int normalAltFwd, int normalAltRev) {
 		
 		int normalDepth = normalReads.getReads().size();
 		int tumorDepth = tumorReads.getReads().size();
@@ -462,7 +497,7 @@ public class Cadabra {
 		buf.append(qual);
 		buf.append("\tPASS\t");
 		buf.append("SOMATIC;CMQ=" + maxContigMapq + ";CTX=" + context + ";REPEAT_PERIOD=" + repeatPeriod);
-		buf.append("\tDP:AD:YM0:YM1:YM:OBS:MIRI:MARI\t");
+		buf.append("\tDP:AD:YM0:YM1:YM:OBS:MIRI:MARI:NOR:TOR\t");
 		buf.append(normalDepth);
 		buf.append(':');
 		buf.append(normalRefObs);
@@ -487,6 +522,25 @@ public class Cadabra {
 		buf.append(minReadIndex);
 		buf.append(':');
 		buf.append(maxReadIndex);
+		buf.append(':');
+		
+		buf.append(normalRefFwd);
+		buf.append(',');
+		buf.append(normalRefRev);
+		buf.append(',');
+		buf.append(normalAltFwd);
+		buf.append(',');
+		buf.append(normalAltRev);
+		
+		buf.append(':');
+
+		buf.append(tumorRefFwd);
+		buf.append(',');
+		buf.append(tumorRefRev);
+		buf.append(',');
+		buf.append(tumorAltFwd);
+		buf.append(',');
+		buf.append(tumorAltRev);
 		
 		System.out.println(buf.toString());
 	}

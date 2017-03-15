@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 import abra.CompareToReference2;
 import abra.Feature;
@@ -27,6 +28,10 @@ public class Cadabra {
 	private ReadLocusReader normal;
 	private ReadLocusReader tumor;
 	private CompareToReference2 c2r;
+	private Map<Integer, Integer> normalAltCounts = new TreeMap<Integer, Integer>();
+	private Map<Integer, Integer> normalRefCounts = new TreeMap<Integer, Integer>();
+	private Map<Integer, String> recordCache = new TreeMap<Integer, String>();
+	private String currChrom = "";
 
 	public void callSomatic(String reference, String normal, String tumor, String target) throws IOException {
 		c2r = new CompareToReference2();
@@ -54,6 +59,60 @@ public class Cadabra {
 		System.out.println("#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NORMAL	TUMOR");
 	}
 	
+	private static final int NORMAL_INDEL_CHECK_SPAN = 10;
+	
+	private void processCached(String chromosome, int position) {
+		
+		Set<Integer> toRemove = new HashSet<Integer>();
+		
+		for (Integer recordPos : recordCache.keySet()) {
+			if (!chromosome.equals(currChrom) || recordPos < position-NORMAL_INDEL_CHECK_SPAN) {
+				float maxNormalAltFreq = 0;
+				for (int pos=recordPos-NORMAL_INDEL_CHECK_SPAN; pos<recordPos+NORMAL_INDEL_CHECK_SPAN; pos++) {
+					if (normalAltCounts.containsKey(pos) && normalRefCounts.containsKey(pos)) {
+						float normalAltFreq = (float) normalAltCounts.get(pos) / ((float)normalAltCounts.get(pos) + (float)normalRefCounts.get(pos));
+						if (normalAltFreq > maxNormalAltFreq) {
+							maxNormalAltFreq = normalAltFreq;
+						}
+					}
+				}
+				
+				String record = recordCache.get(recordPos);
+				record = record.replace("<NNAF>", String.valueOf(maxNormalAltFreq));
+				System.out.println(record);
+				toRemove.add(recordPos);
+			} else {
+				break;
+			}
+		}
+		
+		// Clear out of scope cached entries.
+		if (this.currChrom.equals(chromosome)) {
+			for (Integer pos : toRemove) {
+				recordCache.remove(pos);
+			}
+			
+			toRemove.clear();
+			
+			for (Integer pos : normalAltCounts.keySet()) {
+				if (pos < position - 2*NORMAL_INDEL_CHECK_SPAN) {
+					toRemove.add(pos);
+				}
+			}
+			
+			for (Integer pos : toRemove) {
+				normalAltCounts.remove(pos);
+				normalRefCounts.remove(pos);
+			}
+		} else {
+			recordCache.clear();
+			normalAltCounts.clear();
+			normalRefCounts.clear();
+		}
+		
+		this.currChrom = chromosome;
+	}
+	
 	private void process() {
 		Iterator<ReadsAtLocus> normalIter = normal.iterator();
 		Iterator<ReadsAtLocus> tumorIter = tumor.iterator();
@@ -75,6 +134,8 @@ public class Cadabra {
 				} else if (compare > 0) {
 					tumorReads = tumorIter.next();
 				} else {
+					// TODO: This will skip cases where normal has coverage, but tumor doesn't!
+					processCached(normalReads.getChromosome(), normalReads.getPosition());
 					processLocus(normalReads, tumorReads);
 					normalReads = normalIter.next();
 					tumorReads = tumorIter.next();
@@ -90,6 +151,8 @@ public class Cadabra {
 				tumorReads = tumorIter.next();
 			}
 		}
+		
+		processCached("Done", 0);
 		
 		// Tumor only case
 		if (!normalReadsProcessed) {
@@ -308,37 +371,42 @@ public class Cadabra {
 //		float tumorFraction = (float) tumorCount / (float) tumorReads.getReads().size();
 		float tumorFraction = (float) tumorCount / (float) tumorReadIds.size();
 		
-		if (tumorCount >= MIN_SUPPORTING_READS && hasSufficientDistanceFromReadEnd && tumorFraction >= MIN_TUMOR_FRACTION) {
+//		if (tumorCount >= MIN_SUPPORTING_READS && hasSufficientDistanceFromReadEnd && tumorFraction >= MIN_TUMOR_FRACTION) {
 
-			Set<String> normalReadIds = new HashSet<String>();
-			for (SAMRecord read : normalReads.getReads()) {
-				if (!read.getDuplicateReadFlag()) {
-					IndelInfo normalInfo = checkForIndelAtLocus(read.getAlignmentStart(), read.getCigar(), position);
-					
-					if (normalInfo != null && sufficientDistanceFromReadEnd(read, normalInfo.getReadIndex())) {
-						if (!normalReadIds.contains(read.getReadName())) {
-							normalCount += 1;
-							if (read.getReadNegativeStrandFlag()) {
-								normalAltRev += 1;
-							} else {
-								normalAltFwd += 1;
-							}
-						}
-					} else if (normalInfo == null && matchesReference(read, position)) {
-						if (!normalReadIds.contains(read.getReadName())) {
-							normalRefCount += 1;
-							if (read.getReadNegativeStrandFlag()) {
-								normalRefRev += 1;
-							} else {
-								normalRefFwd += 1;
-							}
+		// Process normal
+		Set<String> normalReadIds = new HashSet<String>();
+		for (SAMRecord read : normalReads.getReads()) {
+			if (!read.getDuplicateReadFlag()) {
+				IndelInfo normalInfo = checkForIndelAtLocus(read.getAlignmentStart(), read.getCigar(), position);
+				
+				if (normalInfo != null && sufficientDistanceFromReadEnd(read, normalInfo.getReadIndex())) {
+					if (!normalReadIds.contains(read.getReadName())) {
+						normalCount += 1;
+						if (read.getReadNegativeStrandFlag()) {
+							normalAltRev += 1;
+						} else {
+							normalAltFwd += 1;
 						}
 					}
-					
-					normalReadIds.add(read.getReadName());
+				} else if (normalInfo == null && matchesReference(read, position)) {
+					if (!normalReadIds.contains(read.getReadName())) {
+						normalRefCount += 1;
+						if (read.getReadNegativeStrandFlag()) {
+							normalRefRev += 1;
+						} else {
+							normalRefFwd += 1;
+						}
+					}
 				}
+				
+				normalReadIds.add(read.getReadName());
 			}
 		}
+		
+		this.normalAltCounts.put(position, normalCount);
+		this.normalRefCounts.put(position, normalRefCount);
+		
+//		}
 		
 		if (tumorIndel != null && !isNormalCountOK(normalCount, normalReads.getReads().size(), tumorCount, tumorReads.getReads().size())) {
 			tumorIndel = null;
@@ -355,7 +423,7 @@ public class Cadabra {
 			
 			double qual = calcPhredScaledQuality(normalRefCount, normalCount, tumorRefCount, tumorCount);
 			
-			outputRecord(chromosome, position, normalReads, tumorReads, tumorIndel,
+			cacheRecord(chromosome, position, normalReads, tumorReads, tumorIndel,
 					tumorCount, tumorRefCount, insertBases, maxContigMapq, mismatch0Count, mismatch1Count, totalMismatchCount, minReadIndex, maxReadIndex,
 					normalCount, normalRefCount, repeatPeriod, qual, tumorRefFwd, tumorRefRev, tumorAltFwd, tumorAltRev,
 					normalRefFwd, normalRefRev, normalAltFwd, normalAltRev);
@@ -462,7 +530,7 @@ public class Cadabra {
 		return c2r.getSequence(chromosome, position, 1);
 	}
 	
-	private void outputRecord(String chromosome, int position,
+	private void cacheRecord(String chromosome, int position,
 			ReadsAtLocus normalReads, ReadsAtLocus tumorReads, CigarElement indel,
 			int tumorObs, int tumorRefObs, String insertBases, int maxContigMapq, int ym0, int ym1, int totalYm,
 			int minReadIndex, int maxReadIndex, int normalObs, int normalRefObs, int repeatPeriod,
@@ -496,14 +564,25 @@ public class Cadabra {
 		buf.append("\t");
 		buf.append(qual);
 		buf.append("\tPASS\t");
-		buf.append("SOMATIC;CMQ=" + maxContigMapq + ";CTX=" + context + ";REPEAT_PERIOD=" + repeatPeriod);
-		buf.append("\tDP:AD:YM0:YM1:YM:OBS:MIRI:MARI:NOR:TOR\t");
+		// <NNAF> is placeholder here
+		buf.append("SOMATIC;CMQ=" + maxContigMapq + ";CTX=" + context + ";REPEAT_PERIOD=" + repeatPeriod + ";NNAF=<NNAF>");
+		buf.append("\tDP:AD:YM0:YM1:YM:OBS:MIRI:MARI:SOR\t");
 		buf.append(normalDepth);
 		buf.append(':');
 		buf.append(normalRefObs);
 		buf.append(',');
 		buf.append(normalObs);
 		buf.append(":0:0:0:0:0:0");
+
+		buf.append(':');		
+		buf.append(normalRefFwd);
+		buf.append(',');
+		buf.append(normalRefRev);
+		buf.append(',');
+		buf.append(normalAltFwd);
+		buf.append(',');
+		buf.append(normalAltRev);
+
 		buf.append('\t');
 		buf.append(tumorDepth);
 		buf.append(':');
@@ -522,18 +601,8 @@ public class Cadabra {
 		buf.append(minReadIndex);
 		buf.append(':');
 		buf.append(maxReadIndex);
-		buf.append(':');
-		
-		buf.append(normalRefFwd);
-		buf.append(',');
-		buf.append(normalRefRev);
-		buf.append(',');
-		buf.append(normalAltFwd);
-		buf.append(',');
-		buf.append(normalAltRev);
-		
-		buf.append(':');
 
+		buf.append(':');
 		buf.append(tumorRefFwd);
 		buf.append(',');
 		buf.append(tumorRefRev);
@@ -542,7 +611,8 @@ public class Cadabra {
 		buf.append(',');
 		buf.append(tumorAltRev);
 		
-		System.out.println(buf.toString());
+		recordCache.put(position, buf.toString());
+//		System.out.println(buf.toString());
 	}
 	
 

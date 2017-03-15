@@ -379,7 +379,8 @@ public class Cadabra {
 			if (!read.getDuplicateReadFlag()) {
 				IndelInfo normalInfo = checkForIndelAtLocus(read.getAlignmentStart(), read.getCigar(), position);
 				
-				if (normalInfo != null && sufficientDistanceFromReadEnd(read, normalInfo.getReadIndex())) {
+//				if (normalInfo != null && sufficientDistanceFromReadEnd(read, normalInfo.getReadIndex())) {
+				if (normalInfo != null) {
 					if (!normalReadIds.contains(read.getReadName())) {
 						normalCount += 1;
 						if (read.getReadNegativeStrandFlag()) {

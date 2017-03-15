@@ -70,7 +70,7 @@ public class SpliceJunctionCounter {
 					pos += elem.getLength();
 					break;
 				case N:
-					junctions.add(new SpliceJunction(read.getReferenceName(), pos+1, pos+elem.getLength()-1));
+					junctions.add(new SpliceJunction(read.getReferenceName(), pos+2, pos+elem.getLength()-1));
 					pos += elem.getLength();
 					break;
 				case S:

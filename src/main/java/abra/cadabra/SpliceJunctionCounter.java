@@ -154,4 +154,11 @@ public class SpliceJunctionCounter {
 			return true;
 		}
 	}
+	
+	public static void main(String[] args) {
+		String input = args[0];
+
+		SpliceJunctionCounter counter = new SpliceJunctionCounter();
+		counter.countSplices(input);
+	}
 }

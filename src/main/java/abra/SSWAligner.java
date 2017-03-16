@@ -100,7 +100,7 @@ public class SSWAligner {
 		if (useSemiGlobal) {
 			SemiGlobalAligner aligner = new SemiGlobalAligner(MATCH, MISMATCH, GAP_OPEN_PENALTY, GAP_EXTEND_PENALTY);
 			SemiGlobalAligner.Result sgResult = aligner.align(seq, ref);
-			Logger.trace("SG Alignment [%s]:\t%s", seq, sgResult);
+			Logger.trace("SG Alignment [%s]:\t%s, possible: %d", seq, sgResult, seq.length()*MATCH);
 			if (sgResult.score > MIN_ALIGNMENT_SCORE && sgResult.score > sgResult.secondBest && sgResult.endPosition > 0) {
 //			if (sgResult.score > MIN_ALIGNMENT_SCORE && sgResult.score > sgResult.secondBest) {
 				Cigar cigar = TextCigarCodec.decode(sgResult.cigar);
@@ -109,8 +109,8 @@ public class SSWAligner {
 				CigarElement last = cigar.getLastCigarElement();
 				
 				// Do not allow indels at the edges of contigs.
-				if (first.getOperator() == CigarOperator.M && first.getLength() >= 5 && 
-					last.getOperator() == CigarOperator.M && last.getLength() >=5) {
+				if (first.getOperator() == CigarOperator.M && first.getLength() >= 10 && 
+					last.getOperator() == CigarOperator.M && last.getLength() >= 10) {
 					
 					int endPos = sgResult.position + cigar.getReferenceLength();
 					
@@ -131,10 +131,38 @@ public class SSWAligner {
 					Logger.trace("OLD_CIGAR: %s\tNEW_CIGAR%s", sgResult.cigar, textCigar);
 					
 					//TODO: Just do this once?
-					if (first.getOperator() == CigarOperator.M && first.getLength() >= 5 && 
-							last.getOperator() == CigarOperator.M && last.getLength() >=5) {
+					if (first.getOperator() == CigarOperator.M && first.getLength() >= 10 && 
+							last.getOperator() == CigarOperator.M && last.getLength() >= 10) {
 						
-						result = finishAlignment(sgResult.position, endPos, textCigar, sgResult.score, seq);
+						// Require first and last 10 bases of contig to be similar to ref
+						int mismatches = 0;
+						for (int i=0; i<10; i++) {
+							if (seq.charAt(i) != ref.charAt(sgResult.position+i)) {
+								mismatches += 1;
+							}
+						}
+						
+						if (mismatches > 2) {
+							Logger.trace("Mismatches at beginning of: %s", seq);
+						} else {
+						
+							mismatches = 0;
+							for (int i=10; i>0; i--) {
+								
+								int seqIdx = seq.length()-i;
+								int refIdx = endPos-i;
+								
+								if (seq.charAt(seqIdx) != ref.charAt(refIdx)) {
+									mismatches += 1;
+								}
+							}
+							
+							if (mismatches > 2) {
+								Logger.trace("Mismatches at end of: %s", seq);
+							} else {
+								result = finishAlignment(sgResult.position, endPos, textCigar, sgResult.score, seq);
+							}
+						}
 					}
 				}
 			}

@@ -191,7 +191,7 @@ public class NativeAssembler {
 					
 					for (SAMRecordWrapper readWrapper : reads) {
 						SAMRecord read = readWrapper.getSamRecord();
-						if (random.nextDouble() < keepProbability) {
+						if (readWrapper.shouldAssemble() && random.nextDouble() < keepProbability) {
 							readBuffer.append(sampleId);
 							readBuffer.append(read.getReadNegativeStrandFlag() ? "1" : "0");
 							

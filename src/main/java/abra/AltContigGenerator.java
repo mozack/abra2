@@ -23,9 +23,10 @@ public class AltContigGenerator {
 	private boolean useObservedIndels;
 	private boolean useSoftClippedReads;
 	private boolean useConsensusSeq;
+	private int minMapq;
 	
 	public AltContigGenerator(int maxSoftClipContigs, int minBaseQual, int softClipFraction, int minSoftClipLength, 
-			boolean useObservedIndels, boolean useSoftClippedReads, boolean useConsensusSeq) {
+			boolean useObservedIndels, boolean useSoftClippedReads, boolean useConsensusSeq, int minMapq) {
 		this.maxSoftClipContigs = maxSoftClipContigs;
 		this.minBaseQual = minBaseQual;
 		this.softClipFraction = (double) softClipFraction / 100.0;
@@ -33,6 +34,7 @@ public class AltContigGenerator {
 		this.useObservedIndels = useObservedIndels;
 		this.useSoftClippedReads = useSoftClippedReads;
 		this.useConsensusSeq = useConsensusSeq;
+		this.minMapq = minMapq;
 	}
 	
 	private boolean hasHighQualitySoftClipping(SAMRecord read, int start, int length) {
@@ -91,8 +93,7 @@ public class AltContigGenerator {
 			for (SAMRecordWrapper readWrapper : reads) {
 				SAMRecord read = readWrapper.getSamRecord();
 				
-				// TODO: Any other filters here.  Higher MQ threshold?
-				if (read.getMappingQuality() > 0) {
+				if (read.getMappingQuality() > minMapq) {
 					
 					if (useObservedIndels) {
 						// For now only use indels bracketed by 2 M elements

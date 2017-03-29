@@ -121,8 +121,8 @@ public class SemiGlobalAligner {
 //		dumpMatrix(matrix);
 		// Find best score in last row (end of seq1)
 		int bestIdx = -1;
-		int bestScore = -30000;
-		int secondBestScore = -30000;
+		int bestScore = -300000000;
+		int secondBestScore = -300000000;
 		int row = seq1.length();
 		
 		for (int c=1; c<=seq2.length(); c++) {

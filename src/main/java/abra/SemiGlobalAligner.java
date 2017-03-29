@@ -13,6 +13,13 @@ public class SemiGlobalAligner {
 	private int gapOpen = -48;
 	private int gapExtend = -1;
 	
+	// Bit flags for backtrack matrix
+	private static final byte LEFT_OPEN = 1;
+	private static final byte UP_OPEN = 2;
+	private static final byte DIR_DIAG = 4;
+	private static final byte DIR_UP = 8;
+	private static final byte DIR_LEFT = 16; 
+		
 	public SemiGlobalAligner() {
 	}
 	
@@ -24,59 +31,53 @@ public class SemiGlobalAligner {
 	}
 
 	public Result align(String seq1, String seq2) {
-		Cell[][] matrix = new Cell[seq1.length()+1][seq2.length()+1];
+		int[][] matrix = new int[seq1.length()+1][seq2.length()+2];
+		byte[][] bt = new byte[seq1.length()+1][seq2.length()+2];
 		
-		populate(matrix, seq1, seq2);
-		return backtrack(matrix, seq1, seq2);
+		populate(matrix, bt, seq1, seq2);
+		return backtrack(matrix, bt, seq1, seq2);
 	}
 	
-	private void populate(Cell[][] matrix, String seq1, String seq2) {
+	private void populate(int[][] matrix, byte[][] bt, String seq1, String seq2) {
 		int col0Init = 0;
 		for (int r=0; r<=seq1.length(); r++) {
-			matrix[r][0] = new Cell(col0Init, Direction.NONE, false, false);
+			matrix[r][0] = col0Init;
 			col0Init += gapOpen;
-		}
-		
-		for (int c=0; c<=seq2.length(); c++) {
-			matrix[0][c] = new Cell(0, Direction.NONE, false, false);
 		}
 		
 		for (int r=1; r<=seq1.length(); r++) {
 			for (int c=1; c<=seq2.length(); c++) {
 				
-				Cell prevCell = matrix[r-1][c-1];
-				int diagScore = seq1.charAt(r-1) == seq2.charAt(c-1) ? prevCell.score + match : prevCell.score + mismatch;
+				int prevCell = matrix[r-1][c-1];
+				int prevBt;
+				int diagScore = seq1.charAt(r-1) == seq2.charAt(c-1) ? prevCell + match : prevCell + mismatch;
 
 				prevCell = matrix[r][c-1];
-				int leftScore = prevCell.leftOpen ? prevCell.score + gapExtend : prevCell.score + gapOpen;
+				prevBt = bt[r][c-1];
+				int leftScore = (prevBt & LEFT_OPEN) == LEFT_OPEN ? prevCell + gapExtend : prevCell + gapOpen;
 
 				prevCell = matrix[r-1][c];
-				int upScore   = prevCell.upOpen ? prevCell.score + gapExtend : prevCell.score + gapOpen;
+				prevBt = bt[r-1][c];
+				int upScore   = (prevBt & UP_OPEN) == UP_OPEN ? prevCell + gapExtend : prevCell + gapOpen;
 				
 				int max = max(diagScore, leftScore, upScore);				
-				Cell cell = null;
 				
-				Direction dir = null;
-				boolean leftOpen = false;
-				boolean upOpen = false;
+				byte currBt = 0;
 
 				if (diagScore == max) {
-					dir = Direction.DIAG; 
+					currBt = DIR_DIAG;
 				}
 				
-				if (upScore == max) {
-					dir = Direction.UP;
-					upOpen = true;
+				if (upScore == max) {				
+					currBt = (byte) (DIR_UP | UP_OPEN);
 				}
 				
-				if (leftScore == max) {
-					dir = Direction.LEFT;
-					leftOpen = true;
+				if (leftScore == max) {				
+					currBt = (byte) (DIR_LEFT | LEFT_OPEN);
 				}
 				
-				cell = new Cell(max, dir, leftOpen, upOpen);
-				
-				matrix[r][c] = cell;
+				matrix[r][c] = max;
+				bt[r][c] = currBt;
 			}
 		}
 	}
@@ -116,7 +117,7 @@ public class SemiGlobalAligner {
 		return currElem;
 	}
 	
-	private Result backtrack(Cell matrix[][], String seq1, String seq2) {
+	private Result backtrack(int matrix[][], byte[][] bt, String seq1, String seq2) {
 //		dumpMatrix(matrix);
 		// Find best score in last row (end of seq1)
 		int bestIdx = -1;
@@ -125,11 +126,11 @@ public class SemiGlobalAligner {
 		int row = seq1.length();
 		
 		for (int c=1; c<=seq2.length(); c++) {
-			if (matrix[row][c].score > bestScore) {
+			if (matrix[row][c] > bestScore) {
 				bestIdx = c;
-				bestScore = matrix[row][c].score;
-			} else if (matrix[row][c].score > secondBestScore) {
-				secondBestScore = matrix[row][c].score; 
+				bestScore = matrix[row][c];
+			} else if (matrix[row][c] > secondBestScore) {
+				secondBestScore = matrix[row][c]; 
 			}
 		}
 		
@@ -141,16 +142,16 @@ public class SemiGlobalAligner {
 		Element currElem = new Element('0', 0);
 		
 		while (r > 0 && c > 0) {
-			Cell cell = matrix[r][c]; 
+			byte currBt = bt[r][c];
 
-			if (cell.prev == Direction.DIAG) {
+			if ((currBt & DIR_DIAG) == DIR_DIAG) {
 				r -= 1;
 				c -= 1;
 				currElem = updateCurrElem('M', currElem, elems);
-			} else if (cell.prev == Direction.LEFT) {
+			} else if ((currBt & DIR_LEFT) == DIR_LEFT) {
 				c -= 1;
 				currElem = updateCurrElem('D', currElem, elems);
-			} else if (cell.prev == Direction.UP) {
+			} else if ((currBt & DIR_UP) == DIR_UP) {
 				r -= 1;
 				currElem = updateCurrElem('I', currElem, elems);
 			} else {
@@ -218,17 +219,26 @@ public class SemiGlobalAligner {
 		}
 	}
 	
-	public static void main(String[] args) {
+	public static void main(String[] args) throws Exception {
 
+//		double i = 1;
+//		i += -1e8;
+		
+//		System.out.println(i);
+	
+		long start = System.currentTimeMillis();
 		Result res = null;
-//		for (int i=0; i<1000; i++) {
+		for (int i=0; i<1000; i++) {
 			String ref = "CCAGATCAGCCTAGGCAACATGGTGAAACCCCGTCTCTACCAAAAATAAAAAACTTAGCTGAGCGTGGTGGTGCACGCCTGTAGCCCCAGCTGCTGAGGAGCCTGAGCCCAGGGGGTGGAGGCTGCAGTGAGCCATGATCACACTACTGTACTCCAGCCTAGGTGACAGAGTGAGACCCTGTCTCAAAAAAATAAAAGAAAATAAAAATAAACAAAGAGAGAAGTGGAAGAAGAGGTGGAGTTTTGTATTTATGACTTGAATTTTGTATTCATGACTGGGTTGACACCCCAATCCACTCCATTTTTAGCCTTGAAACATGGCAAACAGTAACCATTAAAAGGATGGAAAAGAGAAGAAGGCATGGGTGGGAAACTGTGCCTCCCATTTTTGTGCATCTTTGTTGCTGTCCTTCCACTATACTGTACCTTTCAGCATTTTGACGGCAACCTGGATTGAGACTCCTGTTTTGCTAATTCCATAAGCTGTTGCGTTCATCACTTTTCCAAAAGCACCTGATCCTAGTACCTTCCCTGCAAAGACAAATGGTGAGTACGTGCATTTTAAAGATTTTCCAATGGAAAAGAAATGCTGCAGAAACATTTGGCACATTCCATTCTTACCAAACTCTAAATTTTCTCTTGGAAACTCCCATTTGAGATCATATTCATATTCTCTGAAATCAACGTAGAAGTACTCATTATCTGAGGAGCCGGTCACCTGTACCATCTGTAGCTGGCTTTCATACCTAAATTGCTTCAGAGATGAAATGATGAGTCAGTTAGGAATAGGCAGTTCTGCAGATAGAGGAAAGAATAATGAATTTTTACCTTTGCTTTTACCTTTTTGTACTTGTGACAAATTAGCAGGGTTAAAACGACAATGAAGAGGAGACAAACACCAATTGTTGCATAGAATGAGATGTTGTCTTGGATGAAAGGGAAGGGGCCTGCAACAAAAGAGTGTCACTCAGCGATGAAACAGAATTCCTGTGTGACATTATAAATAGTGGACAACTCATTATAATCTCTCACATCCTGTTTCAGTAATAATCATTTTCAGTCCTAACAACCACTCTACATATACTCTACTCCCCACAGACAATCAGGCAATGTCCCTGTAAAGGATACATTTCCTCCCTAGAAAATTGCGGATTATTCTCAATCCATTCTTTAAAACCATTTACTAGGGTAAATTTACAAGAATTACATCTGGTCCAGGCACGATGGCTCACGCCTGTAGTCCCAGCACTTTGGGAGGCCAAGATGGGAGGATCACTTGAGTCCAAGAATTAGACACCAGCCCAGGCAACACAGTGAAATCCCGTCTCTAAAAAAATTCAAAAATTAGCTGGGCGTGGTGGCAGGTGCCTGTAATCCCAGCTGCTCGGGAGGCTGAGGCAGGAG";
 			String seq = "CCATTCTTACCAAACTCTAAATTTTCTCTTGGAAACTCCCATTTGAGATCATATTCATATTCTCTGAAATCAACGTAGAAGTACTCATTATCTGAGGAGCCGCACATTCCATTCTTGCCAAACTCTAGATTTTCTCTTGGAAACTCCCATTTGAGATCACATTCATATTCTCTGAAATCAACGTAGAAGTACTCATTATCTGAGGAGCCGGTCACCCGTACCATCTGTAGC";
 			
 			SemiGlobalAligner sga = new SemiGlobalAligner(8, -32, -48, -1);
 			res = sga.align(seq, ref);
-//		}
+		}
+		long end = System.currentTimeMillis();
+		System.out.println("Elapsed: " + (end-start));
 		System.out.println(String.format("score: %d, second: %d, position: %d, cigar: %s", res.score, res.secondBest, res.position, res.cigar));
-
+		
+//		Thread.sleep(300*1000);
 	}
 }

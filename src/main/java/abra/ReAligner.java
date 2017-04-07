@@ -546,7 +546,7 @@ public class ReAligner {
 			// For each read.
 			for (SAMRecordWrapper readWrapper : reads) {
 				SAMRecord read = readWrapper.getSamRecord();
-				if (read.getMappingQuality() > this.minMappingQuality || read.getReadUnmappedFlag()) {
+				if (read.getMappingQuality() >= this.minMappingQuality || read.getReadUnmappedFlag()) {
 					// TODO: Use NM tag if available (need to handle soft clipping though!)
 					int origEditDist = SAMRecordUtils.getEditDistance(read, c2r);
 	//				int origEditDist = c2r.numMismatches(read);
@@ -770,7 +770,10 @@ public class ReAligner {
 		
 		long stop = System.currentTimeMillis();
 		
-		Logger.debug("PROCESS_REGION_SECS:\t%d\t%s", (stop-start)/1000, region.getDescriptor());
+		String msg = String.format("PROCESS_REGION_SECS:\t%d\t%s", (stop-start)/1000, region.getDescriptor());
+		synchronized(Logger.class) {
+			Logger.info(msg);
+		}
 		
 		return mappedContigs;
 	}

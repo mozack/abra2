@@ -14,7 +14,7 @@ public class SimpleMapper {
 	
 	//TODO: May need to change for short reads or decreased maxMismatchRate
 	//      Increasing when appropriate will speed things up.
-	private static final int KMER_SIZE = 15;
+	private static final int KMER_SIZE = 10;
 	
 	static final int UNMAPPED = -1;
 	static final int HOMOLOGOUS_MAPPING = -2;

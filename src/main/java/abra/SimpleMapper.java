@@ -2,6 +2,7 @@ package abra;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -11,7 +12,9 @@ import java.util.Map;
  */
 public class SimpleMapper {
 	
-	private static final int KMER_SIZE = 25;
+	//TODO: May need to change for short reads or decreased maxMismatchRate
+	//      Increasing when appropriate will speed things up.
+	private static final int KMER_SIZE = 15;
 	
 	static final int UNMAPPED = -1;
 	static final int HOMOLOGOUS_MAPPING = -2;
@@ -48,7 +51,7 @@ public class SimpleMapper {
 		}
 	}
 	
-	private Map<Integer, Integer> getPositionMismatches(String bases) {
+	private Map<Integer, Integer> getPositionMismatches_old(String bases) {
 		// ref position -> # mismatches
 		Map<Integer, Integer> posMismatches = new HashMap<Integer, Integer>();
 		
@@ -71,6 +74,83 @@ public class SimpleMapper {
 
 		return posMismatches;
 	}
+	
+	private Map<Integer, Integer> getPositionMismatches(String bases) {
+		// ref position -> # mismatches
+		Map<Integer, Integer> posMismatches = new HashMap<Integer, Integer>();
+		
+		// pos in ref -> kmer idx
+		// i.e. For pos 100, kmers 0,2,3 (0,50,75 if KMER_SIZE=25) match
+		
+		Map<Integer, List<Integer>> refPosKmers = new HashMap<Integer, List<Integer>>();
+		
+		// Identify kmers in read that match reference
+		int i=0;
+		while (i<=bases.length()-KMER_SIZE) {		
+			String kmer = bases.substring(i, i+KMER_SIZE);
+			
+			if (kmerPositions.containsKey(kmer)) {
+				for (int pos : kmerPositions.get(kmer)) {
+					int refStartPos = pos - i;
+					if (refStartPos > 0 && refStartPos <= ref.length() - bases.length()) {
+						if (!refPosKmers.containsKey(refStartPos)) {
+							refPosKmers.put(refStartPos, new ArrayList<Integer>());
+						}
+						refPosKmers.get(refStartPos).add(i);
+					}
+				}
+			}
+			
+			// Skip to next kmer
+			if (i+KMER_SIZE <= bases.length()-KMER_SIZE) {
+				i += KMER_SIZE;
+			} else if (i < bases.length()-KMER_SIZE){
+				// Last kmer may overlap previous kmer
+				i = bases.length()-KMER_SIZE;
+			} else {
+				// Done.
+				i = bases.length();
+			}
+		}
+		
+		// Count mismatches in read.  Skip over matching kmers for speed.
+		for (int refStartPos : refPosKmers.keySet()) {
+			int mismatches = 0;
+			List<Integer> matchingKmers = refPosKmers.get(refStartPos);
+			Iterator<Integer> kmerIter = matchingKmers.iterator();
+			int currKmer = -1;
+			if (kmerIter.hasNext()) {
+				currKmer = kmerIter.next();
+			}
+			
+			i=0;
+			while (i<bases.length()) {
+				
+				if (i >= currKmer && i < currKmer+KMER_SIZE) {
+					if (kmerIter.hasNext()) {
+						currKmer = kmerIter.next();
+					}
+					
+					// Skip over the matching kmer
+					i += KMER_SIZE;
+				} else {
+					if (bases.charAt(i) != ref.charAt(refStartPos+i)) {
+						mismatches += 1;
+						if (mismatches > bases.length() * maxMismatchRate) {
+							break;
+						}
+					}
+					
+					i += 1;
+				}
+			}
+
+			posMismatches.put(refStartPos, mismatches);
+		}
+
+		return posMismatches;
+	}
+
 	
 	public SimpleMapperResult map(String read) {
 		
@@ -181,12 +261,25 @@ public class SimpleMapper {
 	}
 
 	public static void main(String[] args) {
-		String contig = "TTCAACTAGAGAGAGGTAAAAATTTTTCTAGAACATGAATTGCCCACTCCCCTCATTCCTTCTCAGAAACTAACTGAATTCCAGTGGGTGTGCCTGGCAAACCCAAAAGCAGTTTCTGTTCAGGATGCTGGTCTTACCTGTGAAGGCGTTCATGAACGTGGAGAGGGACCGGTTCAACATTTTGAAGAAAGGGTCTCTGCACGGATATTTCTGAGACCCACAAAGGACGGTATGCTCAAGAATGTGAGGAACACCAGTACTGTCCATGGGAGTGGTACGGAACTGCACGCTAGGGAAGAGAGAGGAATGGCACGCTAGGGAAGGCGAATGACCAGAACGCAAAAGGTTCAGCTTAGTGCTGCGGACACAGTTCCCAGATGCATCATCACCTCAGGCTACTAGAAATCATCATTCTGACACCACAATCCTCCAGCACAGGGTTTTCCAACTATA";
-		String read = "TACTGTCCATGGGAGTGGTACGGAACTGCACGCTAGGGAAGAGAGAGGAATGGCACGCTAGGGAAGGCGAATGACCAGAACGCAAAAGGTTCAGCTTAGTG";
+//		String contig = "TTCAACTAGAGAGAGGTAAAAATTTTTCTAGAACATGAATTGCCCACTCCCCTCATTCCTTCTCAGAAACTAACTGAATTCCAGTGGGTGTGCCTGGCAAACCCAAAAGCAGTTTCTGTTCAGGATGCTGGTCTTACCTGTGAAGGCGTTCATGAACGTGGAGAGGGACCGGTTCAACATTTTGAAGAAAGGGTCTCTGCACGGATATTTCTGAGACCCACAAAGGACGGTATGCTCAAGAATGTGAGGAACACCAGTACTGTCCATGGGAGTGGTACGGAACTGCACGCTAGGGAAGAGAGAGGAATGGCACGCTAGGGAAGGCGAATGACCAGAACGCAAAAGGTTCAGCTTAGTGCTGCGGACACAGTTCCCAGATGCATCATCACCTCAGGCTACTAGAAATCATCATTCTGACACCACAATCCTCCAGCACAGGGTTTTCCAACTATA";
+//		String read = "TACTGTCCATGGGAGTGGTACGGAACTGCACGCTAGGGAAGAGAGAGGAATGGCACGCTAGGGAAGGCGAATGACCAGAACGCAAAAGGTTCAGCTTAGTG";
 		
-		SimpleMapper sm = new SimpleMapper(contig, .05);
+//		SimpleMapper sm = new SimpleMapper(contig, .05);
 		
-		SimpleMapperResult result = sm.map(read);
+		String contig1 = "TTCAACTAGAGAGAGGTAAAAATTTTTCTAGAACATGAATTGCCCACTCCCCTCATTCCTTCTCAGAAACTAACTGAATTCCAGTGGGTGTGCCTGGCAAACCCAAAAGCAGTTTCTGTTCAGGATGCTGGTCTTACCTGTGAAGGCGTTCATGAACGTGGAGAGGGACCGGTTCAACATTTTGAAGAAAGGGTCTCTGCACGGATATTTCTGAGACCCACAAAGGACGGTATGCTCAAGAATGTGAGGAACACCAGTACTGTCCATGGGAGTGGTACGGAACTGCACGCTAGGGAAGAGAGAGGAATGGCACGCTAGGGAAGGCGAATGACCAGAACGCAAAAGGTTCAGCTTAGTGCTGCGGACACAGTTCCCAGATGCATCATCACCTCAGGCTACTAGAAATCATCATTCTGACACCACAATCCTCCAGCACAGGGTTTTCCAACTATA";
+		String read = "CCTGAACAGAAACTGCTTTTGGGAATGCCAGGCACACCCACTGGAATTCAGTTAGTTTCTGAGAAGGAATGAGGGGAGTGGGCAATTCATGTTCTAGAAA";
+
+		SimpleMapper sm = new SimpleMapper(contig1, .05);
+		
+		SimpleMapperResult result = null;
+		
+		long start = System.currentTimeMillis();
+		for (int i=0; i<100000; i++) {
+			result = sm.map(read);
+		}
+		long end = System.currentTimeMillis();
+		System.out.println("Elapsed: " + (end-start));
+		
 		System.out.println("pos: " + result.getPos() + ". mismatches: " + result.getMismatches());
 	}
 }

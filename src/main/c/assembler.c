@@ -10,12 +10,14 @@
 #include <vector>
 #include <sparsehash/sparse_hash_map>
 #include <sparsehash/sparse_hash_set>
+#include <sparsehash/dense_hash_map>
+#include <sparsehash/dense_hash_set>
 #include <stdexcept>
 #include "abra_NativeAssembler.h"
 
 using namespace std;
-using google::sparse_hash_map;
-using google::sparse_hash_set;
+using google::dense_hash_map;
+using google::dense_hash_set;
 
 //#define READ_LENGTH 100
 //#define KMER 63
@@ -324,7 +326,7 @@ int include_kmer(char* sequence, char*qual, int idx) {
 	return include;
 }
 
-void add_to_graph(char sample_id, char* sequence, sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, struct_pool* pool, char* qual, int strand) {
+void add_to_graph(char sample_id, char* sequence, dense_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, struct_pool* pool, char* qual, int strand) {
 
 	struct node* prev = 0;
 
@@ -360,7 +362,7 @@ void add_to_graph(char sample_id, char* sequence, sparse_hash_map<const char*, s
 	}
 }
 
-void build_graph2(const char* input, sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, struct_pool* pool) {
+void build_graph2(const char* input, dense_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, struct_pool* pool) {
 	int input_len = strlen(input);
 	int record_len = read_length*2 + 2;
 	int num_records = input_len / record_len;
@@ -485,7 +487,7 @@ int is_base_quality_good(struct node* node) {
 	return is_good;
 }
 
-void remove_node_and_cleanup(const char* key, struct node* node, sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes) {
+void remove_node_and_cleanup(const char* key, struct node* node, dense_hash_map<const char*, struct node*, my_hash, eqstr>* nodes) {
 	// Remove node from "from" lists
 	struct linked_node* to_node = node->toNodes;
 	while (to_node != NULL) {
@@ -525,11 +527,11 @@ char is_min_edge_ratio_reached(int per_sample_total_freq[], struct node* node) {
 	return exceeds_min_ratio;
 }
 
-void prune_low_frequency_edges(sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes) {
+void prune_low_frequency_edges(dense_hash_map<const char*, struct node*, my_hash, eqstr>* nodes) {
 
 	long removed_edge_count = 0;
 
-	for (sparse_hash_map<const char*, struct node*, my_hash, eqstr>::const_iterator it = nodes->begin();
+	for (dense_hash_map<const char*, struct node*, my_hash, eqstr>::const_iterator it = nodes->begin();
 				 it != nodes->end(); ++it) {
 
 		const char* key = it->first;
@@ -634,10 +636,10 @@ void prune_low_frequency_edges(sparse_hash_map<const char*, struct node*, my_has
 }
 
 
-void prune_graph(sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, char isUnalignedRegion) {
+void prune_graph(dense_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, char isUnalignedRegion) {
 
 	// First prune kmers that do not reach base quality sum threshold
-	for (sparse_hash_map<const char*, struct node*, my_hash, eqstr>::const_iterator it = nodes->begin();
+	for (dense_hash_map<const char*, struct node*, my_hash, eqstr>::const_iterator it = nodes->begin();
 				 it != nodes->end(); ++it) {
 
 		const char* key = it->first;
@@ -663,7 +665,7 @@ void prune_graph(sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nod
 	}
 
 	if (freq > 1) {
-		for (sparse_hash_map<const char*, struct node*, my_hash, eqstr>::const_iterator it = nodes->begin();
+		for (dense_hash_map<const char*, struct node*, my_hash, eqstr>::const_iterator it = nodes->begin();
 					 it != nodes->end(); ++it) {
 
 			const char* key = it->first;
@@ -680,7 +682,7 @@ void prune_graph(sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nod
 	prune_low_frequency_edges(nodes);
 
 	// Final pass through cleaning up nodes that are unreachable
-	for (sparse_hash_map<const char*, struct node*, my_hash, eqstr>::const_iterator it = nodes->begin();
+	for (dense_hash_map<const char*, struct node*, my_hash, eqstr>::const_iterator it = nodes->begin();
 				 it != nodes->end(); ++it) {
 
 		const char* key = it->first;
@@ -741,12 +743,12 @@ int is_root(struct node* node) {
 	return is_root;
 }
 
-struct linked_node* identify_root_nodes(sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes) {
+struct linked_node* identify_root_nodes(dense_hash_map<const char*, struct node*, my_hash, eqstr>* nodes) {
 
 	struct linked_node* root_nodes = NULL;
 	int count = 0;
 
-	for (sparse_hash_map<const char*, struct node*, my_hash, eqstr>::const_iterator it = nodes->begin();
+	for (dense_hash_map<const char*, struct node*, my_hash, eqstr>::const_iterator it = nodes->begin();
 	         it != nodes->end(); ++it) {
 		struct node* node = it->second;
 
@@ -776,7 +778,7 @@ struct linked_node* identify_root_nodes(sparse_hash_map<const char*, struct node
 struct contig {
 	char seq[MAX_CONTIG_SIZE];
 	struct node* curr_node;
-	sparse_hash_set<const char*, my_hash, eqstr>* visited_nodes;
+	dense_hash_set<const char*, my_hash, eqstr>* visited_nodes;
 	double score;
 	int size;
 	char is_repeat;
@@ -789,7 +791,8 @@ struct contig* new_contig() {
 	memset(curr_contig->seq, 0, sizeof(curr_contig->seq));
 	curr_contig->size = 0;
 	curr_contig->is_repeat = 0;
-	curr_contig->visited_nodes = new sparse_hash_set<const char*, my_hash, eqstr>();
+	curr_contig->visited_nodes = new dense_hash_set<const char*, my_hash, eqstr>();
+	curr_contig->visited_nodes->set_empty_key(NULL);
 	curr_contig->score = 0;
 	return curr_contig;
 }
@@ -800,7 +803,7 @@ struct contig* copy_contig(struct contig* orig) {
 	strncpy(copy->seq, orig->seq, MAX_CONTIG_SIZE);
 	copy->size = orig->size;
 	copy->is_repeat = orig->is_repeat;
-	copy->visited_nodes = new sparse_hash_set<const char*, my_hash, eqstr>(*orig->visited_nodes);
+	copy->visited_nodes = new dense_hash_set<const char*, my_hash, eqstr>(*orig->visited_nodes);
 	copy->score = orig->score;
 	return copy;
 }
@@ -812,7 +815,7 @@ void free_contig(struct contig* contig) {
 }
 
 char is_node_visited(struct contig* contig, struct node* node) {
-	 sparse_hash_set<const char*, my_hash, eqstr>::const_iterator it = contig->visited_nodes->find(node->kmer);
+	dense_hash_set<const char*, my_hash, eqstr>::const_iterator it = contig->visited_nodes->find(node->kmer);
 	 return it != contig->visited_nodes->end();
 }
 
@@ -1048,10 +1051,10 @@ int build_contigs(
 	return status;
 }
 
-void cleanup(sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, struct struct_pool* pool) {
+void cleanup(dense_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, struct struct_pool* pool) {
 
 	// Free linked lists
-	for (sparse_hash_map<const char*, struct node*, my_hash, eqstr>::const_iterator it = nodes->begin();
+	for (dense_hash_map<const char*, struct node*, my_hash, eqstr>::const_iterator it = nodes->begin();
 	         it != nodes->end(); ++it) {
 		struct node* node = it->second;
 
@@ -1103,13 +1106,15 @@ char* assemble(const char* input,
 	kmer_size = input_kmer_size;
 
 	struct struct_pool* pool = init_pool();
-	sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes = new sparse_hash_map<const char*, struct node*, my_hash, eqstr>();
+	dense_hash_map<const char*, struct node*, my_hash, eqstr>* nodes = new dense_hash_map<const char*, struct node*, my_hash, eqstr>();
+	nodes->set_empty_key(NULL);
+	char* deleted_key = (char*) calloc(kmer_size, sizeof(char));
+	nodes->set_deleted_key(deleted_key);
 
 	long startTime = time(NULL);
 	if (debug) {
 		fprintf(stderr,"Assembling: -> %s\n", output);
 	}
-	nodes->set_deleted_key(NULL);
 
 	build_graph2(input, nodes, pool);
 
@@ -1178,6 +1183,8 @@ char* assemble(const char* input,
 	cleanup(nodes, pool);
 
 	delete nodes;
+
+	free(deleted_key);
 
 	long stopTime = time(NULL);
 

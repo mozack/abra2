@@ -976,17 +976,19 @@ int build_contigs(
 			contig->curr_node = to_linked_node->node;
 			paths_from_root++;
 
+			double prev_contig_score = contig->score;
+
+			contig->score = contig->score + log10(contig->curr_node->frequency) - log10_total_edge_count;
+			if (!is_contig_score_ok(contig_scores, contig->score)) {
+				popped_contigs.push(contig);
+				contigs.pop();
+			}
+
 			// If there are multiple "to" nodes, branch the contig and push on stack
 			to_linked_node = to_linked_node->next;
 			while (to_linked_node != NULL) {
 
-				double contig_branch_score = contig->score + log10(to_linked_node->node->frequency) - log10_total_edge_count;
-
-				contig->score = contig->score + log10(contig->curr_node->frequency) - log10_total_edge_count;
-				if (!is_contig_score_ok(contig_scores, contig->score)) {
-					popped_contigs.push(contig);
-					contigs.pop();
-				}
+				double contig_branch_score = prev_contig_score + log10(to_linked_node->node->frequency) - log10_total_edge_count;
 
 				if (is_contig_score_ok(contig_scores, contig_branch_score)) {
 					struct contig* contig_branch = copy_contig(contig);

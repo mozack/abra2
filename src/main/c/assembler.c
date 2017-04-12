@@ -3,6 +3,7 @@
 #include <string.h>
 #include <math.h>
 #include <time.h>
+#include <queue>
 #include <iostream>
 #include <stack>
 #include <list>
@@ -843,6 +844,31 @@ void output_contig(struct contig* contig, int& contig_count, const char* prefix,
 //#define TOO_MANY_CONTIGS -2
 //#define STOPPED_ON_REPEAT -3
 
+// Return true if minimum contig score exceeded (where min = lowest of 128 top scoring contigs)
+// Update priority queue as needed
+char is_contig_score_ok(std::priority_queue<double, std::vector<double>, std::greater<double> > contig_scores, double score) {
+	char is_score_ok = 0;
+
+	// 128 = max contigs
+	// TODO: parameterize
+	if (contig_scores.size() == 128) {
+		double min_score = contig_scores.top();
+		if (score >= min_score) {
+			is_score_ok = 1;
+			contig_scores.pop();
+			contig_scores.push(score);
+		}
+	} else if (contig_scores.size() < 128) {
+		is_score_ok = 1;
+		contig_scores.push(score);
+	} else {
+		fprintf(stderr, "ERROR: Invalid contig score size: %ld\n", contig_scores.size());
+		exit(-1);
+	}
+
+	return is_score_ok;
+}
+
 int build_contigs(
 		struct node* root,
 		int& contig_count,
@@ -860,6 +886,8 @@ int build_contigs(
 	struct contig* root_contig = new_contig();
 	root_contig->curr_node = root;
 	contigs.push(root_contig);
+
+	std::priority_queue<double, std::vector<double>, std::greater<double> > contig_scores;
 
 	int paths_from_root = 1;
 
@@ -939,17 +967,28 @@ int build_contigs(
 			// If there are multiple "to" nodes, branch the contig and push on stack
 			to_linked_node = to_linked_node->next;
 			while (to_linked_node != NULL) {
-				//TODO: Do not clone contig for first node.
-				struct contig* contig_branch = copy_contig(contig);
-//				fprintf(stderr,"orig size: %d, copy size: %d\n", contig->visited_nodes->size(), contig_branch->visited_nodes->size());
-				contig_branch->curr_node = to_linked_node->node;
-				contig_branch->score = contig_branch->score + log10(contig_branch->curr_node->frequency) - log10_total_edge_count;
-				contigs.push(contig_branch);
+
+				double contig_branch_score = contig->score + log10(to_linked_node->node->frequency) - log10_total_edge_count;
+
+				if (is_contig_score_ok(contig_scores, contig_branch_score)) {
+					//TODO: Do not clone contig for first node.
+					struct contig* contig_branch = copy_contig(contig);
+	//				fprintf(stderr,"orig size: %d, copy size: %d\n", contig->visited_nodes->size(), contig_branch->visited_nodes->size());
+					contig_branch->curr_node = to_linked_node->node;
+//					contig_branch->score = contig_branch->score + log10(contig_branch->curr_node->frequency) - log10_total_edge_count;
+					contig_branch->score = contig_branch_score;
+					contigs.push(contig_branch);
+				}
+
 				to_linked_node = to_linked_node->next;
 				paths_from_root++;
 			}
 
 			contig->score = contig->score + log10(contig->curr_node->frequency) - log10_total_edge_count;
+			if (!is_contig_score_ok(contig_scores, contig->score)) {
+				popped_contigs.push(contig);
+				contigs.pop();
+			}
 		}
 
 		if (contig_count >= max_contigs) {

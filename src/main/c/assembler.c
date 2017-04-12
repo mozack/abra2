@@ -846,8 +846,10 @@ void output_contig(struct contig* contig, int& contig_count, const char* prefix,
 
 // Return true if minimum contig score exceeded (where min = lowest of 128 top scoring contigs)
 // Update priority queue as needed
-char is_contig_score_ok(std::priority_queue<double, std::vector<double>, std::greater<double> > contig_scores, double score) {
+char is_contig_score_ok(std::priority_queue<double, std::vector<double>, std::greater<double> > & contig_scores, double score) {
 	char is_score_ok = 0;
+
+//	fprintf(stderr, "contig_scores size: %ld\n", contig_scores.size());
 
 	// 128 = max contigs
 	// TODO: parameterize
@@ -855,18 +857,28 @@ char is_contig_score_ok(std::priority_queue<double, std::vector<double>, std::gr
 		double min_score = contig_scores.top();
 		if (score >= min_score) {
 			is_score_ok = 1;
-			contig_scores.pop();
-			contig_scores.push(score);
+		} else {
+//			fprintf(stderr, "contig_score filtered: %lf, min: %lf\n", score, min_score);
 		}
 	} else if (contig_scores.size() < 128) {
 		is_score_ok = 1;
-		contig_scores.push(score);
 	} else {
 		fprintf(stderr, "ERROR: Invalid contig score size: %ld\n", contig_scores.size());
-		exit(-1);
+		fflush(stderr);
+//		exit(-1);
 	}
 
 	return is_score_ok;
+}
+
+void update_contig_scores(std::priority_queue<double, std::vector<double>, std::greater<double> > & contig_scores, double score) {
+	if (contig_scores.size() == 128 && score >= contig_scores.top()) {
+		contig_scores.pop();
+		contig_scores.push(score);
+	}
+	else if (contig_scores.size() < 128) {
+		contig_scores.push(score);
+	}
 }
 
 int build_contigs(
@@ -877,7 +889,8 @@ int build_contigs(
 		int max_contigs,
 		char stop_on_repeat,
 		char shadow_mode,
-		char* contig_str) {
+		char* contig_str,
+		std::priority_queue<double, std::vector<double>, std::greater<double> > & contig_scores) {
 
 	int status = OK;
 	stack<contig*> contigs;
@@ -886,8 +899,6 @@ int build_contigs(
 	struct contig* root_contig = new_contig();
 	root_contig->curr_node = root;
 	contigs.push(root_contig);
-
-	std::priority_queue<double, std::vector<double>, std::greater<double> > contig_scores;
 
 	int paths_from_root = 1;
 
@@ -925,6 +936,7 @@ int build_contigs(
 			if (!shadow_mode) {
 				all_contigs_len += strlen(contig->seq) + 100;
 				contigs_to_output.push(contig);
+				update_contig_scores(contig_scores, contig->score);
 //				output_contig(contig, contig_count, fp, prefix);
 			} else {
 				popped_contigs.push(contig);
@@ -970,24 +982,21 @@ int build_contigs(
 
 				double contig_branch_score = contig->score + log10(to_linked_node->node->frequency) - log10_total_edge_count;
 
+				contig->score = contig->score + log10(contig->curr_node->frequency) - log10_total_edge_count;
+				if (!is_contig_score_ok(contig_scores, contig->score)) {
+					popped_contigs.push(contig);
+					contigs.pop();
+				}
+
 				if (is_contig_score_ok(contig_scores, contig_branch_score)) {
-					//TODO: Do not clone contig for first node.
 					struct contig* contig_branch = copy_contig(contig);
-	//				fprintf(stderr,"orig size: %d, copy size: %d\n", contig->visited_nodes->size(), contig_branch->visited_nodes->size());
 					contig_branch->curr_node = to_linked_node->node;
-//					contig_branch->score = contig_branch->score + log10(contig_branch->curr_node->frequency) - log10_total_edge_count;
 					contig_branch->score = contig_branch_score;
 					contigs.push(contig_branch);
 				}
 
 				to_linked_node = to_linked_node->next;
 				paths_from_root++;
-			}
-
-			contig->score = contig->score + log10(contig->curr_node->frequency) - log10_total_edge_count;
-			if (!is_contig_score_ok(contig_scores, contig->score)) {
-				popped_contigs.push(contig);
-				contigs.pop();
 			}
 		}
 
@@ -1004,13 +1013,15 @@ int build_contigs(
 
 		while (contigs_to_output.size() > 0) {
 			struct contig* contig = contigs_to_output.top();
-			output_contig(contig, contig_count, prefix, contig_str);
+
+			if (is_contig_score_ok(contig_scores, contig->score)) {
+				output_contig(contig, contig_count, prefix, contig_str);
+			}
 
 			contigs_to_output.pop();
 			free_contig(contig);
 		}
 	}
-
 
 	// Cleanup stranded contigs in case processing stopped.
 	while (contigs_to_output.size() > 0) {
@@ -1125,12 +1136,14 @@ char* assemble(const char* input,
 	char* contig_str = (char*) malloc(MAX_TOTAL_CONTIG_LEN);
 	memset(contig_str, 0, MAX_TOTAL_CONTIG_LEN);
 
+	std::priority_queue<double, std::vector<double>, std::greater<double> > contig_scores;
+
 //	FILE *fp = fopen(output, "w");
 	while (root_nodes != NULL) {
 
 		int shadow_count = 0;
 
-		status = build_contigs(root_nodes->node, contig_count, prefix, max_paths_from_root, max_contigs, truncate_on_repeat, false, contig_str);
+		status = build_contigs(root_nodes->node, contig_count, prefix, max_paths_from_root, max_contigs, truncate_on_repeat, false, contig_str, contig_scores);
 
 		switch(status) {
 			case TOO_MANY_CONTIGS:

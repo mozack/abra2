@@ -170,11 +170,6 @@ public class NativeAssembler {
 	public String assembleContigs(List<String> inputFiles, List<Feature> regions, String prefix,
 			boolean checkForDupes, ReAligner realigner, CompareToReference2 c2r, List<List<SAMRecordWrapper>> readsList) {
 		
-		if ((kmers.length == 0) || (kmers[0] < KmerSizeEvaluator.MIN_KMER)) {
-			KmerSizeEvaluator kmerEval = new KmerSizeEvaluator();
-			int kmer = kmerEval.identifyMinKmer(readLength, c2r, regions);
-			this.kmers = realigner.toKmerArray(kmer, readLength);
-		}
 				
 		String contigs = "";
 		
@@ -214,6 +209,12 @@ public class NativeAssembler {
 			StringBuffer readBuffer = new StringBuffer();
 			
 			if (isAssemblyCandidate) {
+				
+				if ((kmers.length == 0) || (kmers[0] < KmerSizeEvaluator.MIN_KMER)) {
+					KmerSizeEvaluator kmerEval = new KmerSizeEvaluator();
+					int kmer = kmerEval.identifyMinKmer(readLength, c2r, regions);
+					this.kmers = realigner.toKmerArray(kmer, readLength);
+				}
 				
 				int downsampleTarget = desiredNumberOfReads(regions);
 				

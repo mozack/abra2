@@ -176,18 +176,18 @@ int compare_kmer(const char* s1, const char* s2) {
 }
 
 struct struct_pool* init_pool() {
-	struct_pool* pool = (struct struct_pool*) malloc(sizeof(struct_pool));
-	pool->node_pool = (struct node_pool*) malloc(sizeof(node_pool));
+	struct_pool* pool = (struct struct_pool*) calloc(1, sizeof(struct_pool));
+	pool->node_pool = (struct node_pool*) calloc(1, sizeof(node_pool));
 	// Allocate array of arrays
-	pool->node_pool->nodes = (struct node**) malloc(sizeof(struct node*) * MAX_NODE_BLOCKS);
+	pool->node_pool->nodes = (struct node**) calloc(MAX_NODE_BLOCKS, sizeof(struct node*));
 	// Allocate first array of nodes
-	pool->node_pool->nodes[0] = (struct node*) malloc(sizeof(struct node) * NODES_PER_BLOCK);
+	pool->node_pool->nodes[0] = (struct node*) calloc(NODES_PER_BLOCK, sizeof(struct node));
 	pool->node_pool->block_idx = 0;
 	pool->node_pool->node_idx = 0;
 
-	pool->read_pool = (struct read_pool*) malloc(sizeof(read_pool));
-	pool->read_pool->reads = (char**) malloc(sizeof(char*) * MAX_READ_BLOCKS);
-	pool->read_pool->reads[0] = (char*) malloc(sizeof(char) * (read_length+1) * READS_PER_BLOCK);
+	pool->read_pool = (struct read_pool*) calloc(1, sizeof(read_pool));
+	pool->read_pool->reads = (char**) calloc(MAX_READ_BLOCKS, sizeof(char*));
+	pool->read_pool->reads[0] = (char*) calloc(READS_PER_BLOCK, sizeof(char) * (read_length+1));
 	pool->read_pool->block_idx = 0;
 	pool->read_pool->read_idx = 0;
 
@@ -203,7 +203,7 @@ char* allocate_read(struct_pool* pool) {
 	if (pool->read_pool->read_idx >= READS_PER_BLOCK) {
 		pool->read_pool->block_idx++;
 		pool->read_pool->read_idx = 0;
-		pool->read_pool->reads[pool->read_pool->block_idx] = (char*) malloc(sizeof(char) * (read_length+1) * READS_PER_BLOCK);
+		pool->read_pool->reads[pool->read_pool->block_idx] = (char*) calloc(READS_PER_BLOCK, sizeof(char) * (read_length+1));
 	}
 
 	return &pool->read_pool->reads[pool->read_pool->block_idx][pool->read_pool->read_idx++ * (read_length+1)];
@@ -218,7 +218,7 @@ struct node* allocate_node(struct_pool* pool) {
 	if (pool->node_pool->node_idx >= NODES_PER_BLOCK) {
 		pool->node_pool->block_idx++;
 		pool->node_pool->node_idx = 0;
-		pool->node_pool->nodes[pool->node_pool->block_idx] = (struct node*) malloc(sizeof(struct node) * NODES_PER_BLOCK);
+		pool->node_pool->nodes[pool->node_pool->block_idx] = (struct node*) calloc(NODES_PER_BLOCK, sizeof(struct node));
 	}
 
 	return &pool->node_pool->nodes[pool->node_pool->block_idx][pool->node_pool->node_idx++];
@@ -232,7 +232,7 @@ struct node* new_node(char sample_id, char* seq, char* contributingRead, struct_
 
 //	node* my_node = (node*) malloc(sizeof(node));
 	node* my_node = allocate_node(pool);
-	memset(my_node, 0, sizeof(node));
+//	memset(my_node, 0, sizeof(node));
 	my_node->kmer = seq;
 //	strcpy(my_node->contributingRead, contributingRead);
 	my_node->contributingRead = contributingRead;
@@ -390,7 +390,7 @@ void build_graph2(const char* input, dense_hash_map<const char*, struct node*, m
 		// TODO: skip copying the input read.  Downstream code appears to depend
 		// upon null terminator.
 		char* read_ptr = allocate_read(pool);
-		memset(read_ptr, 0, read_length+1);
+//		memset(read_ptr, 0, read_length+1);
 		memcpy(read_ptr, &(ptr[2]), read_length);
 
 //		char* read_ptr = (char*) &(ptr[1]);
@@ -786,9 +786,8 @@ struct contig {
 
 struct contig* new_contig() {
 	struct contig* curr_contig;
-	curr_contig = (contig*) malloc(sizeof(contig));
-//	fprintf(stderr,"seq size: %d\n", sizeof(curr_contig->seq));
-	memset(curr_contig->seq, 0, sizeof(curr_contig->seq));
+	curr_contig = (contig*) calloc(1, sizeof(contig));
+//	memset(curr_contig->seq, 0, sizeof(curr_contig->seq));
 	curr_contig->size = 0;
 	curr_contig->is_repeat = 0;
 	curr_contig->visited_nodes = new dense_hash_set<const char*, my_hash, eqstr>();
@@ -810,7 +809,7 @@ struct contig* copy_contig(struct contig* orig) {
 
 void free_contig(struct contig* contig) {
 	delete contig->visited_nodes;
-	memset(contig, 0, sizeof(contig));
+//	memset(contig, 0, sizeof(contig));
 	free(contig);
 }
 
@@ -951,8 +950,8 @@ int build_contigs(
 			// Append first base from current node
 			contig->seq[contig->size++] = contig->curr_node->kmer[0];
 			if (contig->size >= MAX_CONTIG_SIZE) {
-				char kmer[1024];
-				memset(kmer, 0, 1024);
+				char kmer[MAX_KMER_LEN];
+				memset(kmer, 0, MAX_KMER_LEN);
 				strncpy(kmer, contig->curr_node->kmer, kmer_size);
 				fprintf(stderr,"Max contig size exceeded at node: %s\n", kmer);
 
@@ -972,8 +971,6 @@ int build_contigs(
 				to = to->next;
 			}
 
-			double log10_total_edge_count = log10(total_edge_count);
-
 			// Move current contig to next "to" node.
 			struct linked_node* to_linked_node = contig->curr_node->toNodes;
 			contig->curr_node = to_linked_node->node;
@@ -981,7 +978,15 @@ int build_contigs(
 
 			double prev_contig_score = contig->score;
 
-			contig->score = contig->score + log10(contig->curr_node->frequency) - log10_total_edge_count;
+			double log10_total_edge_count = 0;
+
+			// Update contig score if there is fork here.
+			// Otherwise, we would just multiply by 1.
+			if (to_linked_node->next != NULL) {
+				log10_total_edge_count = log10(total_edge_count);
+				contig->score = contig->score + log10(contig->curr_node->frequency) - log10_total_edge_count;
+			}
+
 			if (!is_contig_score_ok(contig_scores, contig->score)) {
 				popped_contigs.push(contig);
 				contigs.pop();
@@ -1140,8 +1145,8 @@ char* assemble(const char* input,
 	int contig_count = 0;
 	char truncate_output = 0;
 
-	char* contig_str = (char*) malloc(MAX_TOTAL_CONTIG_LEN);
-	memset(contig_str, 0, MAX_TOTAL_CONTIG_LEN);
+	char* contig_str = (char*) calloc(MAX_TOTAL_CONTIG_LEN, sizeof(char));
+//	memset(contig_str, 0, MAX_TOTAL_CONTIG_LEN);
 
 	std::priority_queue<double, std::vector<double>, std::greater<double> > contig_scores;
 
@@ -1164,8 +1169,8 @@ char* assemble(const char* input,
 				contig_count = 0;
 				break;
 			case TOO_MANY_PATHS_FROM_ROOT:
-				char kmer[1024];
-				memset(kmer, 0, 1024);
+				char kmer[MAX_KMER_LEN];
+				memset(kmer, 0, MAX_KMER_LEN);
 				strncpy(kmer, root_nodes->node->kmer, kmer_size);
 				fprintf(stderr,"TOO_MANY_PATHS_FROM_ROOT: %s - %s\n", prefix, kmer);
 				break;

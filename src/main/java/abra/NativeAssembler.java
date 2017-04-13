@@ -10,6 +10,9 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 
+import htsjdk.samtools.Cigar;
+import htsjdk.samtools.CigarElement;
+import htsjdk.samtools.CigarOperator;
 import htsjdk.samtools.SAMRecord;
 import htsjdk.samtools.ValidationStringency;
 
@@ -95,35 +98,73 @@ public class NativeAssembler {
 		return (int) (readLengthsForAllRegions(regions) * (double) averageDepthCeiling);
 	}
 	
+	private int countGaps(Cigar cigar) {
+		int count = 0;
+		for (CigarElement elem : cigar.getCigarElements()) {
+			if (elem.getOperator() == CigarOperator.D || elem.getOperator() == CigarOperator.I || elem.getOperator() == CigarOperator.N) {
+				count += 1;
+			}
+		}
+		
+		return count;
+	}
+	
+	private int firstIndelLength(Cigar cigar) {
+		int len = 0;
+		
+		for (CigarElement elem : cigar.getCigarElements()) {
+			if (elem.getOperator() == CigarOperator.D || elem.getOperator() == CigarOperator.I) {
+				len = elem.getLength();
+				break;
+			}
+		}
+		
+		return len;
+	}
+	
 	//TODO: Consider always assembling regions that contain a junction as specified by input file.
 	private boolean isAssemblyTriggerCandidate(SAMRecord read, CompareToReference2 c2r) {
-		boolean isCandidate = false;
+		
+		// Unmapped read anchored by mate
+		if (read.getReadUnmappedFlag() && !read.getMateUnmappedFlag()) {
+			return true;
+		}
+		
+		// Increment candidate count for substantial high quality soft clipping
+		if (read.getCigarString().contains("S") && (c2r.numHighQualityMismatches(read, MIN_CANDIDATE_BASE_QUALITY) > (readLength/10))) {
+			return true;
+		}
+		
+		int numGaps = countGaps(read.getCigar());
+
+		// More than one indel and/or splice in read
+		if (numGaps > 1) {
+			return true;
+		}
+		
+		// if indel is at least 10% of read length
+		if (numGaps == 1 && firstIndelLength(read.getCigar()) >= (readLength/10)) {
+			return true;
+		}
+		
+		// Read contains indel / intron and SNV (inclusive of soft clip mismatch)
+		if (numGaps > 0 && c2r.numHighQualityMismatches(read, MIN_CANDIDATE_BASE_QUALITY) > 0) {
+			return true;
+		}
 		
 		// Increment candidate count for indels
-		if (read.getCigarString().contains("I") || read.getCigarString().contains("D") || read.getCigarString().contains("N")) {
-			isCandidate = true;
-		}
-
-		// Increment candidate count for substantial high quality soft clipping
-		// TODO: Check for chimera directly?
-		if (read.getCigarString().contains("S")) {
-			if (c2r.numHighQualityMismatches(read, MIN_CANDIDATE_BASE_QUALITY) > (readLength/10)) {
-				isCandidate = true;
-			}
-		}
+//		if (read.getCigarString().contains("I") || read.getCigarString().contains("D") || read.getCigarString().contains("N")) {
+//			isCandidate = true;
+//		}
 		
 		// Increment candidate count if read contains at least 3 high quality mismatches
-		if (SAMRecordUtils.getIntAttribute(read, "NM") >= 3) {
-			if (c2r.numHighQualityMismatches(read, MIN_CANDIDATE_BASE_QUALITY) > 3) {
-				isCandidate = true;
-			}
-		}
-		
-		if (read.getReadUnmappedFlag() && !read.getMateUnmappedFlag()) {
-			isCandidate = true;
-		}
+//		if (SAMRecordUtils.getIntAttribute(read, "NM") >= 3) {
+//			if (c2r.numHighQualityMismatches(read, MIN_CANDIDATE_BASE_QUALITY) > 3) {
+//				isCandidate = true;
+//			}
+//		}
 
-		return isCandidate;
+		return false;
 	}
 	
 	public String assembleContigs(List<String> inputFiles, List<Feature> regions, String prefix,
@@ -223,6 +264,8 @@ public class NativeAssembler {
 				
 					//TODO: Not really an output file anymore.  Cleanup.
 					String outputFile = prefix + "_k" + kmer;
+					
+//					System.out.println(readBuffer.toString());
 					
 					contigs = assemble(
 							readBuffer.toString(),

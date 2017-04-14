@@ -7,17 +7,17 @@ package abra;
  * @author Lisle E. Mose (lmose at unc dot edu)
  */
 public class ReAlignerRunnable extends AbraRunnable {
-	private String chromosome;
+	private int chromosomeChunkIdx;
 	private ReAligner reAligner;
 	
-	public ReAlignerRunnable(ThreadManager threadManager, ReAligner reAligner, String chromosome) {
+	public ReAlignerRunnable(ThreadManager threadManager, ReAligner reAligner, int chromosomeChunkIdx) {
 		super(threadManager);
-		this.chromosome = chromosome;
+		this.chromosomeChunkIdx = chromosomeChunkIdx;
 		this.reAligner = reAligner;
 	}
 	
 	@Override
 	public void go() throws Exception {		
-		reAligner.processChromosome(chromosome);
+		reAligner.processChromosomeChunk(chromosomeChunkIdx);
 	}
 }

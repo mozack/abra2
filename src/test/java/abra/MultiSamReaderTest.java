@@ -16,8 +16,9 @@ public class MultiSamReaderTest {
 		int minMapq = 20;
 		boolean isPairedEnd = false;
 		String chromosome = "10";
+		Feature chromosomeChunk = new Feature(chromosome, 3000000, 4000000);
 		
-		MultiSamReader rdr = new MultiSamReader(bams, minMapq, isPairedEnd, chromosome);
+		MultiSamReader rdr = new MultiSamReader(bams, minMapq, isPairedEnd, chromosomeChunk);
 		
 		List<SAMRecordWrapper> reads = new ArrayList<SAMRecordWrapper>();
 		for (SAMRecordWrapper read : rdr) {

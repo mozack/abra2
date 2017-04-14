@@ -115,6 +115,8 @@ public class ReAligner {
 	
 	private SortedSAMWriter writer;
 	
+	private ChromosomeChunker chromosomeChunker;
+	
 	public void reAlign(String[] inputFiles, String[] outputFiles) throws Exception {
 		
 		this.inputSams = inputFiles;
@@ -125,6 +127,9 @@ public class ReAligner {
 		
 		c2r = new CompareToReference2();
 		c2r.init(this.reference);
+		
+		chromosomeChunker = new ChromosomeChunker(c2r);
+		chromosomeChunker.init();
 
 		Logger.info("Reading Input SAM Header and identifying read length");
 		getSamHeaderAndReadLength();
@@ -150,14 +155,19 @@ public class ReAligner {
 			samHeaders[i].addProgramRecord(pg);			
 		}
 		
-		writer = new SortedSAMWriter(outputFiles, tempDir.toString(), samHeaders, isKeepTmp);
+		writer = new SortedSAMWriter(outputFiles, tempDir.toString(), samHeaders, isKeepTmp, chromosomeChunker);
 
 		// Spawn thread for each chromosome
 		// TODO: Validate identical sequence dictionary for each input file
-		for (SAMSequenceRecord seqRecord : this.samHeaders[0].getSequenceDictionary().getSequences()) {
-			String chromosome = seqRecord.getSequenceName();
-			this.spawnChromosomeThread(chromosome);
+		
+		for (int i=0; i<this.chromosomeChunker.getChunks().size(); i++) {
+			spawnChromosomeThread(i);
 		}
+		
+//		for (SAMSequenceRecord seqRecord : this.samHeaders[0].getSequenceDictionary().getSequences()) {
+//			String chromosome = seqRecord.getSequenceName();
+//			this.spawnChromosomeThread(chromosomeChunkIdx);
+//		}
 		
 		Logger.info("Waiting for all threads to complete");
 		threadManager.waitForAllThreadsToComplete();
@@ -176,15 +186,18 @@ public class ReAligner {
 		Logger.info("Done.");
 	}
 	
-	void processChromosome(String chromosome) throws Exception {
+	void processChromosomeChunk(int chromosomeChunkIdx) throws Exception {
 		
-		Logger.info("Processing chromosome: " + chromosome);
-		Clock clock = new Clock("Chromosome: " + chromosome);
+		Feature chromosomeChunk = chromosomeChunker.getChunks().get(chromosomeChunkIdx);
+		String chromosome = chromosomeChunk.getSeqname();
+		
+		Logger.info("Processing chromosome chunk: " + chromosomeChunk);
+		Clock clock = new Clock("Chromosome: " + chromosomeChunk);
 		clock.start();
 		
-		writer.initChromosome(chromosome);
+		writer.initChromosome(chromosomeChunkIdx);
 		
-		MultiSamReader reader = new MultiSamReader(this.inputSams, this.minMappingQuality, this.isPairedEnd, chromosome);
+		MultiSamReader reader = new MultiSamReader(this.inputSams, this.minMappingQuality, this.isPairedEnd, chromosomeChunk);
 		
 		List<List<SAMRecordWrapper>> currReads = new ArrayList<List<SAMRecordWrapper>>();
 		for (int i=0; i<this.inputSams.length; i++) {
@@ -308,9 +321,10 @@ public class ReAligner {
 
 				// Remap out of scope reads
 				long start = System.currentTimeMillis();
-				remapReads(regionContigs, readsToRemap);
+				int totalReads = remapReads(regionContigs, readsToRemap, chromosomeChunkIdx);
 				long stop = System.currentTimeMillis();
-				Logger.debug("REMAP_READS_SECS:\t%d\t%s:%d", (stop-start)/1000, record.getSamRecord().getReferenceName(), record.getSamRecord().getAlignmentStart());
+				Logger.debug("REMAP_READS_MSECS:\t%d\t%d\t%s:%d", (stop-start), totalReads, record.getSamRecord().getReferenceName(), record.getSamRecord().getAlignmentStart());
+//				Logger.debug("REMAP_READS_SECS:\t%d\t%s:%d", (stop-start)/1000, record.getSamRecord().getReferenceName(), record.getSamRecord().getAlignmentStart());
 				
 				// Remove out of scope region assemblies
 				List<Feature> regionsToRemove = new ArrayList<Feature>();
@@ -350,7 +364,7 @@ public class ReAligner {
 						List<SAMRecordWrapper> reads = currReads.get(i);
 
 						for (SAMRecordWrapper read : reads) {
-							this.writer.addAlignment(i, read.getSamRecord());
+							this.writer.addAlignment(i, read.getSamRecord(), chromosomeChunkIdx);
 						}
 						
 						reads.clear();
@@ -389,7 +403,7 @@ public class ReAligner {
 		}
 		
 		// Remap remaining reads
-		remapReads(regionContigs, currReads);
+		remapReads(regionContigs, currReads, chromosomeChunkIdx);
 		currReads.clear();
 		regionContigs.clear();
 		
@@ -397,7 +411,7 @@ public class ReAligner {
 		for (int i=0; i<outOfRegionReads.size(); i++) {
 			List<SAMRecordWrapper> outOfRegionReadsForSample = outOfRegionReads.get(i);
 			for (SAMRecordWrapper outOfRegionRead : outOfRegionReadsForSample) {
-				this.writer.addAlignment(i, outOfRegionRead.getSamRecord());
+				this.writer.addAlignment(i, outOfRegionRead.getSamRecord(), chromosomeChunkIdx);
 			}
 			
 			outOfRegionReadsForSample.clear();
@@ -405,7 +419,7 @@ public class ReAligner {
 		
 		reader.close();
 		
-		writer.finishChromosome(chromosome);
+		writer.finishChromosome(chromosomeChunkIdx);
 		
 		clock.stopAndPrint();
 	}
@@ -460,9 +474,9 @@ public class ReAligner {
 		}
 	}
 		
-	private void spawnChromosomeThread(String chromosome) throws InterruptedException {
-		ReAlignerRunnable thread = new ReAlignerRunnable(threadManager, this, chromosome);
-		Logger.debug("Queuing thread for chromosome: " + chromosome);
+	private void spawnChromosomeThread(int chromosomeChunkIdx) throws InterruptedException {
+		ReAlignerRunnable thread = new ReAlignerRunnable(threadManager, this, chromosomeChunkIdx);
+		Logger.debug("Queuing thread for chromosome: " + chromosomeChunkIdx);
 		threadManager.spawnThread(thread);
 	}
 	
@@ -535,16 +549,19 @@ public class ReAligner {
 		}
 	}
 	
-	private void remapReads(Map<Feature, Map<SimpleMapper, SSWAlignerResult>> mappedContigs, List<List<SAMRecordWrapper>> readsList) throws Exception {
+	private int remapReads(Map<Feature, Map<SimpleMapper, SSWAlignerResult>> mappedContigs,
+			List<List<SAMRecordWrapper>> readsList, int chromosomeChunkIdx) throws Exception {
 		
 		ReadEvaluator readEvaluator = new ReadEvaluator(mappedContigs);
 		
 		int sampleIdx = 0;
+		int totalReads = 0;
 		// For each sample.
 		for (List<SAMRecordWrapper> reads : readsList) {
 			
 			// For each read.
 			for (SAMRecordWrapper readWrapper : reads) {
+				totalReads += 1;
 				SAMRecord read = readWrapper.getSamRecord();
 				if (read.getMappingQuality() >= this.minMappingQuality || read.getReadUnmappedFlag()) {
 					// TODO: Use NM tag if available (need to handle soft clipping though!)
@@ -557,13 +574,15 @@ public class ReAligner {
 				}
 			}
 
-			// Output all reads for this sample - synchronize on the current BAM
+			// Output all reads for this sample
 			for (SAMRecordWrapper read : reads) {
-				this.writer.addAlignment(sampleIdx, read.getSamRecord());
+				this.writer.addAlignment(sampleIdx, read.getSamRecord(), chromosomeChunkIdx);
 			}
 			
 			sampleIdx += 1;
 		}
+		
+		return totalReads;
 	}
 	
 	private List<List<SAMRecordWrapper>> subsetReads(Feature region, List<List<SAMRecordWrapper>> readsList) {
@@ -770,10 +789,7 @@ public class ReAligner {
 		
 		long stop = System.currentTimeMillis();
 		
-		String msg = String.format("PROCESS_REGION_SECS:\t%d\t%s", (stop-start)/1000, region.getDescriptor());
-		synchronized(Logger.class) {
-			Logger.info(msg);
-		}
+		Logger.debug("PROCESS_REGION_MSECS:\t%d\t%s", (stop-start), region.getDescriptor());
 		
 		return mappedContigs;
 	}

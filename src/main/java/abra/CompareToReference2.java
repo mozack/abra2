@@ -31,6 +31,7 @@ public class CompareToReference2 {
 	private BufferedReader refReader;
 	private Map<String, byte[]> refMap;
 	private boolean is2Bit = true;
+	private Map<String, Integer> chromosomeLength; 
 
 	/**
 	 * Memory efficient reference storage using 2 bits per base.
@@ -331,6 +332,7 @@ public class CompareToReference2 {
 		Logger.info("Loading reference map:  " + this.refFileName);
 		long s = System.currentTimeMillis();
 		this.refMap = new HashMap<String, byte[]>();
+		this.chromosomeLength = new HashMap<String, Integer>();
 		
 		BufferedReader reader = new BufferedReader(new FileReader(refFileName));
 		
@@ -342,6 +344,7 @@ public class CompareToReference2 {
 				if (currSeqName != null) {
 					Logger.debug("Chromosome: %s length: %d", currSeqName, sequence.length());
 					refMap.put(currSeqName, getBytes(sequence));
+					chromosomeLength.put(currSeqName, sequence.length());
 				}
 				
 				sequence = new StringBuffer();
@@ -366,6 +369,7 @@ public class CompareToReference2 {
 		
 		Logger.debug("Chromosome: %s length: %d", currSeqName, sequence.length());
 		refMap.put(currSeqName, getBytes(sequence));
+		chromosomeLength.put(currSeqName, sequence.length());
 		
 		sequence = null;
 		
@@ -423,6 +427,10 @@ public class CompareToReference2 {
 			
 			return new String(sub);
 		}
+	}
+	
+	public int getChromosomeLength(String chromosome) {
+		return this.chromosomeLength.get(chromosome);
 	}
 	
 	/**

@@ -31,6 +31,7 @@ public class CompareToReference2 {
 	private BufferedReader refReader;
 	private Map<String, byte[]> refMap;
 	private boolean is2Bit = true;
+	private List<String> chromosomes;
 	private Map<String, Integer> chromosomeLength; 
 
 	/**
@@ -63,7 +64,7 @@ public class CompareToReference2 {
 	}
 	
 	public List<String> getChromosomes() {
-		return new ArrayList<String>(refMap.keySet());
+		return chromosomes;
 	}
 	
 	public void cleanup() throws IOException {
@@ -332,6 +333,7 @@ public class CompareToReference2 {
 		Logger.info("Loading reference map:  " + this.refFileName);
 		long s = System.currentTimeMillis();
 		this.refMap = new HashMap<String, byte[]>();
+		this.chromosomes = new ArrayList<String>();
 		this.chromosomeLength = new HashMap<String, Integer>();
 		
 		BufferedReader reader = new BufferedReader(new FileReader(refFileName));
@@ -344,6 +346,7 @@ public class CompareToReference2 {
 				if (currSeqName != null) {
 					Logger.debug("Chromosome: %s length: %d", currSeqName, sequence.length());
 					refMap.put(currSeqName, getBytes(sequence));
+					chromosomes.add(currSeqName);
 					chromosomeLength.put(currSeqName, sequence.length());
 				}
 				
@@ -369,6 +372,7 @@ public class CompareToReference2 {
 		
 		Logger.debug("Chromosome: %s length: %d", currSeqName, sequence.length());
 		refMap.put(currSeqName, getBytes(sequence));
+		chromosomes.add(currSeqName);
 		chromosomeLength.put(currSeqName, sequence.length());
 		
 		sequence = null;

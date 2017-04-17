@@ -47,6 +47,7 @@ public class CadabraProcessor {
 		this.cadabra = cadabra;
 		this.normalBam = normalBam;
 		this.tumorBam = tumorBam;
+		this.c2r = c2r;
 	}
 	
 	void process(Feature region) {

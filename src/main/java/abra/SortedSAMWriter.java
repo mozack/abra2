@@ -145,13 +145,12 @@ public class SortedSAMWriter {
 	
 	private void processChromosome(SAMFileWriter output, int sampleIdx, String chromosome) throws IOException {
 		
-		Logger.debug("Final processing for: %d, %d", sampleIdx, chromosome);
+		Logger.info("Final processing for: %d, %d", sampleIdx, chromosome);
 		
+		List<SAMRecord> reads = new ArrayList<SAMRecord>();
 		List<Integer> chunks = chromosomeChunker.getChunkGroups().get(chromosome);
 		
 		for (int chunk : chunks) {
-		
-			List<SAMRecord> reads = new ArrayList<SAMRecord>();
 			String filename = getTempFilename(sampleIdx, chunk);
 			
 			File file = new File(filename);
@@ -173,7 +172,7 @@ public class SortedSAMWriter {
 							output.addAlignment(reads.get(i));
 							i += 1;
 						}
-						Logger.trace("Reads output: %d", i);
+						Logger.info("Reads output: %d", i);
 						reads.subList(0, i).clear();
 					}
 				}
@@ -183,9 +182,13 @@ public class SortedSAMWriter {
 			
 			// Output any remaining reads
 			Collections.sort(reads, new SAMCoordinateComparator());
+			int i = 0;
 			for (SAMRecord read : reads) {
 				output.addAlignment(read);
+				i += 1;
 			}
+			
+			Logger.info("Final reads output: %d", i);
 		}
 	}
 	

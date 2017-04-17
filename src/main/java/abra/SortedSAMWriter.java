@@ -174,7 +174,7 @@ public class SortedSAMWriter {
 							output.addAlignment(reads.get(i));
 							i += 1;
 						}
-						Logger.info("Reads output: %d", i);
+						Logger.debug("Reads output: %d", i);
 						reads.subList(0, i).clear();
 					}
 				}
@@ -190,7 +190,7 @@ public class SortedSAMWriter {
 			output.addAlignment(read);
 			i += 1;
 		}
-		Logger.info("Final reads output: %d", i);
+		Logger.debug("Final reads output: %d", i);
 	}
 		
 	private void processUnmapped(SAMFileWriter output, int sampleIdx) throws IOException {

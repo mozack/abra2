@@ -127,6 +127,7 @@ public class SortedSAMWriter {
 	private void initChromosomeChunk(int sampleIdx, int chromosomeChunkIdx) {
 		Logger.debug("Writer init: %d, %d", sampleIdx, chromosomeChunkIdx);
 		//int chrom  = chromIdx.get(chromosome);
+		samHeaders[sampleIdx].setSortOrder(SortOrder.unsorted);
 		writers[sampleIdx][chromosomeChunkIdx] = writerFactory.makeBAMWriter(samHeaders[sampleIdx], false, new File(getTempFilename(sampleIdx, chromosomeChunkIdx)), TEMP_COMPRESSION_LEVEL);
 	}
 	

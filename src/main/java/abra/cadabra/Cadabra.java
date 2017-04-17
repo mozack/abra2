@@ -24,7 +24,7 @@ public class Cadabra {
 
 	private CompareToReference2 c2r;
 	
-	private Map<String, List<String>> chromosomeCalls;
+	private Map<String, List<String>> chromosomeCalls = new HashMap<String, List<String>>();
 
 	public void callSomatic(String reference, String normal, String tumor, int numThreads) throws IOException, InterruptedException {
 		c2r = new CompareToReference2();

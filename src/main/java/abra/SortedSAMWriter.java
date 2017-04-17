@@ -6,8 +6,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.intel.gkl.compression.IntelDeflaterFactory;
 
@@ -38,6 +41,10 @@ public class SortedSAMWriter {
 	private boolean isKeepTmp;
 	private ChromosomeChunker chromosomeChunker;
 	
+	private Integer nextChromosome;
+	private Set<Integer> chunksReady = new HashSet<Integer>();
+	private SAMFileWriter[] outputBams;
+	private AtomicBoolean isFinalizingChromosomes;
 	
 	public SortedSAMWriter(String[] outputFiles, String tempDir, SAMFileHeader[] samHeaders,
 			boolean isKeepTmp, ChromosomeChunker chromosomeChunker) {
@@ -47,6 +54,9 @@ public class SortedSAMWriter {
 		this.tempDir = tempDir;
 		this.isKeepTmp = isKeepTmp;
 		this.chromosomeChunker = chromosomeChunker;
+		
+		this.nextChromosome = 0;
+		isFinalizingChromosomes = new AtomicBoolean(false);
 		
 		// TODO: Compare sequence headers across samples
 		List<SAMSequenceRecord> sequences = samHeaders[0].getSequenceDictionary().getSequences();
@@ -71,6 +81,20 @@ public class SortedSAMWriter {
 		for (int i=0; i<writers.length; i++) {
 			//writers[i] = new SAMFileWriter[sequences.size()+1];
 			writers[i] = new SAMFileWriter[chromosomeChunker.getChunks().size()+1];
+		}
+		
+		initFinalBams();
+	}
+	
+	private void initFinalBams() {
+		outputBams = new SAMFileWriter[outputFiles.length];
+		SAMFileWriterFactory writerFactory = new SAMFileWriterFactory();
+		for (int i=0; i<outputFiles.length; i++) {
+			writerFactory.setUseAsyncIo(false);
+//			writerFactory.setAsyncOutputBufferSize(ASYNC_READ_CACHE_SIZE);
+			writerFactory.setCompressionLevel(FINAL_COMPRESSION_LEVEL);
+			samHeaders[i].setSortOrder(SortOrder.coordinate);
+			outputBams[i] = writerFactory.makeBAMWriter(samHeaders[i], true, new File(outputFiles[i]), FINAL_COMPRESSION_LEVEL);
 		}
 	}
 	
@@ -106,22 +130,65 @@ public class SortedSAMWriter {
 		writers[sampleIdx][chromosomeChunkIdx] = writerFactory.makeBAMWriter(samHeaders[sampleIdx], false, new File(getTempFilename(sampleIdx, chromosomeChunkIdx)), TEMP_COMPRESSION_LEVEL);
 	}
 	
-	private void finishChromosomeChunk(int sampleIdx, int chromosomeChunkIdx) {
+	private void finishChromosomeChunk(int sampleIdx, int chromosomeChunkIdx) throws IOException {
 		Logger.debug("Writer finish: %d, %d", sampleIdx, chromosomeChunkIdx);
 		//int chrom  = chromIdx.get(chromosome);
 		writers[sampleIdx][chromosomeChunkIdx].close();
+		chunksReady.add(chromosomeChunkIdx);
+		
+		outputFinalizedChromosomes();		
 	}
 	
-	public void finishChromosomeChunk(int chromosomeChunkIdx) {
+	public void finishChromosomeChunk(int chromosomeChunkIdx) throws IOException {
 		for (int i=0; i<outputFiles.length; i++) {
 			finishChromosomeChunk(i, chromosomeChunkIdx);
 		}
 	}
 	
+	private void outputFinalizedChromosomes() throws IOException {
+		
+		// Only allow a single thread to run this.
+		if (isFinalizingChromosomes.compareAndSet(false, true)) {
+		
+			if (nextChromosome < chromosomeChunker.getChromosomes().size()) {
+					
+				boolean isDone = false;
+				while (!isDone && nextChromosome < chromosomeChunker.getChromosomes().size()) {
+			
+					// Check to see if we can finalize a chromosome
+					// It is possible for this to be not the current chunk's chromosome
+					String chromosome = chromosomeChunker.getChromosomes().get(nextChromosome);
+					
+					List<Integer> chunks = chromosomeChunker.getChunkGroups().get(chromosome);
+					boolean isChromosomeReady = chunks.size() > 0;
+					for (int chunk : chunks) {
+						if (!chunksReady.contains(chunk)) {
+							isChromosomeReady = false;
+							isDone = true;
+						}
+					}
+					
+					if (isChromosomeReady) {
+						for (int i=0; i<outputBams.length; i++) {
+							processChromosome(outputBams[i], i, chromosome);
+						}
+						
+						nextChromosome += 1;						
+					}
+				}
+			}
+			
+			isFinalizingChromosomes.set(false);
+		}
+	}
+	
 	public void outputFinal() throws IOException {
 		// For each sample...
+		
 		for (int i=0; i<outputFiles.length; i++) {
+						
 			Logger.info("Finishing: " + outputFiles[i]);
+/*
 //			writerFactory.setUseAsyncIo(true);
 			writerFactory.setUseAsyncIo(false);
 			writerFactory.setAsyncOutputBufferSize(ASYNC_READ_CACHE_SIZE);
@@ -139,8 +206,8 @@ public class SortedSAMWriter {
 //			}
 			
 //			processUnmapped(output, i);
-			
-			output.close();
+*/
+			this.outputBams[i].close();
 		}
 	}
 	

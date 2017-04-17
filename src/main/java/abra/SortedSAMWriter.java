@@ -135,15 +135,15 @@ public class SortedSAMWriter {
 		Logger.debug("Writer finish: %d, %d", sampleIdx, chromosomeChunkIdx);
 		//int chrom  = chromIdx.get(chromosome);
 		writers[sampleIdx][chromosomeChunkIdx].close();
-		chunksReady.add(chromosomeChunkIdx);
-		
-		outputFinalizedChromosomes();		
 	}
 	
 	public void finishChromosomeChunk(int chromosomeChunkIdx) throws IOException {
 		for (int i=0; i<outputFiles.length; i++) {
 			finishChromosomeChunk(i, chromosomeChunkIdx);
 		}
+		
+		chunksReady.add(chromosomeChunkIdx);
+		outputFinalizedChromosomes();
 	}
 	
 	private void outputFinalizedChromosomes() throws IOException {

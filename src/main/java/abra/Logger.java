@@ -40,12 +40,12 @@ public class Logger {
 		}
 	}
 	
-	public static void info(String message) {
+	public static void info(String format, Object... args) {
 		if (LEVEL == Level.TRACE || LEVEL == Level.DEBUG || LEVEL == Level.INFO) {
-			log(message, Level.INFO);
+			log(String.format(format, args), Level.DEBUG);
 		}
 	}
-	
+		
 	public static void warn(String message) {
 		if (LEVEL == Level.TRACE || LEVEL == Level.DEBUG || LEVEL == Level.INFO || LEVEL == Level.WARN) {
 			log(message, Level.WARN);

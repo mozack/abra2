@@ -38,6 +38,7 @@ public class SortedSAMWriter {
 	private boolean isKeepTmp;
 	private ChromosomeChunker chromosomeChunker;
 	
+	
 	public SortedSAMWriter(String[] outputFiles, String tempDir, SAMFileHeader[] samHeaders,
 			boolean isKeepTmp, ChromosomeChunker chromosomeChunker) {
 	
@@ -59,11 +60,11 @@ public class SortedSAMWriter {
 		
 		UNMAPPED_INDEX = chromosomeChunker.getChunks().size();
 		
-		writerFactory.setUseAsyncIo(false);
-		IntelDeflaterFactory intelDeflater = new IntelDeflaterFactory();
-		writerFactory.setDeflaterFactory(intelDeflater);
-		
-		Logger.info("Using intel deflator: " + intelDeflater.usingIntelDeflater());
+//		writerFactory.setUseAsyncIo(false);
+//		IntelDeflaterFactory intelDeflater = new IntelDeflaterFactory();
+//		writerFactory.setDeflaterFactory(intelDeflater);
+//		
+//		Logger.info("Using intel deflator: " + intelDeflater.usingIntelDeflater());
 		
 		writers = new SAMFileWriter[outputFiles.length][];
 		
@@ -84,34 +85,41 @@ public class SortedSAMWriter {
 	}
 	
 	public void addAlignment(int sampleIdx, SAMRecord read, int chromosomeChunkIdx) {
-		writers[sampleIdx][chromosomeChunkIdx].addAlignment(read);
-	}
-	
-	public void initChromosome(int chromosomeChunkIdx) {
-		for (int i=0; i<outputFiles.length; i++) {
-			initChromosome(i, chromosomeChunkIdx);
+		Feature chunk = this.chromosomeChunker.getChunks().get(chromosomeChunkIdx);
+		
+		// Only output reads with start pos within specified chromosomeChunk
+		// Avoids reads being written in 2 different chunks
+		if (read.getAlignmentStart() >= chunk.getStart() && read.getAlignmentStart() <= chunk.getEnd()) {
+			writers[sampleIdx][chromosomeChunkIdx].addAlignment(read);
 		}
 	}
 	
-	private void initChromosome(int sampleIdx, int chromosomeChunkIdx) {
+	public void initChromosomeChunk(int chromosomeChunkIdx) {
+		for (int i=0; i<outputFiles.length; i++) {
+			initChromosomeChunk(i, chromosomeChunkIdx);
+		}
+	}
+	
+	private void initChromosomeChunk(int sampleIdx, int chromosomeChunkIdx) {
 		Logger.debug("Writer init: %d, %d", sampleIdx, chromosomeChunkIdx);
 		//int chrom  = chromIdx.get(chromosome);
 		writers[sampleIdx][chromosomeChunkIdx] = writerFactory.makeBAMWriter(samHeaders[sampleIdx], false, new File(getTempFilename(sampleIdx, chromosomeChunkIdx)), TEMP_COMPRESSION_LEVEL);
 	}
 	
-	private void finishChromosome(int sampleIdx, int chromosomeChunkIdx) {
+	private void finishChromosomeChunk(int sampleIdx, int chromosomeChunkIdx) {
 		Logger.debug("Writer finish: %d, %d", sampleIdx, chromosomeChunkIdx);
 		//int chrom  = chromIdx.get(chromosome);
 		writers[sampleIdx][chromosomeChunkIdx].close();
 	}
 	
-	public void finishChromosome(int chromosomeChunkIdx) {
+	public void finishChromosomeChunk(int chromosomeChunkIdx) {
 		for (int i=0; i<outputFiles.length; i++) {
-			finishChromosome(i, chromosomeChunkIdx);
+			finishChromosomeChunk(i, chromosomeChunkIdx);
 		}
 	}
 	
 	public void outputFinal() throws IOException {
+		// For each sample...
 		for (int i=0; i<outputFiles.length; i++) {
 			Logger.info("Finishing: " + outputFiles[i]);
 			writerFactory.setUseAsyncIo(true);
@@ -120,14 +128,64 @@ public class SortedSAMWriter {
 			samHeaders[i].setSortOrder(SortOrder.coordinate);
 			SAMFileWriter output = writerFactory.makeBAMWriter(samHeaders[i], true, new File(outputFiles[i]), FINAL_COMPRESSION_LEVEL);
 			
-			//TODO: One more for unmapped reads...
-			for (int chunk=0; chunk < this.chromosomeChunker.getChunks().size(); chunk++) {
-				processChromosomeChunk(output, i, chunk);
+			for (String chromosome : chromosomeChunker.getChromosomes()) {
+				processChromosome(output, i, chromosome);
 			}
+			
+			//TODO: One more for unmapped reads...
+//			for (int chunk=0; chunk < this.chromosomeChunker.getChunks().size(); chunk++) {
+//				processChromosomeChunk(output, i, chunk);
+//			}
 			
 //			processUnmapped(output, i);
 			
 			output.close();
+		}
+	}
+	
+	private void processChromosome(SAMFileWriter output, int sampleIdx, String chromosome) throws IOException {
+		
+		Logger.debug("Final processing for: %d, %d", sampleIdx, chromosome);
+		
+		List<Integer> chunks = chromosomeChunker.getChunkGroups().get(chromosome);
+		
+		for (int chunk : chunks) {
+		
+			List<SAMRecord> reads = new ArrayList<SAMRecord>();
+			String filename = getTempFilename(sampleIdx, chunk);
+			
+			File file = new File(filename);
+			
+			if (file.exists()) {
+				deleteOnExit(file);
+				
+				SamReader reader = SAMRecordUtils.getSamReader(filename);
+		
+				for (SAMRecord read : reader) {
+					reads.add(read);
+					
+					if (read.getAlignmentStart() - reads.get(0).getAlignmentStart() > GENOMIC_RANGE_TO_CACHE*2) {
+						Collections.sort(reads, new SAMCoordinateComparator());
+						
+						int start = reads.get(0).getAlignmentStart();
+						int i = 0;
+						while (i < reads.size() && reads.get(i).getAlignmentStart() - start < GENOMIC_RANGE_TO_CACHE) {
+							output.addAlignment(reads.get(i));
+							i += 1;
+						}
+						Logger.trace("Reads output: %d", i);
+						reads.subList(0, i).clear();
+					}
+				}
+				
+				reader.close();
+			}
+			
+			// Output any remaining reads
+			Collections.sort(reads, new SAMCoordinateComparator());
+			for (SAMRecord read : reads) {
+				output.addAlignment(read);
+			}
 		}
 	}
 	

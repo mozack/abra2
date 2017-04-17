@@ -36,10 +36,8 @@ public class MultiSamReader implements Iterable<SAMRecordWrapper> {
 			
 			readers[idx] = reader;
 			
-			//TODO: double check boundaries here.  Chunks should overlap for contig generation, but reads should only be output to a single chunk
-			//iterators[idx] = readers[idx].queryOverlapping(region.getSeqname(), (int) region.getStart(), (int) region.getEnd());
-			// TODO: Hack for testing.  Need to handle moves across chunks in final sort step.
-			iterators[idx] = readers[idx].queryContained(region.getSeqname(), (int) region.getStart()+101, (int) region.getEnd()-101);
+			// TODO: Pad by region size?
+			iterators[idx] = readers[idx].queryOverlapping(region.getSeqname(), (int) region.getStart(), (int) region.getEnd());
 			
 			// cache next record
 			cacheNextRecord(idx);

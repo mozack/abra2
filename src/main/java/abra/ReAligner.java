@@ -195,7 +195,7 @@ public class ReAligner {
 		Clock clock = new Clock("Chromosome: " + chromosomeChunk);
 		clock.start();
 		
-		writer.initChromosome(chromosomeChunkIdx);
+		writer.initChromosomeChunk(chromosomeChunkIdx);
 		
 		MultiSamReader reader = new MultiSamReader(this.inputSams, this.minMappingQuality, this.isPairedEnd, chromosomeChunk);
 		
@@ -312,8 +312,17 @@ public class ReAligner {
 					Iterator<SAMRecordWrapper> iter = origSample.iterator();
 					while (iter.hasNext()) {
 						SAMRecordWrapper read = iter.next();
+						
+						// record == most recent read.  read = cached read
 						if (record.getSamRecord().getAlignmentStart() - read.getSamRecord().getAlignmentStart() > MAX_READ_RANGE) {
-							sampleReadsToRemap.add(read);
+
+							// Only output reads with start pos within current chromosomeChunk
+							if (read.getSamRecord().getAlignmentStart() >= chromosomeChunk.getStart() &&
+								read.getSamRecord().getAlignmentStart() <= chromosomeChunk.getEnd()) {
+							
+								sampleReadsToRemap.add(read);
+							}
+							
 							iter.remove();
 						}
 					}					
@@ -345,6 +354,8 @@ public class ReAligner {
 					Logger.debug("%s\tregionContigs size: %d", logPrefix, regionContigs.size());
 				}
 				
+				
+				//TODO: Revisit this.  Is it still necessary?
 				int currReadsCount = 0;
 				int idx = 0;
 				boolean shouldClear = false;
@@ -419,7 +430,7 @@ public class ReAligner {
 		
 		reader.close();
 		
-		writer.finishChromosome(chromosomeChunkIdx);
+		writer.finishChromosomeChunk(chromosomeChunkIdx);
 		
 		clock.stopAndPrint();
 	}

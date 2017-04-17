@@ -18,7 +18,7 @@ public class ChromosomeChunker {
 	private List<Feature> chunks;
 	
 	// Chromosome chunks grouped by chromosome
-	private Map<String, List<Feature>> chunkGroups;
+	private Map<String, List<Integer>> chunkGroups;
 	
 	public ChromosomeChunker(CompareToReference2 c2r) {
 		this.c2r = c2r;
@@ -29,8 +29,9 @@ public class ChromosomeChunker {
 	public void init() {
 		
 		chunks = new ArrayList<Feature>();
-		chunkGroups = new HashMap<String, List<Feature>>();
+		chunkGroups = new HashMap<String, List<Integer>>();
 		
+		int chunkIdx = 0;
 		for (String chromosome : c2r.getChromosomes()) {
 			long currStart = 1;
 			int chromosomeLength = c2r.getChromosomeLength(chromosome);
@@ -41,10 +42,10 @@ public class ChromosomeChunker {
 				chunks.add(chunk);
 				
 				if (!chunkGroups.containsKey(chromosome)) {
-					chunkGroups.put(chromosome, new ArrayList<Feature>());
+					chunkGroups.put(chromosome, new ArrayList<Integer>());
 				}
 				
-				chunkGroups.get(chromosome).add(chunk);
+				chunkGroups.get(chromosome).add(chunkIdx);
 			}
 						
 /*			
@@ -76,8 +77,12 @@ public class ChromosomeChunker {
 		return chunks;
 	}
 
-	public Map<String, List<Feature>> getChunkGroups() {
+	public Map<String, List<Integer>> getChunkGroups() {
 		return chunkGroups;
+	}
+	
+	public List<String> getChromosomes() {
+		return c2r.getChromosomes();
 	}
 
 	public static void main(String[] args) throws Exception {

@@ -145,7 +145,7 @@ public class SortedSAMWriter {
 	
 	private void processChromosome(SAMFileWriter output, int sampleIdx, String chromosome) throws IOException {
 		
-		Logger.info("Final processing for: %d, %d", sampleIdx, chromosome);
+		Logger.info("Final processing for: %d, %s", sampleIdx, chromosome);
 		
 		List<SAMRecord> reads = new ArrayList<SAMRecord>();
 		List<Integer> chunks = chromosomeChunker.getChunkGroups().get(chromosome);

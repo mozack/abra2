@@ -169,9 +169,11 @@ public class SortedSAMWriter {
 					}
 					
 					if (isChromosomeReady) {
+						Logger.info("Finalizing chromosome: %s", chromosome);
 						for (int i=0; i<outputBams.length; i++) {
 							processChromosome(outputBams[i], i, chromosome);
 						}
+						Logger.info("Done finalizing chromosome: %s", chromosome);
 						
 						nextChromosome += 1;						
 					}

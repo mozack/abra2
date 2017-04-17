@@ -60,11 +60,11 @@ public class SortedSAMWriter {
 		
 		UNMAPPED_INDEX = chromosomeChunker.getChunks().size();
 		
-//		writerFactory.setUseAsyncIo(false);
-//		IntelDeflaterFactory intelDeflater = new IntelDeflaterFactory();
-//		writerFactory.setDeflaterFactory(intelDeflater);
-//		
-//		Logger.info("Using intel deflator: " + intelDeflater.usingIntelDeflater());
+		writerFactory.setUseAsyncIo(false);
+		IntelDeflaterFactory intelDeflater = new IntelDeflaterFactory();
+		writerFactory.setDeflaterFactory(intelDeflater);
+		
+		Logger.info("Using intel deflator: " + intelDeflater.usingIntelDeflater());
 		
 		writers = new SAMFileWriter[outputFiles.length][];
 		

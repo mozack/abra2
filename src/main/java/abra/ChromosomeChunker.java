@@ -46,6 +46,7 @@ public class ChromosomeChunker {
 				}
 				
 				chunkGroups.get(chromosome).add(chunkIdx);
+				chunkIdx += 1;
 			}
 						
 /*			
@@ -96,8 +97,16 @@ public class ChromosomeChunker {
 		ChromosomeChunker cc = new ChromosomeChunker(c2r);
 		
 		cc.init();
-		for (Feature chunk : cc.getChunks()) {
+//		for (Feature chunk : cc.getChunks()) {
+//			System.out.println(chunk);
+//		}
+		
+		List<Integer> indices = cc.getChunkGroups().get("chr1");
+		
+		for (Integer idx : indices) {
+			Feature chunk = cc.getChunks().get(idx);
 			System.out.println(chunk);
 		}
+
 	}
 }

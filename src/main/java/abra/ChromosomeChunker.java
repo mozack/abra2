@@ -10,7 +10,8 @@ import abra.Logger.Level;
 public class ChromosomeChunker {
 	
 	// Minimum chromosome chunk size
-	private static final int MIN_CHUNK_SIZE = 50000000;
+	//private static final int MIN_CHUNK_SIZE = 50000000;
+	private static final int MIN_CHUNK_SIZE = 25000000;
 	
 	private CompareToReference2 c2r;
 	

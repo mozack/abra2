@@ -169,7 +169,7 @@ public class ReAligner {
 //			this.spawnChromosomeThread(chromosomeChunkIdx);
 //		}
 		
-		Logger.info("Waiting for all threads to complete");
+		Logger.info("Waiting for processing threads to complete");
 		threadManager.waitForAllThreadsToComplete();
 		
 		if (contigWriter != null) {
@@ -180,7 +180,18 @@ public class ReAligner {
 		
 		clock = new Clock("Sort and cleanup");
 		clock.start();
-		writer.outputFinal();
+		
+		// Cut num threads in half to allow for async writer thread
+		threadManager = new ThreadManager(Math.max(numThreads / 2, 1));
+		
+		for (int i=0; i<outputFiles.length; i++) {
+			SortedSAMWriterRunnable thread = new SortedSAMWriterRunnable(threadManager, writer, i);
+			threadManager.spawnThread(thread);
+		}
+		
+		Logger.info("Waiting for writer threads to complete");
+		threadManager.waitForAllThreadsToComplete();
+		
 		clock.stopAndPrint();
 		
 		Logger.info("Done.");

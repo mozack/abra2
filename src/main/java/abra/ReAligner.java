@@ -185,7 +185,7 @@ public class ReAligner {
 		threadManager = new ThreadManager(Math.max(numThreads / 2, 1));
 		
 		for (int i=0; i<outputFiles.length; i++) {
-			SortedSAMWriterRunnable thread = new SortedSAMWriterRunnable(threadManager, writer, i);
+			SortedSAMWriterRunnable thread = new SortedSAMWriterRunnable(threadManager, writer, i, inputSams[i]);
 			threadManager.spawnThread(thread);
 		}
 		

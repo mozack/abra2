@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -112,7 +113,7 @@ public class SortedSAMWriter {
 //		outputFinalizedChromosomes();
 	}
 	
-	public void outputFinal(int sampleIdx) throws IOException {
+	public void outputFinal(int sampleIdx, String inputBam) throws IOException {
 		
 		Logger.info("Finishing: " + outputFiles[sampleIdx]);
 
@@ -126,7 +127,7 @@ public class SortedSAMWriter {
 			processChromosome(output, sampleIdx, chromosome);
 		}
 		
-//			processUnmapped(output, i);
+		processUnmapped(output, inputBam);
 		
 		output.close();
 	}
@@ -180,20 +181,19 @@ public class SortedSAMWriter {
 		Logger.debug("Final reads output: %d", i);
 	}
 		
-	private void processUnmapped(SAMFileWriter output, int sampleIdx) throws IOException {
-		String filename = getTempFilename(sampleIdx, UNMAPPED_INDEX);
-		File file = new File(filename);
+	private void processUnmapped(SAMFileWriter output, String inputBam) throws IOException {
 		
-		if (file.exists()) {
+		SamReader reader = SAMRecordUtils.getSamReader(inputBam);
+
+		// This should give us only read pairs with both ends unmapped
+		Iterator<SAMRecord> iter = reader.queryUnmapped();
 		
-			SamReader reader = SAMRecordUtils.getSamReader(filename);
-	
-			for (SAMRecord read : reader) {
-				output.addAlignment(read);
-			}
-			
-			reader.close();
+		while (iter.hasNext()) {
+			SAMRecord read = iter.next();
+			output.addAlignment(read);
 		}
+		
+		reader.close();
 	}
 	
 	static class SAMCoordinateComparator implements Comparator<SAMRecord> {

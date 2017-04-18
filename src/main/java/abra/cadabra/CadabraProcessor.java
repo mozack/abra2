@@ -290,7 +290,9 @@ public class CadabraProcessor {
 		Set<String> tumorReadIds = new HashSet<String>();
 		
 		for (SAMRecord read : tumorReads.getReads()) {
-			if (!read.getDuplicateReadFlag() && !read.getReadUnmappedFlag()) {
+			//TODO: Figure out what to do with non-primary alignments.
+			//      Need to reconcile with overlapping read check using read name.
+			if (!read.getDuplicateReadFlag() && !read.getReadUnmappedFlag() && (read.getFlags() & 0x900) == 0) {
 				
 				if (read.getMappingQuality() < MIN_TUMOR_MAPQ) {
 					if (read.getMappingQuality() == 0) {
@@ -314,6 +316,8 @@ public class CadabraProcessor {
 						totalMismatchCount += ym;
 					}
 				} else if (matchesReference(read, position)) {
+					// TODO: Check for agreement in overlapping read pairs for tumor.
+					//       Just check for alt in normal
 					if (!tumorReadIds.contains(read.getReadName())) {
 						tumorRefCount += 1;
 						if (read.getReadNegativeStrandFlag()) {
@@ -384,7 +388,8 @@ public class CadabraProcessor {
 		// Process normal
 		Set<String> normalReadIds = new HashSet<String>();
 		for (SAMRecord read : normalReads.getReads()) {
-			if (!read.getDuplicateReadFlag() && !read.getReadUnmappedFlag()) {
+			//TODO: Figure out what to do with non-primary alignments
+			if (!read.getDuplicateReadFlag() && !read.getReadUnmappedFlag() && (read.getFlags() & 0x900) == 0) {
 				if (read.getMappingQuality() == 0) {
 					normalMapq0 += 1;
 				}

@@ -217,9 +217,9 @@ public class JunctionUtils {
 	// Assuming all inputs on same chromosome
 	protected static boolean isJunctionCombinationValid(Feature region, List<Feature> junctions, int maxJuncDist, int readLength) {
 
-		int maxDist = maxJuncDist;
-		
 		for (int i=0; i<junctions.size()-1; i++) {
+			
+			int maxDist = maxJuncDist;
 			
 			Feature left = junctions.get(i);
 			Feature right = junctions.get(i+1);
@@ -236,7 +236,7 @@ public class JunctionUtils {
 			}
 			
 			// Distance between junctions must be less than maxDist
-			if (right.getStart() - left.getEnd() > maxDist) {
+			if (right.getStart() - left.getEnd() > maxDist) {				
 				return false;
 			}
 		}

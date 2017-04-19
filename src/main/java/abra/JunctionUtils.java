@@ -105,8 +105,11 @@ public class JunctionUtils {
 			Set<Feature> localJunctions = new HashSet<Feature>();;
 			
 			// TODO: Use read length instead of maxRegionLength??
+			// TODO: Should this be window overlap?
+			int regionOverlap = maxRegionLength / 2;
 //			for (int pos=(int) region.getStart()-maxRegionLength; pos<region.getEnd()+maxRegionLength; pos++) {
-			for (int pos=(int) region.getStart()-readLength; pos<region.getEnd()+readLength; pos++) {
+//			for (int pos=(int) region.getStart()-readLength; pos<region.getEnd()+readLength; pos++) {
+			for (int pos=(int) region.getStart()-regionOverlap; pos<region.getEnd()+regionOverlap; pos++) {
 				if (chromosomeJunctionsByStart.containsKey(pos)) {
 					localJunctions.addAll(chromosomeJunctionsByStart.get(pos));
 				}
@@ -215,11 +218,13 @@ public class JunctionUtils {
 	}
 	
 	// Assuming all inputs on same chromosome
-	protected static boolean isJunctionCombinationValid(Feature region, List<Feature> junctions, int maxJuncDist, int readLength) {
+	protected static boolean isJunctionCombinationValid(Feature region, List<Feature> junctions, int maxRegionSize, int readLength) {
 
+		Feature paddedRegion = new Feature(region.getSeqname(), region.getStart()-maxRegionSize/2, region.getEnd()+maxRegionSize/2);
+		
 		for (int i=0; i<junctions.size()-1; i++) {
 			
-			int maxDist = maxJuncDist;
+			int maxDist = maxRegionSize;
 			
 			Feature left = junctions.get(i);
 			Feature right = junctions.get(i+1);
@@ -229,9 +234,16 @@ public class JunctionUtils {
 				return false;
 			}
 			
-			// If either left or right junction is out of region,
-			// limit junc distance to readlength
-			if (!left.overlaps(region) || !right.overlaps(region)) {
+			// Include all junctions within neighboring regions (padded region)
+			// Junctions outside of padded regions should be within a read length of
+			// another junction start/end point.
+			
+			if (!left.overlaps(paddedRegion) || !right.overlaps(paddedRegion)) {
+				// If one of left or right junction is out of region,
+				// limit junc distance to half region size
+
+				// TODO: Should this be the window overlap size?
+//				maxDist = maxRegionSize / 2;
 				maxDist = readLength;
 			}
 			

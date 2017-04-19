@@ -72,7 +72,7 @@ public class JunctionUtilsTest {
 		Feature j4 = new Feature("chr1", 10330, 10500);
 		
 		List<Feature> inputJunctions = Arrays.asList(j1, j2, j3, j4);
-		List<List<Feature>> junctionPerms = JunctionUtils.combineJunctions(inputJunctions, readLength);
+		List<List<Feature>> junctionPerms = JunctionUtils.combineJunctions(new Feature("chr1", 10000, 10400), inputJunctions, readLength, readLength);
 		assertEquals(junctionPerms.size(), 8);
 		
 		// Expected permutations

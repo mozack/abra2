@@ -82,6 +82,10 @@ public class Feature {
 		return overlaps(read.getReferenceName(), read.getAlignmentStart(), alignmentEnd);
 	}
 	
+	public boolean overlaps(Feature that) {
+		return this.overlaps(that.seqname, (int) that.start, (int) that.end);
+	}
+	
 	public boolean overlaps(String chromosome, int startPos, int stopPos) {
 		return ((this.seqname.equals(chromosome)) && overlaps(start, end, startPos, stopPos));
 	}

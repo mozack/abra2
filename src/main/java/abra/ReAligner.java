@@ -223,10 +223,13 @@ public class ReAligner {
 		Map<Feature, Map<SimpleMapper, SSWAlignerResult>> regionContigs = new HashMap<Feature, Map<SimpleMapper, SSWAlignerResult>>();
 		int readCount = 0;
 		
+		// Identify regions overlapping the current chromosome chunk
 		List<Feature> chromosomeRegions = new ArrayList<Feature>();
-		for (Feature region : regions) {
+		for (Feature region : regions) {			
 			if (region.getSeqname().equals(chromosome)) {
-				chromosomeRegions.add(region);
+				if (region.getStart() > chromosomeChunk.getStart()-MAX_REGION_LENGTH && region.getEnd() < chromosomeChunk.getEnd()+MAX_REGION_LENGTH) {
+					chromosomeRegions.add(region);
+				}
 			}
 		}
 		
@@ -692,7 +695,7 @@ public class ReAligner {
 			
 			List<List<Feature>> junctionPermutations = new ArrayList<List<Feature>>();
 			try {
-				junctionPermutations = JunctionUtils.combineJunctions(junctions, (int) region.getLength());
+				junctionPermutations = JunctionUtils.combineJunctions(region, junctions, MAX_REGION_LENGTH, this.readLength);
 			} catch (TooManyJunctionPermutationsException e) {
 				Logger.warn("TOO_MANY_POTENTIAL_JUNCTION_PERMUTATIONS: " + region.getDescriptor());
 			}

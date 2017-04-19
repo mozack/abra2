@@ -104,7 +104,9 @@ public class JunctionUtils {
 			// Junctions for current region
 			Set<Feature> localJunctions = new HashSet<Feature>();;
 			
-			for (int pos=(int) region.getStart()-maxRegionLength; pos<region.getEnd()+maxRegionLength; pos++) {
+			// TODO: Use read length instead of maxRegionLength??
+//			for (int pos=(int) region.getStart()-maxRegionLength; pos<region.getEnd()+maxRegionLength; pos++) {
+			for (int pos=(int) region.getStart()-readLength; pos<region.getEnd()+readLength; pos++) {
 				if (chromosomeJunctionsByStart.containsKey(pos)) {
 					localJunctions.addAll(chromosomeJunctionsByStart.get(pos));
 				}
@@ -161,14 +163,14 @@ public class JunctionUtils {
 		currJunctions.addAll(toAdd);
 	}
 	
-	public static List<List<Feature>> combineJunctions(List<Feature> junctions, int maxJuncDist) throws TooManyJunctionPermutationsException {
+	public static List<List<Feature>> combineJunctions(Feature region, List<Feature> junctions, int maxJuncDist, int readLength) throws TooManyJunctionPermutationsException {
 		List<List<Feature>> combinedJunctions = new ArrayList<List<Feature>>();
 		
 		// Get all possible permutations of junctions regardless of validity
-		List<List<Feature>> junctionLists = combineAllJunctions(junctions, maxJuncDist);
+		List<List<Feature>> junctionLists = combineAllJunctions(region, junctions, maxJuncDist, readLength);
 		
 		for (List<Feature> currJunctions : junctionLists) {
-			if (isJunctionCombinationValid(currJunctions, maxJuncDist)) {
+			if (isJunctionCombinationValid(region, currJunctions, maxJuncDist, readLength)) {
 				combinedJunctions.add(currJunctions);
 			}
 		}
@@ -177,7 +179,7 @@ public class JunctionUtils {
 	}
 	
 	// Produce all possible junction permutations from the input list.
-	private static List<List<Feature>> combineAllJunctions(List<Feature> junctions, int maxJuncDist) throws TooManyJunctionPermutationsException {
+	private static List<List<Feature>> combineAllJunctions(Feature region, List<Feature> junctions, int maxJuncDist, int readLength) throws TooManyJunctionPermutationsException {
 		List<List<Feature>> junctionLists = null;
 		
 		if (junctions.size() == 1) {
@@ -187,7 +189,7 @@ public class JunctionUtils {
 		} else if (junctions.size() > 1) {
 			junctionLists = new ArrayList<List<Feature>>();
 			Feature currentJunction = junctions.get(0);
-			List<List<Feature>> subJuncs = combineAllJunctions(junctions.subList(1, junctions.size()), maxJuncDist);
+			List<List<Feature>> subJuncs = combineAllJunctions(region, junctions.subList(1, junctions.size()), maxJuncDist, readLength);
 			// For each returned list, create a new list with and without the current junction
 			for (List<Feature> subJuncList : subJuncs) {
 				// Pass along sub list without current junction
@@ -197,7 +199,7 @@ public class JunctionUtils {
 				newList.add(currentJunction);
 				newList.addAll(subJuncList);
 				
-				if (isJunctionCombinationValid(newList, maxJuncDist)) {
+				if (isJunctionCombinationValid(region, newList, maxJuncDist, readLength)) {
 					junctionLists.add(newList);
 				}
 				
@@ -213,20 +215,28 @@ public class JunctionUtils {
 	}
 	
 	// Assuming all inputs on same chromosome
-	protected static boolean isJunctionCombinationValid(List<Feature> junctions, int maxJuncDist) {
-//		if (1==1) {
-//			return true;
-//		}
+	protected static boolean isJunctionCombinationValid(Feature region, List<Feature> junctions, int maxJuncDist, int readLength) {
+
+		int maxDist = maxJuncDist;
 		
 		for (int i=0; i<junctions.size()-1; i++) {
 			
+			Feature left = junctions.get(i);
+			Feature right = junctions.get(i+1);
+			
 			// End of left junction must be less than start of right junction 
-			if (junctions.get(i).getEnd() >= junctions.get(i+1).getStart()) {
+			if (left.getEnd() >= right.getStart()) {
 				return false;
 			}
 			
-			// Distance between junctions must be less than readLength*2
-			if (junctions.get(i+1).getStart() - junctions.get(i).getEnd() > maxJuncDist) {
+			// If either left or right junction is out of region,
+			// limit junc distance to readlength
+			if (!left.overlaps(region) || !right.overlaps(region)) {
+				maxDist = readLength;
+			}
+			
+			// Distance between junctions must be less than maxDist
+			if (right.getStart() - left.getEnd() > maxDist) {
 				return false;
 			}
 		}

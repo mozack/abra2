@@ -1127,17 +1127,8 @@ void cleanup(dense_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, s
 		struct node* node = it->second;
 
 		if (node != NULL) {
-
-			// To links for filtered nodes were already freed.
-			if (!node->is_filtered) {
-				cleanup(node->toNodes);
-			}
-
+			cleanup(node->toNodes);
 			cleanup(node->fromNodes);
-
-//			if (node->seq != NULL) {
-//				free(node->seq);
-//			}
 		}
 	}
 
@@ -1219,8 +1210,6 @@ void condense_graph(dense_hash_map<const char*, struct node*, my_hash, eqstr>* n
 
 				int nodes_condensed = 1;
 
-				struct linked_node* prev_last = NULL;
-
 				while (next != NULL && has_one_incoming_edge(next) && nodes_condensed < MAX_CONTIG_SIZE) {
 					last = next->toNodes;
 					seq[idx++] = next->kmer[0];
@@ -1237,11 +1226,6 @@ void condense_graph(dense_hash_map<const char*, struct node*, my_hash, eqstr>* n
 					next = temp;
 
 					nodes_condensed += 1;
-
-					if (prev_last != NULL) {
-						cleanup(prev_last);
-					}
-					prev_last = last;
 				}
 
 				seq[idx] = '\0';
@@ -1255,7 +1239,24 @@ void condense_graph(dense_hash_map<const char*, struct node*, my_hash, eqstr>* n
 
 				// Free original toNodes list
 				cleanup(node->toNodes);
-				node->toNodes = last;
+				// copy last toNodes to this node
+
+				if (last == NULL) {
+					node->toNodes = NULL;
+				} else {
+					struct linked_node* to_link = (linked_node*) malloc(sizeof(linked_node));
+					node->toNodes = to_link;
+
+					while (last != NULL) {
+						to_link->node = last->node;
+						to_link->next = last->next;
+						last = last->next;
+						if (last != NULL) {
+							to_link->next = (linked_node*) malloc(sizeof(linked_node));
+							to_link = to_link->next;
+						}
+					}
+				}
 			}
 		}
 	}

@@ -1180,21 +1180,25 @@ char prev_has_multiple_outgoing_edges(struct node* node) {
 	return prev_bifurcates;
 }
 
-
-
-int condensed_seq_size = 1000000;
-int condensed_seq_idx = 0;
-char* condensed_seq = (char*) calloc(condensed_seq_size, sizeof(char));
+#define CONDENSED_SEQ_SIZE 100000
+__thread int condensed_seq_idx = 0;
+__thread int condensed_seq_cnt = 0;
+__thread char* condensed_seq;
 
 char* get_condensed_seq_buf() {
-	if (condensed_seq_idx + MAX_CONTIG_SIZE+1 >= condensed_seq_size) {
-		condensed_seq_idx = 0;
-		condensed_seq = (char*) calloc(condensed_seq_size, sizeof(char));
+
+	if (condensed_seq_cnt == 0) {
+		condensed_seq_cnt  = 1;
+		condensed_seq = (char*) malloc(CONDENSED_SEQ_SIZE * sizeof(char));
+	}
+
+	if (condensed_seq_idx + MAX_CONTIG_SIZE+1 >= CONDENSED_SEQ_SIZE*condensed_seq_cnt) {
+		condensed_seq_cnt += 1;
+		condensed_seq = (char*) realloc(condensed_seq, CONDENSED_SEQ_SIZE*condensed_seq_cnt * sizeof(char));
 	}
 
 	return condensed_seq + condensed_seq_idx;
 }
-
 
 // NOTE: From nodes are invalid after this step!!!
 void condense_graph(dense_hash_map<const char*, struct node*, my_hash, eqstr>* nodes) {
@@ -1239,6 +1243,8 @@ void condense_graph(dense_hash_map<const char*, struct node*, my_hash, eqstr>* n
 					}
 					prev_last = last;
 				}
+
+				seq[idx] = '\0';
 
 				// Advance condensed seq buffer idx
 				condensed_seq_idx += (strlen(seq) + 1);
@@ -1395,10 +1401,6 @@ char* assemble(const char* input,
 	std::priority_queue<double, std::vector<double>, std::greater<double> > contig_scores;
 	vector<char*> all_contig_fragments;
 
-//	FILE *fp = fopen(output, "w");
-
-	fprintf(stderr, "Before build_contigs...\n");
-	fflush(stderr);
 
 	while (root_nodes != NULL) {
 
@@ -1435,23 +1437,18 @@ char* assemble(const char* input,
 		root_nodes = root_nodes->next;
 	}
 
-	fprintf(stderr, "After build_contigs...\n");
-	fflush(stderr);
-
 	cleanup(nodes, pool);
-
-	fprintf(stderr, "After cleanup...\n");
-	fflush(stderr);
 
 	delete nodes;
 
-	fprintf(stderr, "delete nodes...\n");
-	fflush(stderr);
-
 	free(deleted_key);
 
-	fprintf(stderr, "free deleted_key...\n");
-	fflush(stderr);
+	// Cleanup condensed seq buffer
+	if (condensed_seq_cnt > 0) {
+		free(condensed_seq);
+	}
+	condensed_seq_idx = 0;
+	condensed_seq_cnt = 0;
 
 	long stopTime = time(NULL);
 
@@ -1462,9 +1459,6 @@ char* assemble(const char* input,
 	if (debug) {
 		fprintf(stderr,"Done assembling(%ld): %s, %d\n", (stopTime-startTime), output, contig_count);
 	}
-
-	fprintf(stderr, "Before return...\n");
-	fflush(stderr);
 
 	if (status == OK || status == TOO_MANY_PATHS_FROM_ROOT) {
 		return contig_str;

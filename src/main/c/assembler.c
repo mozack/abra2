@@ -1121,17 +1121,19 @@ int build_contigs(
 
 void cleanup(dense_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, struct struct_pool* pool) {
 
-	fprintf(stderr, "Cleanup start\n");
-	fflush(stderr);
-
 	// Free linked lists
 	for (dense_hash_map<const char*, struct node*, my_hash, eqstr>::const_iterator it = nodes->begin();
 	         it != nodes->end(); ++it) {
 		struct node* node = it->second;
 
 		if (node != NULL) {
-//			cleanup(node->toNodes);
-//			cleanup(node->fromNodes);
+
+			// To links for filtered nodes were already freed.
+			if (!node->is_filtered) {
+				cleanup(node->toNodes);
+			}
+
+			cleanup(node->fromNodes);
 
 //			if (node->seq != NULL) {
 //				free(node->seq);
@@ -1139,47 +1141,23 @@ void cleanup(dense_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, s
 		}
 	}
 
-	fprintf(stderr, "A1\n");
-	fflush(stderr);
-
 	for (int i=0; i<=pool->node_pool->block_idx; i++) {
 		free(pool->node_pool->nodes[i]);
 	}
 
-	fprintf(stderr, "A2\n");
-	fflush(stderr);
-
 	free(pool->node_pool->nodes);
 
-	fprintf(stderr, "A3\n");
-	fflush(stderr);
-
 	free(pool->node_pool);
-
-	fprintf(stderr, "A4\n");
-	fflush(stderr);
 
 	for (int i=0; i<=pool->read_pool->block_idx; i++) {
 		free(pool->read_pool->reads[i]);
 	}
 
-	fprintf(stderr, "A5\n");
-	fflush(stderr);
-
 	free(pool->read_pool->reads);
-
-	fprintf(stderr, "A6\n");
-	fflush(stderr);
 
 	free(pool->read_pool);
 
-	fprintf(stderr, "A7\n");
-	fflush(stderr);
-
 	free(pool);
-
-	fprintf(stderr, "Cleanup done\n");
-	fflush(stderr);
 }
 
 char has_one_incoming_edge(struct node* node) {
@@ -1233,12 +1211,11 @@ void condense_graph(dense_hash_map<const char*, struct node*, my_hash, eqstr>* n
 
 				int idx = 0;
 				char* seq = get_condensed_seq_buf();
-				// TODO: Allow to expand dynamically?
-				// TODO: More miserly use of memory.
-//				char* seq = (char*) calloc(MAX_CONTIG_SIZE, sizeof(char));
 				seq[idx++] = node->kmer[0];
 
 				int nodes_condensed = 1;
+
+				struct linked_node* prev_last = NULL;
 
 				while (next != NULL && has_one_incoming_edge(next) && nodes_condensed < MAX_CONTIG_SIZE) {
 					last = next->toNodes;
@@ -1256,9 +1233,12 @@ void condense_graph(dense_hash_map<const char*, struct node*, my_hash, eqstr>* n
 					next = temp;
 
 					nodes_condensed += 1;
-				}
 
-				fprintf(stderr, "Condensed seq: %s\n", seq);
+					if (prev_last != NULL) {
+						cleanup(prev_last);
+					}
+					prev_last = last;
+				}
 
 				// Advance condensed seq buffer idx
 				condensed_seq_idx += (strlen(seq) + 1);
@@ -1266,6 +1246,9 @@ void condense_graph(dense_hash_map<const char*, struct node*, my_hash, eqstr>* n
 				// Update node
 				node->seq = seq;
 				node->is_condensed = 1;
+
+				// Free original toNodes list
+				cleanup(node->toNodes);
 				node->toNodes = last;
 			}
 		}
@@ -1399,9 +1382,9 @@ char* assemble(const char* input,
 
 	condense_graph(nodes);
 
-	char graph_dump[1024];
-	sprintf(graph_dump, "%s.dot", prefix);
-	dump_graph(nodes, graph_dump);
+//	char graph_dump[1024];
+//	sprintf(graph_dump, "%s.dot", prefix);
+//	dump_graph(nodes, graph_dump);
 
 	int contig_count = 0;
 	char truncate_output = 0;

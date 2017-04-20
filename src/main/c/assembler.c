@@ -61,6 +61,7 @@ __thread int min_base_quality;
 __thread double min_edge_ratio;
 __thread int debug;
 __thread int max_nodes;
+__thread int next_node_id = 1;
 
 #define BIG_CONSTANT(x) (x##LLU)
 
@@ -125,6 +126,14 @@ struct my_hash
 	}
 };
 
+struct eqint
+{
+  bool operator()(int i1, int i2) const
+  {
+    return i1 == i2;
+  }
+};
+
 struct struct_pool {
 	struct node_pool* node_pool;
 	struct read_pool* read_pool;
@@ -151,15 +160,21 @@ struct node {
 
 	//TODO: Collapse from 8 to 2 bits.  Only store as key.
 	char* kmer;
+	char* seq;
+	char kmer_seq[2];
 	//TODO: Convert to stl?
 	struct linked_node* toNodes;
 	struct linked_node* fromNodes;
 	char* contributingRead;
 	unsigned char qual_sums[MAX_KMER_LEN];
 	unsigned short sample_frequency[MAX_SAMPLES];
+	int id;
 	unsigned short frequency;
 	char hasMultipleUniqueReads;
 	char contributing_strand;
+	char is_condensed;
+	char is_filtered;
+	char is_root;
 };
 
 struct linked_node {
@@ -232,6 +247,9 @@ struct node* new_node(char sample_id, char* seq, char* contributingRead, struct_
 
 //	node* my_node = (node*) malloc(sizeof(node));
 	node* my_node = allocate_node(pool);
+
+	my_node->id = next_node_id++;
+
 //	memset(my_node, 0, sizeof(node));
 	my_node->kmer = seq;
 //	strcpy(my_node->contributingRead, contributingRead);
@@ -243,6 +261,7 @@ struct node* new_node(char sample_id, char* seq, char* contributingRead, struct_
 	for (int i=0; i<kmer_size; i++) {
 		my_node->qual_sums[i] = phred33(quals[i]);
 	}
+	my_node->kmer_seq[0] = my_node->kmer[0];
 	return my_node;
 }
 
@@ -761,6 +780,7 @@ struct linked_node* identify_root_nodes(dense_hash_map<const char*, struct node*
 			root_nodes = (linked_node*) malloc(sizeof(linked_node));
 			root_nodes->node = node;
 			root_nodes->next = next;
+			node->is_root = 1;
 
 //			fprintf(stderr,"\tROOT");
 
@@ -776,11 +796,13 @@ struct linked_node* identify_root_nodes(dense_hash_map<const char*, struct node*
 }
 
 struct contig {
-	char seq[MAX_CONTIG_SIZE];
+	vector<char*>* fragments;
+//	char seq[MAX_CONTIG_SIZE];
 	struct node* curr_node;
-	dense_hash_set<const char*, my_hash, eqstr>* visited_nodes;
+	dense_hash_set<int, std::tr1::hash<int>, eqint>* visited_nodes;
 	double score;
-	int size;
+//	int size;
+	int real_size;
 	char is_repeat;
 };
 
@@ -788,54 +810,72 @@ struct contig* new_contig() {
 	struct contig* curr_contig;
 	curr_contig = (contig*) calloc(1, sizeof(contig));
 //	memset(curr_contig->seq, 0, sizeof(curr_contig->seq));
-	curr_contig->size = 0;
+	//curr_contig->size = 0;
+	curr_contig->real_size = 0;
 	curr_contig->is_repeat = 0;
-	curr_contig->visited_nodes = new dense_hash_set<const char*, my_hash, eqstr>();
-	curr_contig->visited_nodes->set_empty_key(NULL);
+	curr_contig->visited_nodes = new dense_hash_set<int, std::tr1::hash<int>, eqint>();
+	curr_contig->visited_nodes->set_empty_key(0);
 	curr_contig->score = 0;
+	curr_contig->fragments = new vector<char*>();
+
 	return curr_contig;
 }
 
 struct contig* copy_contig(struct contig* orig) {
-	struct contig* copy = (contig*) malloc(sizeof(contig));
-	memcpy(copy->seq, orig->seq, MAX_CONTIG_SIZE);
-	strncpy(copy->seq, orig->seq, MAX_CONTIG_SIZE);
-	copy->size = orig->size;
+	struct contig* copy = (contig*) calloc(1, sizeof(contig));
+
+//	memcpy(copy->seq, orig->seq, MAX_CONTIG_SIZE);
+//	strncpy(copy->seq, orig->seq, MAX_CONTIG_SIZE);
+
+	// Copy original fragments to new contig
+	copy->fragments = new vector<char*>(*(orig->fragments));
+
+//	copy->size = orig->size;
+	copy->real_size = orig->real_size;
 	copy->is_repeat = orig->is_repeat;
-	copy->visited_nodes = new dense_hash_set<const char*, my_hash, eqstr>(*orig->visited_nodes);
+	copy->visited_nodes = new dense_hash_set<int, std::tr1::hash<int>, eqint>(*orig->visited_nodes);
 	copy->score = orig->score;
 	return copy;
 }
 
 void free_contig(struct contig* contig) {
 	delete contig->visited_nodes;
-//	memset(contig, 0, sizeof(contig));
+	delete contig->fragments;
 	free(contig);
 }
 
 char is_node_visited(struct contig* contig, struct node* node) {
-	dense_hash_set<const char*, my_hash, eqstr>::const_iterator it = contig->visited_nodes->find(node->kmer);
-	 return it != contig->visited_nodes->end();
+	dense_hash_set<int, std::tr1::hash<int>, eqint>::const_iterator it = contig->visited_nodes->find(node->id);
+	return it != contig->visited_nodes->end();
 }
 
 void output_contig(struct contig* contig, int& contig_count, const char* prefix, char* contigs) {
-	char buf[1024];
 
-	if (strlen(contigs) + strlen(contig->seq) > MAX_TOTAL_CONTIG_LEN) {
-		fprintf(stderr,"contig string too long: %s\n", prefix);
-		exit(-1);
-	}
 
-	if (strlen(contig->seq) >= min_contig_length) {
-		if (contig->is_repeat) {
-			sprintf(buf, ">%s_%d_repeat\n", prefix, contig_count++);
+//	if (strlen(contigs) + strlen(contig->seq) > MAX_TOTAL_CONTIG_LEN) {
+//		fprintf(stderr,"contig string too long: %s\n", prefix);
+//		exit(-1);
+//	}
+
+//	if (strlen(contig->seq) >= min_contig_length) {
+	if (contig->real_size >= min_contig_length) {
+		if (!contig->is_repeat) {
+
+			char buf[MAX_CONTIG_SIZE*2+1];
+			buf[0] = '\0';
+
+			for (vector<char*>::iterator it = contig->fragments->begin(); it != contig->fragments->end(); ++it) {
+				int to_cat = MAX_CONTIG_SIZE - strlen(buf);
+				if (to_cat <= 0) {
+					break;
+				}
+				strncat(buf, *it, to_cat);
+			}
+
+			char id_line[1024];
+			sprintf(id_line, ">%s_%d_%f\n", prefix, contig_count++, contig->score);
+			strcat(contigs, id_line);
 			strcat(contigs, buf);
-			strcat(contigs, contig->seq);
-			strcat(contigs, "\n");
-		} else {
-			sprintf(buf, ">%s_%d_%f\n", prefix, contig_count++, contig->score);
-			strcat(contigs, buf);
-			strcat(contigs, contig->seq);
 			strcat(contigs, "\n");
 		}
 	}
@@ -883,6 +923,27 @@ void update_contig_scores(std::priority_queue<double, std::vector<double>, std::
 	}
 }
 
+// Append curr node to contig
+void append_to_contig(struct contig* contig, vector<char*>& all_contig_fragments, char entire_kmer) {
+
+	if (contig->curr_node->is_condensed) {
+		// Add condensed node sequence to fragment vector
+		contig->fragments->push_back(contig->curr_node->seq);
+		contig->real_size += strlen(contig->curr_node->seq);
+	} else {
+
+		if (!entire_kmer) {
+			contig->fragments->push_back(contig->curr_node->kmer_seq);
+			contig->real_size += 1;
+		} else {
+			char* fragment = (char*) calloc(kmer_size+1, sizeof(char));
+			strncpy(fragment, contig->curr_node->kmer, kmer_size);
+			contig->real_size += kmer_size;
+			all_contig_fragments.push_back(fragment);
+		}
+	}
+}
+
 int build_contigs(
 		struct node* root,
 		int& contig_count,
@@ -892,7 +953,8 @@ int build_contigs(
 		char stop_on_repeat,
 		char shadow_mode,
 		char* contig_str,
-		std::priority_queue<double, std::vector<double>, std::greater<double> > & contig_scores) {
+		std::priority_queue<double, std::vector<double>, std::greater<double> > & contig_scores,
+		vector<char*> & all_contig_fragments) {
 
 	int status = OK;
 	stack<contig*> contigs;
@@ -902,54 +964,49 @@ int build_contigs(
 	root_contig->curr_node = root;
 	contigs.push(root_contig);
 
-	int paths_from_root = 1;
+	// Track all contig fragments
+	// Initialize to reasonably large number to avoid reallocations
+	// TODO: These are just for last kmer in contig.  Use smaller number here?
+	int INIT_FRAGMENTS_PER_THREAD = 10000;
+	all_contig_fragments.clear();
+	all_contig_fragments.reserve(INIT_FRAGMENTS_PER_THREAD);
 
-	int all_contigs_len = 0;
+
+	int paths_from_root = 1;
 
 	while ((contigs.size() > 0) && (status == OK)) {
 		// Get contig from stack
 		struct contig* contig = contigs.top();
 
 		if (is_node_visited(contig, contig->curr_node)) {
-//			fprintf(stderr,"Repeat node: ");
-//			print_kmer(contig->curr_node);
-//			fprintf(stderr,"\n");
 			// We've encountered a repeat
 			contig->is_repeat = 1;
-			if ((!shadow_mode) && (!stop_on_repeat)) {
-				// Add length of contig + padding for prefix
-				all_contigs_len += strlen(contig->seq) + 100;
-				contigs_to_output.push(contig);
-//				output_contig(contig, contig_count, fp, prefix);
-			} else {
-				popped_contigs.push(contig);
-			}
+			popped_contigs.push(contig);
 			contigs.pop();
+
 			if (stop_on_repeat) {
 				status = STOPPED_ON_REPEAT;
 			}
 		}
-		else if (contig->curr_node->toNodes == NULL) {
+		else if (contig->curr_node->toNodes == NULL || contig->real_size >= (MAX_CONTIG_SIZE-1)) {
 			// We've reached the end of the contig.
 			// Append entire current node.
-			memcpy(&(contig->seq[contig->size]), contig->curr_node->kmer, kmer_size);
+
+			append_to_contig(contig, all_contig_fragments, 1);
+
+//			memcpy(&(contig->seq[contig->size]), contig->curr_node->kmer, kmer_size);
 
 			// Now, write the contig
-			if (!shadow_mode) {
-				all_contigs_len += strlen(contig->seq) + 100;
-				contigs_to_output.push(contig);
-				update_contig_scores(contig_scores, contig->score);
-//				output_contig(contig, contig_count, fp, prefix);
-			} else {
-				popped_contigs.push(contig);
-			}
+			contigs_to_output.push(contig);
+			update_contig_scores(contig_scores, contig->score);
+
 			contigs.pop();
-//			free_contig(contig);
 		}
 		else {
 			// Append first base from current node
-			contig->seq[contig->size++] = contig->curr_node->kmer[0];
-			if (contig->size >= MAX_CONTIG_SIZE) {
+			append_to_contig(contig, all_contig_fragments, 0);
+
+			if (contig->real_size >= MAX_CONTIG_SIZE) {
 				char kmer[MAX_KMER_LEN];
 				memset(kmer, 0, MAX_KMER_LEN);
 				strncpy(kmer, contig->curr_node->kmer, kmer_size);
@@ -960,7 +1017,7 @@ int build_contigs(
 				break;
 			}
 
-			contig->visited_nodes->insert(contig->curr_node->kmer);
+			contig->visited_nodes->insert(contig->curr_node->id);
 
 			// Count total edges
 			int total_edge_count = 0;
@@ -1053,10 +1110,19 @@ int build_contigs(
 		free_contig(contig);
 	}
 
+	for (vector<char*>::iterator it=all_contig_fragments.begin(); it != all_contig_fragments.end(); ++it) {
+		free(*it);
+	}
+
+	all_contig_fragments.clear();
+
 	return status;
 }
 
 void cleanup(dense_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, struct struct_pool* pool) {
+
+	fprintf(stderr, "Cleanup start\n");
+	fflush(stderr);
 
 	// Free linked lists
 	for (dense_hash_map<const char*, struct node*, my_hash, eqstr>::const_iterator it = nodes->begin();
@@ -1064,27 +1130,216 @@ void cleanup(dense_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, s
 		struct node* node = it->second;
 
 		if (node != NULL) {
-			cleanup(node->toNodes);
-			cleanup(node->fromNodes);
+//			cleanup(node->toNodes);
+//			cleanup(node->fromNodes);
+
+//			if (node->seq != NULL) {
+//				free(node->seq);
+//			}
 		}
 	}
+
+	fprintf(stderr, "A1\n");
+	fflush(stderr);
 
 	for (int i=0; i<=pool->node_pool->block_idx; i++) {
 		free(pool->node_pool->nodes[i]);
 	}
 
+	fprintf(stderr, "A2\n");
+	fflush(stderr);
+
 	free(pool->node_pool->nodes);
+
+	fprintf(stderr, "A3\n");
+	fflush(stderr);
+
 	free(pool->node_pool);
+
+	fprintf(stderr, "A4\n");
+	fflush(stderr);
 
 	for (int i=0; i<=pool->read_pool->block_idx; i++) {
 		free(pool->read_pool->reads[i]);
 	}
 
+	fprintf(stderr, "A5\n");
+	fflush(stderr);
+
 	free(pool->read_pool->reads);
+
+	fprintf(stderr, "A6\n");
+	fflush(stderr);
+
 	free(pool->read_pool);
 
+	fprintf(stderr, "A7\n");
+	fflush(stderr);
+
 	free(pool);
+
+	fprintf(stderr, "Cleanup done\n");
+	fflush(stderr);
 }
+
+char has_one_incoming_edge(struct node* node) {
+	return node->fromNodes != NULL && node->fromNodes->next == NULL;
+}
+
+char has_one_outgoing_edge(struct node* node) {
+	return node->toNodes != NULL && node->toNodes->next == NULL;
+}
+
+char prev_has_multiple_outgoing_edges(struct node* node) {
+	char prev_bifurcates = 0;
+	if (has_one_incoming_edge(node)) {
+		struct node* prev = node->fromNodes->node;
+		if (prev->toNodes != NULL && prev->toNodes->next != NULL) {
+			prev_bifurcates = 1;
+		}
+	}
+
+	return prev_bifurcates;
+}
+
+
+
+int condensed_seq_size = 1000000;
+int condensed_seq_idx = 0;
+char* condensed_seq = (char*) calloc(condensed_seq_size, sizeof(char));
+
+char* get_condensed_seq_buf() {
+	if (condensed_seq_idx + MAX_CONTIG_SIZE+1 >= condensed_seq_size) {
+		condensed_seq_idx = 0;
+		condensed_seq = (char*) calloc(condensed_seq_size, sizeof(char));
+	}
+
+	return condensed_seq + condensed_seq_idx;
+}
+
+
+// NOTE: From nodes are invalid after this step!!!
+void condense_graph(dense_hash_map<const char*, struct node*, my_hash, eqstr>* nodes) {
+	for (dense_hash_map<const char*, struct node*, my_hash, eqstr>::const_iterator it = nodes->begin();
+	         it != nodes->end(); ++it) {
+		struct node* node = it->second;
+
+		// Starting point 0 or >1 incoming edges or previous node with multiple outgoing edges and curr node has 1 outgoing edge
+		if ((!has_one_incoming_edge(node) || prev_has_multiple_outgoing_edges(node)) && has_one_outgoing_edge(node)) {
+			struct node* next = node->toNodes->node;
+
+			if (has_one_incoming_edge(next)) {
+				struct linked_node* last = next->toNodes;
+
+				int idx = 0;
+				char* seq = get_condensed_seq_buf();
+				// TODO: Allow to expand dynamically?
+				// TODO: More miserly use of memory.
+//				char* seq = (char*) calloc(MAX_CONTIG_SIZE, sizeof(char));
+				seq[idx++] = node->kmer[0];
+
+				int nodes_condensed = 1;
+
+				while (next != NULL && has_one_incoming_edge(next) && nodes_condensed < MAX_CONTIG_SIZE) {
+					last = next->toNodes;
+					seq[idx++] = next->kmer[0];
+					struct node* temp = NULL;
+
+					if (has_one_outgoing_edge(next)) {
+						temp = next->toNodes->node;
+					} else {
+						temp = NULL;
+					}
+
+					next->is_filtered = 1;
+
+					next = temp;
+
+					nodes_condensed += 1;
+				}
+
+				fprintf(stderr, "Condensed seq: %s\n", seq);
+
+				// Advance condensed seq buffer idx
+				condensed_seq_idx += (strlen(seq) + 1);
+
+				// Update node
+				node->seq = seq;
+				node->is_condensed = 1;
+				node->toNodes = last;
+			}
+		}
+	}
+}
+
+void dump_graph(dense_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, const char* filename) {
+
+	fprintf(stderr, "Filename: %s\n", filename);
+	FILE* fp = fopen(filename, "w");
+
+	// Output edges
+	fprintf(fp, "digraph vdjer {\n//\tEdges\n");
+	for (dense_hash_map<const char*, struct node*, my_hash, eqstr>::const_iterator it = nodes->begin();
+				 it != nodes->end(); ++it) {
+
+		const char* key = it->first;
+		node* curr_node = it->second;
+
+		if (!curr_node->is_filtered) {
+			struct linked_node* to_node = curr_node->toNodes;
+
+			while (to_node != NULL) {
+				fprintf(fp, "\tv_%d -> v_%d\n", curr_node->id, to_node->node->id);
+				to_node = to_node->next;
+			}
+		}
+	}
+
+	int num_vertices = 0;
+	int num_condensed = 0;
+
+	// Output vertices
+	fprintf(fp, "//\tVertices\n");
+	for (dense_hash_map<const char*, struct node*, my_hash, eqstr>::const_iterator it = nodes->begin();
+				 it != nodes->end(); ++it) {
+
+		const char* key = it->first;
+		node* curr_node = it->second;
+
+		// Skip orphans
+		if (!curr_node->is_filtered) {
+			if (curr_node->is_condensed) {
+				if (curr_node->is_root) {
+					fprintf(fp, "\tv_%d [label=\"%s\",shape=box,color=green]\n", curr_node->id, curr_node->seq);
+				} else {
+					fprintf(fp, "\tv_%d [label=\"%s\",shape=box,color=blue]\n", curr_node->id, curr_node->seq);
+				}
+				num_condensed += 1;
+			} else {
+				char buf[50];
+				strncpy(buf, curr_node->kmer, kmer_size);
+				buf[kmer_size] = '\0';
+				if (curr_node->is_root) {
+//					fprintf(fp, "\tv_%d [label=\"%s\",shape=box,color=red]\n", curr_node->id, buf);
+					fprintf(fp, "\tv_%d [label=\"%c\",shape=box,color=red]\n", curr_node->id, curr_node->kmer[0]);
+				} else {
+//					fprintf(fp, "\tv_%d [label=\"%s\",shape=box]\n", curr_node->id, buf);
+					fprintf(fp, "\tv_%d [label=\"%c\",shape=box]\n", curr_node->id, curr_node->kmer[0]);
+				}
+			}
+
+			num_vertices += 1;
+		}
+	}
+
+	fprintf(fp, "}\n");
+
+	fclose(fp);
+
+	fprintf(stderr, "Num traversable vertices: %d\n", num_vertices);
+	fprintf(stderr, "Num condensed vertices: %d\n", num_condensed);
+}
+
 
 char* assemble(const char* input,
 			  const char* output,
@@ -1142,6 +1397,12 @@ char* assemble(const char* input,
 		root_nodes = identify_root_nodes(nodes);
 	}
 
+	condense_graph(nodes);
+
+	char graph_dump[1024];
+	sprintf(graph_dump, "%s.dot", prefix);
+	dump_graph(nodes, graph_dump);
+
 	int contig_count = 0;
 	char truncate_output = 0;
 
@@ -1149,13 +1410,19 @@ char* assemble(const char* input,
 //	memset(contig_str, 0, MAX_TOTAL_CONTIG_LEN);
 
 	std::priority_queue<double, std::vector<double>, std::greater<double> > contig_scores;
+	vector<char*> all_contig_fragments;
 
 //	FILE *fp = fopen(output, "w");
+
+	fprintf(stderr, "Before build_contigs...\n");
+	fflush(stderr);
+
 	while (root_nodes != NULL) {
 
 		int shadow_count = 0;
 
-		status = build_contigs(root_nodes->node, contig_count, prefix, max_paths_from_root, max_contigs, truncate_on_repeat, false, contig_str, contig_scores);
+		status = build_contigs(root_nodes->node, contig_count, prefix, max_paths_from_root, max_contigs,
+				truncate_on_repeat, false, contig_str, contig_scores, all_contig_fragments);
 
 		switch(status) {
 			case TOO_MANY_CONTIGS:
@@ -1185,11 +1452,23 @@ char* assemble(const char* input,
 		root_nodes = root_nodes->next;
 	}
 
+	fprintf(stderr, "After build_contigs...\n");
+	fflush(stderr);
+
 	cleanup(nodes, pool);
+
+	fprintf(stderr, "After cleanup...\n");
+	fflush(stderr);
 
 	delete nodes;
 
+	fprintf(stderr, "delete nodes...\n");
+	fflush(stderr);
+
 	free(deleted_key);
+
+	fprintf(stderr, "free deleted_key...\n");
+	fflush(stderr);
 
 	long stopTime = time(NULL);
 
@@ -1200,6 +1479,9 @@ char* assemble(const char* input,
 	if (debug) {
 		fprintf(stderr,"Done assembling(%ld): %s, %d\n", (stopTime-startTime), output, contig_count);
 	}
+
+	fprintf(stderr, "Before return...\n");
+	fflush(stderr);
 
 	if (status == OK || status == TOO_MANY_PATHS_FROM_ROOT) {
 		return contig_str;

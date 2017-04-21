@@ -29,14 +29,17 @@ public class ReAlignerOptions extends Options {
 	private static final String MIN_EDGE_RATIO = "mer";
 	private static final String MAX_NODES = "maxn";
 	private static final String SKIP_ASSEMBLY = "sa";
-	private static final String SW_SOFT_CLIP = "sws";
+	private static final String SKIP_SOFT_CLIP = "ssc";
+	private static final String SOFT_CLIP = "sc";
+	private static final String SKIP_OBS_INDELS = "sobs";
+//	private static final String SW_SOFT_CLIP = "sws";
 	private static final String JUNCTIONS = "junctions";
 	private static final String LOG_LEVEL = "log";
 	private static final String CONTIG_FILE	 = "contigs";
 	private static final String GTF_JUNCTIONS = "gtf";
 	private static final String SW_SCORING = "sw";
 	private static final String MAX_CACHED_READS = "mcr";
-	private static final String USE_OBSERVED_INDELS = "obs";
+//	private static final String USE_OBSERVED_INDELS = "obs";
 	private static final String KEEP_TMP = "keep-tmp";
 	private static final String TMP_DIR = "tmpdir";
 	private static final String CONSENSUS_SEQ = "cons";
@@ -73,10 +76,11 @@ public class ReAlignerOptions extends Options {
             parser.accepts(LOG_LEVEL, "Logging level (trace,debug,info,warn,error)").withRequiredArg().ofType(String.class).defaultsTo("info");
             parser.accepts(CONTIG_FILE, "Optional file to which assembled contigs are written").withRequiredArg().ofType(String.class);
             parser.accepts(GTF_JUNCTIONS, "GTF file defining exons and transcripts").withRequiredArg().ofType(String.class);
-            parser.accepts(SW_SOFT_CLIP, "Enable Smith Waterman alignment of high quality soft clipped sequence (Experimental)").withOptionalArg().ofType(String.class).defaultsTo("32,13,80,8");
+            parser.accepts(SKIP_SOFT_CLIP, "Skip usage of soft clipped sequences as putative contigs");
+            parser.accepts(SOFT_CLIP, "Soft clip contig args [max_contigs,min_base_qual,frac_high_qual_bases,min_soft_clip_len]").withRequiredArg().ofType(String.class).defaultsTo("32,13,80,8");
             parser.accepts(SW_SCORING, "Smith Waterman scoring used for contig alignments (match, mismatch_penalty, gap_open_penalty, gap_extend_penalty)").withRequiredArg().ofType(String.class).defaultsTo("8,32,48,1");
             parser.accepts(MAX_CACHED_READS, "Max number of cached reads per sample per thread").withRequiredArg().ofType(Integer.class).defaultsTo(500000);
-            parser.accepts(USE_OBSERVED_INDELS, "Use observed indels in original alignments to generate contigs (Experimental)");
+            parser.accepts(SKIP_OBS_INDELS, "Do not use observed indels in original alignments to generate contigs");
             parser.accepts(KEEP_TMP, "Do not delete the temporary directory");
             parser.accepts(TMP_DIR, "Set the temp directory (overrides java.io.tmpdir)").withRequiredArg().ofType(String.class);
             parser.accepts(CONSENSUS_SEQ, "Use positional consensus sequence when aligning high quality soft clipping");
@@ -237,11 +241,11 @@ public class ReAlignerOptions extends Options {
 	}
 	
 	public boolean useObservedIndels() {
-		return getOptions().has(USE_OBSERVED_INDELS);
+		return !getOptions().has(SKIP_OBS_INDELS);
 	}
 	
 	public boolean useSoftClippedReads() {
-		return getOptions().has(SW_SOFT_CLIP);
+		return !getOptions().has(SKIP_SOFT_CLIP);
 	}
 	
 	public boolean useConsensusSequence() {
@@ -312,7 +316,7 @@ public class ReAlignerOptions extends Options {
 	}
 	
 	public int[] getSoftClipParams() {
-		String params = (String) getOptions().valueOf(SW_SOFT_CLIP);
+		String params = (String) getOptions().valueOf(SOFT_CLIP);
 		String[] fields = params.split(",");
 		if (fields.length != 4) {
 			Logger.error("4 values required for SW soft clip params");

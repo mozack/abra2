@@ -1212,7 +1212,15 @@ void condense_graph(dense_hash_map<const char*, struct node*, my_hash, eqstr>* n
 
 				while (next != NULL && has_one_incoming_edge(next) && nodes_condensed < MAX_CONTIG_SIZE) {
 					last = next->toNodes;
-					seq[idx++] = next->kmer[0];
+
+					if (next->toNodes != NULL) {
+						seq[idx++] = next->kmer[0];
+					} else {
+						// End of path, copy entire kmer
+						strncpy(&(seq[idx]), next->kmer, kmer_size);
+						idx += kmer_size;
+					}
+
 					struct node* temp = NULL;
 
 					if (has_one_outgoing_edge(next)) {

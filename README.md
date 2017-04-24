@@ -1,6 +1,6 @@
 # ABRA2
 
-ABRA2 is an updated implementation of ABRA (https://github.com/mozack/abra) featuring:
+ABRA2 is an updated implementation of [ABRA](https://github.com/mozack/abra) featuring:
 * RNA support
 * Improved scalability (Human whole genomes now supported)
 * Improved accuracy
@@ -16,7 +16,7 @@ Sample command for DNA:
 
 ```java -Xmx16G -jar abra2-2.05.jar --in normal.bam,tumor.bam --out normal.abra.bam,tumor.abra.bam --ref hg38.fa --threads 8 --targets targets.bed --tmpdir /your/tmpdir > abra.log```
 
-The above accepts normal.bam and tumor.bam as input and outpus realigned BAM files named normal.abra.bam and tumor.abra.bam
+The above accepts normal.bam and tumor.bam as input and outputs sorted realigned BAM files named normal.abra.bam and tumor.abra.bam
 
 * Input files must be sorted by coordinate and index
 * Output files will be sorted
@@ -38,4 +38,5 @@ Junctions observed during alignment can be passed in using the ```--junctions```
 Annotated junctions can be passed in using the ```--gtf``` param.  See: https://www.gencodegenes.org/releases/current.html  
 It is beneficial to use both of the junction related options.
 
-The software is currently considered beta quality. 
+The software is currently considered beta quality.
+

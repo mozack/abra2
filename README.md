@@ -19,7 +19,7 @@ Sample command for DNA:
 The above accepts normal.bam and tumor.bam as input and outputs sorted realigned BAM files named normal.abra.bam and tumor.abra.bam
 
 * Input files must be sorted by coordinate and index
-* Output files will be sorted
+* Output files are sorted
 * The tmpdir may grow large.  Be sure you have sufficient space there (at least equal to the input file size)
 * The targets argument is not required.  When omitted, the entire genome will be eligible for realignment.
 

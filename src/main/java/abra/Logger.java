@@ -42,7 +42,7 @@ public class Logger {
 	
 	public static void info(String format, Object... args) {
 		if (LEVEL == Level.TRACE || LEVEL == Level.DEBUG || LEVEL == Level.INFO) {
-			log(String.format(format, args), Level.DEBUG);
+			log(String.format(format, args), Level.INFO);
 		}
 	}
 		

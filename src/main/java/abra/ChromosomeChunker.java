@@ -69,9 +69,9 @@ public class ChromosomeChunker {
 */
 		}
 		
-		Logger.info("Chromosome chunks:");
+		Logger.debug("Chromosome chunks:");
 		for (Feature chunk : chunks) {
-			Logger.info(chunk.toString());
+			Logger.debug(chunk.toString());
 		}
 	}
 	

@@ -125,9 +125,9 @@ public class NativeAssembler {
 	//TODO: Consider always assembling regions that contain a junction as specified by input file.
 	private boolean isAssemblyTriggerCandidate(SAMRecord read, CompareToReference2 c2r) {
 		
-		// Unmapped read anchored by mate
+		// Unmapped read anchored by mate without substantive trimming
 		// TODO: Check base qualities?
-		if (read.getReadUnmappedFlag() && !read.getMateUnmappedFlag()) {
+		if (read.getReadUnmappedFlag() && !read.getMateUnmappedFlag() && read.getReadLength() >= readLength * .9) {
 			return true;
 		}
 		
@@ -196,6 +196,7 @@ public class NativeAssembler {
 					
 					if (read.shouldAssemble()) {
 						if (!isAssemblyCandidate && isAssemblyTriggerCandidate(read.getSamRecord(), c2r)) {
+							System.err.println("trigger: " + sampleIdx + " : " + read.getSamRecord().getSAMString());
 							candidateReadCount++;
 						}
 						unfilteredReads[sampleIdx] += 1;

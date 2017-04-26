@@ -210,6 +210,8 @@ public class NativeAssembler {
 			
 			if (isAssemblyCandidate) {
 				
+				Logger.debug("ASSEMBLY_TRIGGERED\t", regions.get(0));
+				
 				if ((kmers.length == 0) || (kmers[0] < KmerSizeEvaluator.MIN_KMER)) {
 					KmerSizeEvaluator kmerEval = new KmerSizeEvaluator();
 					int kmer = kmerEval.identifyMinKmer(readLength, c2r, regions);
@@ -233,7 +235,17 @@ public class NativeAssembler {
 					
 					for (SAMRecordWrapper readWrapper : reads) {
 						SAMRecord read = readWrapper.getSamRecord();
+						
+						if (read.getReadString().contains("GCGTCGCGACCCG")) {
+							System.err.println("Examining: " + read.getSAMString());
+						}
+						
 						if (readWrapper.shouldAssemble() && random.nextDouble() < keepProbability) {
+							
+							if (read.getReadString().contains("GCGTCGCGACCCG")) {
+								System.err.println("Including: " + read.getSAMString());
+							}
+							
 							readBuffer.append(sampleId);
 							readBuffer.append(read.getReadNegativeStrandFlag() ? "1" : "0");
 							

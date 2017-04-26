@@ -21,6 +21,16 @@ import htsjdk.samtools.ValidationStringency;
  */
 public class SAMRecordUtils {
 
+	public static int getNumHighQualBases(SAMRecord read, int minBq) {
+		int count = 0;
+		for (byte bq : read.getBaseQualities()) {
+			if (bq >= minBq) {
+				count += 1;
+			}
+		}
+		return count;
+	}
+	
 	/**
 	 * Replace hard clips with soft clips.
 	 */

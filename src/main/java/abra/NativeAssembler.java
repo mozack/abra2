@@ -122,39 +122,66 @@ public class NativeAssembler {
 		return len;
 	}
 	
+	private int numSoftClippedBases(SAMRecord read) {
+		int count = 0;
+		if (read.getCigarLength() > 1) {
+			CigarElement elem = read.getCigar().getCigarElement(0);
+			if (elem.getOperator() == CigarOperator.S) {
+				count += elem.getLength();
+			}
+			
+			elem = read.getCigar().getCigarElement(read.getCigarLength()-1);
+			if (elem.getOperator() == CigarOperator.S) {
+				count += elem.getLength();
+			}			
+		}
+		
+		return count;
+	}
+	
 	//TODO: Consider always assembling regions that contain a junction as specified by input file.
 	private boolean isAssemblyTriggerCandidate(SAMRecord read, CompareToReference2 c2r) {
 		
-		// Unmapped read anchored by mate without substantive trimming
-		// TODO: Check base qualities?
-		if (read.getReadUnmappedFlag() && !read.getMateUnmappedFlag() && read.getReadLength() >= readLength * .9) {
-			return true;
-		}
-		
-		// Increment candidate count for substantial high quality soft clipping
-		// TODO: Higher base quality threshold?
-		if (read.getCigarString().contains("S") && (c2r.numHighQualityMismatches(read, MIN_CANDIDATE_BASE_QUALITY) > (readLength/10))) {
+		// High quality unmapped read anchored by mate
+		if (read.getReadUnmappedFlag() && !read.getMateUnmappedFlag() &&
+			read.getReadLength() >= readLength * .9 && 
+			SAMRecordUtils.getNumHighQualBases(read, MIN_CANDIDATE_BASE_QUALITY) >= readLength * .9) {
 			return true;
 		}
 		
 		int numGaps = countGaps(read.getCigar());
-
 		// More than one indel and/or splice in read
-		if (numGaps > 1) {
-			return true;
+//		if (numGaps > 1) {
+//			return true;
+//		}
+		
+		if (numGaps > 0 || numSoftClippedBases(read) > readLength/10) {
+			int qualAdjustedEditDist = c2r.numHighQualityMismatches(read, MIN_CANDIDATE_BASE_QUALITY) + SAMRecordUtils.getNumIndelBases(read);
+			if (qualAdjustedEditDist > (readLength/10)) {
+				return true;
+			}
 		}
+		
+		// Increment candidate count for substantial high quality soft clipping
+		// TODO: Higher base quality threshold?
+//		if (read.getCigarString().contains("S") && (c2r.numHighQualityMismatches(read, MIN_CANDIDATE_BASE_QUALITY) > (readLength/10))) {
+//			return true;
+//		}
+
+
 		
 		// if indel is at least 10% of read length
 		// TODO: Longer threshold (especially for deletions)?
-		if (numGaps == 1 && firstIndelLength(read.getCigar()) >= (readLength/10)) {
-			return true;
-		}
+//		if (numGaps == 1 && firstIndelLength(read.getCigar()) >= (readLength/10)) {
+//			return true;
+//		}
 		
 		// Read contains indel / intron and SNV (inclusive of soft clip mismatch)
 		// TODO: Higher base qual threshold?
-		if (numGaps > 0 && c2r.numHighQualityMismatches(read, MIN_CANDIDATE_BASE_QUALITY) > 0) {
-			return true;
-		}
+		// TODO: Minimum edit dist (1 base indel + 1 mismatch insufficient)
+//		if (numGaps > 0 && c2r.numHighQualityMismatches(read, MIN_CANDIDATE_BASE_QUALITY) > 0) {
+//			return true;
+//		}
 		
 		// Increment candidate count for indels
 //		if (read.getCigarString().contains("I") || read.getCigarString().contains("D") || read.getCigarString().contains("N")) {
@@ -196,14 +223,14 @@ public class NativeAssembler {
 					
 					if (read.shouldAssemble()) {
 						if (!isAssemblyCandidate && isAssemblyTriggerCandidate(read.getSamRecord(), c2r)) {
-							System.err.println("trigger: " + sampleIdx + " : " + read.getSamRecord().getSAMString());
+//							System.err.println("trigger: " + sampleIdx + " : " + read.getSamRecord().getSAMString());
 							candidateReadCount++;
 						}
 						unfilteredReads[sampleIdx] += 1;
 					}
 				}
 				
-				if (candidateReadCount > minCandidateCount(unfilteredReads[sampleIdx], regions.get(0))) {
+				if (candidateReadCount >= minCandidateCount(unfilteredReads[sampleIdx], regions.get(0))) {
 					isAssemblyCandidate = true;
 				}
 				

@@ -126,11 +126,13 @@ public class NativeAssembler {
 	private boolean isAssemblyTriggerCandidate(SAMRecord read, CompareToReference2 c2r) {
 		
 		// Unmapped read anchored by mate
+		// TODO: Check base qualities?
 		if (read.getReadUnmappedFlag() && !read.getMateUnmappedFlag()) {
 			return true;
 		}
 		
 		// Increment candidate count for substantial high quality soft clipping
+		// TODO: Higher base quality threshold?
 		if (read.getCigarString().contains("S") && (c2r.numHighQualityMismatches(read, MIN_CANDIDATE_BASE_QUALITY) > (readLength/10))) {
 			return true;
 		}
@@ -143,11 +145,13 @@ public class NativeAssembler {
 		}
 		
 		// if indel is at least 10% of read length
+		// TODO: Longer threshold (especially for deletions)?
 		if (numGaps == 1 && firstIndelLength(read.getCigar()) >= (readLength/10)) {
 			return true;
 		}
 		
 		// Read contains indel / intron and SNV (inclusive of soft clip mismatch)
+		// TODO: Higher base qual threshold?
 		if (numGaps > 0 && c2r.numHighQualityMismatches(read, MIN_CANDIDATE_BASE_QUALITY) > 0) {
 			return true;
 		}
@@ -210,7 +214,7 @@ public class NativeAssembler {
 			
 			if (isAssemblyCandidate) {
 				
-				Logger.debug("ASSEMBLY_TRIGGERED\t", regions.get(0));
+				Logger.debug("ASSEMBLY_TRIGGERED\t%s", regions.get(0));
 				
 				if ((kmers.length == 0) || (kmers[0] < KmerSizeEvaluator.MIN_KMER)) {
 					KmerSizeEvaluator kmerEval = new KmerSizeEvaluator();

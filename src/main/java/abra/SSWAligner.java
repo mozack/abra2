@@ -111,7 +111,20 @@ public class SSWAligner {
 				// Do not allow indels at the edges of contigs.
 				if (first.getOperator() != CigarOperator.M || first.getLength() < 10 || 
 					last.getOperator() != CigarOperator.M || last.getLength() < 10) {
-					return SSWAlignerResult.INDEL_NEAR_END;
+
+					if ((first.getOperator() != CigarOperator.M || last.getOperator() != CigarOperator.M) &&
+							cigar.toString().contains("I")) {
+						Logger.trace("INDEL_NEAR_END: %s", cigar.toString());
+						return SSWAlignerResult.INDEL_NEAR_END;
+					}
+					
+					if ((first.getLength() < 5 || last.getLength() < 5) && 
+							cigar.toString().contains("I")) {
+						Logger.trace("INDEL_NEAR_END: %s", cigar.toString());
+						return SSWAlignerResult.INDEL_NEAR_END;						
+					}
+
+					return null;
 				}
 					
 					int endPos = sgResult.position + cigar.getReferenceLength();
@@ -135,7 +148,20 @@ public class SSWAligner {
 					// Do not allow indels at the edges of contigs.
 					if (first.getOperator() != CigarOperator.M || first.getLength() < 10 || 
 						last.getOperator() != CigarOperator.M || last.getLength() < 10) {
-						return SSWAlignerResult.INDEL_NEAR_END;
+						
+						if ((first.getOperator() != CigarOperator.M || last.getOperator() != CigarOperator.M) &&
+								cigar.toString().contains("I")) {
+							Logger.trace("INDEL_NEAR_END: %s", cigar.toString());
+							return SSWAlignerResult.INDEL_NEAR_END;
+						}
+						
+						if ((first.getLength() < 5 || last.getLength() < 5) && 
+								cigar.toString().contains("I")) {
+							Logger.trace("INDEL_NEAR_END: %s", cigar.toString());
+							return SSWAlignerResult.INDEL_NEAR_END;						
+						}
+
+						return null;
 					}
 						
 						// Require first and last 10 bases of contig to be similar to ref

@@ -826,6 +826,7 @@ public class ReAligner {
 							assemblerSettings.getMinEdgeRatio()/2.0);
 					
 					if (shouldRetry) {
+						Logger.info("RETRY_ASSEMBLY: %s", region);
 						// Indel near edge of contig indicates that we may have a low coverage indel encountered.
 						// Try to reassemble using less stringent pruning to see if we can get greater coverage.
 						results.clear();

@@ -109,8 +109,10 @@ public class SSWAligner {
 				CigarElement last = cigar.getLastCigarElement();
 				
 				// Do not allow indels at the edges of contigs.
-				if (first.getOperator() == CigarOperator.M && first.getLength() >= 10 && 
-					last.getOperator() == CigarOperator.M && last.getLength() >= 10) {
+				if (first.getOperator() != CigarOperator.M || first.getLength() < 10 || 
+					last.getOperator() != CigarOperator.M || last.getLength() < 10) {
+					return SSWAlignerResult.INDEL_NEAR_END;
+				}
 					
 					int endPos = sgResult.position + cigar.getReferenceLength();
 					
@@ -130,9 +132,11 @@ public class SSWAligner {
 					String textCigar = TextCigarCodec.encode(cigar);
 					Logger.trace("OLD_CIGAR: %s\tNEW_CIGAR%s", sgResult.cigar, textCigar);
 					
-					//TODO: Just do this once?
-					if (first.getOperator() == CigarOperator.M && first.getLength() >= 10 && 
-							last.getOperator() == CigarOperator.M && last.getLength() >= 10) {
+					// Do not allow indels at the edges of contigs.
+					if (first.getOperator() != CigarOperator.M || first.getLength() < 10 || 
+						last.getOperator() != CigarOperator.M || last.getLength() < 10) {
+						return SSWAlignerResult.INDEL_NEAR_END;
+					}
 						
 						// Require first and last 10 bases of contig to be similar to ref
 						int mismatches = 0;
@@ -163,8 +167,8 @@ public class SSWAligner {
 								result = finishAlignment(sgResult.position, endPos, textCigar, sgResult.score, seq);
 							}
 						}
-					}
-				}
+//					}
+//				}
 			}
 		} else {
 			// Require minimum of minContigLength or 90% of the input sequence to align
@@ -239,7 +243,12 @@ public class SSWAligner {
 		private String sequence;
 		private int score;
 		private boolean isSecondary = false;
+		
+		public static final SSWAlignerResult INDEL_NEAR_END = new SSWAlignerResult();
 
+		private SSWAlignerResult() {
+		}
+		
 		SSWAlignerResult(int refPos, String cigar, String chromosome, int refContextStart, String sequence, int score) {
 			this.localRefPos = refPos;
 			this.cigar = cigar;

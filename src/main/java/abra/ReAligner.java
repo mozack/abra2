@@ -661,6 +661,45 @@ public class ReAligner {
 //		mappedContigs.put(new SimpleMapper(bestResult.getSequence()), bestResult);
 	}
 	
+	private boolean assemble(List<SSWAlignerResult> results, Feature region, 
+			String refSeq, List<String> bams, List<List<SAMRecordWrapper>> readsList, SSWAligner ssw,
+			List<SSWAligner> sswJunctions, int mnf, int mbq, double mer) throws IOException {
+		
+		boolean shouldRetry = false;
+		
+		NativeAssembler assem = (NativeAssembler) newAssembler(region);
+		List<Feature> regions = new ArrayList<Feature>();
+		regions.add(region); 
+		String contigs = assem.assembleContigs(bams, regions, region.getDescriptor(), true, this, c2r, readsList, mnf, mbq, mer);
+		
+		if (!contigs.equals("<ERROR>") && !contigs.equals("<REPEAT>") && !contigs.isEmpty()) {
+			
+			if (contigWriter != null) {
+				appendContigs(contigs);
+			}
+			
+			List<ScoredContig> scoredContigs = ScoredContig.convertAndFilter(contigs);
+			
+			// Map contigs to reference
+			for (ScoredContig contig : scoredContigs) {
+				// Filter contigs that match the reference
+				if (!refSeq.contains(contig.getContig())) {
+					
+					SSWAlignerResult sswResult = alignContig(contig.getContig(), ssw, sswJunctions);
+					
+					if (sswResult == SSWAlignerResult.INDEL_NEAR_END) {
+						shouldRetry = true;
+					} else if (sswResult != null) {
+						// TODO: In multi-region processing, check to ensure identical contigs have identical mappings
+						results.add(sswResult);
+					}
+				}
+			}
+		} 
+		
+		return shouldRetry;
+	}
+	
 	public Map<SimpleMapper, SSWAlignerResult> processRegion(Feature region, List<List<SAMRecordWrapper>> reads, List<Feature> junctions) throws Exception {
 		
 		long start = System.currentTimeMillis();
@@ -781,33 +820,23 @@ public class ReAligner {
 				if (this.isSkipAssembly || region.getKmer() > this.readLength-15) {
 					Logger.debug("Skipping assembly of region: " + region.getDescriptor() + " - " + region.getKmer());
 				} else {
-					NativeAssembler assem = (NativeAssembler) newAssembler(region);
-					List<Feature> regions = new ArrayList<Feature>();
-					regions.add(region); 
-					String contigs = assem.assembleContigs(bams, regions, region.getDescriptor(), true, this, c2r, readsList);
+					List<SSWAlignerResult> results = new ArrayList<SSWAlignerResult>();
+					boolean shouldRetry = assemble(results, region, refSeq, bams, readsList, ssw, sswJunctions,
+							assemblerSettings.getMinNodeFrequncy(), assemblerSettings.getMinBaseQuality(),
+							assemblerSettings.getMinEdgeRatio()/2.0);
 					
-					if (!contigs.equals("<ERROR>") && !contigs.equals("<REPEAT>") && !contigs.isEmpty()) {
-						
-						if (contigWriter != null) {
-							appendContigs(contigs);
-						}
-						
-						List<ScoredContig> scoredContigs = ScoredContig.convertAndFilter(contigs);
-						
-						// Map contigs to reference
-						for (ScoredContig contig : scoredContigs) {
-							// Filter contigs that match the reference
-							if (!refSeq.contains(contig.getContig())) {
-								
-								SSWAlignerResult sswResult = alignContig(contig.getContig(), ssw, sswJunctions);
-								
-								if (sswResult != null) {
-									// TODO: In multi-region processing, check to ensure identical contigs have identical mappings
-									mappedContigs.put(new SimpleMapper(sswResult.getSequence(), maxMismatchRate), sswResult);
-								}
-							}
-						}
-					} 
+					if (shouldRetry) {
+						// Indel near edge of contig indicates that we may have a low coverage indel encountered.
+						// Try to reassemble using less stringent pruning to see if we can get greater coverage.
+						results.clear();
+						assemble(results, region, refSeq, bams, readsList, ssw, sswJunctions,
+								assemblerSettings.getMinNodeFrequncy()/2, assemblerSettings.getMinBaseQuality()/2,
+								assemblerSettings.getMinEdgeRatio()/2.0);
+					}
+					
+					for (SSWAlignerResult sswResult : results) {
+						mappedContigs.put(new SimpleMapper(sswResult.getSequence(), maxMismatchRate), sswResult);
+					}
 				}
 				
 				if (useSoftClippedReads || useObservedIndels) {
@@ -819,8 +848,10 @@ public class ReAligner {
 					
 					for (String contig : altContigs) {
 						// TODO: Check to see if this contig is already in the map before aligning
+						
+						//TODO: Include junctions !!!
 						SSWAlignerResult sswResult = ssw.align(contig);
-						if (sswResult != null) {
+						if (sswResult != null && sswResult != SSWAlignerResult.INDEL_NEAR_END) {
 							// Set as secondary for remap prioritization
 							sswResult.setSecondary(true);
 							// Store for read mapping

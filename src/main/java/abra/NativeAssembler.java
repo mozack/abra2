@@ -199,7 +199,8 @@ public class NativeAssembler {
 	}
 	
 	public String assembleContigs(List<String> inputFiles, List<Feature> regions, String prefix,
-			boolean checkForDupes, ReAligner realigner, CompareToReference2 c2r, List<List<SAMRecordWrapper>> readsList) {
+			boolean checkForDupes, ReAligner realigner, CompareToReference2 c2r, List<List<SAMRecordWrapper>> readsList,
+			int mnf, int mbq, double mer) {
 		
 				
 		String contigs = "";
@@ -267,16 +268,8 @@ public class NativeAssembler {
 					
 					for (SAMRecordWrapper readWrapper : reads) {
 						SAMRecord read = readWrapper.getSamRecord();
-						
-						if (read.getReadString().contains("GCGTCGCGACCCG")) {
-							System.err.println("Examining: " + read.getSAMString());
-						}
-						
+												
 						if (readWrapper.shouldAssemble() && random.nextDouble() < keepProbability) {
-							
-							if (read.getReadString().contains("GCGTCGCGACCCG")) {
-								System.err.println("Including: " + read.getSAMString());
-							}
 							
 							readBuffer.append(sampleId);
 							readBuffer.append(read.getReadNegativeStrandFlag() ? "1" : "0");
@@ -321,9 +314,9 @@ public class NativeAssembler {
 							maxPathsFromRoot,
 							readLength,
 							kmer,
-							minKmerFrequency,
-							minBaseQuality,
-							minEdgeRatio,
+							Math.max(mnf, 1),
+							Math.max(mbq, 20),  // TODO: Define  min mbq/mer elsewhere.
+							Math.max(mer, .001),
 							Logger.LEVEL == Logger.Level.DEBUG || Logger.LEVEL == Logger.Level.TRACE ? 1 : 0,
 							maxNodes);
 					

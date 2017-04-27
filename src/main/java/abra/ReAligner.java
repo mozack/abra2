@@ -716,28 +716,28 @@ public class ReAligner {
 		List<List<SAMRecordWrapper>> readsList = subsetReads(region, reads);
 		
 		boolean isRegionOk = true;
-		for (List<SAMRecordWrapper> sampleReads : readsList) {
-			
-			// TODO: Parameterize
-			if (sampleReads.size() > 10000) {
-				Logger.info("Too many reads in %s: %d", region, sampleReads.size());
-				isRegionOk = false;
-				break;
-			}
-			
-			int lowMapq = 0;
-			for (SAMRecordWrapper read : sampleReads) {
-				if (read.getSamRecord().getMappingQuality() < minMappingQuality) {
-					lowMapq += 1; 
-				}
-			}
-			
-			if ((float) lowMapq / (float) sampleReads.size() > .25) {
-				Logger.info("Too many low mapq reads in %s.  %d out of %d", region, lowMapq, sampleReads.size());
-				isRegionOk = false;
-				break;
-			}
-		}
+//		for (List<SAMRecordWrapper> sampleReads : readsList) {
+//			
+//			// TODO: Parameterize
+//			if (sampleReads.size() > 10000) {
+//				Logger.info("Too many reads in %s: %d", region, sampleReads.size());
+//				isRegionOk = false;
+//				break;
+//			}
+//			
+//			int lowMapq = 0;
+//			for (SAMRecordWrapper read : sampleReads) {
+//				if (read.getSamRecord().getMappingQuality() < minMappingQuality) {
+//					lowMapq += 1; 
+//				}
+//			}
+//			
+//			if ((float) lowMapq / (float) sampleReads.size() > .25) {
+//				Logger.info("Too many low mapq reads in %s.  %d out of %d", region, lowMapq, sampleReads.size());
+//				isRegionOk = false;
+//				break;
+//			}
+//		}
 		
 		if (isRegionOk) {
 			List<String> bams = new ArrayList<String>(Arrays.asList(this.inputSams));

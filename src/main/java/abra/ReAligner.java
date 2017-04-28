@@ -112,6 +112,7 @@ public class ReAligner {
 	public static final int COMPRESSION_LEVEL = 1;
 	
 	private int maxCachedReads = 0;
+	private int maxReadsInRegion;
 	
 	private SortedSAMWriter writer;
 	
@@ -716,15 +717,15 @@ public class ReAligner {
 		List<List<SAMRecordWrapper>> readsList = subsetReads(region, reads);
 		
 		boolean isRegionOk = true;
-//		for (List<SAMRecordWrapper> sampleReads : readsList) {
-//			
-//			// TODO: Parameterize
-//			if (sampleReads.size() > 10000) {
-//				Logger.info("Too many reads in %s: %d", region, sampleReads.size());
-//				isRegionOk = false;
-//				break;
-//			}
-//			
+		for (List<SAMRecordWrapper> sampleReads : readsList) {
+			
+			//TODO: Don't allow these reads to remap to neighboring regions.
+			if (maxReadsInRegion < 0 || sampleReads.size() > this.maxReadsInRegion) {
+				Logger.info("Too many reads in %s: %d", region, sampleReads.size());
+				isRegionOk = false;
+				break;
+			}
+			
 //			int lowMapq = 0;
 //			for (SAMRecordWrapper read : sampleReads) {
 //				if (read.getSamRecord().getMappingQuality() < minMappingQuality) {
@@ -737,7 +738,7 @@ public class ReAligner {
 //				isRegionOk = false;
 //				break;
 //			}
-//		}
+		}
 		
 		if (isRegionOk) {
 			List<String> bams = new ArrayList<String>(Arrays.asList(this.inputSams));
@@ -1283,6 +1284,7 @@ public class ReAligner {
 			realigner.isPairedEnd = options.isPairedEnd();
 			realigner.minMappingQuality = options.getMinimumMappingQuality();
 			realigner.maxMismatchRate = options.getMaxMismatchRate();
+			realigner.maxReadsInRegion = options.getMaxReadsInRegion();
 			realigner.hasPresetKmers = options.hasPresetKmers();
 			realigner.isSkipAssembly = options.isSkipAssembly();
 			realigner.useObservedIndels = options.useObservedIndels();

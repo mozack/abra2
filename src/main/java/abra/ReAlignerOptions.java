@@ -45,6 +45,7 @@ public class ReAlignerOptions extends Options {
 	private static final String CONSENSUS_SEQ = "cons";
 	private static final String MAX_MISMATCH_RATE = "mmr";
 	private static final String WINDOW_SIZE = "ws";
+	private static final String MAX_READS_IN_REGION = "mrr";
 	
 	private OptionParser parser;
 	private boolean isValid;
@@ -86,6 +87,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(CONSENSUS_SEQ, "Use positional consensus sequence when aligning high quality soft clipping");
             parser.accepts(MAX_MISMATCH_RATE, "Max allowed mismatch rate when mapping reads back to contigs").withRequiredArg().ofType(Double.class).defaultsTo(.05);
             parser.accepts(WINDOW_SIZE, "Processing window size and overlap (size,overlap)").withRequiredArg().ofType(String.class).defaultsTo("400,200");
+            parser.accepts(MAX_READS_IN_REGION, "Regions containing more reads than this value are not processed.  Use -1 to disable.").withRequiredArg().ofType(Integer.class).defaultsTo(10000);
     	}
     	
     	return parser;
@@ -218,6 +220,10 @@ public class ReAlignerOptions extends Options {
 	
 	public int getNumThreads() {
 		return getOptions().hasArgument(NUM_THREADS) ? (Integer) getOptions().valueOf(NUM_THREADS) : 4;
+	}
+	
+	public int getMaxReadsInRegion() {
+		return (Integer) getOptions().valueOf(MAX_READS_IN_REGION);
 	}
 	
 	public double getMaxMismatchRate() {

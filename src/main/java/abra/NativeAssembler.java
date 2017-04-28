@@ -155,7 +155,6 @@ public class NativeAssembler {
 //			return true;
 //		}
 		
-		// TODO: Require contiguous soft clipped bases
 		if (numGaps > 0 || maxSoftClipLength(read) > readLength/10) {
 			int qualAdjustedEditDist = c2r.numHighQualityMismatches(read, MIN_CANDIDATE_BASE_QUALITY) + SAMRecordUtils.getNumIndelBases(read);
 			if (qualAdjustedEditDist > (readLength/10)) {

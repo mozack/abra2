@@ -122,21 +122,21 @@ public class NativeAssembler {
 		return len;
 	}
 	
-	private int numSoftClippedBases(SAMRecord read) {
-		int count = 0;
+	private int maxSoftClipLength(SAMRecord read) {
+		int len = 0;
 		if (read.getCigarLength() > 1) {
 			CigarElement elem = read.getCigar().getCigarElement(0);
 			if (elem.getOperator() == CigarOperator.S) {
-				count += elem.getLength();
+				len = elem.getLength();
 			}
 			
 			elem = read.getCigar().getCigarElement(read.getCigarLength()-1);
-			if (elem.getOperator() == CigarOperator.S) {
-				count += elem.getLength();
+			if (elem.getOperator() == CigarOperator.S && elem.getLength() > len) {
+				len = elem.getLength();
 			}			
 		}
 		
-		return count;
+		return len;
 	}
 	
 	//TODO: Consider always assembling regions that contain a junction as specified by input file.
@@ -155,7 +155,8 @@ public class NativeAssembler {
 //			return true;
 //		}
 		
-		if (numGaps > 0 || numSoftClippedBases(read) > readLength/10) {
+		// TODO: Require contiguous soft clipped bases
+		if (numGaps > 0 || maxSoftClipLength(read) > readLength/10) {
 			int qualAdjustedEditDist = c2r.numHighQualityMismatches(read, MIN_CANDIDATE_BASE_QUALITY) + SAMRecordUtils.getNumIndelBases(read);
 			if (qualAdjustedEditDist > (readLength/10)) {
 				return true;

@@ -21,8 +21,8 @@ public class GermlineProcessor {
 
 	private static final int MIN_SUPPORTING_READS = 2;
 	private static final int MIN_DISTANCE_FROM_READ_END = 3;
-	private static final double MIN_TUMOR_FRACTION = 0.02;
-	private static final int MIN_TUMOR_MAPQ = 20;
+	private static final double MIN_ALLELE_FRACTION = 0.10;
+	private static final int MIN_MAPQ = 20;
 	
 	private Germline cadabra;
 	private String tumorBam;
@@ -178,7 +178,7 @@ public class GermlineProcessor {
 			//      Need to reconcile with overlapping read check using read name.
 			if (!read.getDuplicateReadFlag() && !read.getReadUnmappedFlag() && (read.getFlags() & 0x900) == 0) {
 				
-				if (read.getMappingQuality() < MIN_TUMOR_MAPQ) {
+				if (read.getMappingQuality() < MIN_MAPQ) {
 					if (read.getMappingQuality() == 0) {
 						tumorMapq0 += 1;
 					}
@@ -266,7 +266,7 @@ public class GermlineProcessor {
 //		float tumorFraction = (float) tumorCount / (float) tumorReads.getReads().size();
 		float tumorFraction = (float) tumorCount / (float) tumorReadIds.size();
 		
-		if (tumorCount >= MIN_SUPPORTING_READS && hasSufficientDistanceFromReadEnd && tumorFraction >= MIN_TUMOR_FRACTION) {
+		if (tumorCount >= MIN_SUPPORTING_READS && hasSufficientDistanceFromReadEnd && tumorFraction >= MIN_ALLELE_FRACTION) {
 			String insertBases = null;
 			if (tumorIndel.getOperator() == CigarOperator.I) {
 				insertBases = getInsertBaseConsensus(insertBasesMap, tumorIndel.getLength());

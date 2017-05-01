@@ -1,24 +1,14 @@
 package abra.cadabra;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
 
 import abra.CompareToReference2;
 import abra.Feature;
 import abra.Logger;
 import abra.ThreadManager;
-import htsjdk.samtools.Cigar;
-import htsjdk.samtools.CigarElement;
-import htsjdk.samtools.CigarOperator;
-import htsjdk.samtools.SAMRecord;
-import htsjdk.samtools.TextCigarCodec;
 
 public class Cadabra {
 
@@ -30,14 +20,6 @@ public class Cadabra {
 		c2r = new CompareToReference2();
 		c2r.init(reference);
 		
-//		if (target != null) {
-//			String[] fields = target.split(":|-");
-//			String chromosome = fields[0];
-//			long startPos = Long.valueOf(fields[1]);
-//			long endPos = Long.valueOf(fields[2]);
-//			region = new Feature(chromosome, startPos, endPos);
-//		}
-
 		outputHeader();
 		
 		ThreadManager threadManager = new ThreadManager(numThreads);

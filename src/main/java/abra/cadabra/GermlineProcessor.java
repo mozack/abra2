@@ -54,7 +54,7 @@ public class GermlineProcessor {
 			
 			tumorReads = tumorIter.next();
 			processLocus(tumorReads);
-			tumorReads = tumorIter.next();
+//			tumorReads = tumorIter.next();
 		}
 		
 		this.cadabra.addCalls(region.getSeqname(), outputRecords);
@@ -399,9 +399,9 @@ public class GermlineProcessor {
 		buf.append("\tPASS\t");
 		// <NNAF> is placeholder here
 		buf.append("SOMATIC;CMQ=" + maxContigMapq + ";CTX=" + context + ";REPEAT_PERIOD=" + repeatPeriod + ";NNAF=<NNAF>");
-		buf.append("\tDP:AD:YM0:YM1:YM:OBS:MIRI:MARI:SOR:MQ0\t");
+		buf.append("\tDP:AD:YM0:YM1:YM:OBS:MIRI:MARI:SOR:MQ0:GT\t");
 
-		buf.append('\t');
+//		buf.append('\t');
 		buf.append(tumorDepth);
 		buf.append(':');
 		buf.append(tumorRefObs);
@@ -431,6 +431,8 @@ public class GermlineProcessor {
 		
 		buf.append(':');
 		buf.append(tumorMapq0);
+		buf.append(":0/1");  // GT placeholder
+		
 		
 		return buf.toString();
 	}

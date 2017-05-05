@@ -30,7 +30,7 @@ public class GermlineProcessor {
 	private CompareToReference2 c2r;
 	private Feature region;
 	
-	List<String> outputRecords = new ArrayList<String>();
+	List<Call> outputRecords = new ArrayList<Call>();
 	
 	GermlineProcessor(Germline cadabra, String tumorBam, CompareToReference2 c2r) {
 		this.cadabra = cadabra;
@@ -99,6 +99,10 @@ public class GermlineProcessor {
 		return null;
 	}
 	
+	private char getRefBase(String chr, int pos) {
+		return c2r.getSequence(chr, pos, 1).charAt(0);
+	}
+	
 	private boolean matchesReference(SAMRecord read, int refPos) {
 		boolean isMatch = false;
 	
@@ -147,36 +151,48 @@ public class GermlineProcessor {
 		return null;
 	}
 	
+	private Allele getAltAllele(Allele ref, Map<Allele, AlleleCounts> alleleCounts) {
+		int maxAlt = 0;
+		Allele alt = null;
+		for (Allele allele : alleleCounts.keySet()) {
+			if (allele != ref) {
+				AlleleCounts ac = alleleCounts.get(allele);
+				if (ac.getCount() > maxAlt) {
+					maxAlt = ac.getCount();
+					alt = allele;
+				} else if (ac.getCount() == maxAlt) {
+					// TODO: Disambiguate ties (especially inserts of same length)
+					alt = null;
+				}
+			}
+		}
+		
+		return alt;
+	}
+	
 	private void processLocus(ReadsAtLocus tumorReads) {
 		String chromosome = tumorReads.getChromosome();
 		int position = tumorReads.getPosition();
 		
-		CigarElement tumorIndel = null;
-		int tumorCount = 0;
-		int tumorRefCount = 0;
-		int mismatch0Count = 0;
-		int mismatch1Count = 0;
-		int totalMismatchCount = 0;
-		boolean hasSufficientDistanceFromReadEnd = false;
-		int maxContigMapq = 0;
-		int minReadIndex = Integer.MAX_VALUE;
-		int maxReadIndex = Integer.MIN_VALUE;
-		int tumorRefFwd = 0;
-		int tumorRefRev = 0;
-		int tumorAltFwd = 0;
-		int tumorAltRev = 0;
 		int tumorMapq0 = 0;
-		
-		Map<String, Integer> insertBasesMap = new HashMap<String, Integer>();
 		
 		// Don't double count overlapping reads.
 		// TODO: Determine consensus? 
 		Set<String> tumorReadIds = new HashSet<String>();
 		
+		Map<Allele, AlleleCounts> alleleCounts = new HashMap<Allele, AlleleCounts>();
+		
+		// Always include ref allele
+		char refBase = getRefBase(chromosome, position);
+		Allele refAllele = Allele.getAllele(refBase); 
+		alleleCounts.put(refAllele, new AlleleCounts());
+		
 		for (SAMRecord read : tumorReads.getReads()) {
 			//TODO: Figure out what to do with non-primary alignments.
 			//      Need to reconcile with overlapping read check using read name.
-			if (!read.getDuplicateReadFlag() && !read.getReadUnmappedFlag() && (read.getFlags() & 0x900) == 0) {
+			if (!read.getDuplicateReadFlag() && !read.getReadUnmappedFlag() &&
+					!tumorReadIds.contains(read.getReadName()) &&
+					(read.getFlags() & 0x900) == 0) {
 				
 				if (read.getMappingQuality() < MIN_MAPQ) {
 					if (read.getMappingQuality() == 0) {
@@ -187,101 +203,137 @@ public class GermlineProcessor {
 			
 				IndelInfo readElement = checkForIndelAtLocus(read, position);
 				
+				Allele allele = Allele.UNK;
+				
 				if (readElement != null) {
-					Integer ymInt = (Integer) read.getAttribute("YM");
-					if (ymInt != null) {
-						int ym = ymInt;
-						if (ym == 0) {
-							mismatch0Count++;
-						}
-						if (ym <= 1) {
-							mismatch1Count++;
-						}
-						totalMismatchCount += ym;
+					if (readElement.getCigarElement().getOperator() == CigarOperator.D) {
+						allele = new Allele(Allele.Type.DEL, readElement.getCigarElement().getLength());
+					} else if (readElement.getCigarElement().getOperator() == CigarOperator.I) {
+						allele = new Allele(Allele.Type.INS, readElement.getCigarElement().getLength(), readElement.getInsertBases());
 					}
-				} else if (matchesReference(read, position)) {
-					// TODO: Check for agreement in overlapping read pairs for tumor.
-					if (!tumorReadIds.contains(read.getReadName())) {
-						tumorRefCount += 1;
-						if (read.getReadNegativeStrandFlag()) {
-							tumorRefRev += 1;
-						} else {
-							tumorRefFwd += 1;
-						}
+				} else {
+					Character base = getBaseAtPosition(read, position);
+					if (base != null) {
+						allele = Allele.getAllele(base);
 					}
 				}
 				
-				if (tumorIndel == null && readElement != null) {
-					tumorIndel = readElement.getCigarElement();
-					tumorCount = 1;
-					if (read.getReadNegativeStrandFlag()) {
-						tumorAltRev += 1;
-					} else {
-						tumorAltFwd += 1;
-					}
-//					maxContigMapq = Math.max(maxContigMapq, read.getIntegerAttribute(ReadAdjuster.CONTIG_QUALITY_TAG));
-					maxContigMapq = 0;
-					if (readElement.getInsertBases() != null) {
-						updateInsertBases(insertBasesMap, readElement.getInsertBases());
-					}
-					minReadIndex = readElement.getReadIndex() < minReadIndex ? readElement.getReadIndex() : minReadIndex;
-					maxReadIndex = readElement.getReadIndex() > maxReadIndex ? readElement.getReadIndex() : maxReadIndex;
-				} else if (tumorIndel != null && readElement != null) {
-					if (tumorIndel.equals(readElement.getCigarElement())) {
-						// Increment tumor indel support count
-						// Do not allow single fragment to contribute multiple reads
-						// TODO: Identify consensus
-						if (!tumorReadIds.contains(read.getReadName())) {
-							tumorCount += 1;
-							if (read.getReadNegativeStrandFlag()) {
-								tumorAltRev += 1;
-							} else {
-								tumorAltFwd += 1;
-							}
-						}
-//						maxContigMapq = Math.max(maxContigMapq, read.getIntegerAttribute(ReadAdjuster.CONTIG_QUALITY_TAG));
-						maxContigMapq = 0;
-						if (readElement.getInsertBases() != null) {
-							updateInsertBases(insertBasesMap, readElement.getInsertBases());
-						}
-						minReadIndex = readElement.getReadIndex() < minReadIndex ? readElement.getReadIndex() : minReadIndex;
-						maxReadIndex = readElement.getReadIndex() > maxReadIndex ? readElement.getReadIndex() : maxReadIndex;
-	
-					} else {
-						// We will not deal with multiple indels at a single locus for now.
-						tumorIndel = null;
-						tumorCount = 0;
-						break;
-					}
+				if (!alleleCounts.containsKey(allele)) {
+					alleleCounts.put(allele, new AlleleCounts());
 				}
 				
-				if (!hasSufficientDistanceFromReadEnd && tumorIndel != null && readElement != null && readElement.getCigarElement().equals(tumorIndel)) {
-					hasSufficientDistanceFromReadEnd = sufficientDistanceFromReadEnd(read, readElement.getReadIndex());
+				AlleleCounts ac = alleleCounts.get(allele);
+				ac.incrementCount();
+				if (read.getReadNegativeStrandFlag()) {
+					ac.incrementRev();
+				} else {
+					ac.incrementFwd();
 				}
 				
+				if (readElement != null) {
+					ac.updateReadIdx(readElement.getReadIndex());
+				}
+								
 				tumorReadIds.add(read.getReadName());
 			}
 		}
 		
-//		float tumorFraction = (float) tumorCount / (float) tumorReads.getReads().size();
-		float tumorFraction = (float) tumorCount / (float) tumorReadIds.size();
 		
-		if (tumorCount >= MIN_SUPPORTING_READS && hasSufficientDistanceFromReadEnd && tumorFraction >= MIN_ALLELE_FRACTION) {
-			String insertBases = null;
-			if (tumorIndel.getOperator() == CigarOperator.I) {
-				insertBases = getInsertBaseConsensus(insertBasesMap, tumorIndel.getLength());
+		Allele alt = getAltAllele(Allele.getAllele(refBase), alleleCounts);
+		
+		if (alt != null && (alt.getType() == Allele.Type.DEL || alt.getType() == Allele.Type.INS) && refAllele != Allele.UNK) {
+			AlleleCounts altCounts = alleleCounts.get(alt);
+			AlleleCounts refCounts = alleleCounts.get(refAllele);
+			double af = (double) altCounts.getCount() / (double) (altCounts.getCount() + refCounts.getCount());
+			
+			if (altCounts.getCount() >= MIN_SUPPORTING_READS && af >= MIN_ALLELE_FRACTION) {
+
+				double qual = calcPhredScaledQuality(refCounts.getCount(), altCounts.getCount());
+				int repeatPeriod = getRepeatPeriod(chromosome, position, alt);
+
+				String refField = "";
+				String altField = "";
+				if (alt.getType() == Allele.Type.DEL) {
+					refField = getDelRefField(chromosome, position, alt.getLength());
+					altField = refField.substring(0, 1);
+				} else if (alt.getType() == Allele.Type.INS) {
+					refField = getInsRefField(chromosome, position);
+					altField = refField + alt.getInsertBases();
+				}
+				
+				Call call = new Call(chromosome, position, refAllele, alt, alleleCounts, tumorReadIds.size(), 
+						qual, repeatPeriod, tumorMapq0, refField, altField);
+				outputRecords.add(call);
 			}
+		}
+		
+		
+//		float tumorFraction = (float) tumorCount / (float) tumorReads.getReads().size();
+		
+//		float tumorFraction = (float) tumorCount / (float) tumorReadIds.size();
+//		
+//		if (tumorCount >= MIN_SUPPORTING_READS && hasSufficientDistanceFromReadEnd && tumorFraction >= MIN_ALLELE_FRACTION) {
+//			String insertBases = null;
+//			if (tumorIndel.getOperator() == CigarOperator.I) {
+//				insertBases = getInsertBaseConsensus(insertBasesMap, tumorIndel.getLength());
+//			}
+//			
+//			int repeatPeriod = getRepeatPeriod(chromosome, position, tumorIndel, insertBases);
+//			
+//			double qual = calcPhredScaledQuality(tumorRefCount, tumorCount);
+//			
+//			String record = generateRecord(chromosome, position, tumorReads, tumorIndel,
+//					tumorCount, tumorRefCount, insertBases, maxContigMapq, mismatch0Count, mismatch1Count, totalMismatchCount, minReadIndex, maxReadIndex,
+//					repeatPeriod, qual, tumorRefFwd, tumorRefRev, tumorAltFwd, tumorAltRev,
+//					tumorMapq0);
+//			
+//			this.outputRecords.add(record);
+//		}
+	}
+	
+	public static class Call {
+		String chromosome;
+		int position;
+		Allele ref;
+		Allele alt;
+		Map<Allele, AlleleCounts> alleleCounts;
+		int totalReads;
+		double qual;
+		int repeatPeriod;
+		int mapq0;
+		String refField;
+		String altField;
+		
+		Call(String chromosome, int position, Allele ref, Allele alt, Map<Allele, AlleleCounts> alleleCounts, 
+				int totalReads, double qual, int repeatPeriod, int mapq0, String refField, String altField) {
+			this.chromosome = chromosome;
+			this.position = position;
+			this.ref = ref;
+			this.alt = alt;
+			this.alleleCounts = alleleCounts;
+			this.totalReads = totalReads;
+			this.qual = qual;
+			this.repeatPeriod = repeatPeriod;
+			this.mapq0 = mapq0;
+			this.refField = refField;
+			this.altField = altField;
+		}
+		
+		public String toString() {
 			
-			int repeatPeriod = getRepeatPeriod(chromosome, position, tumorIndel, insertBases);
-			
-			double qual = calcPhredScaledQuality(tumorRefCount, tumorCount);
-			
-			String record = generateRecord(chromosome, position, tumorReads, tumorIndel,
-					tumorCount, tumorRefCount, insertBases, maxContigMapq, mismatch0Count, mismatch1Count, totalMismatchCount, minReadIndex, maxReadIndex,
-					repeatPeriod, qual, tumorRefFwd, tumorRefRev, tumorAltFwd, tumorAltRev,
-					tumorMapq0);
-			
-			this.outputRecords.add(record);
+			AlleleCounts refCounts = alleleCounts.get(ref);
+			AlleleCounts altCounts = alleleCounts.get(alt);
+			//
+			// chr1    14397   .       CTGT    C       31.08108108108108       PASS    SOMATIC;CMQ=0;CTX=TAAAAGCACACTGTTGGTTT;REPEAT_PERIOD=1;NNAF=<NNAF>      
+			// DP:AD:YM0:YM1:YM:OBS:MIRI:MARI:SOR:MQ0:GT       1092:51,23:0:0:0:23:5:36:0,51,1,22:981:0/1
+			String pos = String.valueOf(position);
+			String qualStr = String.valueOf(qual);
+			String info = String.format("REPEAT_PERIOD=%d;", repeatPeriod);
+			String format = "DP:AD:MIRI:MARI:SOR:MQ0:GT";
+			String sample = String.format("%d:%d,%d:%d:%d:%d,%d,%d,%d:%d:0/1", totalReads, refCounts.getCount(), altCounts.getCount(),
+					altCounts.getMinReadIdx(), altCounts.getMaxReadIdx(), refCounts.getFwd(), refCounts.getRev(), altCounts.getFwd(), altCounts.getRev(),
+					mapq0);
+			return String.join("\t", chromosome, pos, ".", refField, altField, qualStr, "PASS", info, format, sample);
 		}
 	}
 	
@@ -291,6 +343,29 @@ public class GermlineProcessor {
 		
 		return qual * 100;
 	}
+	
+	private int getRepeatPeriod(String chromosome, int position, Allele indel) {
+		int chromosomeEnd = c2r.getReferenceLength(chromosome);
+		int length = Math.min(indel.getLength() * 20, chromosomeEnd-position-2);
+		String sequence = c2r.getSequence(chromosome, position+1, length);
+		
+		String bases;
+		if (indel.getType() == Allele.Type.DEL) {
+			bases = sequence.substring(0, indel.getLength());
+		} else {
+			bases = indel.getInsertBases();
+		}
+		
+		int period = 0;
+		int index = 0;
+		while ((index+bases.length() < length) && (bases.equals(sequence.substring(index, index+bases.length())))) {
+			period += 1;
+			index += bases.length();
+		}
+		
+		return period;
+	}
+
 	
 	private int getRepeatPeriod(String chromosome, int position, CigarElement indel, String insertBases) {
 		int chromosomeEnd = c2r.getReferenceLength(chromosome);

@@ -10,11 +10,13 @@ import abra.Feature;
 import abra.Logger;
 import abra.ThreadManager;
 
+import abra.cadabra.GermlineProcessor.Call;
+
 public class Germline {
 
 	private CompareToReference2 c2r;
 	
-	private Map<String, List<String>> chromosomeCalls = new HashMap<String, List<String>>();
+	private Map<String, List<Call>> chromosomeCalls = new HashMap<String, List<Call>>();
 
 	public void call(String reference, String bamfile, int numThreads) throws IOException, InterruptedException {
 		c2r = new CompareToReference2();
@@ -36,7 +38,7 @@ public class Germline {
 		
 		// Output calls.
 		for (String chromosome : c2r.getChromosomes()) {
-			for (String call : chromosomeCalls.get(chromosome)) {
+			for (Call call : chromosomeCalls.get(chromosome)) {
 				System.out.println(call);
 			}
 		}
@@ -44,7 +46,7 @@ public class Germline {
 		Logger.info("Cadabra done.");
 	}
 	
-	void addCalls(String chromosome, List<String> calls) {
+	void addCalls(String chromosome, List<Call> calls) {
 		Logger.info("Choromosome: %s done.", chromosome);
 		synchronized(calls) {
 			chromosomeCalls.put(chromosome, calls);

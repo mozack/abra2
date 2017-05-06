@@ -209,7 +209,7 @@ public class GermlineProcessor {
 					if (readElement.getCigarElement().getOperator() == CigarOperator.D) {
 						allele = new Allele(Allele.Type.DEL, readElement.getCigarElement().getLength());
 					} else if (readElement.getCigarElement().getOperator() == CigarOperator.I) {
-						allele = new Allele(Allele.Type.INS, readElement.getCigarElement().getLength(), readElement.getInsertBases());
+						allele = new Allele(Allele.Type.INS, readElement.getCigarElement().getLength());
 					}
 				} else {
 					Character base = getBaseAtPosition(read, position);
@@ -233,6 +233,10 @@ public class GermlineProcessor {
 				if (readElement != null) {
 					ac.updateReadIdx(readElement.getReadIndex());
 				}
+				
+				if (allele.getType() == Allele.Type.INS) {
+					ac.updateInsertBases(readElement.getInsertBases());
+				}
 								
 				tumorReadIds.add(read.getReadName());
 			}
@@ -249,7 +253,7 @@ public class GermlineProcessor {
 			if (altCounts.getCount() >= MIN_SUPPORTING_READS && af >= MIN_ALLELE_FRACTION) {
 
 				double qual = calcPhredScaledQuality(refCounts.getCount(), altCounts.getCount());
-				int repeatPeriod = getRepeatPeriod(chromosome, position, alt);
+				int repeatPeriod = getRepeatPeriod(chromosome, position, alt, altCounts);
 
 				String refField = "";
 				String altField = "";
@@ -258,7 +262,7 @@ public class GermlineProcessor {
 					altField = refField.substring(0, 1);
 				} else if (alt.getType() == Allele.Type.INS) {
 					refField = getInsRefField(chromosome, position);
-					altField = refField + alt.getInsertBases();
+					altField = refField + altCounts.getPreferredInsertBases();
 				}
 				
 				Call call = new Call(chromosome, position, refAllele, alt, alleleCounts, tumorReadIds.size(), 
@@ -344,7 +348,7 @@ public class GermlineProcessor {
 		return qual * 100;
 	}
 	
-	private int getRepeatPeriod(String chromosome, int position, Allele indel) {
+	private int getRepeatPeriod(String chromosome, int position, Allele indel, AlleleCounts indelCounts) {
 		int chromosomeEnd = c2r.getReferenceLength(chromosome);
 		int length = Math.min(indel.getLength() * 20, chromosomeEnd-position-2);
 		String sequence = c2r.getSequence(chromosome, position+1, length);
@@ -353,7 +357,7 @@ public class GermlineProcessor {
 		if (indel.getType() == Allele.Type.DEL) {
 			bases = sequence.substring(0, indel.getLength());
 		} else {
-			bases = indel.getInsertBases();
+			bases = indelCounts.getPreferredInsertBases();
 		}
 		
 		int period = 0;

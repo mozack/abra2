@@ -7,7 +7,6 @@ public class Allele {
 
 	private Type type;
 	private int length;
-	private String insertBases;
 	
 	public static final Allele UNK = new Allele(Type.UNK, 1);
 	public static final Allele A = new Allele(Type.A, 1);
@@ -19,13 +18,7 @@ public class Allele {
 		this.type = type;
 		this.length = length;
 	}
-	
-	public Allele(Type type, int length, String insertBases) {
-		this.type = type;
-		this.length = length;
-		this.insertBases = insertBases;
-	}
-	
+		
 	public static Allele getAllele (char base) {
 		switch (base) {
 			case 'A':
@@ -49,15 +42,11 @@ public class Allele {
 		return length;
 	}
 	
-	public String getInsertBases() {
-		return insertBases;
-	}
-
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + ((insertBases == null) ? 0 : insertBases.hashCode());
+//		result = prime * result + ((insertBases == null) ? 0 : insertBases.hashCode());
 		result = prime * result + length;
 		result = prime * result + ((type == null) ? 0 : type.hashCode());
 		return result;
@@ -72,11 +61,11 @@ public class Allele {
 		if (getClass() != obj.getClass())
 			return false;
 		Allele other = (Allele) obj;
-		if (insertBases == null) {
-			if (other.insertBases != null)
-				return false;
-		} else if (!insertBases.equals(other.insertBases))
-			return false;
+//		if (insertBases == null) {
+//			if (other.insertBases != null)
+//				return false;
+//		} else if (!insertBases.equals(other.insertBases))
+//			return false;
 		if (length != other.length)
 			return false;
 		if (type != other.type)

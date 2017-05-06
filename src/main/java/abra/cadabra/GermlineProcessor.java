@@ -262,11 +262,13 @@ public class GermlineProcessor {
 					altField = refField.substring(0, 1);
 				} else if (alt.getType() == Allele.Type.INS) {
 					refField = getInsRefField(chromosome, position);
-					altField = refField + altCounts.getPreferredInsertBases();
+					altField = refField + getPreferredInsertBases(alt, altCounts);
 				}
 				
 				Call call = new Call(chromosome, position, refAllele, alt, alleleCounts, tumorReadIds.size(), 
 						qual, repeatPeriod, tumorMapq0, refField, altField);
+				
+//				System.err.println(call);
 				outputRecords.add(call);
 			}
 		}
@@ -293,6 +295,20 @@ public class GermlineProcessor {
 //			
 //			this.outputRecords.add(record);
 //		}
+	}
+	
+	private String getPreferredInsertBases(Allele allele, AlleleCounts counts) {
+		String bases = null;
+		if (counts.getPreferredInsertBases().isEmpty()) {
+			StringBuffer buf = new StringBuffer();
+			for (int i=0; i<allele.getLength(); i++) {
+				buf.append('N');
+			}
+			bases = buf.toString();
+		} else {
+			bases = counts.getPreferredInsertBases();
+		}
+		return bases;
 	}
 	
 	public static class Call {
@@ -361,10 +377,13 @@ public class GermlineProcessor {
 		}
 		
 		int period = 0;
-		int index = 0;
-		while ((index+bases.length() < length) && (bases.equals(sequence.substring(index, index+bases.length())))) {
-			period += 1;
-			index += bases.length();
+		
+		if (bases.length() > 0) {
+			int index = 0;
+			while ((index+bases.length() < length) && (bases.equals(sequence.substring(index, index+bases.length())))) {
+				period += 1;
+				index += bases.length();
+			}
 		}
 		
 		return period;

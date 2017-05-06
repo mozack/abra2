@@ -10,7 +10,7 @@ import java.util.Set;
 
 import abra.CompareToReference2;
 import abra.Feature;
-
+import abra.Logger;
 import htsjdk.samtools.Cigar;
 import htsjdk.samtools.CigarElement;
 import htsjdk.samtools.CigarOperator;
@@ -29,6 +29,7 @@ public class GermlineProcessor {
 	private ReadLocusReader tumor;
 	private CompareToReference2 c2r;
 	private Feature region;
+	private int lastPos = 0;
 	
 	List<Call> outputRecords = new ArrayList<Call>();
 	
@@ -173,6 +174,11 @@ public class GermlineProcessor {
 	private void processLocus(ReadsAtLocus tumorReads) {
 		String chromosome = tumorReads.getChromosome();
 		int position = tumorReads.getPosition();
+		
+		if (position > lastPos + 50000000) {
+			Logger.info("Processing: %s:%d", chromosome, position);
+			lastPos = position;
+		}
 		
 		int tumorMapq0 = 0;
 		

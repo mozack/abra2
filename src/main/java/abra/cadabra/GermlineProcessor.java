@@ -175,7 +175,7 @@ public class GermlineProcessor {
 		String chromosome = tumorReads.getChromosome();
 		int position = tumorReads.getPosition();
 		
-		if (position > lastPos + 50000000) {
+		if (position > lastPos + 5000000) {
 			Logger.info("Processing: %s:%d", chromosome, position);
 			lastPos = position;
 		}
@@ -274,7 +274,7 @@ public class GermlineProcessor {
 				Call call = new Call(chromosome, position, refAllele, alt, alleleCounts, tumorReadIds.size(), 
 						qual, repeatPeriod, tumorMapq0, refField, altField);
 				
-//				System.err.println(call);
+				System.err.println(call);
 				outputRecords.add(call);
 			}
 		}

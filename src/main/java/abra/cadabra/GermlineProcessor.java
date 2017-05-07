@@ -274,7 +274,7 @@ public class GermlineProcessor {
 				Call call = new Call(chromosome, position, refAllele, alt, alleleCounts, tumorReadIds.size(), 
 						qual, repeatPeriod, tumorMapq0, refField, altField);
 				
-				System.err.println(call);
+//				System.err.println(call);
 				outputRecords.add(call);
 			}
 		}

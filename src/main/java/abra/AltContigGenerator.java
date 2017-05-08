@@ -243,7 +243,7 @@ public class AltContigGenerator {
 				if (prev.type == 'D') {
 					seqStart = prev.pos + prev.length;
 				} else if (prev.type == 'I') {
-					seqStart = prev.pos+1;
+					seqStart = prev.pos;
 				}
 				String rightSeq = c2r.getSequence(indel.chr, seqStart, readLength);
 				seq.append(rightSeq);

@@ -152,18 +152,16 @@ public class GermlineProcessor {
 		return null;
 	}
 	
-	private Allele getAltAllele(Allele ref, Map<Allele, AlleleCounts> alleleCounts) {
+	private Allele getAltIndelAllele(Allele ref, Map<Allele, AlleleCounts> alleleCounts) {
 		int maxAlt = 0;
 		Allele alt = null;
+		
 		for (Allele allele : alleleCounts.keySet()) {
 			if (allele != ref) {
 				AlleleCounts ac = alleleCounts.get(allele);
-				if (ac.getCount() > maxAlt) {
+				if (ac.getCount() > maxAlt && (allele.getType() == Allele.Type.DEL || allele.getType() == Allele.Type.INS)) {
 					maxAlt = ac.getCount();
 					alt = allele;
-				} else if (ac.getCount() == maxAlt) {
-					// TODO: Disambiguate ties (especially inserts of same length)
-					alt = null;
 				}
 			}
 		}
@@ -248,8 +246,7 @@ public class GermlineProcessor {
 			}
 		}
 		
-		
-		Allele alt = getAltAllele(Allele.getAllele(refBase), alleleCounts);
+		Allele alt = getAltIndelAllele(Allele.getAllele(refBase), alleleCounts);
 		
 		if (alt != null && (alt.getType() == Allele.Type.DEL || alt.getType() == Allele.Type.INS) && refAllele != Allele.UNK) {
 			AlleleCounts altCounts = alleleCounts.get(alt);

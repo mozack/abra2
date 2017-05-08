@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import abra.SAMRecordUtils.ReadBlock;
+
 public class AltContigGenerator {
 	
 	// TODO: Multiple arbitrary cutoffs here, need to optimize
@@ -97,7 +99,6 @@ public class AltContigGenerator {
 					
 					if (useObservedIndels) {
 						// For now only use indels bracketed by 2 M elements
-						// TODO: Handle clipping / complex indels
 						List<CigarElement> elems = read.getCigar().getCigarElements();
 						if (elems.size() == 3 && 
 							elems.get(0).getOperator() == CigarOperator.M && 
@@ -116,6 +117,34 @@ public class AltContigGenerator {
 							}
 							
 							Indel indel = new Indel(type, read.getReferenceName(), read.getAlignmentStart() + elems.get(0).getLength(), elems.get(1).getLength(), insertBases);
+							indels.add(indel);
+						} else if(SAMRecordUtils.getNumIndels(read) > 1) {
+							// Handle read containing multiple indels (create single contig)
+							List<Indel> indelComponents = new ArrayList<Indel>();
+							List<ReadBlock> readBlocks = SAMRecordUtils.getReadBlocks(read.getCigar(), read.getAlignmentStart());
+							
+							// Loop through cigar ignoring edge elements
+							for (int i=1; i<read.getCigar().getCigarElements().size()-1; i++) {
+								CigarElement elem = read.getCigar().getCigarElements().get(i);
+								if (elem.getOperator() == CigarOperator.D || elem.getOperator() == CigarOperator.I) {
+									ReadBlock block = readBlocks.get(i);
+									char type = '0';
+									String insertBases = null;
+									if (elem.getOperator() == CigarOperator.D) {
+										type = 'D';
+									} else {
+										type = 'I';
+										int start = block.getReadPos()-1;
+										int stop = start + elem.getLength();
+										insertBases = read.getReadString().substring(start, stop);
+									}
+									
+									Indel indel = new Indel(type, read.getReferenceName(), block.getRefPos(), elem.getLength(), insertBases);
+									indelComponents.add(indel);
+								}
+							}
+							
+							Indel indel = new Indel('C', read.getReferenceName(), indelComponents);
 							indels.add(indel);
 						}
 					}
@@ -175,6 +204,51 @@ public class AltContigGenerator {
 				String seq = leftSeq + indel.insert + rightSeq;
 				
 				contigs.add(seq);
+			} else if (indel.type == 'C') {
+				// Multiple indels in single read
+				
+				StringBuffer seq = new StringBuffer();
+				Indel prev = indel.components.get(0);
+				int start = prev.pos - readLength;
+				String startSeq = c2r.getSequence(indel.chr, start, readLength);
+				seq.append(startSeq);
+				if (prev.type == 'I') {
+					seq.append(prev.insert);
+				}
+				
+				Indel next = null;
+
+				for (int i=1; i<indel.components.size(); i++) {
+					next = indel.components.get(i);
+					
+					int seqStart = -1;
+					if (prev.type == 'D') {
+						seqStart = prev.pos + prev.length;
+					} else if (prev.type == 'I') {
+						seqStart = prev.pos;
+					}
+					
+					String nextSeq = c2r.getSequence(indel.chr, seqStart, next.pos-seqStart);
+					seq.append(nextSeq);
+					
+					if (next.type == 'I') {
+						seq.append(next.insert);
+					}
+					
+					prev = next;
+				}
+				
+				// Append readLength's worth of ref sequence to right of last indel
+				int seqStart = -1;
+				if (prev.type == 'D') {
+					seqStart = prev.pos + prev.length;
+				} else if (prev.type == 'I') {
+					seqStart = prev.pos+1;
+				}
+				String rightSeq = c2r.getSequence(indel.chr, seqStart, readLength);
+				seq.append(rightSeq);
+				
+				contigs.add(seq.toString());
 			}
 		}
 		
@@ -187,6 +261,7 @@ public class AltContigGenerator {
 		int pos;
 		int length;
 		String insert;
+		List<Indel> components;
 		
 		Indel(char type, String chr, int pos, int length, String insert) {
 			this.type = type;
@@ -195,14 +270,21 @@ public class AltContigGenerator {
 			this.length = length;
 			this.insert = insert;
 		}
+		
+		// For complex indels
+		Indel(char type, String chr, List<Indel> indels) {
+			this.type = type;
+			this.chr = chr;
+			this.components = indels;
+		}
 
 		@Override
 		public int hashCode() {
 			final int prime = 31;
 			int result = 1;
 			result = prime * result + ((chr == null) ? 0 : chr.hashCode());
-			result = prime * result
-					+ ((insert == null) ? 0 : insert.hashCode());
+			result = prime * result + ((components == null) ? 0 : components.hashCode());
+			result = prime * result + ((insert == null) ? 0 : insert.hashCode());
 			result = prime * result + length;
 			result = prime * result + pos;
 			result = prime * result + type;
@@ -223,6 +305,11 @@ public class AltContigGenerator {
 					return false;
 			} else if (!chr.equals(other.chr))
 				return false;
+			if (components == null) {
+				if (other.components != null)
+					return false;
+			} else if (!components.equals(other.components))
+				return false;
 			if (insert == null) {
 				if (other.insert != null)
 					return false;
@@ -236,5 +323,6 @@ public class AltContigGenerator {
 				return false;
 			return true;
 		}
+
 	}
 }

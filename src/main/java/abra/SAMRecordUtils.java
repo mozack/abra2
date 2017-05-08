@@ -3,6 +3,7 @@ package abra;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import htsjdk.samtools.Cigar;
@@ -367,5 +368,77 @@ public class SAMRecordUtils {
                         .validationStringency(ValidationStringency.SILENT)
                         .samRecordFactory(DefaultSAMRecordFactory.getInstance())
                         .open(new File(filename));
+	}
+	
+	// From HTSJDK SAMUtils
+	// Adapted to return a block for all non-clipped elems
+	public static List<ReadBlock> getReadBlocks(final Cigar cigar, final int alignmentStart) {
+        if (cigar == null) return Collections.emptyList();
+
+        final List<ReadBlock> alignmentBlocks = new ArrayList<ReadBlock>();
+        int readBase = 1;
+        int refBase = alignmentStart;
+
+        for (final CigarElement e : cigar.getCigarElements()) {
+            switch (e.getOperator()) {
+                case H:
+                	alignmentBlocks.add(new ReadBlock(readBase, refBase, e.getLength()));
+                    break; // ignore hard clips
+                case P:
+                	alignmentBlocks.add(new ReadBlock(readBase, refBase, e.getLength()));
+                    break; // ignore pads
+                case S:
+                	alignmentBlocks.add(new ReadBlock(readBase, refBase, e.getLength()));
+                    readBase += e.getLength();
+                    break; // soft clip read bases
+                case N:
+                	alignmentBlocks.add(new ReadBlock(readBase, refBase, e.getLength()));
+                    refBase += e.getLength();
+                    break;  // reference skip
+                case D:
+                	alignmentBlocks.add(new ReadBlock(readBase, refBase, e.getLength()));
+                    refBase += e.getLength();
+                    break;
+                case I:
+                	alignmentBlocks.add(new ReadBlock(readBase, refBase, e.getLength()));
+                    readBase += e.getLength();
+                    break;
+                case M:
+                case EQ:
+                case X:
+                    final int length = e.getLength();
+                    alignmentBlocks.add(new ReadBlock(readBase, refBase, length));
+                    readBase += length;
+                    refBase += length;
+                    break;
+                default:
+                    throw new IllegalStateException("Case statement didn't deal with " + cigar.toString() + " op: " + e.getOperator());
+            }
+        }
+        return Collections.unmodifiableList(alignmentBlocks);
+    }
+	
+	public static class ReadBlock {
+		private int readPos;
+		private int refPos;
+		private int length;
+		
+		public ReadBlock(int readPos, int refPos, int length) {
+			this.readPos = readPos;
+			this.refPos = refPos;
+			this.length = length;
+		}
+
+		public int getReadPos() {
+			return readPos;
+		}
+
+		public int getRefPos() {
+			return refPos;
+		}
+
+		public int getLength() {
+			return length;
+		}
 	}
 }

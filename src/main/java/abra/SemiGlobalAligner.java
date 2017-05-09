@@ -63,10 +63,6 @@ public class SemiGlobalAligner {
 				int max = max(diagScore, leftScore, upScore);				
 				
 				byte currBt = 0;
-
-				if (diagScore == max) {
-					currBt = DIR_DIAG;
-				}
 				
 				if (upScore == max) {				
 					currBt = (byte) (DIR_UP | UP_OPEN);
@@ -74,6 +70,21 @@ public class SemiGlobalAligner {
 				
 				if (leftScore == max) {				
 					currBt = (byte) (DIR_LEFT | LEFT_OPEN);
+				}
+
+				// Follow diagonal path preferentially
+				// unless we are already in a gap open.
+				if (diagScore == max) {
+					currBt = DIR_DIAG;
+					
+					// Favor gap extension in case of ties
+					if (upScore == max && (prevBt & UP_OPEN) == UP_OPEN) {				
+						currBt = (byte) (DIR_UP | UP_OPEN);
+					}
+					
+					if (leftScore == max && (prevBt & LEFT_OPEN) == LEFT_OPEN) {				
+						currBt = (byte) (DIR_LEFT | LEFT_OPEN);
+					}
 				}
 				
 				matrix[r][c] = max;

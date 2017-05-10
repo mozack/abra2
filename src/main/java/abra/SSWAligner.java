@@ -45,6 +45,8 @@ public class SSWAligner {
 	private IndelShifter indelShifter = new IndelShifter();
 	private CompareToReference2 localC2r;
 	
+	private static ThreadLocal<SemiGlobalAligner> aligner = new ThreadLocal<SemiGlobalAligner>();
+	
 	public static void init(int[] scoring) {
 		
 		for (int i=0; i<scoring.length; i++) {
@@ -98,8 +100,13 @@ public class SSWAligner {
 		SSWAlignerResult result = null;
 		
 		if (useSemiGlobal) {
-			SemiGlobalAligner aligner = new SemiGlobalAligner(MATCH, MISMATCH, GAP_OPEN_PENALTY, GAP_EXTEND_PENALTY);
-			SemiGlobalAligner.Result sgResult = aligner.align(seq, ref);
+			// Init threadlocal aligner
+			if (aligner.get() == null) {
+				Logger.info("Initializing SGAligner");
+				aligner.set(new SemiGlobalAligner(MATCH, MISMATCH, GAP_OPEN_PENALTY, GAP_EXTEND_PENALTY));
+			}
+			
+			SemiGlobalAligner.Result sgResult = aligner.get().align(seq, ref);
 			Logger.trace("SG Alignment [%s]:\t%s, possible: %d", seq, sgResult, seq.length()*MATCH);
 			if (sgResult.score > MIN_ALIGNMENT_SCORE && sgResult.score > sgResult.secondBest && sgResult.endPosition > 0) {
 //			if (sgResult.score > MIN_ALIGNMENT_SCORE && sgResult.score > sgResult.secondBest) {

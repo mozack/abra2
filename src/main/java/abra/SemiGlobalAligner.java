@@ -23,8 +23,15 @@ public class SemiGlobalAligner {
 	private static final int I = 0;
 	private static final int M = 1;
 	private static final int D = 2;
-		
+	
+	private static final int MAX_REF_LEN = 5000;
+	private static final int MAX_CONTIG_LEN = 2000;
+
+	private int[][][] matrix = new int[MAX_CONTIG_LEN][MAX_REF_LEN][3];
+	private byte[][][] bt = new byte[MAX_CONTIG_LEN][MAX_REF_LEN][3];
+	
 	public SemiGlobalAligner() {
+
 	}
 	
 	public SemiGlobalAligner(int match, int mismatch, int gapOpen, int gapExtend) {
@@ -35,8 +42,8 @@ public class SemiGlobalAligner {
 	}
 
 	public Result align(String seq1, String seq2) {
-		int[][][] matrix = new int[seq1.length()+1][seq2.length()+1][3];
-		byte[][][] bt = new byte[seq1.length()+1][seq2.length()+1][3];
+//		int[][][] matrix = new int[seq1.length()+1][seq2.length()+1][3];
+//		byte[][][] bt = new byte[seq1.length()+1][seq2.length()+1][3];
 		
 		populate(matrix, bt, seq1, seq2);
 		return backtrack(matrix, bt, seq1, seq2);
@@ -286,8 +293,8 @@ public class SemiGlobalAligner {
 	
 	public static void main(String[] args) throws Exception {
 
-		String ref = "ATCGAATTCCGGGCTA";
-		String seq = "GAACCCCTTCCG";
+//		String ref = "ATCGAATTCCGGGCTA";
+//		String seq = "GAACCCCTTCCG";
 		
 //		String ref = "ACTCG";
 //		String seq = "ACCG";
@@ -298,30 +305,31 @@ public class SemiGlobalAligner {
 //		String ref = "ATCGAATTCCGGGCTA";
 //		String seq = "AATTCTA";
 
-		SemiGlobalAligner sg = new SemiGlobalAligner();
-		
-		Result res = sg.align(seq, ref);
-		System.out.println(res);
+//		SemiGlobalAligner sg = new SemiGlobalAligner();
+//		
+//		Result res = sg.align(seq, ref);
+//		System.out.println(res);
 		
 //		double i = 1;
 //		i += -1e8;
 		
 //		System.out.println(i);
 
-		/*
-		long start = System.currentTimeMillis();
+		
 		Result res = null;
+		SemiGlobalAligner sga = new SemiGlobalAligner(8, -32, -48, -1);
+		
+		long start = System.currentTimeMillis();
+		
 		for (int i=0; i<1000; i++) {
 			String ref = "CCAGATCAGCCTAGGCAACATGGTGAAACCCCGTCTCTACCAAAAATAAAAAACTTAGCTGAGCGTGGTGGTGCACGCCTGTAGCCCCAGCTGCTGAGGAGCCTGAGCCCAGGGGGTGGAGGCTGCAGTGAGCCATGATCACACTACTGTACTCCAGCCTAGGTGACAGAGTGAGACCCTGTCTCAAAAAAATAAAAGAAAATAAAAATAAACAAAGAGAGAAGTGGAAGAAGAGGTGGAGTTTTGTATTTATGACTTGAATTTTGTATTCATGACTGGGTTGACACCCCAATCCACTCCATTTTTAGCCTTGAAACATGGCAAACAGTAACCATTAAAAGGATGGAAAAGAGAAGAAGGCATGGGTGGGAAACTGTGCCTCCCATTTTTGTGCATCTTTGTTGCTGTCCTTCCACTATACTGTACCTTTCAGCATTTTGACGGCAACCTGGATTGAGACTCCTGTTTTGCTAATTCCATAAGCTGTTGCGTTCATCACTTTTCCAAAAGCACCTGATCCTAGTACCTTCCCTGCAAAGACAAATGGTGAGTACGTGCATTTTAAAGATTTTCCAATGGAAAAGAAATGCTGCAGAAACATTTGGCACATTCCATTCTTACCAAACTCTAAATTTTCTCTTGGAAACTCCCATTTGAGATCATATTCATATTCTCTGAAATCAACGTAGAAGTACTCATTATCTGAGGAGCCGGTCACCTGTACCATCTGTAGCTGGCTTTCATACCTAAATTGCTTCAGAGATGAAATGATGAGTCAGTTAGGAATAGGCAGTTCTGCAGATAGAGGAAAGAATAATGAATTTTTACCTTTGCTTTTACCTTTTTGTACTTGTGACAAATTAGCAGGGTTAAAACGACAATGAAGAGGAGACAAACACCAATTGTTGCATAGAATGAGATGTTGTCTTGGATGAAAGGGAAGGGGCCTGCAACAAAAGAGTGTCACTCAGCGATGAAACAGAATTCCTGTGTGACATTATAAATAGTGGACAACTCATTATAATCTCTCACATCCTGTTTCAGTAATAATCATTTTCAGTCCTAACAACCACTCTACATATACTCTACTCCCCACAGACAATCAGGCAATGTCCCTGTAAAGGATACATTTCCTCCCTAGAAAATTGCGGATTATTCTCAATCCATTCTTTAAAACCATTTACTAGGGTAAATTTACAAGAATTACATCTGGTCCAGGCACGATGGCTCACGCCTGTAGTCCCAGCACTTTGGGAGGCCAAGATGGGAGGATCACTTGAGTCCAAGAATTAGACACCAGCCCAGGCAACACAGTGAAATCCCGTCTCTAAAAAAATTCAAAAATTAGCTGGGCGTGGTGGCAGGTGCCTGTAATCCCAGCTGCTCGGGAGGCTGAGGCAGGAG";
 			String seq = "CCATTCTTACCAAACTCTAAATTTTCTCTTGGAAACTCCCATTTGAGATCATATTCATATTCTCTGAAATCAACGTAGAAGTACTCATTATCTGAGGAGCCGCACATTCCATTCTTGCCAAACTCTAGATTTTCTCTTGGAAACTCCCATTTGAGATCACATTCATATTCTCTGAAATCAACGTAGAAGTACTCATTATCTGAGGAGCCGGTCACCCGTACCATCTGTAGC";
 			
-			SemiGlobalAligner sga = new SemiGlobalAligner(8, -32, -48, -1);
 			res = sga.align(seq, ref);
 		}
 		long end = System.currentTimeMillis();
 		System.out.println("Elapsed: " + (end-start));
 		System.out.println(String.format("score: %d, second: %d, position: %d, cigar: %s", res.score, res.secondBest, res.position, res.cigar));
-		*/
 //		Thread.sleep(300*1000);
 	}
 }

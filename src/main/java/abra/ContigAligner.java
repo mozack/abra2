@@ -10,7 +10,7 @@ import htsjdk.samtools.TextCigarCodec;
 import ssw.Aligner;
 import ssw.Alignment;
 
-public class SSWAligner {
+public class ContigAligner {
 	
 	private static final int MIN_ALIGNMENT_SCORE = 1;
 
@@ -72,7 +72,7 @@ public class SSWAligner {
 		}
 	}
 	
-	public SSWAligner(String ref, String refChr, int refStart, int minContigLength) {
+	public ContigAligner(String ref, String refChr, int refStart, int minContigLength) {
 		this.ref = ref;
 		this.refChr = refChr;
 		this.refContextStart = refStart;
@@ -81,21 +81,21 @@ public class SSWAligner {
 		localC2r.initLocal(refChr, ref);
 	}
 	
-	public SSWAligner(String ref, String refChr, int refStart, int minContigLength, int junctionPos, int junctionLength) {
+	public ContigAligner(String ref, String refChr, int refStart, int minContigLength, int junctionPos, int junctionLength) {
 		this(ref, refChr, refStart, minContigLength);
 		this.junctionPositions.add(junctionPos);
 		this.junctionLengths.add(junctionLength);
 	}
 	
-	public SSWAligner(String ref, String refChr, int refStart, int minContigLength, List<Integer> junctionPositions, List<Integer> junctionLengths) {
+	public ContigAligner(String ref, String refChr, int refStart, int minContigLength, List<Integer> junctionPositions, List<Integer> junctionLengths) {
 		this(ref, refChr, refStart, minContigLength);
 		this.junctionPositions = junctionPositions;
 		this.junctionLengths = junctionLengths;
 	}
 	
-	public SSWAlignerResult align(String seq) {
+	public ContigAlignerResult align(String seq) {
 		
-		SSWAlignerResult result = null;
+		ContigAlignerResult result = null;
 		
 		// Init threadlocal aligner
 		if (aligner.get() == null) {
@@ -118,13 +118,13 @@ public class SSWAligner {
 				if ((first.getOperator() != CigarOperator.M || last.getOperator() != CigarOperator.M) &&
 						cigar.toString().contains("I")) {
 					Logger.trace("INDEL_NEAR_END: %s", cigar.toString());
-					return SSWAlignerResult.INDEL_NEAR_END;
+					return ContigAlignerResult.INDEL_NEAR_END;
 				}
 				
 				if ((first.getLength() < 5 || last.getLength() < 5) && 
 						cigar.toString().contains("I")) {
 					Logger.trace("INDEL_NEAR_END: %s", cigar.toString());
-					return SSWAlignerResult.INDEL_NEAR_END;						
+					return ContigAlignerResult.INDEL_NEAR_END;						
 				}
 
 				return null;
@@ -166,7 +166,7 @@ public class SSWAligner {
 		return result;
 	}
 	
-	SSWAlignerResult finishAlignment(int refStart, int refEnd, String alignedCigar, int score, String seq) {
+	ContigAlignerResult finishAlignment(int refStart, int refEnd, String alignedCigar, int score, String seq) {
 		try {
 			// Pad with remaining reference sequence
 			String leftPad = ref.substring(0, refStart);
@@ -184,7 +184,7 @@ public class SSWAligner {
 				Logger.trace("Spliced Cigar.  old: %s, new: %s", oldCigar, cigar);
 			}
 			
-			return new SSWAlignerResult(refStart-leftPad.length(), cigar, refChr, refContextStart, paddedSeq, score);
+			return new ContigAlignerResult(refStart-leftPad.length(), cigar, refChr, refContextStart, paddedSeq, score);
 		} catch (StringIndexOutOfBoundsException e) {
 			e.printStackTrace();
 			System.err.println(String.format("index error: %d, %d, %s, %d, %s, %s", refStart, refEnd, alignedCigar, score, seq, ref));
@@ -193,7 +193,7 @@ public class SSWAligner {
 		}
 	}
 	
-	public static class SSWAlignerResult {
+	public static class ContigAlignerResult {
 		
 		// Used for testing
 		static boolean PAD_CONTIG = true;
@@ -208,12 +208,12 @@ public class SSWAligner {
 		private int score;
 		private boolean isSecondary = false;
 		
-		public static final SSWAlignerResult INDEL_NEAR_END = new SSWAlignerResult();
+		public static final ContigAlignerResult INDEL_NEAR_END = new ContigAlignerResult();
 
-		private SSWAlignerResult() {
+		private ContigAlignerResult() {
 		}
 		
-		SSWAlignerResult(int refPos, String cigar, String chromosome, int refContextStart, String sequence, int score) {
+		ContigAlignerResult(int refPos, String cigar, String chromosome, int refContextStart, String sequence, int score) {
 			this.localRefPos = refPos;
 			this.cigar = cigar;
 			this.chromosome = chromosome;

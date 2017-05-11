@@ -10,16 +10,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import abra.SSWAligner.SSWAlignerResult;
+import abra.ContigAligner.ContigAlignerResult;
 import abra.SimpleMapper.Orientation;
 import abra.SimpleMapper.SimpleMapperResult;
 
 public class ReadEvaluator {
 
 	// key = SimpleMapper with cached contig, value = contig SW alignment result
-	private Map<Feature, Map<SimpleMapper, SSWAlignerResult>> mappedContigs;
+	private Map<Feature, Map<SimpleMapper, ContigAlignerResult>> mappedContigs;
 	
-	public ReadEvaluator(Map<Feature, Map<SimpleMapper, SSWAlignerResult>> mappedContigs) {
+	public ReadEvaluator(Map<Feature, Map<SimpleMapper, ContigAlignerResult>> mappedContigs) {
 		this.mappedContigs = mappedContigs;
 	}
 	
@@ -46,7 +46,7 @@ public class ReadEvaluator {
 		for (Feature region : mappedContigs.keySet()) {
 //			if (samRecord == null || region.overlapsRead(samRecord)) {  // Allowing null samRecord for unit test
 			if (true) {
-				Map<SimpleMapper, SSWAlignerResult> regionContigs = mappedContigs.get(region);
+				Map<SimpleMapper, ContigAlignerResult> regionContigs = mappedContigs.get(region);
 				
 				for (SimpleMapper mapper : regionContigs.keySet()) {
 					SimpleMapperResult mapResult = mapper.map(read);
@@ -70,7 +70,7 @@ public class ReadEvaluator {
 		Set<Alignment> alignments = new HashSet<Alignment>();
 		
 		for (AlignmentHit alignmentHit : alignmentHits) {
-			SSWAlignerResult contigAlignment = mappedContigs.get(alignmentHit.region).get(alignmentHit.mapper); 
+			ContigAlignerResult contigAlignment = mappedContigs.get(alignmentHit.region).get(alignmentHit.mapper); 
 			
 			int readRefPos = alignmentHit.mapResult.getPos();
 			String cigar = "";

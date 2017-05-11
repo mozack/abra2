@@ -28,7 +28,7 @@ import java.util.UUID;
 
 import abra.JunctionUtils.TooManyJunctionPermutationsException;
 import abra.ReadEvaluator.Alignment;
-import abra.SSWAligner.SSWAlignerResult;
+import abra.ContigAligner.ContigAlignerResult;
 import abra.SimpleMapper.Orientation;
 import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.SAMProgramRecord;
@@ -221,7 +221,7 @@ public class ReAligner {
 			outOfRegionReads.add(new ArrayList<SAMRecordWrapper>());
 		}
 		
-		Map<Feature, Map<SimpleMapper, SSWAlignerResult>> regionContigs = new HashMap<Feature, Map<SimpleMapper, SSWAlignerResult>>();
+		Map<Feature, Map<SimpleMapper, ContigAlignerResult>> regionContigs = new HashMap<Feature, Map<SimpleMapper, ContigAlignerResult>>();
 		int readCount = 0;
 		
 		// Identify regions overlapping the current chromosome chunk
@@ -283,7 +283,7 @@ public class ReAligner {
 				Feature currRegion = chromosomeRegions.get(currRegionIdx);
 				if (record.getAdjustedAlignmentStart() > currRegion.getEnd() + this.readLength*2) {
 					Logger.debug("Processing region: %s", currRegion);
-					Map<SimpleMapper, SSWAlignerResult> mappedContigs = processRegion(currRegion, currReads, regionJunctions.get(currRegion));
+					Map<SimpleMapper, ContigAlignerResult> mappedContigs = processRegion(currRegion, currReads, regionJunctions.get(currRegion));
 					Logger.debug("Region: %s assembled: %d contigs", currRegion, mappedContigs.keySet().size());
 					regionContigs.put(currRegion, mappedContigs);
 					// Remove curr region from list of regions to process
@@ -423,7 +423,7 @@ public class ReAligner {
 			// Assemble reads
 			Feature region = chromosomeRegions.get(currRegionIdx);
 			Logger.debug("Processing region: %s", region);
-			Map<SimpleMapper, SSWAlignerResult> mappedContigs = processRegion(region, currReads, regionJunctions.get(region));
+			Map<SimpleMapper, ContigAlignerResult> mappedContigs = processRegion(region, currReads, regionJunctions.get(region));
 			Logger.debug("Region: %s assembled: %d contigs", region, mappedContigs.keySet().size());
 			regionContigs.put(region, mappedContigs);
 		}
@@ -574,7 +574,7 @@ public class ReAligner {
 		}
 	}
 	
-	private int remapReads(Map<Feature, Map<SimpleMapper, SSWAlignerResult>> mappedContigs,
+	private int remapReads(Map<Feature, Map<SimpleMapper, ContigAlignerResult>> mappedContigs,
 			List<List<SAMRecordWrapper>> readsList, int chromosomeChunkIdx) throws Exception {
 		
 		ReadEvaluator readEvaluator = new ReadEvaluator(mappedContigs);
@@ -628,12 +628,12 @@ public class ReAligner {
 		return subset;
 	}
 	
-	private SSWAlignerResult alignContig(String contig, SSWAligner ssw, List<SSWAligner> sswJunctions) {
-		SSWAlignerResult bestResult = null;
+	private ContigAlignerResult alignContig(String contig, ContigAligner ssw, List<ContigAligner> sswJunctions) {
+		ContigAlignerResult bestResult = null;
 		int bestScore = -1;
 		
-		SSWAlignerResult sswResult;
-		for (SSWAligner sswJunc : sswJunctions) {
+		ContigAlignerResult sswResult;
+		for (ContigAligner sswJunc : sswJunctions) {
 			sswResult = sswJunc.align(contig);
 			if (sswResult != null && sswResult.getScore() > bestScore) {
 				bestScore = sswResult.getScore();
@@ -662,9 +662,9 @@ public class ReAligner {
 //		mappedContigs.put(new SimpleMapper(bestResult.getSequence()), bestResult);
 	}
 	
-	private boolean assemble(List<SSWAlignerResult> results, Feature region, 
-			String refSeq, List<String> bams, List<List<SAMRecordWrapper>> readsList, SSWAligner ssw,
-			List<SSWAligner> sswJunctions, int mnf, int mbq, double mer) throws IOException {
+	private boolean assemble(List<ContigAlignerResult> results, Feature region, 
+			String refSeq, List<String> bams, List<List<SAMRecordWrapper>> readsList, ContigAligner ssw,
+			List<ContigAligner> sswJunctions, int mnf, int mbq, double mer) throws IOException {
 		
 		boolean shouldRetry = false;
 		
@@ -686,9 +686,9 @@ public class ReAligner {
 				// Filter contigs that match the reference
 				if (!refSeq.contains(contig.getContig())) {
 					
-					SSWAlignerResult sswResult = alignContig(contig.getContig(), ssw, sswJunctions);
+					ContigAlignerResult sswResult = alignContig(contig.getContig(), ssw, sswJunctions);
 					
-					if (sswResult == SSWAlignerResult.INDEL_NEAR_END) {
+					if (sswResult == ContigAlignerResult.INDEL_NEAR_END) {
 						shouldRetry = true;
 					} else if (sswResult != null) {
 						// TODO: In multi-region processing, check to ensure identical contigs have identical mappings
@@ -701,7 +701,7 @@ public class ReAligner {
 		return shouldRetry;
 	}
 	
-	public Map<SimpleMapper, SSWAlignerResult> processRegion(Feature region, List<List<SAMRecordWrapper>> reads, List<Feature> junctions) throws Exception {
+	public Map<SimpleMapper, ContigAlignerResult> processRegion(Feature region, List<List<SAMRecordWrapper>> reads, List<Feature> junctions) throws Exception {
 		
 		long start = System.currentTimeMillis();
 		if (isDebug) {
@@ -712,7 +712,7 @@ public class ReAligner {
 			throw new IllegalArgumentException("Region too big: [" + region + "]");
 		}
 		
-		Map<SimpleMapper, SSWAlignerResult> mappedContigs = new HashMap<SimpleMapper, SSWAlignerResult>();
+		Map<SimpleMapper, ContigAlignerResult> mappedContigs = new HashMap<SimpleMapper, ContigAlignerResult>();
 		
 		List<List<SAMRecordWrapper>> readsList = subsetReads(region, reads);
 		
@@ -750,9 +750,9 @@ public class ReAligner {
 			
 			String refSeq = c2r.getSequence(region.getSeqname(), refSeqStart, refSeqLength);
 			
-			SSWAligner ssw = new SSWAligner(refSeq, region.getSeqname(), refSeqStart, this.readLength);
+			ContigAligner ssw = new ContigAligner(refSeq, region.getSeqname(), refSeqStart, this.readLength);
 			
-			List<SSWAligner> sswJunctions = new ArrayList<SSWAligner>();
+			List<ContigAligner> sswJunctions = new ArrayList<ContigAligner>();
 			
 //			List<List<Feature>> junctionPermutations = JunctionUtils.combineJunctions(junctions, this.readLength);
 			
@@ -811,7 +811,7 @@ public class ReAligner {
 							juncSeq.append(rightSeq);
 							// Junction pos and length should already be added
 							
-							SSWAligner sswJunc = new SSWAligner(juncSeq.toString(), region.getSeqname(), refStart, this.readLength, junctionPos, junctionLengths);
+							ContigAligner sswJunc = new ContigAligner(juncSeq.toString(), region.getSeqname(), refStart, this.readLength, junctionPos, junctionLengths);
 							sswJunctions.add(sswJunc);
 						}
 					}
@@ -821,7 +821,7 @@ public class ReAligner {
 				if (this.isSkipAssembly || region.getKmer() > this.readLength-15) {
 					Logger.debug("Skipping assembly of region: " + region.getDescriptor() + " - " + region.getKmer());
 				} else {
-					List<SSWAlignerResult> results = new ArrayList<SSWAlignerResult>();
+					List<ContigAlignerResult> results = new ArrayList<ContigAlignerResult>();
 					boolean shouldRetry = assemble(results, region, refSeq, bams, readsList, ssw, sswJunctions,
 							assemblerSettings.getMinNodeFrequncy(), assemblerSettings.getMinBaseQuality(),
 							assemblerSettings.getMinEdgeRatio()/2.0);
@@ -836,7 +836,7 @@ public class ReAligner {
 								assemblerSettings.getMinEdgeRatio()/2.0);
 					}
 					
-					for (SSWAlignerResult sswResult : results) {
+					for (ContigAlignerResult sswResult : results) {
 						mappedContigs.put(new SimpleMapper(sswResult.getSequence(), maxMismatchRate), sswResult);
 					}
 				}
@@ -852,8 +852,8 @@ public class ReAligner {
 						// TODO: Check to see if this contig is already in the map before aligning
 						
 						//TODO: Include junctions !!!
-						SSWAlignerResult sswResult = ssw.align(contig);
-						if (sswResult != null && sswResult != SSWAlignerResult.INDEL_NEAR_END) {
+						ContigAlignerResult sswResult = ssw.align(contig);
+						if (sswResult != null && sswResult != ContigAlignerResult.INDEL_NEAR_END) {
 							// Set as secondary for remap prioritization
 							sswResult.setSecondary(true);
 							// Store for read mapping
@@ -1144,7 +1144,7 @@ public class ReAligner {
 			System.setProperty("java.io.tmpdir", tmpDir);
 		}
 		
-		SSWAligner.init(swScoring);
+		ContigAligner.init(swScoring);
 		
 		Set<PosixFilePermission> perms = new HashSet<PosixFilePermission>();
         perms.add(PosixFilePermission.OWNER_READ);

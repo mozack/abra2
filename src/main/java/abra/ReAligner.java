@@ -1112,9 +1112,6 @@ public class ReAligner {
 		NativeAssembler assem = new NativeAssembler();
 
 		assem.setTruncateOutputOnRepeat(true);
-		assem.setMaxContigs(assemblerSettings
-				.getMaxPotentialContigs());
-
 		assem.setMaxPathsFromRoot(100000);
 		assem.setReadLength(readLength);
 		//assem.setKmer(assemblerSettings.getKmerSize());
@@ -1125,7 +1122,6 @@ public class ReAligner {
 		assem.setMaxNodes(assemblerSettings.getMaxNodes());
 		assem.setMinReadCandidateFraction(assemblerSettings.getMinReadCandidateFraction());
 		assem.setMaxAverageDepth(assemblerSettings.getMaxAverageDepth());
-		assem.setAverageDepthCeiling(assemblerSettings.getAverageDepthCeiling());
 
 		return assem;
 	}
@@ -1267,12 +1263,9 @@ public class ReAligner {
 			assemblerSettings.setKmerSize(options.getKmerSizes());
 			assemblerSettings.setMinContigLength(options.getMinContigLength());
 			assemblerSettings.setMinNodeFrequncy(options.getMinNodeFrequency());
-			assemblerSettings.setMaxPotentialContigs(options
-					.getMaxPotentialContigs());
 			assemblerSettings.setMinBaseQuality(options.getMinBaseQuality());
 			assemblerSettings.setMinReadCandidateFraction(options.getMinReadCandidateFraction());
 			assemblerSettings.setMaxAverageDepth(options.getMaxAverageRegionDepth());
-			assemblerSettings.setAverageDepthCeiling(options.getAverageDepthCeiling());
 			assemblerSettings.setMinEdgeRatio(options.getMinEdgeRatio());
 			assemblerSettings.setMaxNodes(options.getMaxNodes());
 

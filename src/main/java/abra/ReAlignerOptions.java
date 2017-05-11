@@ -18,28 +18,24 @@ public class ReAlignerOptions extends Options {
 	private static final String KMER_SIZE = "kmer";
 	private static final String MIN_NODE_FREQUENCY = "mnf";
 	private static final String MIN_CONTIG_LENGTH = "mcl";
-	private static final String MAX_POTENTIAL_CONTIGS = "mpc";
 	private static final String MIN_MAPQ = "mapq";
 	private static final String NUM_THREADS = "threads";
 	private static final String SINGLE_END = "single";
 	private static final String MIN_BASE_QUALITY = "mbq";
 	private static final String MIN_READ_CANDIDATE_FRACTION = "rcf";
 	private static final String MAX_AVERAGE_REGION_DEPTH = "mad";
-	private static final String AVERAGE_DEPTH_CEILING = "adc";
 	private static final String MIN_EDGE_RATIO = "mer";
 	private static final String MAX_NODES = "maxn";
 	private static final String SKIP_ASSEMBLY = "sa";
 	private static final String SKIP_SOFT_CLIP = "ssc";
 	private static final String SOFT_CLIP = "sc";
 	private static final String SKIP_OBS_INDELS = "sobs";
-//	private static final String SW_SOFT_CLIP = "sws";
 	private static final String JUNCTIONS = "junctions";
 	private static final String LOG_LEVEL = "log";
 	private static final String CONTIG_FILE	 = "contigs";
 	private static final String GTF_JUNCTIONS = "gtf";
-	private static final String SW_SCORING = "sw";
+	private static final String SG_ALIGNER_SCORING = "sga";
 	private static final String MAX_CACHED_READS = "mcr";
-//	private static final String USE_OBSERVED_INDELS = "obs";
 	private static final String KEEP_TMP = "keep-tmp";
 	private static final String TMP_DIR = "tmpdir";
 	private static final String CONSENSUS_SEQ = "cons";
@@ -62,14 +58,12 @@ public class ReAlignerOptions extends Options {
             parser.accepts(KMER_SIZE, "Optional assembly kmer size(delimit with commas if multiple sizes specified)").withOptionalArg().ofType(String.class);
             parser.accepts(MIN_NODE_FREQUENCY, "Assembly minimum node frequency").withRequiredArg().ofType(Integer.class).defaultsTo(2);
             parser.accepts(MIN_CONTIG_LENGTH, "Assembly minimum contig length").withOptionalArg().ofType(Integer.class).defaultsTo(-1);
-            parser.accepts(MAX_POTENTIAL_CONTIGS, "Maximum number of potential contigs for a region").withOptionalArg().ofType(Integer.class).defaultsTo(5000);
             parser.accepts(NUM_THREADS, "Number of threads").withRequiredArg().ofType(Integer.class).defaultsTo(4);
             parser.accepts(MIN_MAPQ, "Minimum mapping quality for a read to be used in assembly and be eligible for realignment").withOptionalArg().ofType(Integer.class).defaultsTo(40);
             parser.accepts(SINGLE_END, "Input is single end");
             parser.accepts(MIN_BASE_QUALITY, "Minimum base quality for inclusion in assembly.  This value is compared against the sum of base qualities per kmer position").withOptionalArg().ofType(Integer.class).defaultsTo(60);
             parser.accepts(MIN_READ_CANDIDATE_FRACTION, "Minimum read candidate fraction for triggering assembly").withRequiredArg().ofType(Double.class).defaultsTo(.01);
             parser.accepts(MAX_AVERAGE_REGION_DEPTH, "Regions with average depth exceeding this value will be downsampled").withRequiredArg().ofType(Integer.class).defaultsTo(250);
-            parser.accepts(AVERAGE_DEPTH_CEILING, "Skip regions with average depth greater than this value").withOptionalArg().ofType(Integer.class).defaultsTo(100000);
             parser.accepts(MIN_EDGE_RATIO, "Min edge pruning ratio.  Default value is appropriate for relatively sensitive somatic cases.  May be increased for improved speed in germline only cases.").withRequiredArg().ofType(Double.class).defaultsTo(.02);
             parser.accepts(MAX_NODES, "Maximum pre-pruned nodes in regional assembly").withOptionalArg().ofType(Integer.class).defaultsTo(9000);
             parser.accepts(SKIP_ASSEMBLY, "Skip assembly");
@@ -79,7 +73,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(GTF_JUNCTIONS, "GTF file defining exons and transcripts").withRequiredArg().ofType(String.class);
             parser.accepts(SKIP_SOFT_CLIP, "Skip usage of soft clipped sequences as putative contigs");
             parser.accepts(SOFT_CLIP, "Soft clip contig args [max_contigs,min_base_qual,frac_high_qual_bases,min_soft_clip_len]").withRequiredArg().ofType(String.class).defaultsTo("32,13,80,8");
-            parser.accepts(SW_SCORING, "Smith Waterman scoring used for contig alignments (match, mismatch_penalty, gap_open_penalty, gap_extend_penalty)").withRequiredArg().ofType(String.class).defaultsTo("8,32,48,1");
+            parser.accepts(SG_ALIGNER_SCORING, "Scoring used for contig alignments (match, mismatch_penalty, gap_open_penalty, gap_extend_penalty)").withRequiredArg().ofType(String.class).defaultsTo("8,32,48,1");
             parser.accepts(MAX_CACHED_READS, "Max number of cached reads per sample per thread").withRequiredArg().ofType(Integer.class).defaultsTo(500000);
             parser.accepts(SKIP_OBS_INDELS, "Do not use observed indels in original alignments to generate contigs");
             parser.accepts(KEEP_TMP, "Do not delete the temporary directory");
@@ -214,10 +208,6 @@ public class ReAlignerOptions extends Options {
 		return (Integer) getOptions().valueOf(MIN_CONTIG_LENGTH);
 	}
 	
-	public int getMaxPotentialContigs() {
-		return (Integer) getOptions().valueOf(MAX_POTENTIAL_CONTIGS);
-	}
-	
 	public int getNumThreads() {
 		return getOptions().hasArgument(NUM_THREADS) ? (Integer) getOptions().valueOf(NUM_THREADS) : 4;
 	}
@@ -274,20 +264,16 @@ public class ReAlignerOptions extends Options {
 		return (Integer) getOptions().valueOf(MAX_AVERAGE_REGION_DEPTH);
 	}
 	
-	public int getAverageDepthCeiling() {
-		return (Integer) getOptions().valueOf(AVERAGE_DEPTH_CEILING);
-	}
-	
 	public int getMinimumMappingQuality() {
 		return (Integer) getOptions().valueOf(MIN_MAPQ);
 	}
 	
 	public int[] getSmithWatermanScoring() {
-		String scoring = (String) getOptions().valueOf(SW_SCORING);
+		String scoring = (String) getOptions().valueOf(SG_ALIGNER_SCORING);
 		String[] fields = scoring.split(",");
 		if (fields.length != 4) {
-			Logger.error("4 values required for sw scoring");
-			throw new IllegalArgumentException("4 values required for sw scoring");
+			Logger.error("4 values required for sga scoring");
+			throw new IllegalArgumentException("4 values required for sga scoring");
 		}
 		
 		int[] scores = new int[4];

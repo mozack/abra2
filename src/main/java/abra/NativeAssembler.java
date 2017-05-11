@@ -40,7 +40,6 @@ public class NativeAssembler {
 	private double minReadCandidateFraction;
 	private int maxAverageDepth;
 	private boolean isCycleExceedingThresholdDetected = false;
-	private int averageDepthCeiling;
 	private double minEdgeRatio;
 	private int maxNodes;
 
@@ -92,10 +91,6 @@ public class NativeAssembler {
 	//  Calc desired number of reads per file.
 	private int desiredNumberOfReads(List<Feature> regions) {
 		return (int) (readLengthsForAllRegions(regions) * (double) maxAverageDepth); 
-	}
-	
-	private int maxNumberOfReadsPerSample(List<Feature> regions) {
-		return (int) (readLengthsForAllRegions(regions) * (double) averageDepthCeiling);
 	}
 	
 	private int countGaps(Cigar cigar) {
@@ -429,11 +424,7 @@ public class NativeAssembler {
 	public void setMinReadCandidateFraction(double minReadCandidateFraction) {
 		this.minReadCandidateFraction = minReadCandidateFraction;
 	}
-	
-	public void setAverageDepthCeiling(int averageDepthCeiling) {
-		this.averageDepthCeiling = averageDepthCeiling;
-	}
-	
+		
 	public boolean isCycleExceedingThresholdDetected() {
 		return isCycleExceedingThresholdDetected;
 	}

@@ -77,4 +77,8 @@ public class AlleleCounts {
 		
 		return maxBases;
 	}
+	
+	public String toString() {
+		return "count: " + count;
+	}
 }

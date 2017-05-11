@@ -42,6 +42,35 @@ public class Allele {
 		return length;
 	}
 	
+	public String toString() {
+		String str = "";
+		switch (type) {
+			case A:
+				str = "A";
+				break;
+			case C:
+				str = "C";
+				break;				
+			case T:
+				str = "T";
+				break;
+			case G:
+				str = "G";
+				break;
+			case INS:
+				str = "INS";
+				break;
+			case DEL:
+				str = "DEL";
+				break;
+			case UNK:
+				str = "UNK";
+				break;
+		}
+		
+		return str;
+	}
+	
 	@Override
 	public int hashCode() {
 		final int prime = 31;

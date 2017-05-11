@@ -255,7 +255,7 @@ public class GermlineProcessor {
 			
 			if (altCounts.getCount() >= MIN_SUPPORTING_READS && af >= MIN_ALLELE_FRACTION) {
 
-				double qual = calcPhredScaledQuality(refCounts.getCount(), altCounts.getCount());
+				double qual = calcPhredScaledQuality(refCounts.getCount(), altCounts.getCount(), tumorReadIds.size());
 				int repeatPeriod = getRepeatPeriod(chromosome, position, alt, altCounts);
 
 				String refField = "";
@@ -346,25 +346,47 @@ public class GermlineProcessor {
 			
 			AlleleCounts refCounts = alleleCounts.get(ref);
 			AlleleCounts altCounts = alleleCounts.get(alt);
+			
+			int ispan = altCounts.getMaxReadIdx()-altCounts.getMinReadIdx();
+			float vaf = (float) altCounts.getCount() / (float) (altCounts.getCount()+refCounts.getCount());
 			//
 			// chr1    14397   .       CTGT    C       31.08108108108108       PASS    SOMATIC;CMQ=0;CTX=TAAAAGCACACTGTTGGTTT;REPEAT_PERIOD=1;NNAF=<NNAF>      
 			// DP:AD:YM0:YM1:YM:OBS:MIRI:MARI:SOR:MQ0:GT       1092:51,23:0:0:0:23:5:36:0,51,1,22:981:0/1
 			String pos = String.valueOf(position);
 			String qualStr = String.valueOf(qual);
 			String info = String.format("REPEAT_PERIOD=%d;", repeatPeriod);
-			String format = "DP:AD:MIRI:MARI:SOR:MQ0:GT";
-			String sample = String.format("%d:%d,%d:%d:%d:%d,%d,%d,%d:%d:0/1", totalReads, refCounts.getCount(), altCounts.getCount(),
+			String format = "DP:AD:MIRI:MARI:SOR:MQ0:ISPAN:VAF:GT";
+			
+			String sample = String.format("%d:%d,%d:%d:%d:%d,%d,%d,%d:%d:%d:%f:0/1", totalReads, refCounts.getCount(), altCounts.getCount(),
 					altCounts.getMinReadIdx(), altCounts.getMaxReadIdx(), refCounts.getFwd(), refCounts.getRev(), altCounts.getFwd(), altCounts.getRev(),
-					mapq0);
+					mapq0, ispan, vaf);
+			
 			return String.join("\t", chromosome, pos, ".", refField, altField, qualStr, "PASS", info, format, sample);
 		}
 	}
 	
-	// TODO : Not Phred...
-	static double calcPhredScaledQuality(int refObs, int altObs) {
-		double qual = (double) altObs / ((double) refObs + (double) altObs);
+	// Simple Fisher's exact.  Similar to Varscan's calculation
+	static double calcPhredScaledQuality(int refObs, int altObs, int dp) {
 		
-		return qual * 100;
+		int altExpected = (int) ((dp * .001) + .5);
+		int refExpected = dp - altExpected;
+		
+		FishersExactTest test = new FishersExactTest();
+		// Calc p-value
+		double p = test.oneTailedTest(refExpected, altExpected, refObs, altObs);
+		
+		// Convert to phred scale
+		double qual = -10 * Math.log10(p);
+		
+		// Round to tenths
+		qual = (int) (qual * 10);
+		qual = qual / 10.0;
+		
+		return qual;		
+		
+//		double qual = (double) altObs / ((double) refObs + (double) altObs);
+//		
+//		return qual * 100;
 	}
 	
 	private int getRepeatPeriod(String chromosome, int position, Allele indel, AlleleCounts indelCounts) {

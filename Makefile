@@ -3,7 +3,7 @@
 
 SRCDIR=src/main/c
 
-all: clean native ssw java
+all: clean native java
 
 java:
 	mvn package
@@ -14,19 +14,13 @@ mktargetdir:
 native: mktargetdir
 	g++ -g -O2 -I$(SRCDIR) -I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/linux -shared -fPIC $(SRCDIR)/assembler.cpp $(SRCDIR)/sg_aligner.cpp -o target/libAbra.so
 
-clean_ssw:
-	cd src/main/c/ssw && make clean
-
-ssw:
-	cd src/main/c/ssw && make libssw.so && make libsswjni.so && cp libssw*.so ../../../../target
-
 standalone:
 	g++ -g -I$(SRCDIR) -I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/linux $(SRCDIR)/assembler.c -o abra
 
 sga:
 	g++ -g -O2 -I$(SRCDIR) -I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/linux $(SRCDIR)/sg_aligner.cpp -o sga
 
-clean:	clean_ssw
+clean:
 	rm -rf target
 	mvn clean
 

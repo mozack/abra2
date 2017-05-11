@@ -210,7 +210,7 @@ extern "C"
 	char result[4098];
 	align(seq1, seq2, result);
 
-	fprintf(stderr, "SGA result: %s\n", result);
+//	fprintf(stderr, "SGA result: %s\n", result);
 
 	jstring ret = env->NewStringUTF(result);
 

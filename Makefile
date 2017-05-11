@@ -12,7 +12,7 @@ mktargetdir:
 	mkdir target
 
 native: mktargetdir
-	g++ -g -O2 -I$(SRCDIR) -I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/linux -shared -fPIC $(SRCDIR)/assembler.c $(SRCDIR)/sg_aligner.cpp -o target/libAbra.so
+	g++ -g -O2 -I$(SRCDIR) -I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/linux -shared -fPIC $(SRCDIR)/assembler.cpp $(SRCDIR)/sg_aligner.cpp -o target/libAbra.so
 
 clean_ssw:
 	cd src/main/c/ssw && make clean

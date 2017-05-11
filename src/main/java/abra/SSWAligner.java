@@ -45,7 +45,7 @@ public class SSWAligner {
 	private IndelShifter indelShifter = new IndelShifter();
 	private CompareToReference2 localC2r;
 	
-	private static ThreadLocal<SemiGlobalAligner> aligner = new ThreadLocal<SemiGlobalAligner>();
+	private static ThreadLocal<NativeSemiGlobalAligner> aligner = new ThreadLocal<NativeSemiGlobalAligner>();
 	
 	public static void init(int[] scoring) {
 		
@@ -103,7 +103,7 @@ public class SSWAligner {
 			// Init threadlocal aligner
 			if (aligner.get() == null) {
 				Logger.info("Initializing SGAligner");
-				aligner.set(new SemiGlobalAligner(MATCH, MISMATCH, GAP_OPEN_PENALTY, GAP_EXTEND_PENALTY));
+				aligner.set(new NativeSemiGlobalAligner(MATCH, MISMATCH, GAP_OPEN_PENALTY, GAP_EXTEND_PENALTY));
 			}
 			
 			SemiGlobalAligner.Result sgResult = aligner.get().align(seq, ref);
@@ -136,40 +136,34 @@ public class SSWAligner {
 					
 					int endPos = sgResult.position + cigar.getReferenceLength();
 					
-//					cigar = indelShifter.shiftIndelsLeft(sgResult.position+this.refContextStart, endPos+this.refContextStart,
-//							this.refChr, cigar, seq, c2r);
-					
-					
-//					cigar = indelShifter.shiftAllIndelsLeft(sgResult.position+this.refContextStart, endPos+this.refContextStart,
+
+//					cigar = indelShifter.shiftAllIndelsLeft(sgResult.position+1, endPos+1,
 //							this.refChr, cigar, seq, localC2r);
-
-					cigar = indelShifter.shiftAllIndelsLeft(sgResult.position+1, endPos+1,
-							this.refChr, cigar, seq, localC2r);
-					
-					first = cigar.getFirstCigarElement();
-					last = cigar.getLastCigarElement();
-					
-					String textCigar = TextCigarCodec.encode(cigar);
-					Logger.trace("OLD_CIGAR: %s\tNEW_CIGAR%s", sgResult.cigar, textCigar);
-					
-					// Do not allow indels at the edges of contigs.
-					if (first.getOperator() != CigarOperator.M || first.getLength() < 10 || 
-						last.getOperator() != CigarOperator.M || last.getLength() < 10) {
-						
-						if ((first.getOperator() != CigarOperator.M || last.getOperator() != CigarOperator.M) &&
-								cigar.toString().contains("I")) {
-							Logger.trace("INDEL_NEAR_END: %s", cigar.toString());
-							return SSWAlignerResult.INDEL_NEAR_END;
-						}
-						
-						if ((first.getLength() < 5 || last.getLength() < 5) && 
-								cigar.toString().contains("I")) {
-							Logger.trace("INDEL_NEAR_END: %s", cigar.toString());
-							return SSWAlignerResult.INDEL_NEAR_END;						
-						}
-
-						return null;
-					}
+//					
+//					first = cigar.getFirstCigarElement();
+//					last = cigar.getLastCigarElement();
+//					
+//					String textCigar = TextCigarCodec.encode(cigar);
+//					Logger.trace("OLD_CIGAR: %s\tNEW_CIGAR%s", sgResult.cigar, textCigar);
+//					
+//					// Do not allow indels at the edges of contigs.
+//					if (first.getOperator() != CigarOperator.M || first.getLength() < 10 || 
+//						last.getOperator() != CigarOperator.M || last.getLength() < 10) {
+//						
+//						if ((first.getOperator() != CigarOperator.M || last.getOperator() != CigarOperator.M) &&
+//								cigar.toString().contains("I")) {
+//							Logger.trace("INDEL_NEAR_END: %s", cigar.toString());
+//							return SSWAlignerResult.INDEL_NEAR_END;
+//						}
+//						
+//						if ((first.getLength() < 5 || last.getLength() < 5) && 
+//								cigar.toString().contains("I")) {
+//							Logger.trace("INDEL_NEAR_END: %s", cigar.toString());
+//							return SSWAlignerResult.INDEL_NEAR_END;						
+//						}
+//
+//						return null;
+//					}
 						
 						// Require first and last 10 bases of contig to be similar to ref
 						int mismatches = 0;
@@ -197,7 +191,7 @@ public class SSWAligner {
 							if (mismatches > 2) {
 								Logger.trace("Mismatches at end of: %s", seq);
 							} else {
-								result = finishAlignment(sgResult.position, endPos, textCigar, sgResult.score, seq);
+								result = finishAlignment(sgResult.position, endPos, sgResult.cigar, sgResult.score, seq);
 							}
 						}
 //					}

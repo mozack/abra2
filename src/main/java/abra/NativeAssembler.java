@@ -31,7 +31,7 @@ public class NativeAssembler {
 	private static final int MIN_CANDIDATE_BASE_QUALITY = 10;
 	
 	private boolean truncateOnRepeat;
-	private int maxContigs;
+	private int maxContigs = 5000;
 	private int maxPathsFromRoot;
 	private int readLength;
 	private int[] kmers;
@@ -375,14 +375,6 @@ public class NativeAssembler {
 
 	public void setTruncateOutputOnRepeat(boolean truncateOnRepeat) {
 		this.truncateOnRepeat = truncateOnRepeat;
-	}
-
-	public int getMaxContigs() {
-		return maxContigs;
-	}
-
-	public void setMaxContigs(int maxContigs) {
-		this.maxContigs = maxContigs;
 	}
 
 	public int getMaxPathsFromRoot() {

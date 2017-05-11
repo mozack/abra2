@@ -12,7 +12,6 @@ public class AssemblerSettings {
 	private int minNodeFrequncy;
 	private int minUnalignedNodeFrequency;
 	private int minContigLength;
-	private int maxPotentialContigs;
 	private int minBaseQuality;
 	private double minReadCandidateFraction;
 	private int maxAverageDepth;
@@ -99,15 +98,7 @@ public class AssemblerSettings {
 	public void setMinContigLength(int minContigLength) {
 		this.minContigLength = minContigLength;
 	}
-	
-	public int getMaxPotentialContigs() {
-		return maxPotentialContigs;
-	}
-	
-	public void setMaxPotentialContigs(int maxPotentialContigs) {
-		this.maxPotentialContigs = maxPotentialContigs;
-	}
-			
+				
 	public String getDescription() {
 		StringBuffer str = new StringBuffer();
 		
@@ -117,7 +108,6 @@ public class AssemblerSettings {
 		appendSetting(str, "minEdgeFrequency", minEdgeFrequency);
 		appendSetting(str, "minNodeFrequncy", minNodeFrequncy);
 		appendSetting(str, "minContigLength", minContigLength);
-		appendSetting(str, "maxPotentialContigs", maxPotentialContigs);
 		appendSetting(str, "minBaseQuality", minBaseQuality);
 		appendSetting(str, "minReadCandidateFraction", minReadCandidateFraction);
 		appendSetting(str, "maxAverageRegionDepth", maxAverageDepth);

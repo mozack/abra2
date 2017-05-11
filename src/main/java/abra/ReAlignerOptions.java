@@ -42,6 +42,7 @@ public class ReAlignerOptions extends Options {
 	private static final String MAX_MISMATCH_RATE = "mmr";
 	private static final String WINDOW_SIZE = "ws";
 	private static final String MAX_READS_IN_REGION = "mrr";
+	private static final String COMPRESSION_LEVEL = "cl";
 	
 	private OptionParser parser;
 	private boolean isValid;
@@ -82,6 +83,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(MAX_MISMATCH_RATE, "Max allowed mismatch rate when mapping reads back to contigs").withRequiredArg().ofType(Double.class).defaultsTo(.05);
             parser.accepts(WINDOW_SIZE, "Processing window size and overlap (size,overlap)").withRequiredArg().ofType(String.class).defaultsTo("400,200");
             parser.accepts(MAX_READS_IN_REGION, "Regions containing more reads than this value are not processed.  Use -1 to disable.").withRequiredArg().ofType(Integer.class).defaultsTo(10000);
+            parser.accepts(COMPRESSION_LEVEL, "Compression level of output bam file(s)").withRequiredArg().ofType(Integer.class).defaultsTo(5);
     	}
     	
     	return parser;
@@ -341,5 +343,9 @@ public class ReAlignerOptions extends Options {
 	
 	public int getMaxCachedReads() {
 		return (Integer) getOptions().valueOf(MAX_CACHED_READS);
+	}
+	
+	public int getCompressionLevel() {
+		return (Integer) getOptions().valueOf(COMPRESSION_LEVEL);
 	}
 }

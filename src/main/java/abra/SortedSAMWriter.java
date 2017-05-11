@@ -23,10 +23,8 @@ import htsjdk.samtools.SamReader;
 public class SortedSAMWriter {
 	
 	private static final int TEMP_COMPRESSION_LEVEL = 1;
-	private static final int FINAL_COMPRESSION_LEVEL = 5;
 	
 	public static final int GENOMIC_RANGE_TO_CACHE = 1000000;
-	private static int UNMAPPED_INDEX = -1;
 	private static final int ASYNC_READ_CACHE_SIZE = 1000000;
 	
 	private SAMFileWriterFactory writerFactory = new SAMFileWriterFactory();
@@ -37,19 +35,19 @@ public class SortedSAMWriter {
 	private SAMFileHeader[] samHeaders;
 	private boolean isKeepTmp;
 	private ChromosomeChunker chromosomeChunker;
+	private int finalCompressionLevel;
 	
 	private Set<Integer> chunksReady = new HashSet<Integer>();
 	
 	public SortedSAMWriter(String[] outputFiles, String tempDir, SAMFileHeader[] samHeaders,
-			boolean isKeepTmp, ChromosomeChunker chromosomeChunker) {
+			boolean isKeepTmp, ChromosomeChunker chromosomeChunker, int finalCompressionLevel) {
 	
 		this.samHeaders = samHeaders;
 		this.outputFiles = outputFiles;
 		this.tempDir = tempDir;
 		this.isKeepTmp = isKeepTmp;
 		this.chromosomeChunker = chromosomeChunker;
-		
-		UNMAPPED_INDEX = chromosomeChunker.getChunks().size();
+		this.finalCompressionLevel = finalCompressionLevel;
 		
 		writerFactory.setUseAsyncIo(false);
 		IntelDeflaterFactory intelDeflater = new IntelDeflaterFactory();
@@ -60,7 +58,6 @@ public class SortedSAMWriter {
 		writers = new SAMFileWriter[outputFiles.length][];
 		
 		for (int i=0; i<writers.length; i++) {
-			//writers[i] = new SAMFileWriter[sequences.size()+1];
 			writers[i] = new SAMFileWriter[chromosomeChunker.getChunks().size()+1];
 		}
 	}
@@ -93,14 +90,12 @@ public class SortedSAMWriter {
 	
 	private void initChromosomeChunk(int sampleIdx, int chromosomeChunkIdx) {
 		Logger.debug("Writer init: %d, %d", sampleIdx, chromosomeChunkIdx);
-		//int chrom  = chromIdx.get(chromosome);
 		samHeaders[sampleIdx].setSortOrder(SortOrder.unsorted);
 		writers[sampleIdx][chromosomeChunkIdx] = writerFactory.makeBAMWriter(samHeaders[sampleIdx], false, new File(getTempFilename(sampleIdx, chromosomeChunkIdx)), TEMP_COMPRESSION_LEVEL);
 	}
 	
 	private void finishChromosomeChunk(int sampleIdx, int chromosomeChunkIdx) throws IOException {
 		Logger.debug("Writer finish: %d, %d", sampleIdx, chromosomeChunkIdx);
-		//int chrom  = chromIdx.get(chromosome);
 		writers[sampleIdx][chromosomeChunkIdx].close();
 	}
 	
@@ -110,7 +105,6 @@ public class SortedSAMWriter {
 		}
 		
 		chunksReady.add(chromosomeChunkIdx);
-//		outputFinalizedChromosomes();
 	}
 	
 	public void outputFinal(int sampleIdx, String inputBam) throws IOException {
@@ -119,9 +113,9 @@ public class SortedSAMWriter {
 
 		writerFactory.setUseAsyncIo(true);
 		writerFactory.setAsyncOutputBufferSize(ASYNC_READ_CACHE_SIZE);
-		writerFactory.setCompressionLevel(FINAL_COMPRESSION_LEVEL);
+		writerFactory.setCompressionLevel(finalCompressionLevel);
 		samHeaders[sampleIdx].setSortOrder(SortOrder.coordinate);
-		SAMFileWriter output = writerFactory.makeBAMWriter(samHeaders[sampleIdx], true, new File(outputFiles[sampleIdx]), FINAL_COMPRESSION_LEVEL);
+		SAMFileWriter output = writerFactory.makeBAMWriter(samHeaders[sampleIdx], true, new File(outputFiles[sampleIdx]), finalCompressionLevel);
 		
 		for (String chromosome : chromosomeChunker.getChromosomes()) {
 			processChromosome(output, sampleIdx, chromosome);

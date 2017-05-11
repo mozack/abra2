@@ -90,6 +90,7 @@ public class ReAligner {
 	private boolean useConsensusSeq;
 	private boolean isKeepTmp;
 	private String tmpDir;
+	private int finalCompressionLevel;
 	
 	// If true, the input target file specifies kmer values
 	private boolean hasPresetKmers = false;
@@ -108,8 +109,6 @@ public class ReAligner {
 	
 	private int[] swScoring;
 	private int[] softClipParams;
-	
-	public static final int COMPRESSION_LEVEL = 1;
 	
 	private int maxCachedReads = 0;
 	private int maxReadsInRegion;
@@ -156,7 +155,7 @@ public class ReAligner {
 			samHeaders[i].addProgramRecord(pg);			
 		}
 		
-		writer = new SortedSAMWriter(outputFiles, tempDir.toString(), samHeaders, isKeepTmp, chromosomeChunker);
+		writer = new SortedSAMWriter(outputFiles, tempDir.toString(), samHeaders, isKeepTmp, chromosomeChunker, finalCompressionLevel);
 
 		// Spawn thread for each chromosome
 		// TODO: Validate identical sequence dictionary for each input file
@@ -1291,6 +1290,7 @@ public class ReAligner {
 			realigner.swScoring = options.getSmithWatermanScoring();
 			realigner.softClipParams = options.getSoftClipParams();
 			realigner.maxCachedReads = options.getMaxCachedReads();
+			realigner.finalCompressionLevel = options.getCompressionLevel();
 			MAX_REGION_LENGTH = options.getWindowSize();
 			MIN_REGION_REMAINDER = options.getWindowOverlap();
 			REGION_OVERLAP = options.getWindowOverlap();

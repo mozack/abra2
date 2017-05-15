@@ -172,11 +172,7 @@ public class GermlineProcessor {
 	private void processLocus(ReadsAtLocus tumorReads) {
 		String chromosome = tumorReads.getChromosome();
 		int position = tumorReads.getPosition();
-		
-		if (position == 911220) {
-			System.out.println("foo");
-		}
-		
+				
 		if (position > lastPos + 5000000) {
 			Logger.info("Processing: %s:%d", chromosome, position);
 			lastPos = position;

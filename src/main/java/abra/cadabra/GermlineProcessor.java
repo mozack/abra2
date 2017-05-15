@@ -226,26 +226,28 @@ public class GermlineProcessor {
 					}
 				}
 				
-				if (!alleleCounts.containsKey(allele)) {
-					alleleCounts.put(allele, new AlleleCounts());
+				if (allele != Allele.UNK) {
+					if (!alleleCounts.containsKey(allele)) {
+						alleleCounts.put(allele, new AlleleCounts());
+					}
+					
+					AlleleCounts ac = alleleCounts.get(allele);
+					ac.incrementCount();
+					if (read.getReadNegativeStrandFlag()) {
+						ac.incrementRev();
+					} else {
+						ac.incrementFwd();
+					}
+					
+					if (readElement != null) {
+						ac.updateReadIdx(readElement.getReadIndex());
+					}
+					
+					if (allele.getType() == Allele.Type.INS) {
+						ac.updateInsertBases(readElement.getInsertBases());
+					}
 				}
 				
-				AlleleCounts ac = alleleCounts.get(allele);
-				ac.incrementCount();
-				if (read.getReadNegativeStrandFlag()) {
-					ac.incrementRev();
-				} else {
-					ac.incrementFwd();
-				}
-				
-				if (readElement != null) {
-					ac.updateReadIdx(readElement.getReadIndex());
-				}
-				
-				if (allele.getType() == Allele.Type.INS) {
-					ac.updateInsertBases(readElement.getInsertBases());
-				}
-								
 				tumorReadIds.add(read.getReadName());
 			}
 		}
@@ -257,9 +259,11 @@ public class GermlineProcessor {
 			AlleleCounts refCounts = alleleCounts.get(refAllele);
 			double af = (double) altCounts.getCount() / (double) (altCounts.getCount() + refCounts.getCount());
 			
+			int usableDepth = AlleleCounts.sum(alleleCounts.values());
+			
 			if (altCounts.getCount() >= MIN_SUPPORTING_READS && af >= MIN_ALLELE_FRACTION) {
 
-				double qual = calcPhredScaledQuality(refCounts.getCount(), altCounts.getCount(), tumorReadIds.size());
+				double qual = calcPhredScaledQuality(refCounts.getCount(), altCounts.getCount(), usableDepth);
 				int repeatPeriod = getRepeatPeriod(chromosome, position, alt, altCounts);
 
 				String refField = "";
@@ -273,7 +277,7 @@ public class GermlineProcessor {
 				}
 				
 				Call call = new Call(chromosome, position, refAllele, alt, alleleCounts, tumorReadIds.size(), 
-						AlleleCounts.sum(alleleCounts.values()), qual, repeatPeriod, tumorMapq0, refField, altField);
+						usableDepth, qual, repeatPeriod, tumorMapq0, refField, altField);
 				
 //				System.err.println(call);
 				outputRecords.add(call);

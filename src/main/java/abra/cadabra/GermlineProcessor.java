@@ -173,6 +173,10 @@ public class GermlineProcessor {
 		String chromosome = tumorReads.getChromosome();
 		int position = tumorReads.getPosition();
 		
+		if (position == 911220) {
+			System.out.println("foo");
+		}
+		
 		if (position > lastPos + 5000000) {
 			Logger.info("Processing: %s:%d", chromosome, position);
 			lastPos = position;
@@ -216,8 +220,12 @@ public class GermlineProcessor {
 						allele = new Allele(Allele.Type.INS, readElement.getCigarElement().getLength());
 					}
 				} else {
-					Character base = getBaseAtPosition(read, position);
-					if (base != null) {
+					Character base     = getBaseAtPosition(read, position);
+					Character nextBase = getBaseAtPosition(read, position+1);
+					IndelInfo readIndel = checkForIndelAtLocus(read.getAlignmentStart(),
+							read.getCigar(), position);
+					
+					if (readIndel == null && base != null && nextBase != null) {
 						allele = Allele.getAllele(base);
 					}
 				}
@@ -269,7 +277,7 @@ public class GermlineProcessor {
 				}
 				
 				Call call = new Call(chromosome, position, refAllele, alt, alleleCounts, tumorReadIds.size(), 
-						qual, repeatPeriod, tumorMapq0, refField, altField);
+						AlleleCounts.sum(alleleCounts.values()), qual, repeatPeriod, tumorMapq0, refField, altField);
 				
 //				System.err.println(call);
 				outputRecords.add(call);
@@ -321,25 +329,32 @@ public class GermlineProcessor {
 		Allele alt;
 		Map<Allele, AlleleCounts> alleleCounts;
 		int totalReads;
+		int usableDepth;
 		double qual;
 		int repeatPeriod;
 		int mapq0;
 		String refField;
 		String altField;
+		double fs;
 		
 		Call(String chromosome, int position, Allele ref, Allele alt, Map<Allele, AlleleCounts> alleleCounts, 
-				int totalReads, double qual, int repeatPeriod, int mapq0, String refField, String altField) {
+				int totalReads, int usableDepth, double qual, int repeatPeriod, int mapq0, String refField, String altField) {
 			this.chromosome = chromosome;
 			this.position = position;
 			this.ref = ref;
 			this.alt = alt;
 			this.alleleCounts = alleleCounts;
 			this.totalReads = totalReads;
+			this.usableDepth = usableDepth;
 			this.qual = qual;
 			this.repeatPeriod = repeatPeriod;
 			this.mapq0 = mapq0;
 			this.refField = refField;
 			this.altField = altField;
+			
+			AlleleCounts refCounts = alleleCounts.get(ref);
+			AlleleCounts altCounts = alleleCounts.get(alt);
+			this.fs = strandBias(refCounts.getFwd(), refCounts.getRev(), altCounts.getFwd(), altCounts.getRev());
 		}
 		
 		public String toString() {
@@ -355,18 +370,24 @@ public class GermlineProcessor {
 			String pos = String.valueOf(position);
 			String qualStr = String.valueOf(qual);
 			String info = String.format("REPEAT_PERIOD=%d;", repeatPeriod);
-			String format = "DP:AD:MIRI:MARI:SOR:MQ0:ISPAN:VAF:GT";
+			String format = "DP:DP2:AD:MIRI:MARI:SOR:FS:MQ0:ISPAN:VAF:GT";
 			
-			String sample = String.format("%d:%d,%d:%d:%d:%d,%d,%d,%d:%d:%d:%f:0/1", totalReads, refCounts.getCount(), altCounts.getCount(),
+			String sample = String.format("%d:%d:%d,%d:%d:%d:%d,%d,%d,%d:%f:%d:%d:%f:0/1", totalReads, usableDepth, refCounts.getCount(), altCounts.getCount(),
 					altCounts.getMinReadIdx(), altCounts.getMaxReadIdx(), refCounts.getFwd(), refCounts.getRev(), altCounts.getFwd(), altCounts.getRev(),
-					mapq0, ispan, vaf);
+					fs, mapq0, ispan, vaf);
 			
 			return String.join("\t", chromosome, pos, ".", refField, altField, qualStr, "PASS", info, format, sample);
 		}
 	}
 	
+	static double strandBias(int rf, int rr, int af, int ar) {
+		FishersExactTest test = new FishersExactTest();
+		double sb = test.twoTailedTest(rf, rf, af, ar);
+		return sb;
+	}
+	
 	// Simple Fisher's exact.  Similar to Varscan's calculation
-	static double calcPhredScaledQuality(int refObs, int altObs, int dp) {
+	static double calcPhredScaledQuality_FischerExact(int refObs, int altObs, int dp) {
 		
 		int altExpected = (int) ((dp * .001) + .5);
 		int refExpected = dp - altExpected;
@@ -387,6 +408,10 @@ public class GermlineProcessor {
 //		double qual = (double) altObs / ((double) refObs + (double) altObs);
 //		
 //		return qual * 100;
+	}
+	
+	static double calcPhredScaledQuality(int refObs, int altObs, int dp) {
+		return -10 * Math.log10(BetaBinomial.betabinCDF(dp, altObs));
 	}
 	
 	private int getRepeatPeriod(String chromosome, int position, Allele indel, AlleleCounts indelCounts) {

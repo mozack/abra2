@@ -1,5 +1,6 @@
 package abra.cadabra;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -76,6 +77,16 @@ public class AlleleCounts {
 		}
 		
 		return maxBases;
+	}
+	
+	public static int sum(Collection<AlleleCounts> counts) {
+		int sum = 0;
+		
+		for (AlleleCounts ac : counts) {
+			sum += ac.getCount();
+		}
+		
+		return sum;
 	}
 	
 	public String toString() {

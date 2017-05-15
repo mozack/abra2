@@ -84,8 +84,6 @@ public class Germline {
 			System.exit(-1);
 		}
 		
-		
-		
 		String reference = args[0];
 		String bamfile = args[1];
 		int threads = Integer.parseInt(args[2]);

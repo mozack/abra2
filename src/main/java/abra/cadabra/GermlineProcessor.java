@@ -385,7 +385,7 @@ public class GermlineProcessor {
 			AlleleCounts altCounts = alleleCounts.get(alt);
 			
 			int ispan = altCounts.getMaxReadIdx()-altCounts.getMinReadIdx();
-			float vaf = (float) altCounts.getCount() / (float) (altCounts.getCount()+refCounts.getCount());
+			float vaf = (float) altCounts.getCount() / (float) usableDepth;
 			//
 			// chr1    14397   .       CTGT    C       31.08108108108108       PASS    SOMATIC;CMQ=0;CTX=TAAAAGCACACTGTTGGTTT;REPEAT_PERIOD=1;NNAF=<NNAF>      
 			// DP:AD:YM0:YM1:YM:OBS:MIRI:MARI:SOR:MQ0:GT       1092:51,23:0:0:0:23:5:36:0,51,1,22:981:0/1

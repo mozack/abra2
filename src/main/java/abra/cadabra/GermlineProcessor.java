@@ -11,6 +11,7 @@ import java.util.Set;
 import abra.CompareToReference2;
 import abra.Feature;
 import abra.Logger;
+import abra.SAMRecordUtils;
 import htsjdk.samtools.Cigar;
 import htsjdk.samtools.CigarElement;
 import htsjdk.samtools.CigarOperator;
@@ -179,6 +180,7 @@ public class GermlineProcessor {
 		}
 		
 		int tumorMapq0 = 0;
+		int mismatchExceededReads = 0;
 		
 		// Don't double count overlapping reads.
 		// TODO: Determine consensus? 
@@ -203,6 +205,22 @@ public class GermlineProcessor {
 						tumorMapq0 += 1;
 					}
 					continue;
+				}
+				
+				if (read.getStringAttribute("YA") == null) {
+					// Cap # mismatches in read that can be counted as reference
+					// This is done because realigner caps # of mismatches for remapped indel reads.
+					// This is needed to remove ref bias
+					int editDist = SAMRecordUtils.getEditDistance(read, c2r);
+					int indelBases = SAMRecordUtils.getNumIndelBases(read);
+					int numMismatches = editDist - indelBases;
+					
+					float mismatchRate = (float) .05;
+					if (numMismatches > read.getReadLength()*mismatchRate) {
+						// Skip this read
+						mismatchExceededReads += 1;
+						continue;
+					}
 				}
 			
 				IndelInfo readElement = checkForIndelAtLocus(read, position);
@@ -276,8 +294,8 @@ public class GermlineProcessor {
 					altField = refField + getPreferredInsertBases(alt, altCounts);
 				}
 				
-				Call call = new Call(chromosome, position, refAllele, alt, alleleCounts, tumorReadIds.size(), 
-						usableDepth, qual, repeatPeriod, tumorMapq0, refField, altField);
+				Call call = new Call(chromosome, position, refAllele, alt, alleleCounts, tumorReadIds.size()+mismatchExceededReads, 
+						usableDepth, qual, repeatPeriod, tumorMapq0, refField, altField, mismatchExceededReads);
 				
 //				System.err.println(call);
 				outputRecords.add(call);
@@ -336,9 +354,11 @@ public class GermlineProcessor {
 		String refField;
 		String altField;
 		double fs;
+		int mismatchExceededReads;
 		
 		Call(String chromosome, int position, Allele ref, Allele alt, Map<Allele, AlleleCounts> alleleCounts, 
-				int totalReads, int usableDepth, double qual, int repeatPeriod, int mapq0, String refField, String altField) {
+				int totalReads, int usableDepth, double qual, int repeatPeriod, int mapq0, String refField, String altField,
+				int mismatchExceededReads) {
 			this.chromosome = chromosome;
 			this.position = position;
 			this.ref = ref;
@@ -355,6 +375,8 @@ public class GermlineProcessor {
 			AlleleCounts refCounts = alleleCounts.get(ref);
 			AlleleCounts altCounts = alleleCounts.get(alt);
 			this.fs = strandBias(refCounts.getFwd(), refCounts.getRev(), altCounts.getFwd(), altCounts.getRev());
+			
+			this.mismatchExceededReads = mismatchExceededReads;
 		}
 		
 		public String toString() {
@@ -370,11 +392,11 @@ public class GermlineProcessor {
 			String pos = String.valueOf(position);
 			String qualStr = String.valueOf(qual);
 			String info = String.format("REPEAT_PERIOD=%d;", repeatPeriod);
-			String format = "DP:DP2:AD:MIRI:MARI:SOR:FS:MQ0:ISPAN:VAF:GT";
+			String format = "DP:DP2:AD:MIRI:MARI:SOR:FS:MQ0:ISPAN:VAF:MER:GT";
 			
-			String sample = String.format("%d:%d:%d,%d:%d:%d:%d,%d,%d,%d:%f:%d:%d:%f:0/1", totalReads, usableDepth, refCounts.getCount(), altCounts.getCount(),
+			String sample = String.format("%d:%d:%d,%d:%d:%d:%d,%d,%d,%d:%f:%d:%d:%f:%d:0/1", totalReads, usableDepth, refCounts.getCount(), altCounts.getCount(),
 					altCounts.getMinReadIdx(), altCounts.getMaxReadIdx(), refCounts.getFwd(), refCounts.getRev(), altCounts.getFwd(), altCounts.getRev(),
-					fs, mapq0, ispan, vaf);
+					fs, mapq0, ispan, vaf, mismatchExceededReads);
 			
 			return String.join("\t", chromosome, pos, ".", refField, altField, qualStr, "PASS", info, format, sample);
 		}

@@ -99,7 +99,7 @@ public class ContigAligner {
 		
 		// Init threadlocal aligner
 		if (aligner.get() == null) {
-			Logger.info("Initializing SGAligner");
+			Logger.trace("Initializing SGAligner");
 			aligner.set(new NativeSemiGlobalAligner(MATCH, MISMATCH, GAP_OPEN_PENALTY, GAP_EXTEND_PENALTY));
 		}
 		

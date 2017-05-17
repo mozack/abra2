@@ -34,7 +34,8 @@ public class ContigAligner {
 	private String refChr;
 	private int refContextStart;
 	private String ref;
-	private int minContigLength;
+	private int minAnchorLength;
+	private int maxAnchorMismatches;
 	
 	private List<Integer> junctionPositions = new ArrayList<Integer>();
 	private List<Integer> junctionLengths = new ArrayList<Integer>();
@@ -72,23 +73,20 @@ public class ContigAligner {
 		}
 	}
 	
-	public ContigAligner(String ref, String refChr, int refStart, int minContigLength) {
+	public ContigAligner(String ref, String refChr, int refStart, int minContigLength, int minAnchorLen, int maxAnchorMismatches) {
 		this.ref = ref;
 		this.refChr = refChr;
 		this.refContextStart = refStart;
-		this.minContigLength = minContigLength;
+//		this.minContigLength = minContigLength;
+		this.minAnchorLength = minAnchorLen;
+		this.maxAnchorMismatches = maxAnchorMismatches;
 		this.localC2r = new CompareToReference2();
 		localC2r.initLocal(refChr, ref);
 	}
-	
-	public ContigAligner(String ref, String refChr, int refStart, int minContigLength, int junctionPos, int junctionLength) {
-		this(ref, refChr, refStart, minContigLength);
-		this.junctionPositions.add(junctionPos);
-		this.junctionLengths.add(junctionLength);
-	}
-	
-	public ContigAligner(String ref, String refChr, int refStart, int minContigLength, List<Integer> junctionPositions, List<Integer> junctionLengths) {
-		this(ref, refChr, refStart, minContigLength);
+		
+	public ContigAligner(String ref, String refChr, int refStart, int minContigLength, int minAnchorLen, int maxAnchorMismatches, 
+			List<Integer> junctionPositions, List<Integer> junctionLengths) {
+		this(ref, refChr, refStart, minContigLength, minAnchorLen, maxAnchorMismatches);
 		this.junctionPositions = junctionPositions;
 		this.junctionLengths = junctionLengths;
 	}
@@ -104,7 +102,7 @@ public class ContigAligner {
 		}
 		
 		SemiGlobalAligner.Result sgResult = aligner.get().align(seq, ref);
-		Logger.trace("SG Alignment [%s]:\t%s, possible: %d", seq, sgResult, seq.length()*MATCH);
+		Logger.trace("SG Alignment [%s]:\t%s, possible: %d to: %s", seq, sgResult, seq.length()*MATCH, ref);
 		if (sgResult.score > MIN_ALIGNMENT_SCORE && sgResult.score > sgResult.secondBest && sgResult.endPosition > 0) {
 			Cigar cigar = TextCigarCodec.decode(sgResult.cigar);
 			
@@ -112,8 +110,9 @@ public class ContigAligner {
 			CigarElement last = cigar.getLastCigarElement();
 			
 			// Do not allow indels at the edges of contigs.
-			if (first.getOperator() != CigarOperator.M || first.getLength() < 10 || 
-				last.getOperator() != CigarOperator.M || last.getLength() < 10) {
+			if (minAnchorLength > 0 && 
+				(first.getOperator() != CigarOperator.M || first.getLength() < minAnchorLength || 
+				last.getOperator() != CigarOperator.M || last.getLength() < minAnchorLength)) {
 
 				if ((first.getOperator() != CigarOperator.M || last.getOperator() != CigarOperator.M) &&
 						cigar.toString().contains("I")) {
@@ -122,7 +121,8 @@ public class ContigAligner {
 				}
 				
 				if ((first.getLength() < 5 || last.getLength() < 5) && 
-						cigar.toString().contains("I")) {
+						cigar.toString().contains("I") &&
+						minAnchorLength >= 5) {
 					Logger.trace("INDEL_NEAR_END: %s", cigar.toString());
 					return ContigAlignerResult.INDEL_NEAR_END;						
 				}
@@ -132,20 +132,20 @@ public class ContigAligner {
 				
 			int endPos = sgResult.position + cigar.getReferenceLength();
 			
-			// Require first and last 10 bases of contig to be similar to ref
+			// Require first and last minAnchorLength bases of contig to be similar to ref
 			int mismatches = 0;
-			for (int i=0; i<10; i++) {
+			for (int i=0; i<minAnchorLength; i++) {
 				if (seq.charAt(i) != ref.charAt(sgResult.position+i)) {
 					mismatches += 1;
 				}
 			}
 			
-			if (mismatches > 2) {
+			if (mismatches > maxAnchorMismatches) {
 				Logger.trace("Mismatches at beginning of: %s", seq);
 			} else {
 			
 				mismatches = 0;
-				for (int i=10; i>0; i--) {
+				for (int i=minAnchorLength; i>0; i--) {
 					
 					int seqIdx = seq.length()-i;
 					int refIdx = endPos-i;
@@ -155,7 +155,7 @@ public class ContigAligner {
 					}
 				}
 				
-				if (mismatches > 2) {
+				if (mismatches > maxAnchorMismatches) {
 					Logger.trace("Mismatches at end of: %s", seq);
 				} else {
 					result = finishAlignment(sgResult.position, endPos, sgResult.cigar, sgResult.score, seq);

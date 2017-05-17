@@ -43,6 +43,7 @@ public class ReAlignerOptions extends Options {
 	private static final String WINDOW_SIZE = "ws";
 	private static final String MAX_READS_IN_REGION = "mrr";
 	private static final String COMPRESSION_LEVEL = "cl";
+	private static final String CONTIG_ANCHOR = "ca";
 	
 	private OptionParser parser;
 	private boolean isValid;
@@ -84,6 +85,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(WINDOW_SIZE, "Processing window size and overlap (size,overlap)").withRequiredArg().ofType(String.class).defaultsTo("400,200");
             parser.accepts(MAX_READS_IN_REGION, "Regions containing more reads than this value are not processed.  Use -1 to disable.").withRequiredArg().ofType(Integer.class).defaultsTo(10000);
             parser.accepts(COMPRESSION_LEVEL, "Compression level of output bam file(s)").withRequiredArg().ofType(Integer.class).defaultsTo(5);
+            parser.accepts(CONTIG_ANCHOR, "Contig anchor [M_bases_at_contig_edge, max_mismatches_at_edge").withRequiredArg().ofType(String.class).defaultsTo("10,2");
     	}
     	
     	return parser;
@@ -307,6 +309,22 @@ public class ReAlignerOptions extends Options {
 		}
 		
 		return Integer.parseInt(fields[1].trim());
+	}
+	
+	public int[] getContigAnchor() {
+		String params = (String) getOptions().valueOf(CONTIG_ANCHOR);
+		String[] fields = params.split(",");
+		if (fields.length != 2) {
+			Logger.error("2 values required for contig anchor");
+		}
+		
+		int[] values = new int[2];
+		
+		for (int i=0; i<2; i++) {
+			values[i] = Integer.parseInt(fields[i].trim());
+		}	
+		
+		return values;
 	}
 	
 	public int[] getSoftClipParams() {

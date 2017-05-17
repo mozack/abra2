@@ -113,6 +113,9 @@ public class ReAligner {
 	private int maxCachedReads = 0;
 	private int maxReadsInRegion;
 	
+	private int minAnchorLen;
+	private int maxAnchorMismatches;
+	
 	private SortedSAMWriter writer;
 	
 	private ChromosomeChunker chromosomeChunker;
@@ -749,7 +752,7 @@ public class ReAligner {
 			
 			String refSeq = c2r.getSequence(region.getSeqname(), refSeqStart, refSeqLength);
 			
-			ContigAligner ssw = new ContigAligner(refSeq, region.getSeqname(), refSeqStart, this.readLength);
+			ContigAligner ssw = new ContigAligner(refSeq, region.getSeqname(), refSeqStart, this.readLength, minAnchorLen, maxAnchorMismatches);
 			
 			List<ContigAligner> sswJunctions = new ArrayList<ContigAligner>();
 			
@@ -810,7 +813,7 @@ public class ReAligner {
 							juncSeq.append(rightSeq);
 							// Junction pos and length should already be added
 							
-							ContigAligner sswJunc = new ContigAligner(juncSeq.toString(), region.getSeqname(), refStart, this.readLength, junctionPos, junctionLengths);
+							ContigAligner sswJunc = new ContigAligner(juncSeq.toString(), region.getSeqname(), refStart, this.readLength, minAnchorLen, maxAnchorMismatches, junctionPos, junctionLengths);
 							sswJunctions.add(sswJunc);
 						}
 					}
@@ -1291,6 +1294,8 @@ public class ReAligner {
 			realigner.softClipParams = options.getSoftClipParams();
 			realigner.maxCachedReads = options.getMaxCachedReads();
 			realigner.finalCompressionLevel = options.getCompressionLevel();
+			realigner.minAnchorLen = options.getContigAnchor()[0];
+			realigner.maxAnchorMismatches = options.getContigAnchor()[1];
 			MAX_REGION_LENGTH = options.getWindowSize();
 			MIN_REGION_REMAINDER = options.getWindowOverlap();
 			REGION_OVERLAP = options.getWindowOverlap();

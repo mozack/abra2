@@ -1,8 +1,6 @@
 package abra;
 
-import htsjdk.samtools.Cigar;
 import htsjdk.samtools.SAMRecord;
-import htsjdk.samtools.TextCigarCodec;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -44,24 +42,17 @@ public class ReadEvaluator {
 		
 		// Map read to all contigs, caching the hits with the smallest number of mismatches
 		for (Feature region : mappedContigs.keySet()) {
-//			if (samRecord == null || region.overlapsRead(samRecord)) {  // Allowing null samRecord for unit test
-			if (true) {
-				Map<SimpleMapper, ContigAlignerResult> regionContigs = mappedContigs.get(region);
-				
-				for (SimpleMapper mapper : regionContigs.keySet()) {
-					SimpleMapperResult mapResult = mapper.map(read);
-					
-//					if (samRecord != null && samRecord.getReadName().equals("UNC9-SN296:440:C5F7CACXX:5:1216:12373:72470")) {
-//						System.err.println("MAP_RESULT, pos: " + mapResult.getPos() + ", mismatches: " + mapResult.getMismatches() + ", contig: " + mapper);
-//					}
-					
-					if (mapResult.getMismatches() < bestMismatches) {
-						bestMismatches = mapResult.getMismatches();
-						alignmentHits.clear();
-						alignmentHits.add(new AlignmentHit(mapResult, mapper, region));
-					} else if (mapResult.getMismatches() == bestMismatches && bestMismatches < origEditDist) {
-						alignmentHits.add(new AlignmentHit(mapResult, mapper, region));
-					}
+			Map<SimpleMapper, ContigAlignerResult> regionContigs = mappedContigs.get(region);
+			
+			for (SimpleMapper mapper : regionContigs.keySet()) {
+				SimpleMapperResult mapResult = mapper.map(read);
+									
+				if (mapResult.getMismatches() < bestMismatches) {
+					bestMismatches = mapResult.getMismatches();
+					alignmentHits.clear();
+					alignmentHits.add(new AlignmentHit(mapResult, mapper, region));
+				} else if (mapResult.getMismatches() == bestMismatches && bestMismatches < origEditDist) {
+					alignmentHits.add(new AlignmentHit(mapResult, mapper, region));
 				}
 			}
 		}
@@ -79,15 +70,9 @@ public class ReadEvaluator {
 			if (alignmentHit.mapResult.getPos() >= 0) {
 				StringBuffer cigarBuf = new StringBuffer();
 				int readPosInCigarRelativeToRef = CigarUtils.subsetCigarString(alignmentHit.mapResult.getPos(), read.length(), contigAlignment.getCigar(), cigarBuf);
-//				readRefPos = contigAlignment.getRefPos() + readPosInCigarRelativeToRef;
 				readRefPos = contigAlignment.getGenomicPos() + readPosInCigarRelativeToRef;
 				cigar = cigarBuf.toString();
 			}
-			
-//			IndelShifter is = new IndelShifter();
-//			Cigar samCigar = TextCigarCodec.decode(cigar);
-//			samCigar = is.shiftIndelsLeft(readRefPos, readRefPos + samCigar.getReadLength(), contigAlignment.getChromosome(), samCigar, read, ReAligner.c2r);
-//			cigar = TextCigarCodec.encode(samCigar);
 			
 			Alignment readAlignment = new Alignment(contigAlignment.getChromosome(), readRefPos, cigar, alignmentHit.mapResult.getOrientation(), bestMismatches, 
 					contigAlignment.getGenomicPos(), contigAlignment.getCigar(), contigAlignment.isSecondary());

@@ -163,6 +163,54 @@ public class SAMRecordUtilsTest {
 		Assert.assertEquals(cigar2.toString(), "99M100D99M");
 	}
 	
+	@Test (groups = "unit")
+	public void testGetLeadingClips() {
+		SAMRecord read = new SAMRecord(null);
+		Cigar cigar = getCigar("10S15M8S");
+		read.setCigar(cigar);
+		String leading = SAMRecordUtils.getLeadingClips(read);
+		Assert.assertEquals(leading, "10S");
+	}
+	
+	@Test (groups = "unit")
+	public void testGetLeadingClips_empty() {
+		SAMRecord read = new SAMRecord(null);
+		Cigar cigar = getCigar("15M8S");
+		read.setCigar(cigar);
+		String leading = SAMRecordUtils.getLeadingClips(read);
+		Assert.assertEquals(leading, "");
+	}
+	
+	@Test (groups = "unit")
+	public void testGetTrailingClips() {
+		SAMRecord read = new SAMRecord(null);
+		Cigar cigar = getCigar("10S15M8S");
+		read.setCigar(cigar);
+		String leading = SAMRecordUtils.getTrailingClips(read);
+		Assert.assertEquals(leading, "8S");
+	}
+
+	@Test (groups = "unit")
+	public void testGetTrailingClips_empty() {
+		SAMRecord read = new SAMRecord(null);
+		Cigar cigar = getCigar("10S15M");
+		read.setCigar(cigar);
+		String leading = SAMRecordUtils.getTrailingClips(read);
+		Assert.assertEquals(leading, "");
+	}
+	
+	@Test (groups = "unit")
+	public void testGetMappedReadPortion() {
+		SAMRecord read = new SAMRecord(null);
+		Cigar cigar = getCigar("4S5M7S");
+		String seq = "ATCGCGATACCCCCCC";
+		read.setCigar(cigar);
+		read.setReadString(seq);
+		
+		String unclipped = SAMRecordUtils.getMappedReadPortion(read);
+		Assert.assertEquals(unclipped, "CGATA");
+	}
+	
 	private Cigar getCigar(String str) {
 		SAMRecord read = new SAMRecord(null);
 		read.setCigarString(str);

@@ -13,6 +13,7 @@ import htsjdk.samtools.DefaultSAMRecordFactory;
 import htsjdk.samtools.SAMRecord;
 import htsjdk.samtools.SamReader;
 import htsjdk.samtools.SamReaderFactory;
+import htsjdk.samtools.TextCigarCodec;
 import htsjdk.samtools.ValidationStringency;
 
 /**
@@ -264,6 +265,83 @@ public class SAMRecordUtils {
 		}
 		
 		return numIndels;
+	}
+	
+	private static boolean isClip(CigarElement elem) {
+		return elem.getOperator() == CigarOperator.S || elem.getOperator() == CigarOperator.H;
+	}
+	
+	public static String getMappedReadPortion(SAMRecord read) {
+		int start = 0; 
+		
+		List<CigarElement> elems = read.getCigar().getCigarElements();
+		int i = 0;
+		while (i < elems.size() && isClip(elems.get(i))) {
+			if (elems.get(i).getOperator() == CigarOperator.S) {
+				start += elems.get(i).getLength();
+			}
+			
+			i += 1;
+		}
+		
+		int stop = read.getReadLength();
+		i = elems.size()-1;
+		while (i >= 0 && isClip(elems.get(i))) {
+			if (elems.get(i).getOperator() == CigarOperator.S) {
+				stop -= elems.get(i).getLength();
+			}
+			
+			i -= 1;
+		}
+		
+		return read.getReadString().substring(start, stop);
+	}
+	
+	public static String getLeadingClips(SAMRecord read) {
+		List<CigarElement> elems = read.getCigar().getCigarElements();
+		
+		List<CigarElement> leading = new ArrayList<CigarElement>();
+		
+		for (CigarElement elem : elems) {
+			if (isClip(elem)) {
+				leading.add(elem);
+			} else {
+				break;
+			}
+		}
+		
+		String ret = "";
+		if (leading.size() > 0) {
+			Cigar cigar = new Cigar(leading);
+			ret = TextCigarCodec.encode(cigar);
+		}
+		
+		return ret;
+	}
+	
+	public static String getTrailingClips(SAMRecord read) {
+		List<CigarElement> elems = read.getCigar().getCigarElements();
+		
+		List<CigarElement> trailing = new ArrayList<CigarElement>();
+		boolean isNonClippedReached = false;
+		
+		for (CigarElement elem : elems) {
+			if (isClip(elem)) {
+				if (isNonClippedReached) {
+					trailing.add(elem);
+				}
+			} else {
+				isNonClippedReached = true;
+			}
+		}
+
+		String ret = "";
+		if (trailing.size() > 0) {
+			Cigar cigar = new Cigar(trailing);
+			ret =  TextCigarCodec.encode(cigar);
+		}
+		
+		return ret;
 	}
 	
 	/**

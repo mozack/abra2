@@ -21,9 +21,6 @@ public class ReadEvaluator {
 		this.mappedContigs = mappedContigs;
 	}
 	
-	Alignment getImprovedAlignment(int origEditDist, String read) {
-		return getImprovedAlignment(origEditDist, read, null);
-	}
 	
 	/**
 	 * If an improved alignment exists for the input read, return it.
@@ -33,7 +30,25 @@ public class ReadEvaluator {
 	 * A read may align to multiple contigs, but result in the same alignment in
 	 * the context of the reference.  In this case the alignment is considered distinct. 
 	 */
-	public Alignment getImprovedAlignment(int origEditDist, String read, SAMRecord samRecord) {
+	public Alignment getImprovedAlignment(int origEditDist, SAMRecord samRecord) {
+		Alignment result = getImprovedAlignment(origEditDist, samRecord.getReadString());
+		
+		if (result == null) {
+			// If soft clipped, attempt to map only the unclipped portion of the read
+			// Relying on the original mapper to handle clipping here
+			if (samRecord.getCigarString().contains("S")) {
+				String unclipped = SAMRecordUtils.getMappedReadPortion(samRecord);
+				result = getImprovedAlignment(origEditDist, unclipped);
+				if (result != null) {
+					result.cigar = SAMRecordUtils.getLeadingClips(samRecord) + result.cigar + SAMRecordUtils.getTrailingClips(samRecord);
+				}
+			}
+		}
+		
+		return result;
+	}
+	
+	public Alignment getImprovedAlignment(int origEditDist, String read) {
 		Alignment result = null;
 		
 		List<AlignmentHit> alignmentHits = new ArrayList<AlignmentHit>();

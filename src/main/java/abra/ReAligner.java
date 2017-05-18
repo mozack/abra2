@@ -516,7 +516,7 @@ public class ReAligner {
 	
 	private void remapRead(ReadEvaluator readEvaluator, SAMRecord read, int origEditDist) {
 		
-		Alignment alignment = readEvaluator.getImprovedAlignment(origEditDist, read.getReadString(), read);
+		Alignment alignment = readEvaluator.getImprovedAlignment(origEditDist, read);
 		if (alignment != null) {
 			
 			if (Math.abs(read.getAlignmentStart() - alignment.pos) > SortedSAMWriter.GENOMIC_RANGE_TO_CACHE / 2) {

@@ -5,9 +5,11 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import com.intel.gkl.compression.IntelDeflaterFactory;
@@ -38,6 +40,8 @@ public class SortedSAMWriter {
 	private int finalCompressionLevel;
 	
 	private Set<Integer> chunksReady = new HashSet<Integer>();
+	
+	private ReverseComplementor rc = new ReverseComplementor();
 	
 	public SortedSAMWriter(String[] outputFiles, String tempDir, SAMFileHeader[] samHeaders,
 			boolean isKeepTmp, ChromosomeChunker chromosomeChunker, int finalCompressionLevel) {
@@ -78,6 +82,13 @@ public class SortedSAMWriter {
 		// Only output reads with start pos within specified chromosomeChunk
 		// Avoids reads being written in 2 different chunks
 		if (read.getAlignmentStart() >= chunk.getStart() && read.getAlignmentStart() <= chunk.getEnd()) {
+			
+			if (read.getReadUnmappedFlag() && read.getReadNegativeStrandFlag()) {
+				// We RC'd this read previously.  Convert it back now.
+				read.setReadString(rc.reverseComplement(read.getReadString()));
+				read.setBaseQualityString(rc.reverse(read.getBaseQualityString()));
+				read.setReadNegativeStrandFlag(false);
+			}
 			writers[sampleIdx][chromosomeChunkIdx].addAlignment(read);
 		}
 	}
@@ -126,12 +137,24 @@ public class SortedSAMWriter {
 		output.close();
 	}
 	
+	private void setMateInfo(SAMRecord read, Map<MateKey, SAMRecord> mates) {
+		SAMRecord mate = mates.get(getMateKey(read));
+		if (mate != null) {
+			read.setMateAlignmentStart(mate.getAlignmentStart());
+			read.setMateUnmappedFlag(mate.getReadUnmappedFlag());
+			read.setMateNegativeStrandFlag(mate.getReadNegativeStrandFlag());
+		}
+	}
+	
 	private void processChromosome(SAMFileWriter output, int sampleIdx, String chromosome) throws IOException {
 		
 		Logger.debug("Final processing for: %d, %s", sampleIdx, chromosome);
 		
 		List<SAMRecord> reads = new ArrayList<SAMRecord>();
 		List<Integer> chunks = chromosomeChunker.getChunkGroups().get(chromosome);
+		
+		// Cache read by name and original position for pairing with mate
+		Map<MateKey, SAMRecord> mates = new HashMap<MateKey, SAMRecord>();
 		
 		for (int chunk : chunks) {
 			Logger.debug("Outputting chunk: %d", chunk);
@@ -146,6 +169,8 @@ public class SortedSAMWriter {
 		
 				for (SAMRecord read : reader) {
 					reads.add(read);
+					MateKey mateKey = getOriginalReadInfo(read);
+					mates.put(mateKey, read);
 					
 					if (read.getAlignmentStart() - reads.get(0).getAlignmentStart() > GENOMIC_RANGE_TO_CACHE*2) {
 						Collections.sort(reads, new SAMCoordinateComparator());
@@ -153,9 +178,19 @@ public class SortedSAMWriter {
 						int start = reads.get(0).getAlignmentStart();
 						int i = 0;
 						while (i < reads.size() && reads.get(i).getAlignmentStart() - start < GENOMIC_RANGE_TO_CACHE) {
-							output.addAlignment(reads.get(i));
+							SAMRecord currRead = reads.get(i);
+							setMateInfo(currRead, mates);
+							output.addAlignment(currRead);
 							i += 1;
 						}
+						
+						// Clear out of scope mate keys
+						for (MateKey key : mates.keySet()) {
+							if (key.pos - start < -GENOMIC_RANGE_TO_CACHE) {
+								mates.remove(key);
+							}
+						}
+						
 						Logger.debug("Reads output: %d", i);
 						reads.subList(0, i).clear();
 					}
@@ -169,11 +204,42 @@ public class SortedSAMWriter {
 		Collections.sort(reads, new SAMCoordinateComparator());
 		int i = 0;
 		for (SAMRecord read : reads) {
+			setMateInfo(read, mates);
 			output.addAlignment(read);
 			i += 1;
 		}
 		Logger.debug("Final reads output: %d", i);
 	}
+	
+	public MateKey getMateKey(SAMRecord read) {
+		return new MateKey(read.getReadName(), read.getMateAlignmentStart(),
+				read.getMateUnmappedFlag(), read.getMateNegativeStrandFlag());
+	}
+	
+	public MateKey getOriginalReadInfo(SAMRecord read) {
+		int pos = read.getAlignmentStart();
+		boolean isUnmapped = read.getReadUnmappedFlag();
+		boolean isRc = read.getReadNegativeStrandFlag();
+		
+		String yo = read.getStringAttribute("YO");
+		
+		if (yo != null) {
+			if (yo.equals("N/A")) {
+				// Original alignment was unmapped
+				pos = -1;
+				isUnmapped = true;
+				isRc = false;
+			} else {
+				String[] fields = yo.split(":");
+				pos = Integer.parseInt(fields[1]);
+				isUnmapped = false;
+				isRc = fields[2].equals("-") ? true : false;
+			}
+		}
+		
+		return new MateKey(read.getReadName(), pos, isUnmapped, isRc);
+	}
+
 		
 	private void processUnmapped(SAMFileWriter output, String inputBam) throws IOException {
 		
@@ -198,6 +264,56 @@ public class SortedSAMWriter {
 		public int compare(SAMRecord o1, SAMRecord o2) {
 			return o1.getAlignmentStart()-o2.getAlignmentStart();
 		}
+	}
+	
+	static class MateKey {
+		String readId;
+		int pos;
+		boolean isUnmapped;
+		boolean isRc;
+		
+		MateKey(String readId, int pos, boolean isUnmapped, boolean isRc) {
+			this.readId = readId;
+			this.pos = pos;
+			this.isUnmapped = isUnmapped;
+			this.isRc = isRc;
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + (isUnmapped ? 1231 : 1237);
+			result = prime * result + (isRc ? 1231 : 1237);
+			result = prime * result + pos;
+			result = prime * result + ((readId == null) ? 0 : readId.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			MateKey other = (MateKey) obj;
+			if (isUnmapped != other.isUnmapped)
+				return false;
+			if (isRc != other.isRc)
+				return false;
+			if (pos != other.pos)
+				return false;
+			if (readId == null) {
+				if (other.readId != null)
+					return false;
+			} else if (!readId.equals(other.readId))
+				return false;
+			return true;
+		}
+		
+		
 	}
 	
 	/*

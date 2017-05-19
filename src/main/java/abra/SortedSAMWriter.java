@@ -185,10 +185,15 @@ public class SortedSAMWriter {
 						}
 						
 						// Clear out of scope mate keys
+						List<MateKey> toRemove = new ArrayList<MateKey>();
 						for (MateKey key : mates.keySet()) {
 							if (key.pos - start < -GENOMIC_RANGE_TO_CACHE) {
-								mates.remove(key);
+								toRemove.add(key);
 							}
+						}
+						
+						for (MateKey key : toRemove) {
+							mates.remove(key);
 						}
 						
 						Logger.debug("Reads output: %d", i);

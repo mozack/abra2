@@ -83,12 +83,12 @@ public class SortedSAMWriter {
 		// Avoids reads being written in 2 different chunks
 		if (read.getAlignmentStart() >= chunk.getStart() && read.getAlignmentStart() <= chunk.getEnd()) {
 			
-			if (read.getReadUnmappedFlag() && read.getReadNegativeStrandFlag()) {
-				// We RC'd this read previously.  Convert it back now.
-				read.setReadString(rc.reverseComplement(read.getReadString()));
-				read.setBaseQualityString(rc.reverse(read.getBaseQualityString()));
-				read.setReadNegativeStrandFlag(false);
-			}
+//			if (read.getReadUnmappedFlag() && read.getReadNegativeStrandFlag()) {
+//				// We RC'd this read previously.  Convert it back now.
+//				read.setReadString(rc.reverseComplement(read.getReadString()));
+//				read.setBaseQualityString(rc.reverse(read.getBaseQualityString()));
+//				read.setReadNegativeStrandFlag(false);
+//			}
 			writers[sampleIdx][chromosomeChunkIdx].addAlignment(read);
 		}
 	}
@@ -169,6 +169,7 @@ public class SortedSAMWriter {
 		
 				for (SAMRecord read : reader) {
 					reads.add(read);
+
 					MateKey mateKey = getOriginalReadInfo(read);
 					mates.put(mateKey, read);
 					
@@ -179,7 +180,6 @@ public class SortedSAMWriter {
 						int i = 0;
 						while (i < reads.size() && reads.get(i).getAlignmentStart() - start < GENOMIC_RANGE_TO_CACHE) {
 							SAMRecord currRead = reads.get(i);
-
 							setMateInfo(currRead, mates);
 							output.addAlignment(currRead);
 							i += 1;
@@ -188,7 +188,7 @@ public class SortedSAMWriter {
 						// Clear out of scope mate keys
 						List<MateKey> toRemove = new ArrayList<MateKey>();
 						for (MateKey key : mates.keySet()) {
-							if (key.pos - start < -GENOMIC_RANGE_TO_CACHE) {
+							if (key.start - start < -GENOMIC_RANGE_TO_CACHE) {
 								toRemove.add(key);
 							}
 						}
@@ -225,7 +225,7 @@ public class SortedSAMWriter {
 		int matePos = read.getMateUnmappedFlag() ? -1 : read.getMateAlignmentStart();
 		
 		return new MateKey(read.getReadName(), matePos,
-				read.getMateUnmappedFlag(), isMateRevOrientation);
+				read.getMateUnmappedFlag(), isMateRevOrientation, read.getAlignmentStart());
 	}
 	
 	public MateKey getOriginalReadInfo(SAMRecord read) {
@@ -251,7 +251,7 @@ public class SortedSAMWriter {
 			}
 		}
 		
-		return new MateKey(read.getReadName(), pos, isUnmapped, isRc);
+		return new MateKey(read.getReadName(), pos, isUnmapped, isRc, read.getAlignmentStart());
 	}
 
 		
@@ -285,16 +285,18 @@ public class SortedSAMWriter {
 		int pos;
 		boolean isUnmapped;
 		boolean isRc;
+		int start; // Used for cache clearing.  Not part of identity
 		
-		MateKey(String readId, int pos, boolean isUnmapped, boolean isRc) {
+		MateKey(String readId, int pos, boolean isUnmapped, boolean isRc, int start) {
 			this.readId = readId;
 			if (isUnmapped) {
-				pos = -1;
+				this.pos = -1;
 			} else {
 				this.pos = pos;
 			}
 			this.isUnmapped = isUnmapped;
 			this.isRc = isRc;
+			this.start = start;
 		}
 
 		@Override
@@ -329,6 +331,11 @@ public class SortedSAMWriter {
 			} else if (!readId.equals(other.readId))
 				return false;
 			return true;
+		}
+
+		@Override
+		public String toString() {
+			return "MateKey [readId=" + readId + ", pos=" + pos + ", isUnmapped=" + isUnmapped + ", isRc=" + isRc + "]";
 		}
 		
 		

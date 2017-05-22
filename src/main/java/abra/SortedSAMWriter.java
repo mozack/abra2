@@ -224,8 +224,10 @@ public class SortedSAMWriter {
 		boolean isMateRevOrientation = read.getMateUnmappedFlag() ? !read.getReadNegativeStrandFlag() : read.getMateNegativeStrandFlag();
 		int matePos = read.getMateUnmappedFlag() ? -1 : read.getMateAlignmentStart();
 		
+		int mateNum = read.getFirstOfPairFlag() ? 2 : 1;
+		
 		return new MateKey(read.getReadName(), matePos,
-				read.getMateUnmappedFlag(), isMateRevOrientation, read.getAlignmentStart());
+				read.getMateUnmappedFlag(), isMateRevOrientation, mateNum, read.getAlignmentStart());
 	}
 	
 	public MateKey getOriginalReadInfo(SAMRecord read) {
@@ -251,7 +253,9 @@ public class SortedSAMWriter {
 			}
 		}
 		
-		return new MateKey(read.getReadName(), pos, isUnmapped, isRc, read.getAlignmentStart());
+		int readNum = read.getFirstOfPairFlag() ? 1 : 2;
+		
+		return new MateKey(read.getReadName(), pos, isUnmapped, isRc, readNum, read.getAlignmentStart());
 	}
 
 		
@@ -285,9 +289,10 @@ public class SortedSAMWriter {
 		int pos;
 		boolean isUnmapped;
 		boolean isRc;
+		int readNum;  // 1st or 2nd read
 		int start; // Used for cache clearing.  Not part of identity
 		
-		MateKey(String readId, int pos, boolean isUnmapped, boolean isRc, int start) {
+		MateKey(String readId, int pos, boolean isUnmapped, boolean isRc, int readNum, int start) {
 			this.readId = readId;
 			if (isUnmapped) {
 				this.pos = -1;
@@ -296,6 +301,7 @@ public class SortedSAMWriter {
 			}
 			this.isUnmapped = isUnmapped;
 			this.isRc = isRc;
+			this.readNum = readNum;
 			this.start = start;
 		}
 
@@ -303,10 +309,11 @@ public class SortedSAMWriter {
 		public int hashCode() {
 			final int prime = 31;
 			int result = 1;
-			result = prime * result + (isUnmapped ? 1231 : 1237);
 			result = prime * result + (isRc ? 1231 : 1237);
+			result = prime * result + (isUnmapped ? 1231 : 1237);
 			result = prime * result + pos;
 			result = prime * result + ((readId == null) ? 0 : readId.hashCode());
+			result = prime * result + readNum;
 			return result;
 		}
 
@@ -319,9 +326,9 @@ public class SortedSAMWriter {
 			if (getClass() != obj.getClass())
 				return false;
 			MateKey other = (MateKey) obj;
-			if (isUnmapped != other.isUnmapped)
-				return false;
 			if (isRc != other.isRc)
+				return false;
+			if (isUnmapped != other.isUnmapped)
 				return false;
 			if (pos != other.pos)
 				return false;
@@ -330,15 +337,16 @@ public class SortedSAMWriter {
 					return false;
 			} else if (!readId.equals(other.readId))
 				return false;
+			if (readNum != other.readNum)
+				return false;
 			return true;
 		}
 
 		@Override
 		public String toString() {
-			return "MateKey [readId=" + readId + ", pos=" + pos + ", isUnmapped=" + isUnmapped + ", isRc=" + isRc + "]";
+			return "MateKey [readId=" + readId + ", pos=" + pos + ", isUnmapped=" + isUnmapped + ", isRc=" + isRc
+					+ ", readNum=" + readNum + ", start=" + start + "]";
 		}
-		
-		
 	}
 	
 	/*

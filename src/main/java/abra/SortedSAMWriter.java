@@ -179,6 +179,7 @@ public class SortedSAMWriter {
 						int i = 0;
 						while (i < reads.size() && reads.get(i).getAlignmentStart() - start < GENOMIC_RANGE_TO_CACHE) {
 							SAMRecord currRead = reads.get(i);
+
 							setMateInfo(currRead, mates);
 							output.addAlignment(currRead);
 							i += 1;
@@ -217,8 +218,14 @@ public class SortedSAMWriter {
 	}
 	
 	public MateKey getMateKey(SAMRecord read) {
-		return new MateKey(read.getReadName(), read.getMateAlignmentStart(),
-				read.getMateUnmappedFlag(), read.getMateNegativeStrandFlag());
+		
+		// If mate is mapped, use read flag.
+		// If mate is not mapped, use opposite of this read's RC flag
+		boolean isMateRevOrientation = read.getMateUnmappedFlag() ? !read.getReadNegativeStrandFlag() : read.getMateNegativeStrandFlag();
+		int matePos = read.getMateUnmappedFlag() ? -1 : read.getMateAlignmentStart();
+		
+		return new MateKey(read.getReadName(), matePos,
+				read.getMateUnmappedFlag(), isMateRevOrientation);
 	}
 	
 	public MateKey getOriginalReadInfo(SAMRecord read) {
@@ -231,9 +238,11 @@ public class SortedSAMWriter {
 		if (yo != null) {
 			if (yo.equals("N/A")) {
 				// Original alignment was unmapped
-				pos = -1;
 				isUnmapped = true;
-				isRc = false;
+//				isRc = false;
+				// Orientation is forced to be opposite of mate during realignment
+				// regardless of the original alignment.
+				isRc = !read.getMateNegativeStrandFlag();
 			} else {
 				String[] fields = yo.split(":");
 				pos = Integer.parseInt(fields[1]);
@@ -279,7 +288,11 @@ public class SortedSAMWriter {
 		
 		MateKey(String readId, int pos, boolean isUnmapped, boolean isRc) {
 			this.readId = readId;
-			this.pos = pos;
+			if (isUnmapped) {
+				pos = -1;
+			} else {
+				this.pos = pos;
+			}
 			this.isUnmapped = isUnmapped;
 			this.isRc = isRc;
 		}

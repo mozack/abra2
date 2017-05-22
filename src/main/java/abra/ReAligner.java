@@ -254,14 +254,18 @@ public class ReAligner {
 			// If this is an unmapped read anchored by its mate, check rc flag
 			SAMRecord read1 = record.getSamRecord();
 			if (read1.getReadUnmappedFlag() && !read1.getMateUnmappedFlag()) {
-				if (!read1.getMateNegativeStrandFlag()) {
-					// Mate is not reverse complemented, so RC this read
+				
+				if (!read1.getReadNegativeStrandFlag() && !read1.getMateNegativeStrandFlag()) {
+					// Both ends in forward orientation.  Reverse the unmapped read
 					read1.setReadString(rc.reverseComplement(read1.getReadString()));
 					read1.setBaseQualityString(rc.reverse(read1.getBaseQualityString()));
 					read1.setReadNegativeStrandFlag(true);
-					
-					// TODO: Revert read information if not remapped...
-				}
+				} else if (read1.getReadNegativeStrandFlag() && read1.getMateNegativeStrandFlag()) {
+					// Both ends in reverse orientation.  Reverse the unmapped read
+					read1.setReadString(rc.reverseComplement(read1.getReadString()));
+					read1.setBaseQualityString(rc.reverse(read1.getBaseQualityString()));
+					read1.setReadNegativeStrandFlag(false);					
+				}				
 			}
 			
 			List<Integer> overlappingRegions = Feature.findAllOverlappingRegions(reader.getSAMFileHeader(), record, chromosomeRegions, currRegionIdx);

@@ -595,12 +595,17 @@ public class ReAligner {
 				totalReads += 1;
 				SAMRecord read = readWrapper.getSamRecord();
 				if (read.getMappingQuality() >= this.minMappingQuality || read.getReadUnmappedFlag()) {
-					// TODO: Use NM tag if available (need to handle soft clipping though!)
-					int origEditDist = SAMRecordUtils.getEditDistance(read, c2r);
-	//				int origEditDist = c2r.numMismatches(read);
-										
-					if (origEditDist > 0 || SAMRecordUtils.getNumSplices(read) > 0) {
-						remapRead(readEvaluator, read, origEditDist);
+					
+					if (Math.abs(read.getAlignmentStart() - read.getMateAlignmentStart()) < SortedSAMWriter.GENOMIC_RANGE_TO_CACHE &&
+						read.getReferenceName().equals(read.getMateReferenceName())) {
+					
+						// TODO: Use NM tag if available (need to handle soft clipping though!)
+						int origEditDist = SAMRecordUtils.getEditDistance(read, c2r);
+		//				int origEditDist = c2r.numMismatches(read);
+											
+						if (origEditDist > 0 || SAMRecordUtils.getNumSplices(read) > 0) {
+							remapRead(readEvaluator, read, origEditDist);
+						}
 					}
 				}
 			}

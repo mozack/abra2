@@ -53,11 +53,11 @@ public class SortedSAMWriter {
 		this.chromosomeChunker = chromosomeChunker;
 		this.finalCompressionLevel = finalCompressionLevel;
 		
-		writerFactory.setUseAsyncIo(false);
-		IntelDeflaterFactory intelDeflater = new IntelDeflaterFactory();
-		writerFactory.setDeflaterFactory(intelDeflater);
-		
-		Logger.info("Using intel deflator: " + intelDeflater.usingIntelDeflater());
+//		writerFactory.setUseAsyncIo(false);
+//		IntelDeflaterFactory intelDeflater = new IntelDeflaterFactory();
+//		writerFactory.setDeflaterFactory(intelDeflater);
+//		
+//		Logger.info("Using intel deflator: " + intelDeflater.usingIntelDeflater());
 		
 		writers = new SAMFileWriter[outputFiles.length][];
 		
@@ -143,6 +143,19 @@ public class SortedSAMWriter {
 			read.setMateAlignmentStart(mate.getAlignmentStart());
 			read.setMateUnmappedFlag(mate.getReadUnmappedFlag());
 			read.setMateNegativeStrandFlag(mate.getReadNegativeStrandFlag());
+			 
+			int start = read.getAlignmentStart() < mate.getAlignmentStart() ? read.getAlignmentStart() : mate.getAlignmentStart();
+			int stop  = read.getAlignmentEnd() > mate.getAlignmentEnd() ? read.getAlignmentEnd() : mate.getAlignmentEnd();
+			
+			int insert = stop-start+1;
+			
+			if (read.getAlignmentStart() > mate.getAlignmentStart()) {
+				insert *= -1;
+			} else if (read.getAlignmentStart() == mate.getAlignmentStart() && mate.getFirstOfPairFlag()) {
+				insert *= -1;
+			}
+			
+			read.setInferredInsertSize(insert);
 		}
 	}
 	
@@ -171,7 +184,11 @@ public class SortedSAMWriter {
 					reads.add(read);
 
 					MateKey mateKey = getOriginalReadInfo(read);
-					mates.put(mateKey, read);
+					SAMRecord existingMate = mates.get(mateKey);
+					if (existingMate == null || (existingMate.getFlags() & 0xA00) != 0) {
+						// Cache read info giving priority to primary alignments
+						mates.put(mateKey, read);
+					}
 					
 					if (read.getAlignmentStart() - reads.get(0).getAlignmentStart() > GENOMIC_RANGE_TO_CACHE*2) {
 						Collections.sort(reads, new SAMCoordinateComparator());

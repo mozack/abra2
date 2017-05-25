@@ -862,8 +862,7 @@ public class ReAligner {
 					for (String contig : altContigs) {
 						// TODO: Check to see if this contig is already in the map before aligning
 						
-						//TODO: Include junctions !!!
-						ContigAlignerResult sswResult = ssw.align(contig);
+						ContigAlignerResult sswResult = alignContig(contig, ssw, sswJunctions);
 						if (sswResult != null && sswResult != ContigAlignerResult.INDEL_NEAR_END) {
 							// Set as secondary for remap prioritization
 							sswResult.setSecondary(true);

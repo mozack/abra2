@@ -53,6 +53,10 @@ public class ReAligner {
 	// Cannot be larger than buffer in assembler.c
 	private static final int MAX_KMER_SIZE = 199;
 	
+	// These must match constants in C code (Aligner matrix dimensions)
+	private static final int MAX_CONTIG_LEN = 2000-1;
+	private static final int MAX_REF_REGION_LEN = 5000-1;
+	
 	private SAMFileHeader[] samHeaders;
 	
 	private List<Feature> regions;
@@ -639,7 +643,12 @@ public class ReAligner {
 		return subset;
 	}
 	
-	private ContigAlignerResult alignContig(String contig, ContigAligner ssw, List<ContigAligner> sswJunctions) {
+	private ContigAlignerResult alignContig(Feature region, String contig, ContigAligner ssw, List<ContigAligner> sswJunctions) {
+		
+		if (contig.length() > MAX_CONTIG_LEN) {
+			Logger.warn(String.format("In Region: %s, contig too long: [%s]", region, contig));
+		}
+		
 		ContigAlignerResult bestResult = null;
 		int bestScore = -1;
 		
@@ -669,8 +678,6 @@ public class ReAligner {
 		//TODO: Check for tie scores with different final alignment
 		
 		return bestResult;
-		
-//		mappedContigs.put(new SimpleMapper(bestResult.getSequence()), bestResult);
 	}
 	
 	private boolean assemble(List<ContigAlignerResult> results, Feature region, 
@@ -697,7 +704,7 @@ public class ReAligner {
 				// Filter contigs that match the reference
 				if (!refSeq.contains(contig.getContig())) {
 					
-					ContigAlignerResult sswResult = alignContig(contig.getContig(), ssw, sswJunctions);
+					ContigAlignerResult sswResult = alignContig(region, contig.getContig(), ssw, sswJunctions);
 					
 					if (sswResult == ContigAlignerResult.INDEL_NEAR_END) {
 						shouldRetry = true;
@@ -821,9 +828,14 @@ public class ReAligner {
 							String rightSeq = c2r.getSequence(region.getSeqname(), rightStart, rightStop-rightStart);
 							juncSeq.append(rightSeq);
 							// Junction pos and length should already be added
-							
-							ContigAligner sswJunc = new ContigAligner(juncSeq.toString(), region.getSeqname(), refStart, this.readLength, minAnchorLen, maxAnchorMismatches, junctionPos, junctionLengths);
-							sswJunctions.add(sswJunc);
+							if (juncSeq.length() > MAX_REF_REGION_LEN) {
+								// Make sure we don't blow up the hardcoded size C matrix
+								Logger.warn("Junction Ref Seq to long: " + juncSeq.toString());
+								
+							} else {
+								ContigAligner sswJunc = new ContigAligner(juncSeq.toString(), region.getSeqname(), refStart, this.readLength, minAnchorLen, maxAnchorMismatches, junctionPos, junctionLengths);
+								sswJunctions.add(sswJunc);
+							}
 						}
 					}
 				}
@@ -862,7 +874,7 @@ public class ReAligner {
 					for (String contig : altContigs) {
 						// TODO: Check to see if this contig is already in the map before aligning
 						
-						ContigAlignerResult sswResult = alignContig(contig, ssw, sswJunctions);
+						ContigAlignerResult sswResult = alignContig(region, contig, ssw, sswJunctions);
 						if (sswResult != null && sswResult != ContigAlignerResult.INDEL_NEAR_END) {
 							// Set as secondary for remap prioritization
 							sswResult.setSecondary(true);

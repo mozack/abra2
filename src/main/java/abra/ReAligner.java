@@ -645,37 +645,39 @@ public class ReAligner {
 	
 	private ContigAlignerResult alignContig(Feature region, String contig, ContigAligner ssw, List<ContigAligner> sswJunctions) {
 		
+		ContigAlignerResult bestResult = null;
+		
 		if (contig.length() > MAX_CONTIG_LEN) {
 			Logger.warn(String.format("In Region: %s, contig too long: [%s]", region, contig));
-		}
-		
-		ContigAlignerResult bestResult = null;
-		int bestScore = -1;
-		
-		ContigAlignerResult sswResult;
-		for (ContigAligner sswJunc : sswJunctions) {
-			sswResult = sswJunc.align(contig);
+		} else {
+
+			int bestScore = -1;
+			
+			ContigAlignerResult sswResult;
+			for (ContigAligner sswJunc : sswJunctions) {
+				sswResult = sswJunc.align(contig);
+				if (sswResult != null && sswResult.getScore() > bestScore) {
+					bestScore = sswResult.getScore();
+					bestResult = sswResult;
+				}
+			}
+			
+			sswResult = ssw.align(contig);
 			if (sswResult != null && sswResult.getScore() > bestScore) {
 				bestScore = sswResult.getScore();
 				bestResult = sswResult;
 			}
+	
+	
+			if (bestResult != null) {
+				Logger.debug("BEST_SSW: %d : %s : %d: %d : %s",
+						bestResult.getGenomicPos(), bestResult.getCigar(), bestResult.getRefPos(), bestResult.getScore(), bestResult.getSequence());
+			} else {
+				Logger.debug("NO_SSW: %s", contig);
+			}
+			
+			//TODO: Check for tie scores with different final alignment
 		}
-		
-		sswResult = ssw.align(contig);
-		if (sswResult != null && sswResult.getScore() > bestScore) {
-			bestScore = sswResult.getScore();
-			bestResult = sswResult;
-		}
-
-
-		if (bestResult != null) {
-			Logger.debug("BEST_SSW: %d : %s : %d: %d : %s",
-					bestResult.getGenomicPos(), bestResult.getCigar(), bestResult.getRefPos(), bestResult.getScore(), bestResult.getSequence());
-		} else {
-			Logger.debug("NO_SSW: %s", contig);
-		}
-		
-		//TODO: Check for tie scores with different final alignment
 		
 		return bestResult;
 	}

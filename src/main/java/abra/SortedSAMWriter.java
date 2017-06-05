@@ -53,11 +53,11 @@ public class SortedSAMWriter {
 		this.chromosomeChunker = chromosomeChunker;
 		this.finalCompressionLevel = finalCompressionLevel;
 		
-//		writerFactory.setUseAsyncIo(false);
-//		IntelDeflaterFactory intelDeflater = new IntelDeflaterFactory();
-//		writerFactory.setDeflaterFactory(intelDeflater);
-//		
-//		Logger.info("Using intel deflator: " + intelDeflater.usingIntelDeflater());
+		writerFactory.setUseAsyncIo(false);
+		IntelDeflaterFactory intelDeflater = new IntelDeflaterFactory();
+		writerFactory.setDeflaterFactory(intelDeflater);
+		
+		Logger.info("Using intel deflator: " + intelDeflater.usingIntelDeflater());
 		
 		writers = new SAMFileWriter[outputFiles.length][];
 		

@@ -80,19 +80,23 @@ public class SortedSAMWriter {
 		return String.format("%s/%d.%d.bam", tempDir, sampleIdx, chrom);
 	}
 	
-	public void addAlignment(int sampleIdx, SAMRecord read, int chromosomeChunkIdx) {
+	public void addAlignment(int sampleIdx, SAMRecordWrapper samRecord, int chromosomeChunkIdx) {
 		Feature chunk = this.chromosomeChunker.getChunks().get(chromosomeChunkIdx);
+		
+		SAMRecord read = samRecord.getSamRecord();
 		
 		// Only output reads with start pos within specified chromosomeChunk
 		// Avoids reads being written in 2 different chunks
 		if (read.getAlignmentStart() >= chunk.getStart() && read.getAlignmentStart() <= chunk.getEnd()) {
 			
-//			if (read.getReadUnmappedFlag() && read.getReadNegativeStrandFlag()) {
-//				// We RC'd this read previously.  Convert it back now.
-//				read.setReadString(rc.reverseComplement(read.getReadString()));
-//				read.setBaseQualityString(rc.reverse(read.getBaseQualityString()));
-//				read.setReadNegativeStrandFlag(false);
-//			}
+			if (samRecord.isUnalignedRc() && read.getReadUnmappedFlag()) {
+				// This read was reverse complemented, but not updated.
+				// Change it back to its original state.
+				read.setReadString(rc.reverseComplement(read.getReadString()));
+				read.setBaseQualityString(rc.reverse(read.getBaseQualityString()));
+				read.setReadNegativeStrandFlag(!read.getReadNegativeStrandFlag());
+			}
+			
 			writers[sampleIdx][chromosomeChunkIdx].addAlignment(read);
 		}
 	}

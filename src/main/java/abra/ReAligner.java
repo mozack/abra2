@@ -30,11 +30,13 @@ import abra.JunctionUtils.TooManyJunctionPermutationsException;
 import abra.ReadEvaluator.Alignment;
 import abra.ContigAligner.ContigAlignerResult;
 import abra.SimpleMapper.Orientation;
+import htsjdk.samtools.Cigar;
 import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.SAMProgramRecord;
 import htsjdk.samtools.SAMRecord;
 import htsjdk.samtools.SAMSequenceRecord;
 import htsjdk.samtools.SamReader;
+import htsjdk.samtools.TextCigarCodec;
 
 /**
  * ABRA's main entry point
@@ -267,11 +269,13 @@ public class ReAligner {
 					read1.setReadString(rc.reverseComplement(read1.getReadString()));
 					read1.setBaseQualityString(rc.reverse(read1.getBaseQualityString()));
 					read1.setReadNegativeStrandFlag(true);
+					record.setUnalignedRc(true);
 				} else if (read1.getReadNegativeStrandFlag() && read1.getMateNegativeStrandFlag()) {
 					// Both ends in reverse orientation.  Reverse the unmapped read
 					read1.setReadString(rc.reverseComplement(read1.getReadString()));
 					read1.setBaseQualityString(rc.reverse(read1.getBaseQualityString()));
-					read1.setReadNegativeStrandFlag(false);					
+					read1.setReadNegativeStrandFlag(false);
+					record.setUnalignedRc(true);
 				}				
 			}
 			
@@ -402,7 +406,7 @@ public class ReAligner {
 						List<SAMRecordWrapper> reads = currReads.get(i);
 
 						for (SAMRecordWrapper read : reads) {
-							this.writer.addAlignment(i, read.getSamRecord(), chromosomeChunkIdx);
+							this.writer.addAlignment(i, read, chromosomeChunkIdx);
 						}
 						
 						reads.clear();
@@ -449,7 +453,7 @@ public class ReAligner {
 		for (int i=0; i<outOfRegionReads.size(); i++) {
 			List<SAMRecordWrapper> outOfRegionReadsForSample = outOfRegionReads.get(i);
 			for (SAMRecordWrapper outOfRegionRead : outOfRegionReadsForSample) {
-				this.writer.addAlignment(i, outOfRegionRead.getSamRecord(), chromosomeChunkIdx);
+				this.writer.addAlignment(i, outOfRegionRead, chromosomeChunkIdx);
 			}
 			
 			outOfRegionReadsForSample.clear();
@@ -618,7 +622,7 @@ public class ReAligner {
 
 			// Output all reads for this sample
 			for (SAMRecordWrapper read : reads) {
-				this.writer.addAlignment(sampleIdx, read.getSamRecord(), chromosomeChunkIdx);
+				this.writer.addAlignment(sampleIdx, read, chromosomeChunkIdx);
 			}
 			
 			sampleIdx += 1;
@@ -644,6 +648,16 @@ public class ReAligner {
 		
 		return subset;
 	}
+	/*
+	private List<Feature> getExtraJunctions(ContigAlignerResult result, List<Feature> junctions) {
+		// Look for junctions with adjacent deletions.
+		// Treat these as putative novel junctions.
+		List<Feature> extraJunctions = new ArrayList<Feature>();
+		
+		Cigar cigar = TextCigarCodec.decode(result.getCigar());
+		result.getCigar();
+	}
+	*/
 	
 	private ContigAlignerResult alignContig(Feature region, String contig, ContigAligner ssw, List<ContigAligner> sswJunctions) {
 		
@@ -685,8 +699,8 @@ public class ReAligner {
 	}
 	
 	private boolean assemble(List<ContigAlignerResult> results, Feature region, 
-			String refSeq, List<String> bams, List<List<SAMRecordWrapper>> readsList, ContigAligner ssw,
-			List<ContigAligner> sswJunctions, int mnf, int mbq, double mer) throws IOException {
+			String refSeq, List<String> bams, List<List<SAMRecordWrapper>> readsList, ContigAligner contigAligner,
+			List<ContigAligner> junctionAligners, int mnf, int mbq, double mer) throws IOException {
 		
 		boolean shouldRetry = false;
 		
@@ -708,7 +722,7 @@ public class ReAligner {
 				// Filter contigs that match the reference
 				if (!refSeq.contains(contig.getContig())) {
 					
-					ContigAlignerResult sswResult = alignContig(region, contig.getContig(), ssw, sswJunctions);
+					ContigAlignerResult sswResult = alignContig(region, contig.getContig(), contigAligner, junctionAligners);
 					
 					if (sswResult == ContigAlignerResult.INDEL_NEAR_END) {
 						shouldRetry = true;
@@ -774,7 +788,7 @@ public class ReAligner {
 			
 			ContigAligner ssw = new ContigAligner(refSeq, region.getSeqname(), refSeqStart, this.readLength, minAnchorLen, maxAnchorMismatches);
 			
-			List<ContigAligner> sswJunctions = new ArrayList<ContigAligner>();
+			List<ContigAligner> junctionAligners = new ArrayList<ContigAligner>();
 			
 //			List<List<Feature>> junctionPermutations = JunctionUtils.combineJunctions(junctions, this.readLength);
 			
@@ -838,7 +852,7 @@ public class ReAligner {
 								
 							} else {
 								ContigAligner sswJunc = new ContigAligner(juncSeq.toString(), region.getSeqname(), refStart, this.readLength, minAnchorLen, maxAnchorMismatches, junctionPos, junctionLengths);
-								sswJunctions.add(sswJunc);
+								junctionAligners.add(sswJunc);
 							}
 						}
 					}
@@ -849,7 +863,7 @@ public class ReAligner {
 					Logger.debug("Skipping assembly of region: " + region.getDescriptor() + " - " + region.getKmer());
 				} else {
 					List<ContigAlignerResult> results = new ArrayList<ContigAlignerResult>();
-					boolean shouldRetry = assemble(results, region, refSeq, bams, readsList, ssw, sswJunctions,
+					boolean shouldRetry = assemble(results, region, refSeq, bams, readsList, ssw, junctionAligners,
 							assemblerSettings.getMinNodeFrequncy(), assemblerSettings.getMinBaseQuality(),
 							assemblerSettings.getMinEdgeRatio()/2.0);
 					
@@ -858,7 +872,7 @@ public class ReAligner {
 						// Indel near edge of contig indicates that we may have a low coverage indel encountered.
 						// Try to reassemble using less stringent pruning to see if we can get greater coverage.
 						results.clear();
-						assemble(results, region, refSeq, bams, readsList, ssw, sswJunctions,
+						assemble(results, region, refSeq, bams, readsList, ssw, junctionAligners,
 								assemblerSettings.getMinNodeFrequncy()/2, assemblerSettings.getMinBaseQuality()/2,
 								assemblerSettings.getMinEdgeRatio()/2.0);
 					}
@@ -878,7 +892,7 @@ public class ReAligner {
 					for (String contig : altContigs) {
 						// TODO: Check to see if this contig is already in the map before aligning
 						
-						ContigAlignerResult sswResult = alignContig(region, contig, ssw, sswJunctions);
+						ContigAlignerResult sswResult = alignContig(region, contig, ssw, junctionAligners);
 						if (sswResult != null && sswResult != ContigAlignerResult.INDEL_NEAR_END) {
 							// Set as secondary for remap prioritization
 							sswResult.setSecondary(true);

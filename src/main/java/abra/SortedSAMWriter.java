@@ -134,6 +134,8 @@ public class SortedSAMWriter {
 			// Only allow buffering if sorting
 			writerFactory.setUseAsyncIo(true);
 			writerFactory.setAsyncOutputBufferSize(ASYNC_READ_CACHE_SIZE);
+		} else {
+			writerFactory.setUseAsyncIo(false);
 		}
 		
 		writerFactory.setCompressionLevel(finalCompressionLevel);

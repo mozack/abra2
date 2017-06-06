@@ -26,8 +26,7 @@ public class SortedSAMWriter {
 	
 	private static final int TEMP_COMPRESSION_LEVEL = 1;
 	
-	public static final int GENOMIC_RANGE_TO_CACHE = 1000000;
-	private static final int ASYNC_READ_CACHE_SIZE = 1000000;
+	private static final int ASYNC_READ_CACHE_SIZE = 100000;
 	
 	private SAMFileWriterFactory writerFactory = new SAMFileWriterFactory();
 	
@@ -38,13 +37,16 @@ public class SortedSAMWriter {
 	private boolean isKeepTmp;
 	private ChromosomeChunker chromosomeChunker;
 	private int finalCompressionLevel;
+	private boolean shouldSort;
+	private int genomicRangeToCache;
 	
 	private Set<Integer> chunksReady = new HashSet<Integer>();
 	
 	private ReverseComplementor rc = new ReverseComplementor();
 	
 	public SortedSAMWriter(String[] outputFiles, String tempDir, SAMFileHeader[] samHeaders,
-			boolean isKeepTmp, ChromosomeChunker chromosomeChunker, int finalCompressionLevel) {
+			boolean isKeepTmp, ChromosomeChunker chromosomeChunker, int finalCompressionLevel,
+			boolean shouldSort, int genomicRangeToCache) {
 	
 		this.samHeaders = samHeaders;
 		this.outputFiles = outputFiles;
@@ -52,6 +54,8 @@ public class SortedSAMWriter {
 		this.isKeepTmp = isKeepTmp;
 		this.chromosomeChunker = chromosomeChunker;
 		this.finalCompressionLevel = finalCompressionLevel;
+		this.shouldSort = shouldSort;
+		this.genomicRangeToCache = genomicRangeToCache;
 		
 		writerFactory.setUseAsyncIo(false);
 		IntelDeflaterFactory intelDeflater = new IntelDeflaterFactory();
@@ -125,7 +129,11 @@ public class SortedSAMWriter {
 		writerFactory.setUseAsyncIo(true);
 		writerFactory.setAsyncOutputBufferSize(ASYNC_READ_CACHE_SIZE);
 		writerFactory.setCompressionLevel(finalCompressionLevel);
-		samHeaders[sampleIdx].setSortOrder(SortOrder.coordinate);
+		if (shouldSort) {
+			samHeaders[sampleIdx].setSortOrder(SortOrder.coordinate);
+		} else {
+			samHeaders[sampleIdx].setSortOrder(SortOrder.unsorted);
+		}
 		SAMFileWriter output = writerFactory.makeBAMWriter(samHeaders[sampleIdx], true, new File(outputFiles[sampleIdx]), finalCompressionLevel);
 		
 		for (String chromosome : chromosomeChunker.getChromosomes()) {
@@ -184,41 +192,45 @@ public class SortedSAMWriter {
 				SamReader reader = SAMRecordUtils.getSamReader(filename);
 		
 				for (SAMRecord read : reader) {
-					reads.add(read);
-
-					MateKey mateKey = getOriginalReadInfo(read);
-					SAMRecord existingMate = mates.get(mateKey);
-					if (existingMate == null || (existingMate.getFlags() & 0xA00) != 0) {
-						// Cache read info giving priority to primary alignments
-						mates.put(mateKey, read);
-					}
-					
-					if (read.getAlignmentStart() - reads.get(0).getAlignmentStart() > GENOMIC_RANGE_TO_CACHE*2) {
-						Collections.sort(reads, new SAMCoordinateComparator());
-						
-						int start = reads.get(0).getAlignmentStart();
-						int i = 0;
-						while (i < reads.size() && reads.get(i).getAlignmentStart() - start < GENOMIC_RANGE_TO_CACHE) {
-							SAMRecord currRead = reads.get(i);
-							setMateInfo(currRead, mates);
-							output.addAlignment(currRead);
-							i += 1;
+					if (shouldSort) {
+						reads.add(read);
+	
+						MateKey mateKey = getOriginalReadInfo(read);
+						SAMRecord existingMate = mates.get(mateKey);
+						if (existingMate == null || (existingMate.getFlags() & 0xA00) != 0) {
+							// Cache read info giving priority to primary alignments
+							mates.put(mateKey, read);
 						}
 						
-						// Clear out of scope mate keys
-						List<MateKey> toRemove = new ArrayList<MateKey>();
-						for (MateKey key : mates.keySet()) {
-							if (key.start - start < -GENOMIC_RANGE_TO_CACHE) {
-								toRemove.add(key);
+						if (read.getAlignmentStart() - reads.get(0).getAlignmentStart() > genomicRangeToCache*2) {
+							Collections.sort(reads, new SAMCoordinateComparator());
+							
+							int start = reads.get(0).getAlignmentStart();
+							int i = 0;
+							while (i < reads.size() && reads.get(i).getAlignmentStart() - start < genomicRangeToCache) {
+								SAMRecord currRead = reads.get(i);
+								setMateInfo(currRead, mates);
+								output.addAlignment(currRead);
+								i += 1;
 							}
+							
+							// Clear out of scope mate keys
+							List<MateKey> toRemove = new ArrayList<MateKey>();
+							for (MateKey key : mates.keySet()) {
+								if (key.start - start < -genomicRangeToCache) {
+									toRemove.add(key);
+								}
+							}
+							
+							for (MateKey key : toRemove) {
+								mates.remove(key);
+							}
+							
+							Logger.debug("Reads output: %d", i);
+							reads.subList(0, i).clear();
 						}
-						
-						for (MateKey key : toRemove) {
-							mates.remove(key);
-						}
-						
-						Logger.debug("Reads output: %d", i);
-						reads.subList(0, i).clear();
+					} else {
+						output.addAlignment(read);
 					}
 				}
 				

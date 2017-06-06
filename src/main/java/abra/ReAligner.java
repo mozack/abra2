@@ -93,8 +93,10 @@ public class ReAligner {
 	private boolean useObservedIndels;
 	private boolean useConsensusSeq;
 	private boolean isKeepTmp;
+	private boolean shouldSort;
 	private String tmpDir;
 	private int finalCompressionLevel;
+	private int maxRealignDist;
 	
 	// If true, the input target file specifies kmer values
 	private boolean hasPresetKmers = false;
@@ -162,7 +164,8 @@ public class ReAligner {
 			samHeaders[i].addProgramRecord(pg);			
 		}
 		
-		writer = new SortedSAMWriter(outputFiles, tempDir.toString(), samHeaders, isKeepTmp, chromosomeChunker, finalCompressionLevel);
+		writer = new SortedSAMWriter(outputFiles, tempDir.toString(), samHeaders, isKeepTmp, chromosomeChunker,
+				finalCompressionLevel, shouldSort, maxRealignDist);
 
 		// Spawn thread for each chromosome
 		// TODO: Validate identical sequence dictionary for each input file
@@ -358,7 +361,6 @@ public class ReAligner {
 				int totalReads = remapReads(regionContigs, readsToRemap, chromosomeChunkIdx);
 				long stop = System.currentTimeMillis();
 				Logger.debug("REMAP_READS_MSECS:\t%d\t%d\t%s:%d", (stop-start), totalReads, record.getSamRecord().getReferenceName(), record.getSamRecord().getAlignmentStart());
-//				Logger.debug("REMAP_READS_SECS:\t%d\t%s:%d", (stop-start)/1000, record.getSamRecord().getReferenceName(), record.getSamRecord().getAlignmentStart());
 				
 				// Remove out of scope region assemblies
 				List<Feature> regionsToRemove = new ArrayList<Feature>();
@@ -527,7 +529,7 @@ public class ReAligner {
 		Alignment alignment = readEvaluator.getImprovedAlignment(origEditDist, read);
 		if (alignment != null) {
 			
-			if (Math.abs(read.getAlignmentStart() - alignment.pos) > SortedSAMWriter.GENOMIC_RANGE_TO_CACHE / 2) {
+			if (Math.abs(read.getAlignmentStart() - alignment.pos) > maxRealignDist) {
 				Logger.warn("Not moving read: " + read.getReadName() + " from: " + read.getAlignmentStart() + " to: " + alignment.pos);
 			} else {
 			
@@ -600,7 +602,7 @@ public class ReAligner {
 				SAMRecord read = readWrapper.getSamRecord();
 				if (read.getMappingQuality() >= this.minMappingQuality || read.getReadUnmappedFlag()) {
 					
-					if (Math.abs(read.getAlignmentStart() - read.getMateAlignmentStart()) < SortedSAMWriter.GENOMIC_RANGE_TO_CACHE &&
+					if (Math.abs(read.getAlignmentStart() - read.getMateAlignmentStart()) < maxRealignDist &&
 						read.getReferenceName().equals(read.getMateReferenceName())) {
 					
 						// TODO: Use NM tag if available (need to handle soft clipping though!)
@@ -1305,6 +1307,8 @@ public class ReAligner {
 			realigner.hasPresetKmers = options.hasPresetKmers();
 			realigner.isSkipAssembly = options.isSkipAssembly();
 			realigner.useObservedIndels = options.useObservedIndels();
+			realigner.shouldSort = options.shouldSort();
+			realigner.maxRealignDist = options.getMaxRealignDist();
 			realigner.useConsensusSeq = options.useConsensusSequence();
 			realigner.isKeepTmp = options.isKeepTmp();
 			realigner.tmpDir = options.getTmpDir();

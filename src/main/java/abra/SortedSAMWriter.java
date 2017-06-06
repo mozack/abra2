@@ -58,10 +58,10 @@ public class SortedSAMWriter {
 		this.genomicRangeToCache = genomicRangeToCache;
 		
 		writerFactory.setUseAsyncIo(false);
-		IntelDeflaterFactory intelDeflater = new IntelDeflaterFactory();
-		writerFactory.setDeflaterFactory(intelDeflater);
-		
-		Logger.info("Using intel deflator: " + intelDeflater.usingIntelDeflater());
+//		IntelDeflaterFactory intelDeflater = new IntelDeflaterFactory();
+//		writerFactory.setDeflaterFactory(intelDeflater);
+//		
+//		Logger.info("Using intel deflator: " + intelDeflater.usingIntelDeflater());
 		
 		writers = new SAMFileWriter[outputFiles.length][];
 		
@@ -130,8 +130,12 @@ public class SortedSAMWriter {
 		
 		Logger.info("Finishing: " + outputFiles[sampleIdx]);
 
-		writerFactory.setUseAsyncIo(true);
-		writerFactory.setAsyncOutputBufferSize(ASYNC_READ_CACHE_SIZE);
+		if (shouldSort) {
+			// Only allow buffering if sorting
+			writerFactory.setUseAsyncIo(true);
+			writerFactory.setAsyncOutputBufferSize(ASYNC_READ_CACHE_SIZE);
+		}
+		
 		writerFactory.setCompressionLevel(finalCompressionLevel);
 		if (shouldSort) {
 			samHeaders[sampleIdx].setSortOrder(SortOrder.coordinate);

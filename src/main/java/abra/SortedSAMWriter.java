@@ -202,15 +202,17 @@ public class SortedSAMWriter {
 							mates.put(mateKey, read);
 						}
 						
-						if (read.getAlignmentStart() - reads.get(0).getAlignmentStart() > genomicRangeToCache*2) {
+						if (read.getAlignmentStart() - reads.get(0).getAlignmentStart() > genomicRangeToCache*3) {
 							Collections.sort(reads, new SAMCoordinateComparator());
 							
 							int start = reads.get(0).getAlignmentStart();
 							int i = 0;
+							int last = -1;
 							while (i < reads.size() && reads.get(i).getAlignmentStart() - start < genomicRangeToCache) {
 								SAMRecord currRead = reads.get(i);
 								setMateInfo(currRead, mates);
 								output.addAlignment(currRead);
+								last = currRead.getAlignmentStart();
 								i += 1;
 							}
 							
@@ -226,7 +228,7 @@ public class SortedSAMWriter {
 								mates.remove(key);
 							}
 							
-							Logger.debug("Reads output: %d", i);
+							Logger.debug("%s - Reads output: %d @ %d - %d, curr: %d", chromosome, i, start, last, read.getAlignmentStart());
 							reads.subList(0, i).clear();
 						}
 					} else {
@@ -420,6 +422,32 @@ public class SortedSAMWriter {
 		System.out.println("Elapsed: " + (end-start));
 	}
 	*/
+	
+	public static void main(String[] args) throws IOException {
+		Logger.LEVEL = Logger.Level.TRACE;
+		String ref = "/home/lmose/dev/reference/hg38/chr1.fa";
+		
+		CompareToReference2 c2r = new CompareToReference2();
+		c2r.init(ref);
+		
+		ChromosomeChunker cc = new ChromosomeChunker(c2r);
+		
+		cc.init();
+		
+		SamReader reader = SAMRecordUtils.getSamReader("/home/lmose/dev/abra2_dev/sort_issue3/0.5.bam");
+		SAMFileHeader header = reader.getFileHeader();
+		header.setSortOrder(SortOrder.coordinate);
+		
+		SortedSAMWriter writer = new SortedSAMWriter(new String[] { "/home/lmose/dev/abra2_dev/sort_issue4/final.bam" }, "/home/lmose/dev/abra2_dev/sort_issue4", new SAMFileHeader[] { reader.getFileHeader() }, true, cc,
+				1,true,1000);
+
+		SAMFileWriterFactory writerFactory = new SAMFileWriterFactory();
+		SAMFileWriter out = writerFactory.makeBAMWriter(reader.getFileHeader(), true, new File("/home/lmose/dev/abra2_dev/sort_issue4/test.bam"),1);
+		
+		writer.processChromosome(out, 1, "chr1");
+		
+		out.close();
+	}
 	
 //	public static void main(String[] args) throws IOException {
 ////		String in = args[0];

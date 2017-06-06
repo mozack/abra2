@@ -7,25 +7,11 @@ import htsjdk.samtools.Cigar;
 import htsjdk.samtools.CigarElement;
 import htsjdk.samtools.CigarOperator;
 import htsjdk.samtools.TextCigarCodec;
-import ssw.Aligner;
-import ssw.Alignment;
 
 public class ContigAligner {
 	
 	private static final int MIN_ALIGNMENT_SCORE = 1;
 
-	// gatk scores
-//	private static final int MATCH = 20;
-//	private static final int MISMATCH = -20;
-//	private static final int GAP_OPEN_PENALTY = 41;
-//	private static final int GAP_EXTEND_PENALTY = 1;
-	
-	// bwa scores
-//	private static final int MATCH = 1;
-//	private static final int MISMATCH = -4;
-//	private static final int GAP_OPEN_PENALTY = 6;
-//	private static final int GAP_EXTEND_PENALTY = 0;
-	
 	private static int MATCH;
 	private static int MISMATCH;
 	private static int GAP_OPEN_PENALTY;
@@ -40,11 +26,9 @@ public class ContigAligner {
 	private List<Integer> junctionPositions = new ArrayList<Integer>();
 	private List<Integer> junctionLengths = new ArrayList<Integer>();
 	
-	private static int [][] score;
-	
 	private CompareToReference2 localC2r;
 	
-	private static ThreadLocal<NativeSemiGlobalAligner> aligner = new ThreadLocal<NativeSemiGlobalAligner>();
+	private NativeSemiGlobalAligner aligner = new NativeSemiGlobalAligner(MATCH, MISMATCH, GAP_OPEN_PENALTY, GAP_EXTEND_PENALTY);
 	
 	public static void init(int[] scoring) {
 		
@@ -61,23 +45,14 @@ public class ContigAligner {
 		GAP_OPEN_PENALTY = -scoring[2];
 		GAP_EXTEND_PENALTY = -scoring[3];
 		
-		Logger.info("SW match,mismatch,gap_open_penalty,gap_extend_penalty: " 
+		Logger.info("SG match,mismatch,gap_open_penalty,gap_extend_penalty: " 
 				+ MATCH + "," + MISMATCH + "," + GAP_OPEN_PENALTY + "," + GAP_EXTEND_PENALTY);
-		
-		score = new int[128][128];
-		for (int i = 0; i < 128; i++) {
-			for (int j = 0; j < 128; j++) {
-				if (i == j) score[i][j] = MATCH;
-				else score[i][j] = MISMATCH;
-			}
-		}
 	}
 	
 	public ContigAligner(String ref, String refChr, int refStart, int minContigLength, int minAnchorLen, int maxAnchorMismatches) {
 		this.ref = ref;
 		this.refChr = refChr;
 		this.refContextStart = refStart;
-//		this.minContigLength = minContigLength;
 		this.minAnchorLength = minAnchorLen;
 		this.maxAnchorMismatches = maxAnchorMismatches;
 		this.localC2r = new CompareToReference2();
@@ -95,13 +70,7 @@ public class ContigAligner {
 		
 		ContigAlignerResult result = null;
 		
-		// Init threadlocal aligner
-		if (aligner.get() == null) {
-			Logger.trace("Initializing SGAligner");
-			aligner.set(new NativeSemiGlobalAligner(MATCH, MISMATCH, GAP_OPEN_PENALTY, GAP_EXTEND_PENALTY));
-		}
-		
-		SemiGlobalAligner.Result sgResult = aligner.get().align(seq, ref);
+		SemiGlobalAligner.Result sgResult = aligner.align(seq, ref);
 		Logger.trace("SG Alignment [%s]:\t%s, possible: %d to: %s", seq, sgResult, seq.length()*MATCH, ref);
 		if (sgResult.score > MIN_ALIGNMENT_SCORE && sgResult.score > sgResult.secondBest && sgResult.endPosition > 0) {
 			Cigar cigar = TextCigarCodec.decode(sgResult.cigar);

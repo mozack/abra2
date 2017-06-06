@@ -31,6 +31,8 @@ import abra.ReadEvaluator.Alignment;
 import abra.ContigAligner.ContigAlignerResult;
 import abra.SimpleMapper.Orientation;
 import htsjdk.samtools.Cigar;
+import htsjdk.samtools.CigarElement;
+import htsjdk.samtools.CigarOperator;
 import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.SAMProgramRecord;
 import htsjdk.samtools.SAMRecord;
@@ -648,18 +650,67 @@ public class ReAligner {
 		
 		return subset;
 	}
-	/*
+	
 	private List<Feature> getExtraJunctions(ContigAlignerResult result, List<Feature> junctions) {
 		// Look for junctions with adjacent deletions.
 		// Treat these as putative novel junctions.
+		Set<Feature> junctionSet = new HashSet<Feature>(junctions);
 		List<Feature> extraJunctions = new ArrayList<Feature>();
 		
 		Cigar cigar = TextCigarCodec.decode(result.getCigar());
-		result.getCigar();
+		
+		boolean isInGap = false;
+		int gapStart = -1;
+		int gapLength = -1;
+		int numElems = -1;
+		int refOffset = 0;
+		
+		for (CigarElement elem : cigar.getCigarElements()) {
+			if (elem.getOperator() == CigarOperator.D || elem.getOperator() == CigarOperator.N) {
+				if (!isInGap) {
+					isInGap = true;
+					gapStart = refOffset;
+					gapLength = elem.getLength();
+					numElems = 1;
+				} else {
+					gapLength += elem.getLength();
+					numElems += 1;
+				}
+			} else {
+				if (isInGap) {
+					
+					if (numElems > 1) {
+						long start = result.getGenomicPos() + gapStart;
+						long end = start + gapLength;
+						Feature junc = new Feature(result.getChromosome(), start, end-1);
+						if (!junctionSet.contains(junc)) {
+							Logger.info("Extra junction idenfified: %s", junc);
+							extraJunctions.add(junc);
+						}
+					}
+					
+					isInGap = false;
+					gapStart = -1;
+					gapLength = -1;
+					numElems = -1;
+				}
+			}
+			
+			if (elem.getOperator() == CigarOperator.M || 
+				elem.getOperator() == CigarOperator.D || 
+				elem.getOperator() == CigarOperator.N ||
+				elem.getOperator() == CigarOperator.X ||
+				elem.getOperator() == CigarOperator.EQ) {
+				
+				refOffset += elem.getLength();
+			}
+		}
+		
+		return extraJunctions;
 	}
-	*/
 	
-	private ContigAlignerResult alignContig(Feature region, String contig, ContigAligner ssw, List<ContigAligner> sswJunctions) {
+	private ContigAlignerResult alignContig(Feature region, String contig, ContigAligner ssw, List<ContigAligner> sswJunctions, List<Feature> allJunctions,
+			int chromosomeLength) {
 		
 		ContigAlignerResult bestResult = null;
 		
@@ -684,10 +735,21 @@ public class ReAligner {
 				bestResult = sswResult;
 			}
 	
-	
 			if (bestResult != null) {
+				
+				List<Feature> extraJunctions = getExtraJunctions(bestResult, allJunctions);
+				if (!extraJunctions.isEmpty()) {
+					ContigAligner aligner = getContigAlignerForJunctionPermutation(extraJunctions, region, chromosomeLength);
+					sswResult = aligner.align(contig);
+					if (sswResult != null && sswResult.getScore() > bestScore) {
+						bestScore = sswResult.getScore();
+						bestResult = sswResult;
+					}
+				}
+				
 				Logger.debug("BEST_SSW: %d : %s : %d: %d : %s",
 						bestResult.getGenomicPos(), bestResult.getCigar(), bestResult.getRefPos(), bestResult.getScore(), bestResult.getSequence());
+				
 			} else {
 				Logger.debug("NO_SSW: %s", contig);
 			}
@@ -700,7 +762,8 @@ public class ReAligner {
 	
 	private boolean assemble(List<ContigAlignerResult> results, Feature region, 
 			String refSeq, List<String> bams, List<List<SAMRecordWrapper>> readsList, ContigAligner contigAligner,
-			List<ContigAligner> junctionAligners, int mnf, int mbq, double mer) throws IOException {
+			List<ContigAligner> junctionAligners, int mnf, int mbq, double mer, List<Feature> junctions,
+			int chromosomeLength) throws IOException {
 		
 		boolean shouldRetry = false;
 		
@@ -722,7 +785,7 @@ public class ReAligner {
 				// Filter contigs that match the reference
 				if (!refSeq.contains(contig.getContig())) {
 					
-					ContigAlignerResult sswResult = alignContig(region, contig.getContig(), contigAligner, junctionAligners);
+					ContigAlignerResult sswResult = alignContig(region, contig.getContig(), contigAligner, junctionAligners, junctions, chromosomeLength);
 					
 					if (sswResult == ContigAlignerResult.INDEL_NEAR_END) {
 						shouldRetry = true;
@@ -735,6 +798,63 @@ public class ReAligner {
 		} 
 		
 		return shouldRetry;
+	}
+	
+	private ContigAligner getContigAlignerForJunctionPermutation(List<Feature> junctionPerm, Feature region, int chromosomeLength) {
+		
+		ContigAligner contigAligner = null;
+		
+		// List of junction positions within localized reference
+		List<Integer> junctionPos = new ArrayList<Integer>();
+		// List of junction lengths within localized reference
+		List<Integer> junctionLengths = new ArrayList<Integer>();
+		
+		StringBuffer juncSeq = new StringBuffer();
+		
+		int refStart = Math.max((int) junctionPerm.get(0).getStart() - (int) region.getLength() - this.readLength*2, 1);
+		String leftSeq = c2r.getSequence(region.getSeqname(), refStart, (int) junctionPerm.get(0).getStart() - refStart);
+		juncSeq.append(leftSeq);
+		junctionPos.add(leftSeq.length());
+		junctionLengths.add((int) junctionPerm.get(0).getLength()+1);
+		
+		boolean isJunctionGapTooBig = false;
+		
+		for (int i=1; i<junctionPerm.size(); i++) {
+			int midStart = (int) junctionPerm.get(i-1).getEnd()+1;
+			String middleSeq = c2r.getSequence(region.getSeqname(), midStart, (int) junctionPerm.get(i).getStart() - midStart);
+			if (middleSeq.length() > region.getLength()*2) {
+				isJunctionGapTooBig = true;
+				break;
+			}
+			juncSeq.append(middleSeq);
+			junctionPos.add(juncSeq.length());
+			junctionLengths.add((int) junctionPerm.get(i).getLength()+1);
+		}
+		
+		// TODO: Tighten this up...
+		if (!isJunctionGapTooBig && juncSeq.length() < region.getLength()*10) {
+			
+			// Sequence on right of last junction
+			// Junction stop is exclusive, so add 1 to starting position (junction end + 1)
+			Feature lastJunction = junctionPerm.get(junctionPerm.size()-1);
+			int rightStart = (int) lastJunction.getEnd()+1;
+			int rightStop = Math.min((int) lastJunction.getEnd() + (int) region.getLength() + this.readLength*2, chromosomeLength-1);
+			
+			if (rightStop-rightStart > 0) {
+				String rightSeq = c2r.getSequence(region.getSeqname(), rightStart, rightStop-rightStart);
+				juncSeq.append(rightSeq);
+				// Junction pos and length should already be added
+				if (juncSeq.length() > MAX_REF_REGION_LEN) {
+					// Make sure we don't blow up the hardcoded size C matrix
+					Logger.warn("Junction Ref Seq to long: " + juncSeq.toString());
+					
+				} else {
+					contigAligner = new ContigAligner(juncSeq.toString(), region.getSeqname(), refStart, this.readLength, minAnchorLen, maxAnchorMismatches, junctionPos, junctionLengths);
+				}
+			}
+		}
+
+		return contigAligner;
 	}
 	
 	public Map<SimpleMapper, ContigAlignerResult> processRegion(Feature region, List<List<SAMRecordWrapper>> reads, List<Feature> junctions) throws Exception {
@@ -761,19 +881,6 @@ public class ReAligner {
 				isRegionOk = false;
 				break;
 			}
-			
-//			int lowMapq = 0;
-//			for (SAMRecordWrapper read : sampleReads) {
-//				if (read.getSamRecord().getMappingQuality() < minMappingQuality) {
-//					lowMapq += 1; 
-//				}
-//			}
-//			
-//			if ((float) lowMapq / (float) sampleReads.size() > .25) {
-//				Logger.info("Too many low mapq reads in %s.  %d out of %d", region, lowMapq, sampleReads.size());
-//				isRegionOk = false;
-//				break;
-//			}
 		}
 		
 		if (isRegionOk) {
@@ -806,55 +913,9 @@ public class ReAligner {
 			} else {
 			
 				for (List<Feature> junctionPerm : junctionPermutations) {
-					// List of junction positions within localized reference
-					List<Integer> junctionPos = new ArrayList<Integer>();
-					// List of junction lengths within localized reference
-					List<Integer> junctionLengths = new ArrayList<Integer>();
-					
-					StringBuffer juncSeq = new StringBuffer();
-					
-					int refStart = Math.max((int) junctionPerm.get(0).getStart() - (int) region.getLength() - this.readLength*2, 1);
-					String leftSeq = c2r.getSequence(region.getSeqname(), refStart, (int) junctionPerm.get(0).getStart() - refStart);
-					juncSeq.append(leftSeq);
-					junctionPos.add(leftSeq.length());
-					junctionLengths.add((int) junctionPerm.get(0).getLength()+1);
-					
-					boolean isJunctionGapTooBig = false;
-					
-					for (int i=1; i<junctionPerm.size(); i++) {
-						int midStart = (int) junctionPerm.get(i-1).getEnd()+1;
-						String middleSeq = c2r.getSequence(region.getSeqname(), midStart, (int) junctionPerm.get(i).getStart() - midStart);
-						if (middleSeq.length() > region.getLength()*2) {
-							isJunctionGapTooBig = true;
-							break;
-						}
-						juncSeq.append(middleSeq);
-						junctionPos.add(juncSeq.length());
-						junctionLengths.add((int) junctionPerm.get(i).getLength()+1);
-					}
-					
-					// TODO: Tighten this up...
-					if (!isJunctionGapTooBig && juncSeq.length() < region.getLength()*10) {
-						
-						// Sequence on right of last junction
-						// Junction stop is exclusive, so add 1 to starting position (junction end + 1)
-						Feature lastJunction = junctionPerm.get(junctionPerm.size()-1);
-						int rightStart = (int) lastJunction.getEnd()+1;
-						int rightStop = Math.min((int) lastJunction.getEnd() + (int) region.getLength() + this.readLength*2, chromosomeLength-1);
-						
-						if (rightStop-rightStart > 0) {
-							String rightSeq = c2r.getSequence(region.getSeqname(), rightStart, rightStop-rightStart);
-							juncSeq.append(rightSeq);
-							// Junction pos and length should already be added
-							if (juncSeq.length() > MAX_REF_REGION_LEN) {
-								// Make sure we don't blow up the hardcoded size C matrix
-								Logger.warn("Junction Ref Seq to long: " + juncSeq.toString());
-								
-							} else {
-								ContigAligner sswJunc = new ContigAligner(juncSeq.toString(), region.getSeqname(), refStart, this.readLength, minAnchorLen, maxAnchorMismatches, junctionPos, junctionLengths);
-								junctionAligners.add(sswJunc);
-							}
-						}
+					ContigAligner aligner = getContigAlignerForJunctionPermutation(junctionPerm, region, chromosomeLength);
+					if (aligner != null) {
+						junctionAligners.add(aligner);
 					}
 				}
 							
@@ -865,7 +926,7 @@ public class ReAligner {
 					List<ContigAlignerResult> results = new ArrayList<ContigAlignerResult>();
 					boolean shouldRetry = assemble(results, region, refSeq, bams, readsList, ssw, junctionAligners,
 							assemblerSettings.getMinNodeFrequncy(), assemblerSettings.getMinBaseQuality(),
-							assemblerSettings.getMinEdgeRatio()/2.0);
+							assemblerSettings.getMinEdgeRatio()/2.0, junctions, chromosomeLength);
 					
 					if (shouldRetry) {
 						Logger.debug("RETRY_ASSEMBLY: %s", region);
@@ -874,7 +935,7 @@ public class ReAligner {
 						results.clear();
 						assemble(results, region, refSeq, bams, readsList, ssw, junctionAligners,
 								assemblerSettings.getMinNodeFrequncy()/2, assemblerSettings.getMinBaseQuality()/2,
-								assemblerSettings.getMinEdgeRatio()/2.0);
+								assemblerSettings.getMinEdgeRatio()/2.0, junctions, chromosomeLength);
 					}
 					
 					for (ContigAlignerResult sswResult : results) {
@@ -892,7 +953,7 @@ public class ReAligner {
 					for (String contig : altContigs) {
 						// TODO: Check to see if this contig is already in the map before aligning
 						
-						ContigAlignerResult sswResult = alignContig(region, contig, ssw, junctionAligners);
+						ContigAlignerResult sswResult = alignContig(region, contig, ssw, junctionAligners, junctions, chromosomeLength);
 						if (sswResult != null && sswResult != ContigAlignerResult.INDEL_NEAR_END) {
 							// Set as secondary for remap prioritization
 							sswResult.setSecondary(true);

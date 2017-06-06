@@ -735,8 +735,9 @@ public class ReAligner {
 				bestResult = sswResult;
 			}
 	
-			if (bestResult != null) {
+			if (bestResult != null && bestResult != ContigAlignerResult.INDEL_NEAR_END) {
 				
+				// Check for deletion adjacent to intron (i.e. skipped exon or unannotated splice)
 				List<Feature> extraJunctions = getExtraJunctions(bestResult, allJunctions);
 				if (!extraJunctions.isEmpty()) {
 					ContigAligner aligner = getContigAlignerForJunctionPermutation(extraJunctions, region, chromosomeLength);

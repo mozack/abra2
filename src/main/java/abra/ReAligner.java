@@ -16,6 +16,7 @@ import java.security.CodeSource;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -26,6 +27,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
 
+import abra.JunctionUtils.JunctionComparator;
 import abra.JunctionUtils.TooManyJunctionPermutationsException;
 import abra.ReadEvaluator.Alignment;
 import abra.ContigAligner.ContigAlignerResult;
@@ -827,7 +829,6 @@ public class ReAligner {
 			if (bestResult != null && bestResult != ContigAlignerResult.INDEL_NEAR_END) {
 				
 				if (!allJunctions.isEmpty()) {
-					
 					// Check for additional potential exon skipping junctions masked by a base or 2 interrupting the gap
 					// Using annotated exons here
 					List<Feature> extraJunctions = getExonSkippingJunctions(bestResult, allJunctions);
@@ -835,6 +836,8 @@ public class ReAligner {
 						
 						List<Feature> combinedJunctions = new ArrayList<Feature>(allJunctions);
 						combinedJunctions.addAll(extraJunctions);
+						
+						Collections.sort(combinedJunctions, new JunctionComparator());
 						
 						List<List<Feature>> junctionPermutations = new ArrayList<List<Feature>>();
 						try {
@@ -870,6 +873,8 @@ public class ReAligner {
 						
 						List<Feature> combinedJunctions = new ArrayList<Feature>(allJunctions);
 						combinedJunctions.addAll(extraJunctions);
+						
+						Collections.sort(combinedJunctions, new JunctionComparator());
 						
 						List<List<Feature>> junctionPermutations = new ArrayList<List<Feature>>();
 						try {

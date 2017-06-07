@@ -651,10 +651,11 @@ public class ReAligner {
 		return subset;
 	}
 	
-	private List<Feature> getExtraJunctions(ContigAlignerResult result, List<Feature> junctions) {
+	private List<Feature> getExtraJunctions(ContigAlignerResult result, List<Feature> junctions, List<Feature> junctions2) {
 		// Look for junctions with adjacent deletions.
 		// Treat these as putative novel junctions.
 		Set<Feature> junctionSet = new HashSet<Feature>(junctions);
+		junctionSet.addAll(junctions2);
 		List<Feature> extraJunctions = new ArrayList<Feature>();
 		
 		Cigar cigar = TextCigarCodec.decode(result.getCigar());
@@ -709,6 +710,94 @@ public class ReAligner {
 		return extraJunctions;
 	}
 	
+	private List<Feature> getExonSkippingJunctions(ContigAlignerResult result, List<Feature> junctions) {
+
+		// Handles special case where an exon skipping junction causes large gaps with a tiny (~1)
+		// number of bases mapped somewhere in the gap
+		Set<Feature> junctionSet = new HashSet<Feature>(junctions);
+		List<Feature> extraJunctions = new ArrayList<Feature>();
+		
+		Cigar cigar = TextCigarCodec.decode(result.getCigar());
+		
+		boolean isInGap = false;
+		int gapStart = -1;
+		int gapLength = -1;
+		int numElems = -1;
+		int refOffset = 0;
+		
+		int maxBasesInMiddle = 5;
+		int middleBases = -1;
+		
+		CigarOperator prev = CigarOperator.M;
+		
+		for (CigarElement elem : cigar.getCigarElements()) {
+			if (elem.getOperator() == CigarOperator.D || elem.getOperator() == CigarOperator.N) {
+				if (!isInGap) {
+					isInGap = true;
+					gapStart = refOffset;
+					gapLength = elem.getLength();
+					numElems = 1;
+					middleBases = 0;
+				} else {
+					gapLength += elem.getLength();
+					numElems += 1;
+				}
+			} else {
+				if (isInGap) {
+					
+					if (elem.getLength() + middleBases < maxBasesInMiddle) {
+						middleBases += elem.getLength();
+					} else {
+						
+						if (numElems > 1 && middleBases > 0 && (prev == CigarOperator.D || prev == CigarOperator.N)) {
+							long start = result.getGenomicPos() + gapStart;
+							long end = start + gapLength;
+							
+							// Find junction start / end points closest to gap start / end point
+							long closestStart = junctions.get(0).getStart();
+							long closestEnd = junctions.get(0).getEnd();
+							for (Feature junction : junctions) {
+								if (Math.abs(junction.getStart()-start) < Math.abs(closestStart-start)) {
+									closestStart = junction.getStart();
+								}
+
+								if (Math.abs(junction.getEnd()-end) < Math.abs(closestEnd-end)) {
+									closestEnd = junction.getEnd();
+								}
+							}
+							
+							Feature junc = new Feature(result.getChromosome(), closestStart, closestEnd);
+							if (!junctionSet.contains(junc)) {
+								Logger.info("Potential exon skipping junction idenfified: %s", junc);
+								extraJunctions.add(junc);
+							}
+						}
+						
+						isInGap = false;
+						gapStart = -1;
+						gapLength = -1;
+						numElems = -1;
+						middleBases = -1;
+					}
+				}
+			}
+			
+			if (elem.getOperator() == CigarOperator.M || 
+				elem.getOperator() == CigarOperator.D || 
+				elem.getOperator() == CigarOperator.N ||
+				elem.getOperator() == CigarOperator.X ||
+				elem.getOperator() == CigarOperator.EQ) {
+				
+				refOffset += elem.getLength();
+			}
+			
+			prev = elem.getOperator();
+		}
+		
+		return extraJunctions;
+	}
+
+	
 	private ContigAlignerResult alignContig(Feature region, String contig, ContigAligner ssw, List<ContigAligner> sswJunctions, List<Feature> allJunctions,
 			int chromosomeLength) {
 		
@@ -737,14 +826,76 @@ public class ReAligner {
 	
 			if (bestResult != null && bestResult != ContigAlignerResult.INDEL_NEAR_END) {
 				
-				// Check for deletion adjacent to intron (i.e. skipped exon or unannotated splice)
-				List<Feature> extraJunctions = getExtraJunctions(bestResult, allJunctions);
-				if (!extraJunctions.isEmpty()) {
-					ContigAligner aligner = getContigAlignerForJunctionPermutation(extraJunctions, region, chromosomeLength);
-					sswResult = aligner.align(contig);
-					if (sswResult != null && sswResult.getScore() > bestScore) {
-						bestScore = sswResult.getScore();
-						bestResult = sswResult;
+				if (!allJunctions.isEmpty()) {
+					
+					// Check for additional potential exon skipping junctions masked by a base or 2 interrupting the gap
+					// Using annotated exons here
+					List<Feature> extraJunctions = getExonSkippingJunctions(bestResult, allJunctions);
+					if (!extraJunctions.isEmpty()) {
+						
+						List<Feature> combinedJunctions = new ArrayList<Feature>(allJunctions);
+						combinedJunctions.addAll(extraJunctions);
+						
+						List<List<Feature>> junctionPermutations = new ArrayList<List<Feature>>();
+						try {
+							junctionPermutations = JunctionUtils.combineJunctions(region, combinedJunctions, MAX_REGION_LENGTH, this.readLength);
+						} catch (TooManyJunctionPermutationsException e) {
+							Logger.warn("TOO_MANY_POTENTIAL_JUNCTION_PERMUTATIONS: " + region.getDescriptor());
+						}
+						
+						for (List<Feature> permutation : junctionPermutations) {
+							boolean hasExtra = false;
+							for (Feature junc : permutation) {
+								if (extraJunctions.contains(junc)) {
+									hasExtra = true;
+									break;
+								}
+							}
+							
+							if (hasExtra) {
+								ContigAligner aligner = getContigAlignerForJunctionPermutation(permutation, region, chromosomeLength);
+								sswResult = aligner.align(contig);
+								if (sswResult != null && sswResult.getScore() > bestScore) {
+									bestScore = sswResult.getScore();
+									bestResult = sswResult;
+								}
+							}
+						}
+					}
+					
+					// Check for deletion adjacent to intron (i.e. skipped exon or unannotated splice)
+					// Not relying on annotated exons here.
+					extraJunctions = getExtraJunctions(bestResult, allJunctions, extraJunctions);
+					if (!extraJunctions.isEmpty()) {
+						
+						List<Feature> combinedJunctions = new ArrayList<Feature>(allJunctions);
+						combinedJunctions.addAll(extraJunctions);
+						
+						List<List<Feature>> junctionPermutations = new ArrayList<List<Feature>>();
+						try {
+							junctionPermutations = JunctionUtils.combineJunctions(region, combinedJunctions, MAX_REGION_LENGTH, this.readLength);
+						} catch (TooManyJunctionPermutationsException e) {
+							Logger.warn("TOO_MANY_POTENTIAL_JUNCTION_PERMUTATIONS: " + region.getDescriptor());
+						}
+						
+						for (List<Feature> permutation : junctionPermutations) {
+							boolean hasExtra = false;
+							for (Feature junc : permutation) {
+								if (extraJunctions.contains(junc)) {
+									hasExtra = true;
+									break;
+								}
+							}
+							
+							if (hasExtra) {
+								ContigAligner aligner = getContigAlignerForJunctionPermutation(permutation, region, chromosomeLength);
+								sswResult = aligner.align(contig);
+								if (sswResult != null && sswResult.getScore() > bestScore) {
+									bestScore = sswResult.getScore();
+									bestResult = sswResult;
+								}
+							}
+						}
 					}
 				}
 				

@@ -21,7 +21,6 @@ import htsjdk.samtools.TextCigarCodec;
 public class GermlineProcessor {
 
 	private static final int MIN_SUPPORTING_READS = 2;
-	private static final int MIN_DISTANCE_FROM_READ_END = 3;
 	private static final double MIN_ALLELE_FRACTION = 0.10;
 	private static final int MIN_MAPQ = 20;
 	
@@ -105,53 +104,6 @@ public class GermlineProcessor {
 		return c2r.getSequence(chr, pos, 1).charAt(0);
 	}
 	
-	private boolean matchesReference(SAMRecord read, int refPos) {
-		boolean isMatch = false;
-	
-		if (!read.getReadUnmappedFlag()) {
-			Character base = getBaseAtPosition(read, refPos);
-			if (base != null) {
-				String seq = c2r.getSequence(read.getReferenceName(), refPos, 1);
-				isMatch = base.charValue() == seq.charAt(0); 
-			}
-		}
-		
-		return isMatch;
-	}
-	
-	// Returns most abundant indel in reads
-	private IndelInfo checkForIndelInReadsAtPosition(ReadsAtLocus tumorReads, int position) {
-		
-		Map<IndelInfo, Integer> indelCounts = new HashMap<IndelInfo, Integer>();
-		int totalIndelCounts = 0;
-		
-		for (SAMRecord read : tumorReads.getReads()) {
-			if (!read.getDuplicateReadFlag()) {
-				IndelInfo indel = checkForIndelAtLocus(read, position);
-				
-				int currCount = 0;
-				if (indelCounts.containsKey(indel)) {
-					currCount = indelCounts.get(indel);
-				}
-				
-				indelCounts.put(indel, currCount + 1);
-				totalIndelCounts += 1;
-			}
-		}
-		
-		
-		IndelInfo maxIndel = null;
-		int max = 0;
-		for (IndelInfo indel : indelCounts.keySet()) {
-			
-			if (indelCounts.get(indel) > max) {
-				
-			}
-		}
-		
-		// TODO: Placeholder to compile
-		return null;
-	}
 	
 	private Allele getAltIndelAllele(Allele ref, Map<Allele, AlleleCounts> alleleCounts) {
 		int maxAlt = 0;
@@ -297,33 +249,9 @@ public class GermlineProcessor {
 				Call call = new Call(chromosome, position, refAllele, alt, alleleCounts, tumorReadIds.size()+mismatchExceededReads, 
 						usableDepth, qual, repeatPeriod, tumorMapq0, refField, altField, mismatchExceededReads);
 				
-//				System.err.println(call);
 				outputRecords.add(call);
 			}
 		}
-		
-		
-//		float tumorFraction = (float) tumorCount / (float) tumorReads.getReads().size();
-		
-//		float tumorFraction = (float) tumorCount / (float) tumorReadIds.size();
-//		
-//		if (tumorCount >= MIN_SUPPORTING_READS && hasSufficientDistanceFromReadEnd && tumorFraction >= MIN_ALLELE_FRACTION) {
-//			String insertBases = null;
-//			if (tumorIndel.getOperator() == CigarOperator.I) {
-//				insertBases = getInsertBaseConsensus(insertBasesMap, tumorIndel.getLength());
-//			}
-//			
-//			int repeatPeriod = getRepeatPeriod(chromosome, position, tumorIndel, insertBases);
-//			
-//			double qual = calcPhredScaledQuality(tumorRefCount, tumorCount);
-//			
-//			String record = generateRecord(chromosome, position, tumorReads, tumorIndel,
-//					tumorCount, tumorRefCount, insertBases, maxContigMapq, mismatch0Count, mismatch1Count, totalMismatchCount, minReadIndex, maxReadIndex,
-//					repeatPeriod, qual, tumorRefFwd, tumorRefRev, tumorAltFwd, tumorAltRev,
-//					tumorMapq0);
-//			
-//			this.outputRecords.add(record);
-//		}
 	}
 	
 	private String getPreferredInsertBases(Allele allele, AlleleCounts counts) {
@@ -408,30 +336,6 @@ public class GermlineProcessor {
 		return sb;
 	}
 	
-	// Simple Fisher's exact.  Similar to Varscan's calculation
-	static double calcPhredScaledQuality_FischerExact(int refObs, int altObs, int dp) {
-		
-		int altExpected = (int) ((dp * .001) + .5);
-		int refExpected = dp - altExpected;
-		
-		FishersExactTest test = new FishersExactTest();
-		// Calc p-value
-		double p = test.oneTailedTest(refExpected, altExpected, refObs, altObs);
-		
-		// Convert to phred scale
-		double qual = -10 * Math.log10(p);
-		
-		// Round to tenths
-		qual = (int) (qual * 10);
-		qual = qual / 10.0;
-		
-		return qual;		
-		
-//		double qual = (double) altObs / ((double) refObs + (double) altObs);
-//		
-//		return qual * 100;
-	}
-	
 	static double calcPhredScaledQuality(int refObs, int altObs, int dp) {
 		return -10 * Math.log10(BetaBinomial.betabinCDF(dp, altObs));
 	}
@@ -461,152 +365,13 @@ public class GermlineProcessor {
 		return period;
 	}
 
-	
-	private int getRepeatPeriod(String chromosome, int position, CigarElement indel, String insertBases) {
-		int chromosomeEnd = c2r.getReferenceLength(chromosome);
-		int length = Math.min(indel.getLength() * 20, chromosomeEnd-position-2);
-		String sequence = c2r.getSequence(chromosome, position+1, length);
-		
-		String bases;
-		if (indel.getOperator() == CigarOperator.D) {
-			bases = sequence.substring(0, indel.getLength());
-		} else {
-			bases = insertBases;
-		}
-		
-		int period = 0;
-		int index = 0;
-		while ((index+bases.length() < length) && (bases.equals(sequence.substring(index, index+bases.length())))) {
-			period += 1;
-			index += bases.length();
-		}
-		
-		return period;
-	}
-	
-	private void updateInsertBases(Map<String, Integer> insertBases, String bases) {
-		if (insertBases.containsKey(bases)) {
-			insertBases.put(bases, insertBases.get(bases) + 1);
-		} else {
-			insertBases.put(bases, 1);
-		}
-	}
-	
-	private String getInsertBaseConsensus(Map<String, Integer> insertBases, int length) {
-		int maxCount = -1;
-		String maxBases = null;
-		
-		for (String bases : insertBases.keySet()) {
-			int count = insertBases.get(bases);
-			if (count > maxCount) {
-				maxCount = count;
-				maxBases = bases;
-			}
-		}
-		
-		if (maxBases == null) {
-			StringBuffer buf = new StringBuffer(length);
-			for (int i=0; i<length; i++) {
-				buf.append('N');
-			}
-			maxBases = buf.toString();
-		}
-		
-		return maxBases;
-	}
-	
-	private boolean sufficientDistanceFromReadEnd(SAMRecord read, int readIdx) {
-		boolean ret = false;
-		
-		if (readIdx >= MIN_DISTANCE_FROM_READ_END &&
-			readIdx <= read.getReadLength()-MIN_DISTANCE_FROM_READ_END-1) {
-				ret = true;
-		}
-		
-		return ret;
-	}
-	
 	private String getDelRefField(String chromosome, int position, int length) {
 		return c2r.getSequence(chromosome, position, length+1);
 	}
 	
 	private String getInsRefField(String chromosome, int position) {
 		return c2r.getSequence(chromosome, position, 1);
-	}
-	
-	private String generateRecord(String chromosome, int position,
-			ReadsAtLocus tumorReads, CigarElement indel,
-			int tumorObs, int tumorRefObs, String insertBases, int maxContigMapq, int ym0, int ym1, int totalYm,
-			int minReadIndex, int maxReadIndex, int repeatPeriod,
-			double qual, int tumorRefFwd, int tumorRefRev, int tumorAltFwd, int tumorAltRev,
-			int tumorMapq0) {
-		
-		int tumorDepth = tumorReads.getReads().size();
-		
-		String context = c2r.getSequence(chromosome, position-10, 20);
-		
-		StringBuffer buf = new StringBuffer();
-		buf.append(chromosome);
-		buf.append('\t');
-		buf.append(position);
-		buf.append("\t.\t");
-		
-		String ref = ".";
-		String alt = ".";
-		if (indel.getOperator() == CigarOperator.D) {
-			ref = getDelRefField(chromosome, position, indel.getLength());
-			alt = ref.substring(0, 1);
-		} else if (indel.getOperator() == CigarOperator.I) {
-			ref = getInsRefField(chromosome, position);
-			alt = ref + insertBases;
-		}
-		
-		buf.append(ref);
-		buf.append('\t');
-		buf.append(alt);
-		buf.append("\t");
-		buf.append(qual);
-		buf.append("\tPASS\t");
-		// <NNAF> is placeholder here
-		buf.append("SOMATIC;CMQ=" + maxContigMapq + ";CTX=" + context + ";REPEAT_PERIOD=" + repeatPeriod + ";NNAF=<NNAF>");
-		buf.append("\tDP:AD:YM0:YM1:YM:OBS:MIRI:MARI:SOR:MQ0:GT\t");
-
-//		buf.append('\t');
-		buf.append(tumorDepth);
-		buf.append(':');
-		buf.append(tumorRefObs);
-		buf.append(',');
-		buf.append(tumorObs);
-		buf.append(':');
-		buf.append(ym0);
-		buf.append(':');
-		buf.append(ym1);
-		buf.append(':');
-		buf.append(totalYm);
-		buf.append(':');
-		buf.append(tumorObs);
-		buf.append(':');
-		buf.append(minReadIndex);
-		buf.append(':');
-		buf.append(maxReadIndex);
-
-		buf.append(':');
-		buf.append(tumorRefFwd);
-		buf.append(',');
-		buf.append(tumorRefRev);
-		buf.append(',');
-		buf.append(tumorAltFwd);
-		buf.append(',');
-		buf.append(tumorAltRev);
-		
-		buf.append(':');
-		buf.append(tumorMapq0);
-		buf.append(":0/1");  // GT placeholder
-		
-		
-		return buf.toString();
-	}
-	
+	}	
 
 	private IndelInfo checkForIndelAtLocus(SAMRecord read, int refPos) {
 		IndelInfo elem = null;
@@ -617,7 +382,6 @@ public class GermlineProcessor {
 			String[] fields = contigInfo.split(":");
 			int contigPos = Integer.parseInt(fields[1]);
 			
-//			Cigar contigCigar = TextCigarCodec.getSingleton().decode(fields[2]);
 			Cigar contigCigar = TextCigarCodec.decode(fields[2]);
 			
 			// Check to see if contig contains indel at current locus
@@ -679,9 +443,5 @@ public class GermlineProcessor {
 		}
 		
 		return ret;
-	}
-	
-	private char getReadBase(SAMRecord read, int index) {
-		return (char) read.getReadBases()[index];
 	}
 }

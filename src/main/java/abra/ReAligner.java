@@ -538,7 +538,7 @@ public class ReAligner {
 		if (alignment != null) {
 			
 			if (Math.abs(read.getAlignmentStart() - alignment.pos) > maxRealignDist) {
-				Logger.warn("Not moving read: " + read.getReadName() + " from: " + read.getAlignmentStart() + " to: " + alignment.pos);
+				Logger.trace("Not moving read: " + read.getReadName() + " from: " + read.getAlignmentStart() + " to: " + alignment.pos);
 			} else {
 			
 				int readPos = alignment.pos;

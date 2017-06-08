@@ -10,15 +10,17 @@ import abra.Feature;
 import abra.Logger;
 import abra.ThreadManager;
 
-import abra.cadabra.GermlineProcessor.Call;
+import abra.cadabra.GermlineProcessor.SampleCall;
+import abra.cadabra.GermlineProcessor.SomaticCall;
 
 public class Germline {
 
 	private CompareToReference2 c2r;
 	
-	private Map<String, List<Call>> chromosomeCalls = new HashMap<String, List<Call>>();
-
-	public void call(String reference, String bamfile, int numThreads) throws IOException, InterruptedException {
+	private Map<String, List<SampleCall>> chromosomeCalls = new HashMap<String, List<SampleCall>>();
+	private Map<String, List<SomaticCall>> chromosomeSomaticCalls = new HashMap<String, List<SomaticCall>>();
+	
+	public void call(String reference, String normalBam, String tumorBam, int numThreads) throws IOException, InterruptedException {
 		c2r = new CompareToReference2();
 		c2r.init(reference);
 		
@@ -28,8 +30,14 @@ public class Germline {
 		
 		for (String chromosome : c2r.getChromosomes()) {
 			Feature region = new Feature(chromosome, 1, c2r.getChromosomeLength(chromosome));
-			GermlineRunnable thread = new GermlineRunnable(threadManager, this, bamfile, 
-				c2r, region);
+			GermlineRunnable thread;
+			if (normalBam != null) {
+				thread = new GermlineRunnable(threadManager, this, normalBam, 
+						tumorBam, c2r, region);
+			} else {
+				thread = new GermlineRunnable(threadManager, this,
+						tumorBam, c2r, region);				
+			}
 			
 			threadManager.spawnThread(thread);
 		}
@@ -37,19 +45,36 @@ public class Germline {
 		threadManager.waitForAllThreadsToComplete();
 		
 		// Output calls.
-		for (String chromosome : c2r.getChromosomes()) {
-			for (Call call : chromosomeCalls.get(chromosome)) {
-				System.out.println(call);
+		if (normalBam == null) {
+			// Simple calling
+			for (String chromosome : c2r.getChromosomes()) {
+				for (SampleCall call : chromosomeCalls.get(chromosome)) {
+					System.out.println(call);
+				}
+			}
+		} else {
+			// Somatic calling
+			for (String chromosome : c2r.getChromosomes()) {
+				for (SomaticCall call : chromosomeSomaticCalls.get(chromosome)) {
+					System.out.println(call);
+				}
 			}
 		}
 		
 		Logger.info("Cadabra done.");
 	}
 	
-	void addCalls(String chromosome, List<Call> calls) {
+	void addCalls(String chromosome, List<SampleCall> calls) {
 		Logger.info("Choromosome: %s done.", chromosome);
-		synchronized(calls) {
+		synchronized(chromosomeCalls) {
 			chromosomeCalls.put(chromosome, calls);
+		}
+	}
+	
+	void addSomaticCalls(String chromosome, List<SomaticCall> calls) {
+		Logger.info("Choromosome: %s done.", chromosome);
+		synchronized(chromosomeSomaticCalls) {
+			chromosomeSomaticCalls.put(chromosome, calls);
 		}
 	}
 	
@@ -85,9 +110,13 @@ public class Germline {
 		}
 		
 		String reference = args[0];
-		String bamfile = args[1];
-		int threads = Integer.parseInt(args[2]);
+		int threads = Integer.parseInt(args[1]);
+		String tumor = args[2];
+		String normal = null;
+		if (args.length > 3) {
+			normal = args[3];
+		}
 		
-		new Germline().call(reference, bamfile, threads);
+		new Germline().call(reference, normal, tumor, threads);
 	}
 }

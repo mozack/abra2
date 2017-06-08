@@ -13,6 +13,18 @@ public class AlleleCounts {
 	private int maxReadIdx = Integer.MIN_VALUE;
 	private Map<String, Integer> insertBaseCounts = new HashMap<String, Integer>();
 	
+	
+	public static final AlleleCounts EMPTY_COUNTS;
+	
+	static {
+		EMPTY_COUNTS = new AlleleCounts();
+		EMPTY_COUNTS.count = 0;
+		EMPTY_COUNTS.fwd = 0;
+		EMPTY_COUNTS.rev = 0;
+		EMPTY_COUNTS.minReadIdx = 0;
+		EMPTY_COUNTS.maxReadIdx = 0;
+	}
+	
 	public int getCount() {
 		return count;
 	}

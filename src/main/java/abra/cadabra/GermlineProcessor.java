@@ -25,13 +25,16 @@ public class GermlineProcessor {
 	private static final int MIN_MAPQ = 20;
 	
 	private Germline cadabra;
+	private String normalBam;
 	private String tumorBam;
+	private ReadLocusReader normal;
 	private ReadLocusReader tumor;
 	private CompareToReference2 c2r;
 	private Feature region;
 	private int lastPos = 0;
 	
-	List<Call> outputRecords = new ArrayList<Call>();
+	List<SampleCall> sampleRecords = new ArrayList<SampleCall>();
+	List<SomaticCall> somaticCalls = new ArrayList<SomaticCall>();
 	
 	GermlineProcessor(Germline cadabra, String tumorBam, CompareToReference2 c2r) {
 		this.cadabra = cadabra;
@@ -39,26 +42,96 @@ public class GermlineProcessor {
 		this.c2r = c2r;
 	}
 	
+	GermlineProcessor(Germline cadabra, String normalBam, String tumorBam, CompareToReference2 c2r) {
+		this(cadabra, tumorBam, c2r);
+		this.normalBam = normalBam;
+	}
+	
 	void process(Feature region) {
 		this.region = region;
 		this.tumor = new ReadLocusReader(tumorBam, region);
-		
-		process();
+		if (normalBam != null) {
+			this.normal = new ReadLocusReader(normalBam, region);
+			processSomatic();
+		} else {
+			processSimple();
+		}
 	}
 		
-	private void process() {
-		Iterator<ReadsAtLocus> tumorIter = tumor.iterator();
+	private void processSimple() {
+		Iterator<ReadsAtLocus> sampleIter = tumor.iterator();
 		
-		ReadsAtLocus tumorReads = null;
+		ReadsAtLocus sampleReads = null;
 		
-		while (tumorIter.hasNext()) {
+		while (sampleIter.hasNext()) {
 			
-			tumorReads = tumorIter.next();
-			processLocus(tumorReads);
-//			tumorReads = tumorIter.next();
+			sampleReads = sampleIter.next();
+			SampleCall call = processLocus(sampleReads);
+			if (call != null && sampleCallExceedsThresholds(call)) {
+				sampleRecords.add(call);
+			}
 		}
 		
-		this.cadabra.addCalls(region.getSeqname(), outputRecords);
+		this.cadabra.addCalls(region.getSeqname(), sampleRecords);
+	}
+	
+	private boolean sampleCallExceedsThresholds(SampleCall call) {
+		return call.alt != null && call.alt != Allele.UNK && call.alleleCounts.get(call.alt).getCount() >= MIN_SUPPORTING_READS &&
+				call.getVaf() >= MIN_ALLELE_FRACTION;
+	}
+	
+	private void processSomatic() {
+		Iterator<ReadsAtLocus> normalIter = normal.iterator();
+		Iterator<ReadsAtLocus> tumorIter = tumor.iterator();
+		
+		ReadsAtLocus normalReads = null;
+		ReadsAtLocus tumorReads = null;
+		
+		int count = 0;
+		
+		while (normalIter.hasNext() && tumorIter.hasNext()) {
+			if (normalReads != null && tumorReads != null) {
+				int compare = normalReads.compareLoci(tumorReads, normal.getSamHeader().getSequenceDictionary());
+				
+				if (compare < 0) {
+					normalReads = normalIter.next();
+				} else if (compare > 0) {
+					tumorReads = tumorIter.next();
+				} else {
+					// TODO: This will skip cases where normal has coverage, but tumor doesn't!
+					SampleCall normalCall = processLocus(normalReads);
+					SampleCall tumorCall = processLocus(tumorReads);
+					
+					if (tumorCall.alt != null && tumorCall.alt != Allele.UNK && tumorCall.alleleCounts.get(tumorCall.alt).getCount() >= MIN_SUPPORTING_READS) {
+						
+						if (tumorCall.position == 19968926) {
+							System.out.println("foo");
+						}
+						
+						SomaticCall somaticCall = new SomaticCall(normalCall, tumorCall);
+						if (somaticCall.qual > 0) {
+							somaticCalls.add(somaticCall);
+						}
+					}
+
+					normalReads = normalIter.next();
+					tumorReads = tumorIter.next();
+				}
+				
+				if ((count % 1000000) == 0) {
+					System.err.println("Position: " + normalReads.getChromosome() + ":" + normalReads.getPosition());
+				}
+				
+				count += 1;
+			} else {
+				normalReads = normalIter.next();
+				tumorReads = tumorIter.next();
+			}
+		}
+		
+		// TODO: Loop through somatic calls here, annotating those with nearby normal calls.
+		
+		this.cadabra.addSomaticCalls(region.getSeqname(), somaticCalls);
 	}
 	
 	private Character getBaseAtPosition(SAMRecord read, int refPos) {
@@ -122,9 +195,12 @@ public class GermlineProcessor {
 		return alt;
 	}
 	
-	private void processLocus(ReadsAtLocus tumorReads) {
-		String chromosome = tumorReads.getChromosome();
-		int position = tumorReads.getPosition();
+	private SampleCall processLocus(ReadsAtLocus reads) {
+		
+		SampleCall call = null;
+		
+		String chromosome = reads.getChromosome();
+		int position = reads.getPosition();
 				
 		if (position > lastPos + 5000000) {
 			Logger.info("Processing: %s:%d", chromosome, position);
@@ -145,7 +221,7 @@ public class GermlineProcessor {
 		Allele refAllele = Allele.getAllele(refBase); 
 		alleleCounts.put(refAllele, new AlleleCounts());
 		
-		for (SAMRecord read : tumorReads.getReads()) {
+		for (SAMRecord read : reads.getReads()) {
 			//TODO: Figure out what to do with non-primary alignments.
 			//      Need to reconcile with overlapping read check using read name.
 			if (!read.getDuplicateReadFlag() && !read.getReadUnmappedFlag() &&
@@ -224,14 +300,14 @@ public class GermlineProcessor {
 		
 		Allele alt = getAltIndelAllele(Allele.getAllele(refBase), alleleCounts);
 		
+		int usableDepth = AlleleCounts.sum(alleleCounts.values());
+		
 		if (alt != null && (alt.getType() == Allele.Type.DEL || alt.getType() == Allele.Type.INS) && refAllele != Allele.UNK) {
 			AlleleCounts altCounts = alleleCounts.get(alt);
 			AlleleCounts refCounts = alleleCounts.get(refAllele);
 			double af = (double) altCounts.getCount() / (double) (altCounts.getCount() + refCounts.getCount());
 			
-			int usableDepth = AlleleCounts.sum(alleleCounts.values());
-			
-			if (altCounts.getCount() >= MIN_SUPPORTING_READS && af >= MIN_ALLELE_FRACTION) {
+//			if (altCounts.getCount() >= MIN_SUPPORTING_READS && af >= MIN_ALLELE_FRACTION) {
 
 				double qual = calcPhredScaledQuality(refCounts.getCount(), altCounts.getCount(), usableDepth);
 				int repeatPeriod = getRepeatPeriod(chromosome, position, alt, altCounts);
@@ -246,12 +322,20 @@ public class GermlineProcessor {
 					altField = refField + getPreferredInsertBases(alt, altCounts);
 				}
 				
-				Call call = new Call(chromosome, position, refAllele, alt, alleleCounts, tumorReadIds.size()+mismatchExceededReads, 
+				call = new SampleCall(chromosome, position, refAllele, alt, alleleCounts, tumorReadIds.size()+mismatchExceededReads, 
 						usableDepth, qual, repeatPeriod, tumorMapq0, refField, altField, mismatchExceededReads);
-				
-				outputRecords.add(call);
-			}
+//			}
+		} else {
+			String refField = getInsRefField(chromosome, position);
+			String altField = ".";
+			double qual = 0;
+			int rp = 0;
+			
+			call = new SampleCall(chromosome, position, refAllele, Allele.UNK, alleleCounts, tumorReadIds.size()+mismatchExceededReads, 
+					usableDepth, qual, rp, tumorMapq0, refField, altField, mismatchExceededReads);
 		}
+		
+		return call;
 	}
 	
 	private String getPreferredInsertBases(Allele allele, AlleleCounts counts) {
@@ -268,7 +352,10 @@ public class GermlineProcessor {
 		return bases;
 	}
 	
-	public static class Call {
+	public static class SampleCall {
+		
+		public static final String FORMAT = "DP:DP2:AD:MIRI:MARI:SOR:FS:MQ0:ISPAN:VAF:MER:GT";
+		
 		String chromosome;
 		int position;
 		Allele ref;
@@ -284,7 +371,7 @@ public class GermlineProcessor {
 		double fs;
 		int mismatchExceededReads;
 		
-		Call(String chromosome, int position, Allele ref, Allele alt, Map<Allele, AlleleCounts> alleleCounts, 
+		SampleCall(String chromosome, int position, Allele ref, Allele alt, Map<Allele, AlleleCounts> alleleCounts, 
 				int totalReads, int usableDepth, double qual, int repeatPeriod, int mapq0, String refField, String altField,
 				int mismatchExceededReads) {
 			this.chromosome = chromosome;
@@ -302,18 +389,48 @@ public class GermlineProcessor {
 			
 			AlleleCounts refCounts = alleleCounts.get(ref);
 			AlleleCounts altCounts = alleleCounts.get(alt);
-			this.fs = strandBias(refCounts.getFwd(), refCounts.getRev(), altCounts.getFwd(), altCounts.getRev());
+			
+			if (refCounts != null && altCounts != null) {
+				this.fs = strandBias(refCounts.getFwd(), refCounts.getRev(), altCounts.getFwd(), altCounts.getRev());
+			}
 			
 			this.mismatchExceededReads = mismatchExceededReads;
 		}
 		
-		public String toString() {
+		public float getVaf() {
+			float vaf = 0;
+			AlleleCounts altCounts = alleleCounts.get(alt);
+			if (altCounts != null) {
+				vaf = (float) altCounts.getCount() / (float) usableDepth;
+			}
 			
+			return vaf;
+		}
+		
+		public String getSampleInfo(Allele ref, Allele alt) {
 			AlleleCounts refCounts = alleleCounts.get(ref);
 			AlleleCounts altCounts = alleleCounts.get(alt);
 			
-			int ispan = altCounts.getMaxReadIdx()-altCounts.getMinReadIdx();
-			float vaf = (float) altCounts.getCount() / (float) usableDepth;
+			if (refCounts == null) {
+				refCounts = AlleleCounts.EMPTY_COUNTS;
+			}
+			
+			if (altCounts == null) {
+				altCounts = AlleleCounts.EMPTY_COUNTS;
+			}
+			
+			int ispan = altCounts == null ? 0 : altCounts.getMaxReadIdx()-altCounts.getMinReadIdx();
+			float vaf = getVaf();
+			
+			String sampleInfo = String.format("%d:%d:%d,%d:%d:%d:%d,%d,%d,%d:%f:%d:%d:%f:%d:0/1", totalReads, usableDepth, refCounts.getCount(), altCounts.getCount(),
+					altCounts.getMinReadIdx(), altCounts.getMaxReadIdx(), refCounts.getFwd(), refCounts.getRev(), altCounts.getFwd(), altCounts.getRev(),
+					fs, mapq0, ispan, vaf, mismatchExceededReads);
+
+			return sampleInfo;
+		}
+		
+		public String toString() {
+			
 			//
 			// chr1    14397   .       CTGT    C       31.08108108108108       PASS    SOMATIC;CMQ=0;CTX=TAAAAGCACACTGTTGGTTT;REPEAT_PERIOD=1;NNAF=<NNAF>      
 			// DP:AD:YM0:YM1:YM:OBS:MIRI:MARI:SOR:MQ0:GT       1092:51,23:0:0:0:23:5:36:0,51,1,22:981:0/1
@@ -322,11 +439,56 @@ public class GermlineProcessor {
 			String info = String.format("REPEAT_PERIOD=%d;", repeatPeriod);
 			String format = "DP:DP2:AD:MIRI:MARI:SOR:FS:MQ0:ISPAN:VAF:MER:GT";
 			
-			String sample = String.format("%d:%d:%d,%d:%d:%d:%d,%d,%d,%d:%f:%d:%d:%f:%d:0/1", totalReads, usableDepth, refCounts.getCount(), altCounts.getCount(),
-					altCounts.getMinReadIdx(), altCounts.getMaxReadIdx(), refCounts.getFwd(), refCounts.getRev(), altCounts.getFwd(), altCounts.getRev(),
-					fs, mapq0, ispan, vaf, mismatchExceededReads);
+			String sampleInfo = getSampleInfo(ref, alt);
 			
-			return String.join("\t", chromosome, pos, ".", refField, altField, qualStr, "PASS", info, format, sample);
+			return String.join("\t", chromosome, pos, ".", refField, altField, qualStr, "PASS", info, format, sampleInfo);
+		}
+	}
+	
+	static double calcFisherExactPhredScaledQuality(int normalRefObs, int normalAltObs, int tumorRefObs, int tumorAltObs) {
+		FishersExactTest test = new FishersExactTest();
+		// Calc p-value
+		double p = test.oneTailedTest(normalRefObs, normalAltObs, tumorRefObs, tumorAltObs);
+		
+		// Convert to phred scale
+		double qual = -10 * Math.log10(p);
+		
+		// Round to tenths
+		qual = (int) (qual * 10);
+		qual = qual / 10.0;
+		
+		return qual;
+	}
+	
+	public static class SomaticCall {
+		SampleCall normal;
+		SampleCall tumor;
+		
+		double qual;
+		
+		public SomaticCall(SampleCall normal, SampleCall tumor) {
+			this.normal = normal;
+			this.tumor = tumor;
+			
+			int normalRef = normal.alleleCounts.get(tumor.ref) == null ? 0 : normal.alleleCounts.get(tumor.ref).getCount();
+			int normalAlt = normal.alleleCounts.get(tumor.alt) == null ? 0 : normal.alleleCounts.get(tumor.alt).getCount();
+			
+			int tumorRef = tumor.alleleCounts.get(tumor.ref).getCount();
+			int tumorAlt = tumor.alleleCounts.get(tumor.alt).getCount();
+			
+			this.qual = calcFisherExactPhredScaledQuality(normalRef, normalAlt, tumorRef, tumorAlt);
+		}
+		
+		public String toString() {
+			
+			String pos = String.valueOf(tumor.position);
+			String qualStr = String.valueOf(qual);
+			String info = String.format("REPEAT_PERIOD=%d;", tumor.repeatPeriod);
+			
+			String normalInfo = normal.getSampleInfo(tumor.ref, tumor.alt);
+			String tumorInfo = tumor.getSampleInfo(tumor.ref, tumor.alt);
+			
+			return String.join("\t", tumor.chromosome, pos, ".", tumor.refField, tumor.altField, qualStr, "PASS", info, SampleCall.FORMAT, normalInfo, tumorInfo);
 		}
 	}
 	

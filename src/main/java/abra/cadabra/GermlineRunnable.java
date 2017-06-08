@@ -16,6 +16,13 @@ public class GermlineRunnable extends AbraRunnable {
 		this.processor = new GermlineProcessor(germline, bam, c2r);
 		this.region = region;
 	}
+	
+	public GermlineRunnable(ThreadManager threadManager, Germline germline, 
+			String normalBam, String tumorBam, CompareToReference2 c2r, Feature region) {
+		super(threadManager);
+		this.processor = new GermlineProcessor(germline, normalBam, tumorBam, c2r);
+		this.region = region;
+	}
 
 	@Override
 	public void go() throws Exception {

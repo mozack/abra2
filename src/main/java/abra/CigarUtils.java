@@ -161,16 +161,20 @@ public class CigarUtils {
 	private static List<CigarBlock> getCigarBlocks(String cigar) {
 		
 		List<CigarBlock> cigarBlocks = new ArrayList<CigarBlock>();
-		
-		StringBuffer len = new StringBuffer();
-		for (int i=0; i<cigar.length(); i++) {
-			char ch = cigar.charAt(i);
-			if (Character.isDigit(ch)) {
-				len.append(ch);
-			} else {
-				cigarBlocks.add(new CigarBlock(Integer.valueOf(len.toString()), ch));
-				len.setLength(0);
+		try {
+			StringBuffer len = new StringBuffer();
+			for (int i=0; i<cigar.length(); i++) {
+				char ch = cigar.charAt(i);
+				if (Character.isDigit(ch)) {
+					len.append(ch);
+				} else {
+					cigarBlocks.add(new CigarBlock(Integer.valueOf(len.toString()), ch));
+					len.setLength(0);
+				}
 			}
+		} catch (NumberFormatException e) {
+			Logger.error("NumberFormatException: " + cigar);
+			throw e;
 		}
 		
 		return cigarBlocks;

@@ -768,10 +768,12 @@ public class ReAligner {
 								}
 							}
 							
-							Feature junc = new Feature(result.getChromosome(), closestStart, closestEnd);
-							if (!junctionSet.contains(junc)) {
-								Logger.info("Potential exon skipping junction idenfified: %s", junc);
-								extraJunctions.add(junc);
+							if (closestEnd > closestStart+1) {
+								Feature junc = new Feature(result.getChromosome(), closestStart, closestEnd);
+								if (!junctionSet.contains(junc)) {
+									Logger.info("Potential exon skipping junction idenfified: %s", junc);
+									extraJunctions.add(junc);
+								}
 							}
 						}
 						

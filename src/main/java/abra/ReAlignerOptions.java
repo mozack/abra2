@@ -89,7 +89,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(COMPRESSION_LEVEL, "Compression level of output bam file(s)").withRequiredArg().ofType(Integer.class).defaultsTo(5);
             parser.accepts(CONTIG_ANCHOR, "Contig anchor [M_bases_at_contig_edge, max_mismatches_at_edge").withRequiredArg().ofType(String.class).defaultsTo("10,2");
             parser.accepts(NO_SORT, "Do not attempt to sort final output");
-            parser.accepts(MAX_READ_MOVE_DISTANCE, "Max read move distance").withRequiredArg().ofType(Integer.class).defaultsTo(500000);
+            parser.accepts(MAX_READ_MOVE_DISTANCE, "Max read move distance").withRequiredArg().ofType(Integer.class).defaultsTo(1000);
     	}
     	
     	return parser;

@@ -104,10 +104,6 @@ public class GermlineProcessor {
 					
 					if (tumorCall.alt != null && tumorCall.alt != Allele.UNK && tumorCall.alleleCounts.get(tumorCall.alt).getCount() >= MIN_SUPPORTING_READS) {
 						
-						if (tumorCall.position == 19968926) {
-							System.out.println("foo");
-						}
-						
 						SomaticCall somaticCall = new SomaticCall(normalCall, tumorCall);
 						if (somaticCall.qual > 0) {
 							somaticCalls.add(somaticCall);
@@ -354,7 +350,7 @@ public class GermlineProcessor {
 	
 	public static class SampleCall {
 		
-		public static final String FORMAT = "DP:DP2:AD:MIRI:MARI:SOR:FS:MQ0:ISPAN:VAF:MER:GT";
+		public static final String FORMAT = "DP:DP2:AD:MIRI:MARI:SOR:FS:MQ0:ISPAN:VAF:MER:BB:GT";
 		
 		String chromosome;
 		int position;
@@ -422,9 +418,11 @@ public class GermlineProcessor {
 			int ispan = altCounts == null ? 0 : altCounts.getMaxReadIdx()-altCounts.getMinReadIdx();
 			float vaf = getVaf();
 			
-			String sampleInfo = String.format("%d:%d:%d,%d:%d:%d:%d,%d,%d,%d:%f:%d:%d:%f:%d:0/1", totalReads, usableDepth, refCounts.getCount(), altCounts.getCount(),
+			double bbQual = calcPhredScaledQuality(refCounts.getCount(), altCounts.getCount(), usableDepth);
+			
+			String sampleInfo = String.format("%d:%d:%d,%d:%d:%d:%d,%d,%d,%d:%f:%d:%d:%f:%d:%f:0/1", totalReads, usableDepth, refCounts.getCount(), altCounts.getCount(),
 					altCounts.getMinReadIdx(), altCounts.getMaxReadIdx(), refCounts.getFwd(), refCounts.getRev(), altCounts.getFwd(), altCounts.getRev(),
-					fs, mapq0, ispan, vaf, mismatchExceededReads);
+					fs, mapq0, ispan, vaf, mismatchExceededReads, bbQual);
 
 			return sampleInfo;
 		}

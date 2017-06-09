@@ -14,7 +14,7 @@ ABRA2 requires Java 8.
 
 Sample command for DNA:
 
-```java -Xmx16G -jar abra2-2.05.jar --in normal.bam,tumor.bam --out normal.abra.bam,tumor.abra.bam --ref hg38.fa --threads 8 --targets targets.bed --tmpdir /your/tmpdir > abra.log```
+```java -Xmx16G -jar abra2-2.07.jar --in normal.bam,tumor.bam --out normal.abra.bam,tumor.abra.bam --ref hg38.fa --threads 8 --targets targets.bed --tmpdir /your/tmpdir > abra.log```
 
 The above accepts normal.bam and tumor.bam as input and outputs sorted realigned BAM files named normal.abra.bam and tumor.abra.bam
 

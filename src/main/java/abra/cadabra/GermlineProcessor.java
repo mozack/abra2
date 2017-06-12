@@ -205,11 +205,8 @@ public class GermlineProcessor {
 		
 		int tumorMapq0 = 0;
 		int mismatchExceededReads = 0;
-		
-		// Don't double count overlapping reads.
-		// TODO: Determine consensus? 
-		Set<String> tumorReadIds = new HashSet<String>();
-		
+		int totalDepth = 0;
+				
 		Map<Allele, AlleleCounts> alleleCounts = new HashMap<Allele, AlleleCounts>();
 		
 		// Always include ref allele
@@ -218,11 +215,11 @@ public class GermlineProcessor {
 		alleleCounts.put(refAllele, new AlleleCounts());
 		
 		for (SAMRecord read : reads.getReads()) {
-			//TODO: Figure out what to do with non-primary alignments.
-			//      Need to reconcile with overlapping read check using read name.
+			
 			if (!read.getDuplicateReadFlag() && !read.getReadUnmappedFlag() &&
-					!tumorReadIds.contains(read.getReadName()) &&
 					(read.getFlags() & 0x900) == 0) {
+
+				totalDepth += 1;
 				
 				if (read.getMappingQuality() < MIN_MAPQ) {
 					if (read.getMappingQuality() == 0) {
@@ -274,13 +271,9 @@ public class GermlineProcessor {
 					}
 					
 					AlleleCounts ac = alleleCounts.get(allele);
-					ac.incrementCount();
-					if (read.getReadNegativeStrandFlag()) {
-						ac.incrementRev();
-					} else {
-						ac.incrementFwd();
-					}
 					
+					ac.incrementCount(read);
+										
 					if (readElement != null) {
 						ac.updateReadIdx(readElement.getReadIndex());
 					}
@@ -289,9 +282,12 @@ public class GermlineProcessor {
 						ac.updateInsertBases(readElement.getInsertBases());
 					}
 				}
-				
-				tumorReadIds.add(read.getReadName());
 			}
+		}
+		
+		// Allow readId sets to be garbage collected.
+		for (AlleleCounts counts : alleleCounts.values()) {
+			counts.clearReadIds();
 		}
 		
 		Allele alt = getAltIndelAllele(Allele.getAllele(refBase), alleleCounts);
@@ -301,7 +297,6 @@ public class GermlineProcessor {
 		if (alt != null && (alt.getType() == Allele.Type.DEL || alt.getType() == Allele.Type.INS) && refAllele != Allele.UNK) {
 			AlleleCounts altCounts = alleleCounts.get(alt);
 			AlleleCounts refCounts = alleleCounts.get(refAllele);
-			double af = (double) altCounts.getCount() / (double) (altCounts.getCount() + refCounts.getCount());
 			
 //			if (altCounts.getCount() >= MIN_SUPPORTING_READS && af >= MIN_ALLELE_FRACTION) {
 
@@ -318,7 +313,7 @@ public class GermlineProcessor {
 					altField = refField + getPreferredInsertBases(alt, altCounts);
 				}
 				
-				call = new SampleCall(chromosome, position, refAllele, alt, alleleCounts, tumorReadIds.size()+mismatchExceededReads, 
+				call = new SampleCall(chromosome, position, refAllele, alt, alleleCounts, totalDepth, 
 						usableDepth, qual, repeatPeriod, tumorMapq0, refField, altField, mismatchExceededReads);
 //			}
 		} else {
@@ -327,7 +322,7 @@ public class GermlineProcessor {
 			double qual = 0;
 			int rp = 0;
 			
-			call = new SampleCall(chromosome, position, refAllele, Allele.UNK, alleleCounts, tumorReadIds.size()+mismatchExceededReads, 
+			call = new SampleCall(chromosome, position, refAllele, Allele.UNK, alleleCounts, totalDepth, 
 					usableDepth, qual, rp, tumorMapq0, refField, altField, mismatchExceededReads);
 		}
 		
@@ -350,7 +345,7 @@ public class GermlineProcessor {
 	
 	public static class SampleCall {
 		
-		public static final String FORMAT = "DP:DP2:AD:MIRI:MARI:SOR:FS:MQ0:ISPAN:VAF:MER:BB:GT";
+		public static final String FORMAT = "DP:DP2:AD:AD2:MIRI:MARI:SOR:FS:MQ0:ISPAN:VAF:MER:BB:GT";
 		
 		String chromosome;
 		int position;
@@ -420,7 +415,8 @@ public class GermlineProcessor {
 			
 			double bbQual = calcPhredScaledQuality(refCounts.getCount(), altCounts.getCount(), usableDepth);
 			
-			String sampleInfo = String.format("%d:%d:%d,%d:%d:%d:%d,%d,%d,%d:%f:%d:%d:%f:%d:%f:0/1", totalReads, usableDepth, refCounts.getCount(), altCounts.getCount(),
+			String sampleInfo = String.format("%d:%d:%d,%d:%d,%d:%d:%d:%d,%d,%d,%d:%f:%d:%d:%f:%d:%f:0/1", totalReads, usableDepth, refCounts.getCount(), altCounts.getCount(),
+					refCounts.getTotalCount(), altCounts.getTotalCount(),
 					altCounts.getMinReadIdx(), altCounts.getMaxReadIdx(), refCounts.getFwd(), refCounts.getRev(), altCounts.getFwd(), altCounts.getRev(),
 					fs, mapq0, ispan, vaf, mismatchExceededReads, bbQual);
 

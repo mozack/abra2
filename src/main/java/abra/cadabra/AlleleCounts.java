@@ -2,16 +2,22 @@ package abra.cadabra;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
+
+import htsjdk.samtools.SAMRecord;
 
 public class AlleleCounts {
 	
 	private int count;
+	private int totalCount;  // Includes overlapping pairs
 	private int fwd;
 	private int rev;
 	private int minReadIdx = Integer.MAX_VALUE;
 	private int maxReadIdx = Integer.MIN_VALUE;
 	private Map<String, Integer> insertBaseCounts = new HashMap<String, Integer>();
+	private Set<String> readIds = new HashSet<String>();
 	
 	
 	public static final AlleleCounts EMPTY_COUNTS;
@@ -23,6 +29,7 @@ public class AlleleCounts {
 		EMPTY_COUNTS.rev = 0;
 		EMPTY_COUNTS.minReadIdx = 0;
 		EMPTY_COUNTS.maxReadIdx = 0;
+		EMPTY_COUNTS.totalCount = 0;
 	}
 	
 	public int getCount() {
@@ -45,16 +52,37 @@ public class AlleleCounts {
 		return maxReadIdx;
 	}
 	
-	public void incrementCount() {
-		count += 1;
+	public void incrementCount(SAMRecord read) {
+		if (!readIds.contains(read.getReadName())) {
+			// Don't allow multiple ends of fragment to be double counted
+			count += 1;
+		}
+		
+		totalCount += 1;
+		
+		if (read.getReadNegativeStrandFlag()) {
+			incrementRev();
+		} else {
+			incrementFwd();
+		}
+		
+		readIds.add(read.getReadName());
 	}
 	
-	public void incrementFwd() {
+	public int getTotalCount() {
+		return totalCount;
+	}
+
+	private void incrementFwd() {
 		fwd += 1;
 	}
 	
-	public void incrementRev() {
+	private void incrementRev() {
 		rev += 1;
+	}
+	
+	public void clearReadIds() {
+		readIds.clear();
 	}
 	
 	public void updateReadIdx(int idx) {

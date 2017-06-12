@@ -35,6 +35,7 @@ public class GermlineProcessor {
 	
 	List<SampleCall> sampleRecords = new ArrayList<SampleCall>();
 	List<SomaticCall> somaticCalls = new ArrayList<SomaticCall>();
+	Map<Integer, SampleCall> normalCalls = new HashMap<Integer, SampleCall>();
 	
 	GermlineProcessor(Germline cadabra, String tumorBam, CompareToReference2 c2r) {
 		this.cadabra = cadabra;
@@ -104,10 +105,14 @@ public class GermlineProcessor {
 					
 					if (tumorCall.alt != null && tumorCall.alt != Allele.UNK && tumorCall.alleleCounts.get(tumorCall.alt).getCount() >= MIN_SUPPORTING_READS) {
 						
-						SomaticCall somaticCall = new SomaticCall(normalCall, tumorCall);
-						if (somaticCall.qual > 0) {
+						if (normalCall.getVaf()/tumorCall.getVaf() < .2) {
+							SomaticCall somaticCall = new SomaticCall(normalCall, tumorCall);
 							somaticCalls.add(somaticCall);
 						}
+					}
+					
+					if (normalCall.alt != null && normalCall.alt != Allele.UNK && normalCall.alleleCounts.get(normalCall.alt).getCount() >= MIN_SUPPORTING_READS) {
+						normalCalls.put(normalCall.position, normalCall);
 					}
 
 					normalReads = normalIter.next();
@@ -125,8 +130,33 @@ public class GermlineProcessor {
 			}
 		}
 		
-		// TODO: Loop through somatic calls here, annotating those with nearby normal calls.
+		// Annotate somatic calls that have overlapping normal indels
+		for (SomaticCall call : somaticCalls) {
+			int pos = call.tumor.position;
+			int normalOverlap = 0;
+			
+			int stop = pos;
+			if (call.tumor.alt.getType() == Allele.Type.DEL) {
+				stop += call.tumor.alt.getLength();
+			} else {
+				stop += 1;
+			}
+			
+			for (int i=pos-100; i<=stop; i++) {
+				SampleCall normalCall = normalCalls.get(pos);
+				if (normalCall != null) {
+					int normalStop = normalCall.alt.getType() == Allele.Type.DEL ? normalCall.position + normalCall.alt.getLength() :
+						normalCall.position + 1;
+					if (normalStop >= pos) {
+						normalOverlap += 1;
+					}
+				}
+			}
+			
+			call.overlappingNormalAF = (float) normalOverlap / (float) call.normal.usableDepth;
+		}
 		
+		normalCalls.clear();
 		this.cadabra.addSomaticCalls(region.getSeqname(), somaticCalls);
 	}
 	
@@ -459,6 +489,7 @@ public class GermlineProcessor {
 		SampleCall tumor;
 		
 		double qual;
+		float overlappingNormalAF;
 		
 		public SomaticCall(SampleCall normal, SampleCall tumor) {
 			this.normal = normal;
@@ -477,7 +508,7 @@ public class GermlineProcessor {
 			
 			String pos = String.valueOf(tumor.position);
 			String qualStr = String.valueOf(qual);
-			String info = String.format("REPEAT_PERIOD=%d;", tumor.repeatPeriod);
+			String info = String.format("REPEAT_PERIOD=%d;ONAF=%f", tumor.repeatPeriod, overlappingNormalAF);
 			
 			String normalInfo = normal.getSampleInfo(tumor.ref, tumor.alt);
 			String tumorInfo = tumor.getSampleInfo(tumor.ref, tumor.alt);

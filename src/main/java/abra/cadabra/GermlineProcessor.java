@@ -99,27 +99,25 @@ public class GermlineProcessor {
 				} else if (compare > 0) {
 					tumorReads = tumorIter.next();
 				} else {
-					// Avoid processing at chromosome's edge
-					if (normalReads.getPosition() > c2r.getChromosomeLength(normalReads.getChromosome())-100) {
-						continue;
-					}					
-					if (tumorReads.getPosition() > c2r.getChromosomeLength(tumorReads.getChromosome())-100) {
-						continue;
-					}
-					
 					SampleCall normalCall = processLocus(normalReads);
 					SampleCall tumorCall = processLocus(tumorReads);
 					
 					if (tumorCall.alt != null && tumorCall.alt != Allele.UNK && tumorCall.alleleCounts.get(tumorCall.alt).getCount() >= MIN_SUPPORTING_READS) {
 						
 						if (normalCall.getVaf()/tumorCall.getVaf() < .2) {
-							String refSeq = c2r.getSequence(tumorCall.chromosome, tumorCall.position-9, 20);
+							
+							int chromosomeLength = c2r.getChromosomeLength(tumorCall.chromosome);
+							String refSeq = "N";
+							if (tumorCall.position > 10 && tumorCall.position < chromosomeLength-10) {
+								refSeq = c2r.getSequence(tumorCall.chromosome, tumorCall.position-9, 20);
+							}
+							
 							SomaticCall somaticCall = new SomaticCall(normalCall, tumorCall, refSeq);
 							somaticCalls.add(somaticCall);
 						}
 					}
 					
-					if (normalCall.alt != null && normalCall.alt != Allele.UNK && normalCall.alleleCounts.get(normalCall.alt).getCount() >= MIN_SUPPORTING_READS) {
+					if (normalCall.alt != null && (normalCall.alt.getType() == Allele.Type.DEL || normalCall.alt.getType() == Allele.Type.INS)) {
 						normalCalls.put(normalCall.position, normalCall);
 					}
 

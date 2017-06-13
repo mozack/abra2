@@ -1,6 +1,5 @@
 package abra.cadabra;
 
-import abra.CompareToReference2;
 import abra.ReverseComplementor;
 
 public class HomopolymerRun {
@@ -8,8 +7,6 @@ public class HomopolymerRun {
 	private int length;
 	private char base;
 	private int pos;
-	
-	private static ReverseComplementor rc = new ReverseComplementor();
 
 	/**
 	 *  Search for short HP run on either side of position. 

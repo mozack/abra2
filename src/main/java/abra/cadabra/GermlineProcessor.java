@@ -99,14 +99,22 @@ public class GermlineProcessor {
 				} else if (compare > 0) {
 					tumorReads = tumorIter.next();
 				} else {
-					// TODO: This will skip cases where normal has coverage, but tumor doesn't!
+					// Avoid processing at chromosome's edge
+					if (normalReads.getPosition() > c2r.getChromosomeLength(normalReads.getChromosome())-100) {
+						continue;
+					}					
+					if (tumorReads.getPosition() > c2r.getChromosomeLength(tumorReads.getChromosome())-100) {
+						continue;
+					}
+					
 					SampleCall normalCall = processLocus(normalReads);
 					SampleCall tumorCall = processLocus(tumorReads);
 					
 					if (tumorCall.alt != null && tumorCall.alt != Allele.UNK && tumorCall.alleleCounts.get(tumorCall.alt).getCount() >= MIN_SUPPORTING_READS) {
 						
 						if (normalCall.getVaf()/tumorCall.getVaf() < .2) {
-							SomaticCall somaticCall = new SomaticCall(normalCall, tumorCall);
+							String refSeq = c2r.getSequence(tumorCall.chromosome, tumorCall.position-9, 20);
+							SomaticCall somaticCall = new SomaticCall(normalCall, tumorCall, refSeq);
 							somaticCalls.add(somaticCall);
 						}
 					}
@@ -490,8 +498,10 @@ public class GermlineProcessor {
 		
 		double qual;
 		float overlappingNormalAF;
+		HomopolymerRun hrun;
+		String context;
 		
-		public SomaticCall(SampleCall normal, SampleCall tumor) {
+		public SomaticCall(SampleCall normal, SampleCall tumor, String context) {
 			this.normal = normal;
 			this.tumor = tumor;
 			
@@ -502,13 +512,20 @@ public class GermlineProcessor {
 			int tumorAlt = tumor.alleleCounts.get(tumor.alt).getCount();
 			
 			this.qual = calcFisherExactPhredScaledQuality(normalRef, normalAlt, tumorRef, tumorAlt);
+			this.hrun = HomopolymerRun.find(context);
+			this.context = context;
 		}
 		
 		public String toString() {
 			
 			String pos = String.valueOf(tumor.position);
 			String qualStr = String.valueOf(qual);
-			String info = String.format("REPEAT_PERIOD=%d;ONAF=%f", tumor.repeatPeriod, overlappingNormalAF);
+			int hrunLen = hrun != null ? hrun.getLength() : 0;
+			char hrunBase = hrun != null ? hrun.getBase() : 'N';
+			int hrunPos = hrun != null ? hrun.getPos() : 0;
+			
+			String info = String.format("REPEAT_PERIOD=%d;ONAF=%f;HRUN=%d,%c,%d;REF=%s", tumor.repeatPeriod, overlappingNormalAF,
+					hrunLen, hrunBase, hrunPos, context);
 			
 			String normalInfo = normal.getSampleInfo(tumor.ref, tumor.alt);
 			String tumorInfo = tumor.getSampleInfo(tumor.ref, tumor.alt);
@@ -551,7 +568,7 @@ public class GermlineProcessor {
 		
 		return period;
 	}
-
+	
 	private String getDelRefField(String chromosome, int position, int length) {
 		return c2r.getSequence(chromosome, position, length+1);
 	}

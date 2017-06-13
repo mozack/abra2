@@ -137,7 +137,7 @@ public class GermlineProcessor {
 			
 			int stop = pos;
 			if (call.tumor.alt.getType() == Allele.Type.DEL) {
-				stop += call.tumor.alt.getLength();
+				stop += call.tumor.alt.getLength()+1;
 			} else {
 				stop += 1;
 			}
@@ -145,8 +145,8 @@ public class GermlineProcessor {
 			for (int i=pos-100; i<=stop; i++) {
 				SampleCall normalCall = normalCalls.get(pos);
 				if (normalCall != null) {
-					int normalStop = normalCall.alt.getType() == Allele.Type.DEL ? normalCall.position + normalCall.alt.getLength() :
-						normalCall.position + 1;
+					int normalStop = normalCall.alt.getType() == Allele.Type.DEL ? 
+							normalCall.position + normalCall.alt.getLength() + 1 : normalCall.position + 1;
 					if (normalStop >= pos) {
 						normalOverlap += 1;
 					}

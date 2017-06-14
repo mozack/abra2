@@ -418,7 +418,8 @@ public class GermlineProcessor {
 			AlleleCounts altCounts = alleleCounts.get(alt);
 			
 			if (refCounts != null && altCounts != null) {
-				this.fs = strandBias(refCounts.getFwd(), refCounts.getRev(), altCounts.getFwd(), altCounts.getRev());
+//				this.fs = strandBias(refCounts.getFwd(), refCounts.getRev(), altCounts.getFwd(), altCounts.getRev());
+				this.fs = 0;
 			}
 			
 			this.mismatchExceededReads = mismatchExceededReads;
@@ -539,7 +540,8 @@ public class GermlineProcessor {
 	}
 	
 	static double calcPhredScaledQuality(int refObs, int altObs, int dp) {
-		return -10 * Math.log10(BetaBinomial.betabinCDF(dp, altObs));
+		//return -10 * Math.log10(BetaBinomial.betabinCDF(dp, altObs));
+		return 0;
 	}
 	
 	private int getRepeatPeriod(String chromosome, int position, Allele indel, AlleleCounts indelCounts) {

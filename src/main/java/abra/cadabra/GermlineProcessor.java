@@ -268,12 +268,12 @@ public class GermlineProcessor {
 					// Cap # mismatches in read that can be counted as reference
 					// This is done because realigner caps # of mismatches for remapped indel reads.
 					// This is needed to remove ref bias
-					int editDist = SAMRecordUtils.getEditDistance(read, c2r);
+					int editDist = SAMRecordUtils.getEditDistance(read, null);
 					int indelBases = SAMRecordUtils.getNumIndelBases(read);
 					int numMismatches = editDist - indelBases;
 					
 					float mismatchRate = (float) .05;
-					if (numMismatches > read.getReadLength()*mismatchRate) {
+					if (numMismatches > SAMRecordUtils.getMappedLength(read) * mismatchRate) {
 						// Skip this read
 						mismatchExceededReads += 1;
 						continue;

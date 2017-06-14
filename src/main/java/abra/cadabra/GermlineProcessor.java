@@ -67,7 +67,7 @@ public class GermlineProcessor {
 		while (sampleIter.hasNext()) {
 			
 			sampleReads = sampleIter.next();
-			SampleCall call = processLocus(sampleReads);
+			SampleCall call = processLocus(sampleReads, false);
 			if (call != null && sampleCallExceedsThresholds(call)) {
 				sampleRecords.add(call);
 			}
@@ -99,8 +99,8 @@ public class GermlineProcessor {
 				} else if (compare > 0) {
 					tumorReads = tumorIter.next();
 				} else {
-					SampleCall normalCall = processLocus(normalReads);
-					SampleCall tumorCall = processLocus(tumorReads);
+					SampleCall normalCall = processLocus(normalReads, true);
+					SampleCall tumorCall = processLocus(tumorReads, true);
 					
 					if (tumorCall.alt != null && tumorCall.alt != Allele.UNK && tumorCall.alleleCounts.get(tumorCall.alt).getCount() >= MIN_SUPPORTING_READS) {
 						
@@ -227,7 +227,7 @@ public class GermlineProcessor {
 		return alt;
 	}
 	
-	private SampleCall processLocus(ReadsAtLocus reads) {
+	private SampleCall processLocus(ReadsAtLocus reads, boolean isSomatic) {
 		
 		SampleCall call = null;
 		
@@ -330,13 +330,22 @@ public class GermlineProcessor {
 		
 		int usableDepth = AlleleCounts.sum(alleleCounts.values());
 		
+		String refSeq = null;
+		if (!isSomatic) {
+			int chromosomeLength = c2r.getChromosomeLength(chromosome);
+			refSeq = "N";
+			if (position > 10 && position < chromosomeLength-10) {
+				refSeq = c2r.getSequence(chromosome, position-9, 20);
+			}
+		}
+		
 		if (alt != null && (alt.getType() == Allele.Type.DEL || alt.getType() == Allele.Type.INS) && refAllele != Allele.UNK) {
 			AlleleCounts altCounts = alleleCounts.get(alt);
 			AlleleCounts refCounts = alleleCounts.get(refAllele);
 			
 //			if (altCounts.getCount() >= MIN_SUPPORTING_READS && af >= MIN_ALLELE_FRACTION) {
 
-				double qual = calcPhredScaledQuality(refCounts.getCount(), altCounts.getCount(), usableDepth);
+				double qual = isSomatic ? 0 : calcPhredScaledQuality(refCounts.getCount(), altCounts.getCount(), usableDepth);
 				int repeatPeriod = getRepeatPeriod(chromosome, position, alt, altCounts);
 
 				String refField = "";
@@ -350,7 +359,7 @@ public class GermlineProcessor {
 				}
 				
 				call = new SampleCall(chromosome, position, refAllele, alt, alleleCounts, totalDepth, 
-						usableDepth, qual, repeatPeriod, tumorMapq0, refField, altField, mismatchExceededReads);
+						usableDepth, qual, repeatPeriod, tumorMapq0, refField, altField, mismatchExceededReads, refSeq);
 //			}
 		} else {
 			String refField = getInsRefField(chromosome, position);
@@ -359,7 +368,7 @@ public class GermlineProcessor {
 			int rp = 0;
 			
 			call = new SampleCall(chromosome, position, refAllele, Allele.UNK, alleleCounts, totalDepth, 
-					usableDepth, qual, rp, tumorMapq0, refField, altField, mismatchExceededReads);
+					usableDepth, qual, rp, tumorMapq0, refField, altField, mismatchExceededReads, refSeq);
 		}
 		
 		return call;
@@ -397,10 +406,12 @@ public class GermlineProcessor {
 		String altField;
 		double fs;
 		int mismatchExceededReads;
+		HomopolymerRun hrun;
+		String context;
 		
 		SampleCall(String chromosome, int position, Allele ref, Allele alt, Map<Allele, AlleleCounts> alleleCounts, 
 				int totalReads, int usableDepth, double qual, int repeatPeriod, int mapq0, String refField, String altField,
-				int mismatchExceededReads) {
+				int mismatchExceededReads, String context) {
 			this.chromosome = chromosome;
 			this.position = position;
 			this.ref = ref;
@@ -423,6 +434,11 @@ public class GermlineProcessor {
 			}
 			
 			this.mismatchExceededReads = mismatchExceededReads;
+			
+			if (context != null) {
+				this.hrun = HomopolymerRun.find(context);
+				this.context = context;
+			}
 		}
 		
 		public float getVaf() {
@@ -467,12 +483,17 @@ public class GermlineProcessor {
 			// DP:AD:YM0:YM1:YM:OBS:MIRI:MARI:SOR:MQ0:GT       1092:51,23:0:0:0:23:5:36:0,51,1,22:981:0/1
 			String pos = String.valueOf(position);
 			String qualStr = String.valueOf(qual);
-			String info = String.format("REPEAT_PERIOD=%d;", repeatPeriod);
-			String format = "DP:DP2:AD:MIRI:MARI:SOR:FS:MQ0:ISPAN:VAF:MER:GT";
+			
+			int hrunLen = hrun != null ? hrun.getLength() : 0;
+			char hrunBase = hrun != null ? hrun.getBase() : 'N';
+			int hrunPos = hrun != null ? hrun.getPos() : 0;
+			
+			String info = String.format("REPEAT_PERIOD=%d;HRUN=%d,%c,%d;REF=%s", repeatPeriod,
+					hrunLen, hrunBase, hrunPos, context);
 			
 			String sampleInfo = getSampleInfo(ref, alt);
 			
-			return String.join("\t", chromosome, pos, ".", refField, altField, qualStr, "PASS", info, format, sampleInfo);
+			return String.join("\t", chromosome, pos, ".", refField, altField, qualStr, "PASS", info, SampleCall.FORMAT, sampleInfo);
 		}
 	}
 	
@@ -540,8 +561,7 @@ public class GermlineProcessor {
 	}
 	
 	static double calcPhredScaledQuality(int refObs, int altObs, int dp) {
-		//return -10 * Math.log10(BetaBinomial.betabinCDF(dp, altObs));
-		return 0;
+		return -10 * Math.log10(BetaBinomial.betabinCDF(dp, altObs));
 	}
 	
 	private int getRepeatPeriod(String chromosome, int position, Allele indel, AlleleCounts indelCounts) {

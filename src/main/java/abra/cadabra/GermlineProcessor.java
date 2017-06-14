@@ -663,6 +663,12 @@ public class GermlineProcessor {
 				currRefPos += element.getLength();
 			} else if (element.getOperator() == CigarOperator.S) {
 				readIdx += element.getLength();
+			} else if (element.getOperator() == CigarOperator.N) {
+				currRefPos += element.getLength();
+			}
+			
+			if (currRefPos > refPos+1) {
+				break;
 			}
 		}
 		

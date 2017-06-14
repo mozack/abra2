@@ -185,6 +185,11 @@ public class SAMRecordUtils {
 			distance = read.getIntegerAttribute("NM");
 			
 			if (distance == null) {
+				// STAR format
+				distance = read.getIntegerAttribute("nM");
+			}
+			
+			if (distance == null) {
 				distance = read.getReadLength();
 			}
 		}
@@ -430,6 +435,17 @@ public class SAMRecordUtils {
 	 */
 	public static boolean isPrimary(SAMRecord read) {
 		return ((read.getFlags() & 0x800)  == 0) && (!read.getNotPrimaryAlignmentFlag());
+	}
+	
+	public static int getMappedLength(SAMRecord read) {
+		int length = read.getReadLength();
+		for (CigarElement elem : read.getCigar().getCigarElements()) {
+			if (elem.getOperator() == CigarOperator.S) {
+				length -= elem.getLength();
+			}
+		}
+		
+		return length;
 	}
 
 	public static int sumBaseQuals(SAMRecord read) {

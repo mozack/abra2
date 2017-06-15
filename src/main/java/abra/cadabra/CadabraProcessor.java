@@ -1,6 +1,5 @@
 package abra.cadabra;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -8,11 +7,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 
 import abra.CompareToReference2;
 import abra.Feature;
-
+import abra.Logger;
+import abra.SAMRecordUtils;
 import htsjdk.samtools.Cigar;
 import htsjdk.samtools.CigarElement;
 import htsjdk.samtools.CigarOperator;
@@ -22,12 +21,8 @@ import htsjdk.samtools.TextCigarCodec;
 public class CadabraProcessor {
 
 	private static final int MIN_SUPPORTING_READS = 2;
-	private static final int MIN_DISTANCE_FROM_READ_END = 3;
-	private static final double MAX_NORMAL_OBS_AS_FRACTION_OF_TUMOR_OBS = 0.1;
-	private static final double MIN_TUMOR_FRACTION = 0.02;
-	private static final int MIN_TUMOR_MAPQ = 20;
-	
-	private static final int NORMAL_INDEL_CHECK_SPAN = 10;
+	private static final double MIN_ALLELE_FRACTION = 0.10;
+	private static final int MIN_MAPQ = 20;
 	
 	private Cadabra cadabra;
 	private String normalBam;
@@ -35,82 +30,58 @@ public class CadabraProcessor {
 	private ReadLocusReader normal;
 	private ReadLocusReader tumor;
 	private CompareToReference2 c2r;
-	private Map<Integer, Integer> normalAltCounts = new TreeMap<Integer, Integer>();
-	private Map<Integer, Integer> normalRefCounts = new TreeMap<Integer, Integer>();
-	private Map<Integer, String> recordCache = new TreeMap<Integer, String>();
-	private String currChrom = "";
 	private Feature region;
+	private int lastPos = 0;
 	
-	List<String> outputRecords = new ArrayList<String>();
+	List<SampleCall> sampleRecords = new ArrayList<SampleCall>();
+	List<SomaticCall> somaticCalls = new ArrayList<SomaticCall>();
+	Map<Integer, SampleCall> normalCalls = new HashMap<Integer, SampleCall>();
 	
-	CadabraProcessor(Cadabra cadabra, String normalBam, String tumorBam, CompareToReference2 c2r) {
+	CadabraProcessor(Cadabra cadabra, String tumorBam, CompareToReference2 c2r) {
 		this.cadabra = cadabra;
-		this.normalBam = normalBam;
 		this.tumorBam = tumorBam;
 		this.c2r = c2r;
 	}
 	
+	CadabraProcessor(Cadabra cadabra, String normalBam, String tumorBam, CompareToReference2 c2r) {
+		this(cadabra, tumorBam, c2r);
+		this.normalBam = normalBam;
+	}
+	
 	void process(Feature region) {
 		this.region = region;
-		this.normal = new ReadLocusReader(normalBam, region);
 		this.tumor = new ReadLocusReader(tumorBam, region);
-		
-		process();
-	}
-	
-	private void processCached(String chromosome, int position) {
-		
-		Set<Integer> toRemove = new HashSet<Integer>();
-		
-		for (Integer recordPos : recordCache.keySet()) {
-			if (!chromosome.equals(currChrom) || recordPos < position-NORMAL_INDEL_CHECK_SPAN) {
-				float maxNormalAltFreq = 0;
-				for (int pos=recordPos-NORMAL_INDEL_CHECK_SPAN; pos<recordPos+NORMAL_INDEL_CHECK_SPAN; pos++) {
-					if (normalAltCounts.containsKey(pos) && normalRefCounts.containsKey(pos)) {
-						float normalAltFreq = (float) normalAltCounts.get(pos) / ((float)normalAltCounts.get(pos) + (float)normalRefCounts.get(pos));
-						if (normalAltFreq > maxNormalAltFreq) {
-							maxNormalAltFreq = normalAltFreq;
-						}
-					}
-				}
-				
-				String record = recordCache.get(recordPos);
-				record = record.replace("<NNAF>", String.valueOf(maxNormalAltFreq));
-				this.outputRecords.add(record);
-				toRemove.add(recordPos);
-			} else {
-				break;
-			}
-		}
-		
-		// Clear out of scope cached entries.
-		if (this.currChrom.equals(chromosome)) {
-			for (Integer pos : toRemove) {
-				recordCache.remove(pos);
-			}
-			
-			toRemove.clear();
-			
-			for (Integer pos : normalAltCounts.keySet()) {
-				if (pos < position - 2*NORMAL_INDEL_CHECK_SPAN) {
-					toRemove.add(pos);
-				}
-			}
-			
-			for (Integer pos : toRemove) {
-				normalAltCounts.remove(pos);
-				normalRefCounts.remove(pos);
-			}
+		if (normalBam != null) {
+			this.normal = new ReadLocusReader(normalBam, region);
+			processSomatic();
 		} else {
-			recordCache.clear();
-			normalAltCounts.clear();
-			normalRefCounts.clear();
+			processSimple();
+		}
+	}
+		
+	private void processSimple() {
+		Iterator<ReadsAtLocus> sampleIter = tumor.iterator();
+		
+		ReadsAtLocus sampleReads = null;
+		
+		while (sampleIter.hasNext()) {
+			
+			sampleReads = sampleIter.next();
+			SampleCall call = processLocus(sampleReads, false);
+			if (call != null && sampleCallExceedsThresholds(call)) {
+				sampleRecords.add(call);
+			}
 		}
 		
-		this.currChrom = chromosome;
+		this.cadabra.addCalls(region.getSeqname(), sampleRecords);
 	}
 	
-	private void process() {
+	private boolean sampleCallExceedsThresholds(SampleCall call) {
+		return call.alt != null && call.alt != Allele.UNK && call.alleleCounts.get(call.alt).getCount() >= MIN_SUPPORTING_READS &&
+				call.getVaf() >= MIN_ALLELE_FRACTION;
+	}
+	
+	private void processSomatic() {
 		Iterator<ReadsAtLocus> normalIter = normal.iterator();
 		Iterator<ReadsAtLocus> tumorIter = tumor.iterator();
 		
@@ -119,10 +90,7 @@ public class CadabraProcessor {
 		
 		int count = 0;
 		
-		boolean normalReadsProcessed = false;
-		
 		while (normalIter.hasNext() && tumorIter.hasNext()) {
-			normalReadsProcessed = true;
 			if (normalReads != null && tumorReads != null) {
 				int compare = normalReads.compareLoci(tumorReads, normal.getSamHeader().getSequenceDictionary());
 				
@@ -131,9 +99,28 @@ public class CadabraProcessor {
 				} else if (compare > 0) {
 					tumorReads = tumorIter.next();
 				} else {
-					// TODO: This will skip cases where normal has coverage, but tumor doesn't!
-					processCached(normalReads.getChromosome(), normalReads.getPosition());
-					processLocus(normalReads, tumorReads);
+					SampleCall normalCall = processLocus(normalReads, true);
+					SampleCall tumorCall = processLocus(tumorReads, true);
+					
+					if (tumorCall.alt != null && tumorCall.alt != Allele.UNK && tumorCall.alleleCounts.get(tumorCall.alt).getCount() >= MIN_SUPPORTING_READS) {
+						
+						if (normalCall.getVaf()/tumorCall.getVaf() < .2) {
+							
+							int chromosomeLength = c2r.getChromosomeLength(tumorCall.chromosome);
+							String refSeq = "N";
+							if (tumorCall.position > 10 && tumorCall.position < chromosomeLength-10) {
+								refSeq = c2r.getSequence(tumorCall.chromosome, tumorCall.position-9, 20);
+							}
+							
+							SomaticCall somaticCall = new SomaticCall(normalCall, tumorCall, refSeq);
+							somaticCalls.add(somaticCall);
+						}
+					}
+					
+					if (normalCall.alt != null && (normalCall.alt.getType() == Allele.Type.DEL || normalCall.alt.getType() == Allele.Type.INS)) {
+						normalCalls.put(normalCall.position, normalCall);
+					}
+
 					normalReads = normalIter.next();
 					tumorReads = tumorIter.next();
 				}
@@ -149,24 +136,34 @@ public class CadabraProcessor {
 			}
 		}
 		
-		processCached("Done", 0);
-		
-		// Tumor only case
-		if (!normalReadsProcessed) {
-			while (tumorIter.hasNext()) {
-				tumorReads = tumorIter.next();
-				normalReads = new ReadsAtLocus(tumorReads.getChromosome(), tumorReads.getPosition(), new ArrayList<SAMRecord>());
-				processLocus(normalReads, tumorReads);
-				
-				if ((count % 1000000) == 0) {
-					System.err.println("Position: " + tumorReads.getChromosome() + ":" + tumorReads.getPosition());
-				}
-				
-				count += 1;
+		// Annotate somatic calls that have overlapping normal indels
+		for (SomaticCall call : somaticCalls) {
+			int pos = call.tumor.position;
+			int normalOverlap = 0;
+			
+			int stop = pos;
+			if (call.tumor.alt.getType() == Allele.Type.DEL) {
+				stop += call.tumor.alt.getLength()+1;
+			} else {
+				stop += 1;
 			}
+			
+			for (int i=pos-100; i<=stop; i++) {
+				SampleCall normalCall = normalCalls.get(pos);
+				if (normalCall != null) {
+					int normalStop = normalCall.alt.getType() == Allele.Type.DEL ? 
+							normalCall.position + normalCall.alt.getLength() + 1 : normalCall.position + 1;
+					if (normalStop >= pos) {
+						normalOverlap += 1;
+					}
+				}
+			}
+			
+			call.overlappingNormalAF = (float) normalOverlap / (float) call.normal.usableDepth;
 		}
 		
-		this.cadabra.addCalls(region.getSeqname(), outputRecords);
+		normalCalls.clear();
+		this.cadabra.addSomaticCalls(region.getSeqname(), somaticCalls);
 	}
 	
 	private Character getBaseAtPosition(SAMRecord read, int refPos) {
@@ -208,247 +205,299 @@ public class CadabraProcessor {
 		return null;
 	}
 	
-	private boolean matchesReference(SAMRecord read, int refPos) {
-		boolean isMatch = false;
-	
-		if (!read.getReadUnmappedFlag()) {
-			Character base = getBaseAtPosition(read, refPos);
-			if (base != null) {
-				String seq = c2r.getSequence(read.getReferenceName(), refPos, 1);
-				isMatch = base.charValue() == seq.charAt(0); 
-			}
-		}
-		
-		return isMatch;
+	private char getRefBase(String chr, int pos) {
+		return c2r.getSequence(chr, pos, 1).charAt(0);
 	}
 	
-	// Returns most abundant indel in reads
-	private IndelInfo checkForIndelInReadsAtPosition(ReadsAtLocus tumorReads, int position) {
+	
+	private Allele getAltIndelAllele(Allele ref, Map<Allele, AlleleCounts> alleleCounts) {
+		int maxAlt = 0;
+		Allele alt = null;
 		
-		Map<IndelInfo, Integer> indelCounts = new HashMap<IndelInfo, Integer>();
-		int totalIndelCounts = 0;
-		
-		for (SAMRecord read : tumorReads.getReads()) {
-			if (!read.getDuplicateReadFlag()) {
-				IndelInfo indel = checkForIndelAtLocus(read, position);
-				
-				int currCount = 0;
-				if (indelCounts.containsKey(indel)) {
-					currCount = indelCounts.get(indel);
+		for (Allele allele : alleleCounts.keySet()) {
+			if (allele != ref) {
+				AlleleCounts ac = alleleCounts.get(allele);
+				if (ac.getCount() > maxAlt && (allele.getType() == Allele.Type.DEL || allele.getType() == Allele.Type.INS)) {
+					maxAlt = ac.getCount();
+					alt = allele;
 				}
-				
-				indelCounts.put(indel, currCount + 1);
-				totalIndelCounts += 1;
 			}
 		}
 		
-		
-		IndelInfo maxIndel = null;
-		int max = 0;
-		for (IndelInfo indel : indelCounts.keySet()) {
-			
-			if (indelCounts.get(indel) > max) {
-				
-			}
-		}
-		
-		// TODO: Placeholder to compile
-		return null;
+		return alt;
 	}
 	
-	private void processLocus(ReadsAtLocus normalReads, ReadsAtLocus tumorReads) {
-		String chromosome = normalReads.getChromosome();
-		int position = normalReads.getPosition();
+	private SampleCall processLocus(ReadsAtLocus reads, boolean isSomatic) {
 		
-		CigarElement tumorIndel = null;
-		int tumorCount = 0;
-		int tumorRefCount = 0;
-		int mismatch0Count = 0;
-		int mismatch1Count = 0;
-		int totalMismatchCount = 0;
-		boolean hasSufficientDistanceFromReadEnd = false;
-		int maxContigMapq = 0;
-		int minReadIndex = Integer.MAX_VALUE;
-		int maxReadIndex = Integer.MIN_VALUE;
-		int normalCount = 0;
-		int normalRefCount = 0;
-		int tumorRefFwd = 0;
-		int tumorRefRev = 0;
-		int tumorAltFwd = 0;
-		int tumorAltRev = 0;
-		int normalRefFwd = 0;
-		int normalRefRev = 0;
-		int normalAltFwd = 0;
-		int normalAltRev = 0;
-		int tumorMapq0 = 0;
-		int normalMapq0 = 0;
+		SampleCall call = null;
 		
-		Map<String, Integer> insertBasesMap = new HashMap<String, Integer>();
-		
-		// Don't double count overlapping reads.
-		// TODO: Determine consensus?  What about normal?
-		Set<String> tumorReadIds = new HashSet<String>();
-		
-		for (SAMRecord read : tumorReads.getReads()) {
-			//TODO: Figure out what to do with non-primary alignments.
-			//      Need to reconcile with overlapping read check using read name.
-			if (!read.getDuplicateReadFlag() && !read.getReadUnmappedFlag() && (read.getFlags() & 0x900) == 0) {
+		String chromosome = reads.getChromosome();
+		int position = reads.getPosition();
 				
-				if (read.getMappingQuality() < MIN_TUMOR_MAPQ) {
+		if (position > lastPos + 5000000) {
+			Logger.info("Processing: %s:%d", chromosome, position);
+			lastPos = position;
+		}
+		
+		int tumorMapq0 = 0;
+		int mismatchExceededReads = 0;
+		int totalDepth = 0;
+				
+		Map<Allele, AlleleCounts> alleleCounts = new HashMap<Allele, AlleleCounts>();
+		
+		// Always include ref allele
+		char refBase = getRefBase(chromosome, position);
+		Allele refAllele = Allele.getAllele(refBase); 
+		alleleCounts.put(refAllele, new AlleleCounts());
+		
+		for (SAMRecord read : reads.getReads()) {
+			
+			if (!read.getDuplicateReadFlag() && !read.getReadUnmappedFlag() &&
+					(read.getFlags() & 0x900) == 0) {
+
+				totalDepth += 1;
+				
+				if (read.getMappingQuality() < MIN_MAPQ) {
 					if (read.getMappingQuality() == 0) {
 						tumorMapq0 += 1;
 					}
 					continue;
 				}
+				
+				if (read.getStringAttribute("YA") == null) {
+					// Cap # mismatches in read that can be counted as reference
+					// This is done because realigner caps # of mismatches for remapped indel reads.
+					// This is needed to remove ref bias
+					int editDist = SAMRecordUtils.getEditDistance(read, null);
+					int indelBases = SAMRecordUtils.getNumIndelBases(read);
+					int numMismatches = editDist - indelBases;
+					
+					float mismatchRate = (float) .05;
+					if (numMismatches > SAMRecordUtils.getMappedLength(read) * mismatchRate) {
+						// Skip this read
+						mismatchExceededReads += 1;
+						continue;
+					}
+				}
 			
 				IndelInfo readElement = checkForIndelAtLocus(read, position);
 				
+				Allele allele = Allele.UNK;
+				
 				if (readElement != null) {
-					Integer ymInt = (Integer) read.getAttribute("YM");
-					if (ymInt != null) {
-						int ym = ymInt;
-						if (ym == 0) {
-							mismatch0Count++;
-						}
-						if (ym <= 1) {
-							mismatch1Count++;
-						}
-						totalMismatchCount += ym;
+					if (readElement.getCigarElement().getOperator() == CigarOperator.D) {
+						allele = new Allele(Allele.Type.DEL, readElement.getCigarElement().getLength());
+					} else if (readElement.getCigarElement().getOperator() == CigarOperator.I) {
+						allele = new Allele(Allele.Type.INS, readElement.getCigarElement().getLength());
 					}
-				} else if (matchesReference(read, position)) {
-					// TODO: Check for agreement in overlapping read pairs for tumor.
-					//       Just check for alt in normal
-					if (!tumorReadIds.contains(read.getReadName())) {
-						tumorRefCount += 1;
-						if (read.getReadNegativeStrandFlag()) {
-							tumorRefRev += 1;
-						} else {
-							tumorRefFwd += 1;
-						}
+				} else {
+					Character base     = getBaseAtPosition(read, position);
+					Character nextBase = getBaseAtPosition(read, position+1);
+					IndelInfo readIndel = checkForIndelAtLocus(read.getAlignmentStart(),
+							read.getCigar(), position);
+					
+					if (readIndel == null && base != null && nextBase != null) {
+						allele = Allele.getAllele(base);
 					}
 				}
 				
-				if (tumorIndel == null && readElement != null) {
-					tumorIndel = readElement.getCigarElement();
-					tumorCount = 1;
-					if (read.getReadNegativeStrandFlag()) {
-						tumorAltRev += 1;
-					} else {
-						tumorAltFwd += 1;
+				if (allele != Allele.UNK) {
+					if (!alleleCounts.containsKey(allele)) {
+						alleleCounts.put(allele, new AlleleCounts());
 					}
-//					maxContigMapq = Math.max(maxContigMapq, read.getIntegerAttribute(ReadAdjuster.CONTIG_QUALITY_TAG));
-					maxContigMapq = 0;
-					if (readElement.getInsertBases() != null) {
-						updateInsertBases(insertBasesMap, readElement.getInsertBases());
+					
+					AlleleCounts ac = alleleCounts.get(allele);
+					
+					ac.incrementCount(read);
+										
+					if (readElement != null) {
+						ac.updateReadIdx(readElement.getReadIndex());
 					}
-					minReadIndex = readElement.getReadIndex() < minReadIndex ? readElement.getReadIndex() : minReadIndex;
-					maxReadIndex = readElement.getReadIndex() > maxReadIndex ? readElement.getReadIndex() : maxReadIndex;
-				} else if (tumorIndel != null && readElement != null) {
-					if (tumorIndel.equals(readElement.getCigarElement())) {
-						// Increment tumor indel support count
-						// Do not allow single fragment to contribute multiple reads
-						// TODO: Identify consensus
-						if (!tumorReadIds.contains(read.getReadName())) {
-							tumorCount += 1;
-							if (read.getReadNegativeStrandFlag()) {
-								tumorAltRev += 1;
-							} else {
-								tumorAltFwd += 1;
-							}
-						}
-//						maxContigMapq = Math.max(maxContigMapq, read.getIntegerAttribute(ReadAdjuster.CONTIG_QUALITY_TAG));
-						maxContigMapq = 0;
-						if (readElement.getInsertBases() != null) {
-							updateInsertBases(insertBasesMap, readElement.getInsertBases());
-						}
-						minReadIndex = readElement.getReadIndex() < minReadIndex ? readElement.getReadIndex() : minReadIndex;
-						maxReadIndex = readElement.getReadIndex() > maxReadIndex ? readElement.getReadIndex() : maxReadIndex;
-	
-					} else {
-						// We will not deal with multiple indels at a single locus for now.
-						tumorIndel = null;
-						tumorCount = 0;
-						break;
+					
+					if (allele.getType() == Allele.Type.INS) {
+						ac.updateInsertBases(readElement.getInsertBases());
 					}
 				}
-				
-				if (!hasSufficientDistanceFromReadEnd && tumorIndel != null && readElement != null && readElement.getCigarElement().equals(tumorIndel)) {
-					hasSufficientDistanceFromReadEnd = sufficientDistanceFromReadEnd(read, readElement.getReadIndex());
-				}
-				
-				tumorReadIds.add(read.getReadName());
 			}
 		}
 		
-//		float tumorFraction = (float) tumorCount / (float) tumorReads.getReads().size();
-		float tumorFraction = (float) tumorCount / (float) tumorReadIds.size();
+		// Allow readId sets to be garbage collected.
+		for (AlleleCounts counts : alleleCounts.values()) {
+			counts.clearReadIds();
+		}
 		
-//		if (tumorCount >= MIN_SUPPORTING_READS && hasSufficientDistanceFromReadEnd && tumorFraction >= MIN_TUMOR_FRACTION) {
+		Allele alt = getAltIndelAllele(Allele.getAllele(refBase), alleleCounts);
+		
+		int usableDepth = AlleleCounts.sum(alleleCounts.values());
+		
+		String refSeq = null;
+		if (!isSomatic) {
+			int chromosomeLength = c2r.getChromosomeLength(chromosome);
+			refSeq = "N";
+			if (position > 10 && position < chromosomeLength-10) {
+				refSeq = c2r.getSequence(chromosome, position-9, 20);
+			}
+		}
+		
+		if (alt != null && (alt.getType() == Allele.Type.DEL || alt.getType() == Allele.Type.INS) && refAllele != Allele.UNK) {
+			AlleleCounts altCounts = alleleCounts.get(alt);
+			AlleleCounts refCounts = alleleCounts.get(refAllele);
+			
+//			if (altCounts.getCount() >= MIN_SUPPORTING_READS && af >= MIN_ALLELE_FRACTION) {
 
-		// Process normal
-		Set<String> normalReadIds = new HashSet<String>();
-		for (SAMRecord read : normalReads.getReads()) {
-			//TODO: Figure out what to do with non-primary alignments
-			if (!read.getDuplicateReadFlag() && !read.getReadUnmappedFlag() && (read.getFlags() & 0x900) == 0) {
-				if (read.getMappingQuality() == 0) {
-					normalMapq0 += 1;
+				double qual = isSomatic ? 0 : calcPhredScaledQuality(refCounts.getCount(), altCounts.getCount(), usableDepth);
+				int repeatPeriod = getRepeatPeriod(chromosome, position, alt, altCounts);
+
+				String refField = "";
+				String altField = "";
+				if (alt.getType() == Allele.Type.DEL) {
+					refField = getDelRefField(chromosome, position, alt.getLength());
+					altField = refField.substring(0, 1);
+				} else if (alt.getType() == Allele.Type.INS) {
+					refField = getInsRefField(chromosome, position);
+					altField = refField + getPreferredInsertBases(alt, altCounts);
 				}
 				
-				IndelInfo normalInfo = checkForIndelAtLocus(read.getAlignmentStart(), read.getCigar(), position);
-				
-//				if (normalInfo != null && sufficientDistanceFromReadEnd(read, normalInfo.getReadIndex())) {
-				if (normalInfo != null) {
-					if (!normalReadIds.contains(read.getReadName())) {
-						normalCount += 1;
-						if (read.getReadNegativeStrandFlag()) {
-							normalAltRev += 1;
-						} else {
-							normalAltFwd += 1;
-						}
-					}
-				} else if (normalInfo == null && matchesReference(read, position)) {
-					if (!normalReadIds.contains(read.getReadName())) {
-						normalRefCount += 1;
-						if (read.getReadNegativeStrandFlag()) {
-							normalRefRev += 1;
-						} else {
-							normalRefFwd += 1;
-						}
-					}
-				}
-				
-				normalReadIds.add(read.getReadName());
+				call = new SampleCall(chromosome, position, refAllele, alt, alleleCounts, totalDepth, 
+						usableDepth, qual, repeatPeriod, tumorMapq0, refField, altField, mismatchExceededReads, refSeq);
+//			}
+		} else {
+			String refField = getInsRefField(chromosome, position);
+			String altField = ".";
+			double qual = 0;
+			int rp = 0;
+			
+			call = new SampleCall(chromosome, position, refAllele, Allele.UNK, alleleCounts, totalDepth, 
+					usableDepth, qual, rp, tumorMapq0, refField, altField, mismatchExceededReads, refSeq);
+		}
+		
+		return call;
+	}
+	
+	private String getPreferredInsertBases(Allele allele, AlleleCounts counts) {
+		String bases = null;
+		if (counts.getPreferredInsertBases().isEmpty()) {
+			StringBuffer buf = new StringBuffer();
+			for (int i=0; i<allele.getLength(); i++) {
+				buf.append('N');
+			}
+			bases = buf.toString();
+		} else {
+			bases = counts.getPreferredInsertBases();
+		}
+		return bases;
+	}
+	
+	public static class SampleCall {
+		
+		public static final String FORMAT = "DP:DP2:AD:AD2:MIRI:MARI:SOR:FS:MQ0:ISPAN:VAF:MER:BB:GT";
+		
+		String chromosome;
+		int position;
+		Allele ref;
+		Allele alt;
+		Map<Allele, AlleleCounts> alleleCounts;
+		int totalReads;
+		int usableDepth;
+		double qual;
+		int repeatPeriod;
+		int mapq0;
+		String refField;
+		String altField;
+		double fs;
+		int mismatchExceededReads;
+		HomopolymerRun hrun;
+		String context;
+		
+		SampleCall(String chromosome, int position, Allele ref, Allele alt, Map<Allele, AlleleCounts> alleleCounts, 
+				int totalReads, int usableDepth, double qual, int repeatPeriod, int mapq0, String refField, String altField,
+				int mismatchExceededReads, String context) {
+			this.chromosome = chromosome;
+			this.position = position;
+			this.ref = ref;
+			this.alt = alt;
+			this.alleleCounts = alleleCounts;
+			this.totalReads = totalReads;
+			this.usableDepth = usableDepth;
+			this.qual = qual;
+			this.repeatPeriod = repeatPeriod;
+			this.mapq0 = mapq0;
+			this.refField = refField;
+			this.altField = altField;
+			
+			AlleleCounts refCounts = alleleCounts.get(ref);
+			AlleleCounts altCounts = alleleCounts.get(alt);
+			
+			if (refCounts != null && altCounts != null) {
+//				this.fs = strandBias(refCounts.getFwd(), refCounts.getRev(), altCounts.getFwd(), altCounts.getRev());
+				this.fs = 0;
+			}
+			
+			this.mismatchExceededReads = mismatchExceededReads;
+			
+			if (context != null) {
+				this.hrun = HomopolymerRun.find(context);
+				this.context = context;
 			}
 		}
 		
-		this.normalAltCounts.put(position, normalCount);
-		this.normalRefCounts.put(position, normalRefCount);
-		
-//		}
-		
-		if (tumorIndel != null && !isNormalCountOK(normalCount, normalReads.getReads().size(), tumorCount, tumorReads.getReads().size())) {
-			tumorIndel = null;
-			tumorCount = 0;
-		}
-		
-		if (tumorCount >= MIN_SUPPORTING_READS && hasSufficientDistanceFromReadEnd && tumorFraction >= MIN_TUMOR_FRACTION) {
-			String insertBases = null;
-			if (tumorIndel.getOperator() == CigarOperator.I) {
-				insertBases = getInsertBaseConsensus(insertBasesMap, tumorIndel.getLength());
+		public float getVaf() {
+			float vaf = 0;
+			AlleleCounts altCounts = alleleCounts.get(alt);
+			if (altCounts != null) {
+				vaf = (float) altCounts.getCount() / (float) usableDepth;
 			}
 			
-			int repeatPeriod = getRepeatPeriod(chromosome, position, tumorIndel, insertBases);
+			return vaf;
+		}
+		
+		public String getSampleInfo(Allele ref, Allele alt) {
+			AlleleCounts refCounts = alleleCounts.get(ref);
+			AlleleCounts altCounts = alleleCounts.get(alt);
 			
-			double qual = calcPhredScaledQuality(normalRefCount, normalCount, tumorRefCount, tumorCount);
+			if (refCounts == null) {
+				refCounts = AlleleCounts.EMPTY_COUNTS;
+			}
 			
-			cacheRecord(chromosome, position, normalReads, tumorReads, tumorIndel,
-					tumorCount, tumorRefCount, insertBases, maxContigMapq, mismatch0Count, mismatch1Count, totalMismatchCount, minReadIndex, maxReadIndex,
-					normalCount, normalRefCount, repeatPeriod, qual, tumorRefFwd, tumorRefRev, tumorAltFwd, tumorAltRev,
-					normalRefFwd, normalRefRev, normalAltFwd, normalAltRev, tumorMapq0, normalMapq0);
+			if (altCounts == null) {
+				altCounts = AlleleCounts.EMPTY_COUNTS;
+			}
+			
+			int ispan = altCounts == null ? 0 : altCounts.getMaxReadIdx()-altCounts.getMinReadIdx();
+			float vaf = getVaf();
+			
+			double bbQual = calcPhredScaledQuality(refCounts.getCount(), altCounts.getCount(), usableDepth);
+			
+			String sampleInfo = String.format("%d:%d:%d,%d:%d,%d:%d:%d:%d,%d,%d,%d:%f:%d:%d:%f:%d:%f:0/1", totalReads, usableDepth, refCounts.getCount(), altCounts.getCount(),
+					refCounts.getTotalCount(), altCounts.getTotalCount(),
+					altCounts.getMinReadIdx(), altCounts.getMaxReadIdx(), refCounts.getFwd(), refCounts.getRev(), altCounts.getFwd(), altCounts.getRev(),
+					fs, mapq0, ispan, vaf, mismatchExceededReads, bbQual);
+
+			return sampleInfo;
+		}
+		
+		public String toString() {
+			
+			//
+			// chr1    14397   .       CTGT    C       31.08108108108108       PASS    SOMATIC;CMQ=0;CTX=TAAAAGCACACTGTTGGTTT;REPEAT_PERIOD=1;NNAF=<NNAF>      
+			// DP:AD:YM0:YM1:YM:OBS:MIRI:MARI:SOR:MQ0:GT       1092:51,23:0:0:0:23:5:36:0,51,1,22:981:0/1
+			String pos = String.valueOf(position);
+			String qualStr = String.valueOf(qual);
+			
+			int hrunLen = hrun != null ? hrun.getLength() : 0;
+			char hrunBase = hrun != null ? hrun.getBase() : 'N';
+			int hrunPos = hrun != null ? hrun.getPos() : 0;
+			
+			String info = String.format("REPEAT_PERIOD=%d;HRUN=%d,%c,%d;REF=%s", repeatPeriod,
+					hrunLen, hrunBase, hrunPos, context);
+			
+			String sampleInfo = getSampleInfo(ref, alt);
+			
+			return String.join("\t", chromosome, pos, ".", refField, altField, qualStr, "PASS", info, SampleCall.FORMAT, sampleInfo);
 		}
 	}
 	
-	static double calcPhredScaledQuality(int normalRefObs, int normalAltObs, int tumorRefObs, int tumorAltObs) {
+	static double calcFisherExactPhredScaledQuality(int normalRefObs, int normalAltObs, int tumorRefObs, int tumorAltObs) {
 		FishersExactTest test = new FishersExactTest();
 		// Calc p-value
 		double p = test.oneTailedTest(normalRefObs, normalAltObs, tumorRefObs, tumorAltObs);
@@ -463,81 +512,81 @@ public class CadabraProcessor {
 		return qual;
 	}
 	
-	private int getRepeatPeriod(String chromosome, int position, CigarElement indel, String insertBases) {
+	public static class SomaticCall {
+		SampleCall normal;
+		SampleCall tumor;
+		
+		double qual;
+		float overlappingNormalAF;
+		HomopolymerRun hrun;
+		String context;
+		
+		public SomaticCall(SampleCall normal, SampleCall tumor, String context) {
+			this.normal = normal;
+			this.tumor = tumor;
+			
+			int normalRef = normal.alleleCounts.get(tumor.ref) == null ? 0 : normal.alleleCounts.get(tumor.ref).getCount();
+			int normalAlt = normal.alleleCounts.get(tumor.alt) == null ? 0 : normal.alleleCounts.get(tumor.alt).getCount();
+			
+			int tumorRef = tumor.alleleCounts.get(tumor.ref).getCount();
+			int tumorAlt = tumor.alleleCounts.get(tumor.alt).getCount();
+			
+			this.qual = calcFisherExactPhredScaledQuality(normalRef, normalAlt, tumorRef, tumorAlt);
+			this.hrun = HomopolymerRun.find(context);
+			this.context = context;
+		}
+		
+		public String toString() {
+			
+			String pos = String.valueOf(tumor.position);
+			String qualStr = String.valueOf(qual);
+			int hrunLen = hrun != null ? hrun.getLength() : 0;
+			char hrunBase = hrun != null ? hrun.getBase() : 'N';
+			int hrunPos = hrun != null ? hrun.getPos() : 0;
+			
+			String info = String.format("REPEAT_PERIOD=%d;ONAF=%f;HRUN=%d,%c,%d;REF=%s", tumor.repeatPeriod, overlappingNormalAF,
+					hrunLen, hrunBase, hrunPos, context);
+			
+			String normalInfo = normal.getSampleInfo(tumor.ref, tumor.alt);
+			String tumorInfo = tumor.getSampleInfo(tumor.ref, tumor.alt);
+			
+			return String.join("\t", tumor.chromosome, pos, ".", tumor.refField, tumor.altField, qualStr, "PASS", info, SampleCall.FORMAT, normalInfo, tumorInfo);
+		}
+	}
+	
+	static double strandBias(int rf, int rr, int af, int ar) {
+		FishersExactTest test = new FishersExactTest();
+		double sb = test.twoTailedTest(rf, rf, af, ar);
+		return sb;
+	}
+	
+	static double calcPhredScaledQuality(int refObs, int altObs, int dp) {
+		return -10 * Math.log10(BetaBinomial.betabinCDF(dp, altObs));
+	}
+	
+	private int getRepeatPeriod(String chromosome, int position, Allele indel, AlleleCounts indelCounts) {
 		int chromosomeEnd = c2r.getReferenceLength(chromosome);
 		int length = Math.min(indel.getLength() * 20, chromosomeEnd-position-2);
 		String sequence = c2r.getSequence(chromosome, position+1, length);
 		
 		String bases;
-		if (indel.getOperator() == CigarOperator.D) {
+		if (indel.getType() == Allele.Type.DEL) {
 			bases = sequence.substring(0, indel.getLength());
 		} else {
-			bases = insertBases;
+			bases = indelCounts.getPreferredInsertBases();
 		}
 		
 		int period = 0;
-		int index = 0;
-		while ((index+bases.length() < length) && (bases.equals(sequence.substring(index, index+bases.length())))) {
-			period += 1;
-			index += bases.length();
+		
+		if (bases.length() > 0) {
+			int index = 0;
+			while ((index+bases.length() < length) && (bases.equals(sequence.substring(index, index+bases.length())))) {
+				period += 1;
+				index += bases.length();
+			}
 		}
 		
 		return period;
-	}
-	
-	private void updateInsertBases(Map<String, Integer> insertBases, String bases) {
-		if (insertBases.containsKey(bases)) {
-			insertBases.put(bases, insertBases.get(bases) + 1);
-		} else {
-			insertBases.put(bases, 1);
-		}
-	}
-	
-	private String getInsertBaseConsensus(Map<String, Integer> insertBases, int length) {
-		int maxCount = -1;
-		String maxBases = null;
-		
-		for (String bases : insertBases.keySet()) {
-			int count = insertBases.get(bases);
-			if (count > maxCount) {
-				maxCount = count;
-				maxBases = bases;
-			}
-		}
-		
-		if (maxBases == null) {
-			StringBuffer buf = new StringBuffer(length);
-			for (int i=0; i<length; i++) {
-				buf.append('N');
-			}
-			maxBases = buf.toString();
-		}
-		
-		return maxBases;
-	}
-	
-	private boolean isNormalCountOK(int normalObs, int numNormalReads, int tumorObs, int numTumorReads) {
-		if (numNormalReads == 0) {
-			// Just proceed if normal depth is 0.
-			return true;
-		}
-		
-		double scalar = (double) numTumorReads / (double) numNormalReads;
-		double scaledNormalObs = (double) normalObs * scalar;
-		
-		// Require normal observations to be less than 10% of tumor observations (normalized)
-		return scaledNormalObs < tumorObs * MAX_NORMAL_OBS_AS_FRACTION_OF_TUMOR_OBS;
-	}
-	
-	private boolean sufficientDistanceFromReadEnd(SAMRecord read, int readIdx) {
-		boolean ret = false;
-		
-		if (readIdx >= MIN_DISTANCE_FROM_READ_END &&
-			readIdx <= read.getReadLength()-MIN_DISTANCE_FROM_READ_END-1) {
-				ret = true;
-		}
-		
-		return ret;
 	}
 	
 	private String getDelRefField(String chromosome, int position, int length) {
@@ -546,99 +595,7 @@ public class CadabraProcessor {
 	
 	private String getInsRefField(String chromosome, int position) {
 		return c2r.getSequence(chromosome, position, 1);
-	}
-	
-	private void cacheRecord(String chromosome, int position,
-			ReadsAtLocus normalReads, ReadsAtLocus tumorReads, CigarElement indel,
-			int tumorObs, int tumorRefObs, String insertBases, int maxContigMapq, int ym0, int ym1, int totalYm,
-			int minReadIndex, int maxReadIndex, int normalObs, int normalRefObs, int repeatPeriod,
-			double qual, int tumorRefFwd, int tumorRefRev, int tumorAltFwd, int tumorAltRev,
-			int normalRefFwd, int normalRefRev, int normalAltFwd, int normalAltRev, int tumorMapq0, int normalMapq0) {
-		
-		int normalDepth = normalReads.getReads().size();
-		int tumorDepth = tumorReads.getReads().size();
-		
-		String context = c2r.getSequence(chromosome, position-10, 20);
-		
-		StringBuffer buf = new StringBuffer();
-		buf.append(chromosome);
-		buf.append('\t');
-		buf.append(position);
-		buf.append("\t.\t");
-		
-		String ref = ".";
-		String alt = ".";
-		if (indel.getOperator() == CigarOperator.D) {
-			ref = getDelRefField(chromosome, position, indel.getLength());
-			alt = ref.substring(0, 1);
-		} else if (indel.getOperator() == CigarOperator.I) {
-			ref = getInsRefField(chromosome, position);
-			alt = ref + insertBases;
-		}
-		
-		buf.append(ref);
-		buf.append('\t');
-		buf.append(alt);
-		buf.append("\t");
-		buf.append(qual);
-		buf.append("\tPASS\t");
-		// <NNAF> is placeholder here
-		buf.append("SOMATIC;CMQ=" + maxContigMapq + ";CTX=" + context + ";REPEAT_PERIOD=" + repeatPeriod + ";NNAF=<NNAF>");
-		buf.append("\tDP:AD:YM0:YM1:YM:OBS:MIRI:MARI:SOR:MQ0\t");
-		buf.append(normalDepth);
-		buf.append(':');
-		buf.append(normalRefObs);
-		buf.append(',');
-		buf.append(normalObs);
-		buf.append(":0:0:0:0:0:0");
-
-		buf.append(':');		
-		buf.append(normalRefFwd);
-		buf.append(',');
-		buf.append(normalRefRev);
-		buf.append(',');
-		buf.append(normalAltFwd);
-		buf.append(',');
-		buf.append(normalAltRev);
-		
-		buf.append(':');
-		buf.append(normalMapq0);
-
-		buf.append('\t');
-		buf.append(tumorDepth);
-		buf.append(':');
-		buf.append(tumorRefObs);
-		buf.append(',');
-		buf.append(tumorObs);
-		buf.append(':');
-		buf.append(ym0);
-		buf.append(':');
-		buf.append(ym1);
-		buf.append(':');
-		buf.append(totalYm);
-		buf.append(':');
-		buf.append(tumorObs);
-		buf.append(':');
-		buf.append(minReadIndex);
-		buf.append(':');
-		buf.append(maxReadIndex);
-
-		buf.append(':');
-		buf.append(tumorRefFwd);
-		buf.append(',');
-		buf.append(tumorRefRev);
-		buf.append(',');
-		buf.append(tumorAltFwd);
-		buf.append(',');
-		buf.append(tumorAltRev);
-		
-		buf.append(':');
-		buf.append(tumorMapq0);
-		
-		recordCache.put(position, buf.toString());
-//		System.out.println(buf.toString());
-	}
-	
+	}	
 
 	private IndelInfo checkForIndelAtLocus(SAMRecord read, int refPos) {
 		IndelInfo elem = null;
@@ -649,7 +606,6 @@ public class CadabraProcessor {
 			String[] fields = contigInfo.split(":");
 			int contigPos = Integer.parseInt(fields[1]);
 			
-//			Cigar contigCigar = TextCigarCodec.getSingleton().decode(fields[2]);
 			Cigar contigCigar = TextCigarCodec.decode(fields[2]);
 			
 			// Check to see if contig contains indel at current locus
@@ -707,13 +663,15 @@ public class CadabraProcessor {
 				currRefPos += element.getLength();
 			} else if (element.getOperator() == CigarOperator.S) {
 				readIdx += element.getLength();
+			} else if (element.getOperator() == CigarOperator.N) {
+				currRefPos += element.getLength();
+			}
+			
+			if (currRefPos > refPos+1) {
+				break;
 			}
 		}
 		
 		return ret;
-	}
-	
-	private char getReadBase(SAMRecord read, int index) {
-		return (char) read.getReadBases()[index];
 	}
 }

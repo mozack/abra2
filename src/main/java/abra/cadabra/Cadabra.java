@@ -10,13 +10,17 @@ import abra.Feature;
 import abra.Logger;
 import abra.ThreadManager;
 
+import abra.cadabra.CadabraProcessor.SampleCall;
+import abra.cadabra.CadabraProcessor.SomaticCall;
+
 public class Cadabra {
 
 	private CompareToReference2 c2r;
 	
-	private Map<String, List<String>> chromosomeCalls = new HashMap<String, List<String>>();
-
-	public void callSomatic(String reference, String normal, String tumor, int numThreads) throws IOException, InterruptedException {
+	private Map<String, List<SampleCall>> chromosomeCalls = new HashMap<String, List<SampleCall>>();
+	private Map<String, List<SomaticCall>> chromosomeSomaticCalls = new HashMap<String, List<SomaticCall>>();
+	
+	public void call(String reference, String normalBam, String tumorBam, int numThreads) throws IOException, InterruptedException {
 		c2r = new CompareToReference2();
 		c2r.init(reference);
 		
@@ -26,8 +30,14 @@ public class Cadabra {
 		
 		for (String chromosome : c2r.getChromosomes()) {
 			Feature region = new Feature(chromosome, 1, c2r.getChromosomeLength(chromosome));
-			CadabraRunnable thread = new CadabraRunnable(threadManager, this, normal, tumor, 
-				c2r, region);
+			CadabraRunnable thread;
+			if (normalBam != null) {
+				thread = new CadabraRunnable(threadManager, this, normalBam, 
+						tumorBam, c2r, region);
+			} else {
+				thread = new CadabraRunnable(threadManager, this,
+						tumorBam, c2r, region);				
+			}
 			
 			threadManager.spawnThread(thread);
 		}
@@ -35,25 +45,42 @@ public class Cadabra {
 		threadManager.waitForAllThreadsToComplete();
 		
 		// Output calls.
-		for (String chromosome : c2r.getChromosomes()) {
-			for (String call : chromosomeCalls.get(chromosome)) {
-				System.out.println(call);
+		if (normalBam == null) {
+			// Simple calling
+			for (String chromosome : c2r.getChromosomes()) {
+				for (SampleCall call : chromosomeCalls.get(chromosome)) {
+					System.out.println(call);
+				}
+			}
+		} else {
+			// Somatic calling
+			for (String chromosome : c2r.getChromosomes()) {
+				for (SomaticCall call : chromosomeSomaticCalls.get(chromosome)) {
+					System.out.println(call);
+				}
 			}
 		}
 		
 		Logger.info("Cadabra done.");
 	}
 	
-	void addCalls(String chromosome, List<String> calls) {
+	void addCalls(String chromosome, List<SampleCall> calls) {
 		Logger.info("Choromosome: %s done.", chromosome);
-		synchronized(calls) {
+		synchronized(chromosomeCalls) {
 			chromosomeCalls.put(chromosome, calls);
+		}
+	}
+	
+	void addSomaticCalls(String chromosome, List<SomaticCall> calls) {
+		Logger.info("Choromosome: %s done.", chromosome);
+		synchronized(chromosomeSomaticCalls) {
+			chromosomeSomaticCalls.put(chromosome, calls);
 		}
 	}
 	
 	private void outputHeader() {
 		System.out.println("##fileformat=VCFv4.1");
-		System.out.println("#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NORMAL	TUMOR");
+		System.out.println("#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	SAMPLE");
 	}
 		
 	public static void main(String[] args) throws Exception {
@@ -78,15 +105,18 @@ public class Cadabra {
 //		String tumor = "/home/lmose/dev/abra/cadabra/ins/ttest.bam";
 		
 		if (args.length < 3) {
-			System.out.println("Usage: java -cp abra.jar abra.cadabra.Cadabra <reference> <normal_bam> <tumor_bam> <num_threads>");
+			System.out.println("Usage: java -cp abra.jar abra.cadabra.Cadabra <reference> <bam> <num_threads>");
 			System.exit(-1);
 		}
 		
 		String reference = args[0];
-		String normal = args[1];
+		int threads = Integer.parseInt(args[1]);
 		String tumor = args[2];
-		int threads = Integer.parseInt(args[3]);
+		String normal = null;
+		if (args.length > 3) {
+			normal = args[3];
+		}
 		
-		new Cadabra().callSomatic(reference, normal, tumor, threads);
+		new Cadabra().call(reference, normal, tumor, threads);
 	}
 }

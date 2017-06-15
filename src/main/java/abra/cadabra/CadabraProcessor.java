@@ -468,7 +468,7 @@ public class CadabraProcessor {
 			
 			double bbQual = calcPhredScaledQuality(refCounts.getCount(), altCounts.getCount(), usableDepth);
 			
-			String sampleInfo = String.format("%d:%d:%d,%d:%d,%d:%d:%d:%d,%d,%d,%d:%f:%d:%d:%f:%d:%f:0/1", totalReads, usableDepth, refCounts.getCount(), altCounts.getCount(),
+			String sampleInfo = String.format("%d:%d:%d,%d:%d,%d:%d:%d:%d,%d,%d,%d:%f:%d:%d:%f:%d:%f:./.", totalReads, usableDepth, refCounts.getCount(), altCounts.getCount(),
 					refCounts.getTotalCount(), altCounts.getTotalCount(),
 					altCounts.getMinReadIdx(), altCounts.getMaxReadIdx(), refCounts.getFwd(), refCounts.getRev(), altCounts.getFwd(), altCounts.getRev(),
 					fs, mapq0, ispan, vaf, mismatchExceededReads, bbQual);

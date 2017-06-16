@@ -565,7 +565,7 @@ public class CadabraProcessor {
 				filter += "STR;";
 			}
 			
-			if (tumor.hrun.getLength() >= 6) {
+			if (tumor.hrun != null && tumor.hrun.getLength() >= 6) {
 				filter += "HRUN;";
 			}
 			

@@ -408,6 +408,7 @@ public class CadabraProcessor {
 		int mismatchExceededReads;
 		HomopolymerRun hrun;
 		String context;
+		int ispan;
 		
 		SampleCall(String chromosome, int position, Allele ref, Allele alt, Map<Allele, AlleleCounts> alleleCounts, 
 				int totalReads, int usableDepth, double qual, int repeatPeriod, int mapq0, String refField, String altField,
@@ -439,6 +440,8 @@ public class CadabraProcessor {
 				this.hrun = HomopolymerRun.find(context);
 				this.context = context;
 			}
+			
+			ispan = altCounts == null ? 0 : altCounts.getMaxReadIdx()-altCounts.getMinReadIdx();
 		}
 		
 		public float getVaf() {
@@ -463,7 +466,6 @@ public class CadabraProcessor {
 				altCounts = AlleleCounts.EMPTY_COUNTS;
 			}
 			
-			int ispan = altCounts == null ? 0 : altCounts.getMaxReadIdx()-altCounts.getMinReadIdx();
 			float vaf = getVaf();
 			
 			double bbQual = calcPhredScaledQuality(refCounts.getCount(), altCounts.getCount(), usableDepth);
@@ -550,7 +552,28 @@ public class CadabraProcessor {
 			String normalInfo = normal.getSampleInfo(tumor.ref, tumor.alt);
 			String tumorInfo = tumor.getSampleInfo(tumor.ref, tumor.alt);
 			
-			return String.join("\t", tumor.chromosome, pos, ".", tumor.refField, tumor.altField, qualStr, "PASS", info, SampleCall.FORMAT, normalInfo, tumorInfo);
+			String filter = "";
+			if (tumor.getVaf() < .05) {
+				filter += "TUMOR_VAF;";
+			}
+			
+			if (tumor.ispan < 20) {
+				filter += "TUMOR_ISPAN;";
+			}
+			
+			if (tumor.repeatPeriod >= 6) {
+				filter += "STR;";
+			}
+			
+			if (tumor.hrun.getLength() >= 6) {
+				filter += "HRUN;";
+			}
+			
+			if (filter.equals("")) {
+				filter = "PASS";
+			}
+			
+			return String.join("\t", tumor.chromosome, pos, ".", tumor.refField, tumor.altField, qualStr, filter, info, SampleCall.FORMAT, normalInfo, tumorInfo);
 		}
 	}
 	

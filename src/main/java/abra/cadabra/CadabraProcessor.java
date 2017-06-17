@@ -2,11 +2,9 @@ package abra.cadabra;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import abra.CompareToReference2;
 import abra.Feature;
@@ -35,7 +33,6 @@ public class CadabraProcessor {
 	
 	List<SampleCall> sampleRecords = new ArrayList<SampleCall>();
 	List<SomaticCall> somaticCalls = new ArrayList<SomaticCall>();
-	Map<Integer, SampleCall> normalCalls = new HashMap<Integer, SampleCall>();
 	
 	CadabraProcessor(Cadabra cadabra, String tumorBam, CompareToReference2 c2r) {
 		this.cadabra = cadabra;
@@ -117,10 +114,6 @@ public class CadabraProcessor {
 						}
 					}
 					
-					if (normalCall.alt != null && (normalCall.alt.getType() == Allele.Type.DEL || normalCall.alt.getType() == Allele.Type.INS)) {
-						normalCalls.put(normalCall.position, normalCall);
-					}
-
 					normalReads = normalIter.next();
 					tumorReads = tumorIter.next();
 				}
@@ -136,33 +129,6 @@ public class CadabraProcessor {
 			}
 		}
 		
-		// Annotate somatic calls that have overlapping normal indels
-		for (SomaticCall call : somaticCalls) {
-			int pos = call.tumor.position;
-			int normalOverlap = 0;
-			
-			int stop = pos;
-			if (call.tumor.alt.getType() == Allele.Type.DEL) {
-				stop += call.tumor.alt.getLength()+1;
-			} else {
-				stop += 1;
-			}
-			
-			for (int i=pos-100; i<=stop; i++) {
-				SampleCall normalCall = normalCalls.get(pos);
-				if (normalCall != null) {
-					int normalStop = normalCall.alt.getType() == Allele.Type.DEL ? 
-							normalCall.position + normalCall.alt.getLength() + 1 : normalCall.position + 1;
-					if (normalStop >= pos) {
-						normalOverlap += 1;
-					}
-				}
-			}
-			
-			call.overlappingNormalAF = (float) normalOverlap / (float) call.normal.usableDepth;
-		}
-		
-		normalCalls.clear();
 		this.cadabra.addSomaticCalls(region.getSeqname(), somaticCalls);
 	}
 	

@@ -309,24 +309,21 @@ public class CadabraProcessor {
 			AlleleCounts altCounts = alleleCounts.get(alt);
 			AlleleCounts refCounts = alleleCounts.get(refAllele);
 			
-//			if (altCounts.getCount() >= MIN_SUPPORTING_READS && af >= MIN_ALLELE_FRACTION) {
+			double qual = isSomatic ? 0 : calcPhredScaledQuality(refCounts.getCount(), altCounts.getCount(), usableDepth);
+			int repeatPeriod = getRepeatPeriod(chromosome, position, alt, altCounts);
 
-				double qual = isSomatic ? 0 : calcPhredScaledQuality(refCounts.getCount(), altCounts.getCount(), usableDepth);
-				int repeatPeriod = getRepeatPeriod(chromosome, position, alt, altCounts);
-
-				String refField = "";
-				String altField = "";
-				if (alt.getType() == Allele.Type.DEL) {
-					refField = getDelRefField(chromosome, position, alt.getLength());
-					altField = refField.substring(0, 1);
-				} else if (alt.getType() == Allele.Type.INS) {
-					refField = getInsRefField(chromosome, position);
-					altField = refField + getPreferredInsertBases(alt, altCounts);
-				}
-				
-				call = new SampleCall(chromosome, position, refAllele, alt, alleleCounts, totalDepth, 
-						usableDepth, qual, repeatPeriod, tumorMapq0, refField, altField, mismatchExceededReads, refSeq);
-//			}
+			String refField = "";
+			String altField = "";
+			if (alt.getType() == Allele.Type.DEL) {
+				refField = getDelRefField(chromosome, position, alt.getLength());
+				altField = refField.substring(0, 1);
+			} else if (alt.getType() == Allele.Type.INS) {
+				refField = getInsRefField(chromosome, position);
+				altField = refField + getPreferredInsertBases(alt, altCounts);
+			}
+			
+			call = new SampleCall(chromosome, position, refAllele, alt, alleleCounts, totalDepth, 
+					usableDepth, qual, repeatPeriod, tumorMapq0, refField, altField, mismatchExceededReads, refSeq);
 		} else {
 			String refField = getInsRefField(chromosome, position);
 			String altField = ".";
@@ -356,7 +353,7 @@ public class CadabraProcessor {
 	
 	public static class SampleCall {
 		
-		public static final String FORMAT = "DP:DP2:AD:AD2:MIRI:MARI:SOR:FS:MQ0:ISPAN:VAF:MER:BB:GT";
+		public static final String FORMAT = "DP:DP2:AD:AD2:SOR:MQ0:ISPAN:VAF:MER:GT";
 		
 		String chromosome;
 		int position;
@@ -370,7 +367,6 @@ public class CadabraProcessor {
 		int mapq0;
 		String refField;
 		String altField;
-		double fs;
 		int mismatchExceededReads;
 		HomopolymerRun hrun;
 		String context;
@@ -392,13 +388,7 @@ public class CadabraProcessor {
 			this.refField = refField;
 			this.altField = altField;
 			
-			AlleleCounts refCounts = alleleCounts.get(ref);
 			AlleleCounts altCounts = alleleCounts.get(alt);
-			
-			if (refCounts != null && altCounts != null) {
-//				this.fs = strandBias(refCounts.getFwd(), refCounts.getRev(), altCounts.getFwd(), altCounts.getRev());
-				this.fs = 0;
-			}
 			
 			this.mismatchExceededReads = mismatchExceededReads;
 			
@@ -434,36 +424,30 @@ public class CadabraProcessor {
 			
 			float vaf = getVaf();
 			
-			String sampleInfo = String.format("%d:%d:%d,%d:%d,%d:%d:%d:%d,%d,%d,%d:%f:%d:%d:%f:%d:%f:./.", totalReads, usableDepth, refCounts.getCount(), altCounts.getCount(),
+			String sampleInfo = String.format("%d:%d:%d,%d:%d,%d:%d,%d,%d,%d:%d:%d:%.2f:%d:0/1", usableDepth, totalReads, 
+					refCounts.getCount(), altCounts.getCount(),
 					refCounts.getTotalCount(), altCounts.getTotalCount(),
-					altCounts.getMinReadIdx(), altCounts.getMaxReadIdx(), refCounts.getFwd(), refCounts.getRev(), altCounts.getFwd(), altCounts.getRev(),
-					fs, mapq0, ispan, vaf, mismatchExceededReads, qual);
+					refCounts.getFwd(), refCounts.getRev(), altCounts.getFwd(), altCounts.getRev(),
+					mapq0, ispan, vaf, mismatchExceededReads);
 
 			return sampleInfo;
 		}
 		
 		public String toString() {
 			
-			//
-			// chr1    14397   .       CTGT    C       31.08108108108108       PASS    SOMATIC;CMQ=0;CTX=TAAAAGCACACTGTTGGTTT;REPEAT_PERIOD=1;NNAF=<NNAF>      
-			// DP:AD:YM0:YM1:YM:OBS:MIRI:MARI:SOR:MQ0:GT       1092:51,23:0:0:0:23:5:36:0,51,1,22:981:0/1
 			String pos = String.valueOf(position);
-			String qualStr = String.valueOf(qual);
+			String qualStr = String.format("%.2f", qual);
 			
 			int hrunLen = hrun != null ? hrun.getLength() : 0;
 			char hrunBase = hrun != null ? hrun.getBase() : 'N';
 			int hrunPos = hrun != null ? hrun.getPos() : 0;
 			
-			String info = String.format("REPEAT_PERIOD=%d;HRUN=%d,%c,%d;REF=%s", repeatPeriod,
+			String info = String.format("STRP=%d;HRUN=%d,%c,%d;REF=%s", repeatPeriod,
 					hrunLen, hrunBase, hrunPos, context);
 			
 			String sampleInfo = getSampleInfo(ref, alt);
 			
-			String filter = "";
-			if (getVaf() < .1) {
-				filter += "VAF;";
-			}
-			
+			String filter = "";			
 			if (ispan < 20) {
 				filter += "ISPAN;";
 			}
@@ -505,7 +489,6 @@ public class CadabraProcessor {
 		SampleCall tumor;
 		
 		double qual;
-		float overlappingNormalAF;
 		HomopolymerRun hrun;
 		String context;
 		
@@ -527,21 +510,21 @@ public class CadabraProcessor {
 		public String toString() {
 			
 			String pos = String.valueOf(tumor.position);
-			String qualStr = String.valueOf(qual);
+			String qualStr = String.format("%.2f", qual);
 			int hrunLen = hrun != null ? hrun.getLength() : 0;
 			char hrunBase = hrun != null ? hrun.getBase() : 'N';
 			int hrunPos = hrun != null ? hrun.getPos() : 0;
 			
-			String info = String.format("REPEAT_PERIOD=%d;ONAF=%f;HRUN=%d,%c,%d;REF=%s", tumor.repeatPeriod, overlappingNormalAF,
+			String info = String.format("STRP=%d;HRUN=%d,%c,%d;REF=%s", tumor.repeatPeriod,
 					hrunLen, hrunBase, hrunPos, context);
 			
 			String normalInfo = normal.getSampleInfo(tumor.ref, tumor.alt);
 			String tumorInfo = tumor.getSampleInfo(tumor.ref, tumor.alt);
 			
 			String filter = "";
-			if (tumor.getVaf() < .05) {
-				filter += "TUMOR_VAF;";
-			}
+//			if (tumor.getVaf() < .05) {
+//				filter += "TUMOR_VAF;";
+//			}
 			
 			if (tumor.ispan < 20) {
 				filter += "TUMOR_ISPAN;";

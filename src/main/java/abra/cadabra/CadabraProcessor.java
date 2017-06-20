@@ -459,7 +459,28 @@ public class CadabraProcessor {
 			
 			String sampleInfo = getSampleInfo(ref, alt);
 			
-			return String.join("\t", chromosome, pos, ".", refField, altField, qualStr, "PASS", info, SampleCall.FORMAT, sampleInfo);
+			String filter = "";
+			if (getVaf() < .1) {
+				filter += "VAF;";
+			}
+			
+			if (ispan < 20) {
+				filter += "ISPAN;";
+			}
+			
+			if (repeatPeriod >= 6) {
+				filter += "STR;";
+			}
+			
+			if (hrunLen >= 6) {
+				filter += "HRUN;";
+			}
+			
+			if (filter.equals("")) {
+				filter = "PASS";
+			}
+			
+			return String.join("\t", chromosome, pos, ".", refField, altField, qualStr, filter, info, SampleCall.FORMAT, sampleInfo);
 		}
 	}
 	

@@ -472,7 +472,8 @@ public class CadabraProcessor {
 				filter += "STR;";
 			}
 			
-			if (hrunLen >= 6) {
+			// Filter short indels near homopolymer runs
+			if (hrunLen >= 6 && Math.abs(ref.getLength() - alt.getLength())<10) {
 				filter += "HRUN;";
 			}
 			
@@ -550,7 +551,8 @@ public class CadabraProcessor {
 				filter += "STR;";
 			}
 			
-			if (hrunLen >= 6) {
+			// Filter short indels near homopolymer runs
+			if (hrunLen >= 6 && Math.abs(tumor.ref.getLength() - tumor.alt.getLength())<10) {
 				filter += "HRUN;";
 			}
 			

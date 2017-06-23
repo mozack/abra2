@@ -34,6 +34,7 @@ public abstract class Options {
             if (options.has(HELP)) {
                 printHelp();
             } else {
+            	init();
                 validate();
             }
         } catch (joptsimple.OptionException e) {
@@ -49,4 +50,7 @@ public abstract class Options {
     abstract protected OptionParser getOptionParser();
     
     abstract protected void validate();
+    
+    protected void init() {
+    }
 }

@@ -10,17 +10,10 @@ public class CadabraRunnable extends AbraRunnable {
 	private CadabraProcessor processor;
 	private Feature region;
 
-	public CadabraRunnable(ThreadManager threadManager, Cadabra cadabra, String bam, 
+	public CadabraRunnable(ThreadManager threadManager, Cadabra cadabra, CadabraOptions options, 
 			CompareToReference2 c2r, Feature region) {
 		super(threadManager);
-		this.processor = new CadabraProcessor(cadabra, bam, c2r);
-		this.region = region;
-	}
-	
-	public CadabraRunnable(ThreadManager threadManager, Cadabra cadabra, 
-			String normalBam, String tumorBam, CompareToReference2 c2r, Feature region) {
-		super(threadManager);
-		this.processor = new CadabraProcessor(cadabra, normalBam, tumorBam, c2r);
+		this.processor = new CadabraProcessor(cadabra, options, c2r);
 		this.region = region;
 	}
 

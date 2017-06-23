@@ -20,32 +20,24 @@ public class Cadabra {
 	private Map<String, List<SampleCall>> chromosomeCalls = new HashMap<String, List<SampleCall>>();
 	private Map<String, List<SomaticCall>> chromosomeSomaticCalls = new HashMap<String, List<SomaticCall>>();
 	
-	public void call(String reference, String normalBam, String tumorBam, int numThreads) throws IOException, InterruptedException {
+	public void call(CadabraOptions options) throws IOException, InterruptedException {
 		c2r = new CompareToReference2();
-		c2r.init(reference);
+		c2r.init(options.getReference());
 		
 		outputHeader();
 		
-		ThreadManager threadManager = new ThreadManager(numThreads);
+		ThreadManager threadManager = new ThreadManager(options.getNumThreads());
 		
 		for (String chromosome : c2r.getChromosomes()) {
 			Feature region = new Feature(chromosome, 1, c2r.getChromosomeLength(chromosome));
-			CadabraRunnable thread;
-			if (normalBam != null) {
-				thread = new CadabraRunnable(threadManager, this, normalBam, 
-						tumorBam, c2r, region);
-			} else {
-				thread = new CadabraRunnable(threadManager, this,
-						tumorBam, c2r, region);				
-			}
-			
+			CadabraRunnable thread = new CadabraRunnable(threadManager, this, options, c2r, region);			
 			threadManager.spawnThread(thread);
 		}
 		
 		threadManager.waitForAllThreadsToComplete();
 		
 		// Output calls.
-		if (normalBam == null) {
+		if (options.getNormal() == null) {
 			// Simple calling
 			for (String chromosome : c2r.getChromosomes()) {
 				for (SampleCall call : chromosomeCalls.get(chromosome)) {
@@ -104,19 +96,11 @@ public class Cadabra {
 //		String normal = "/home/lmose/dev/abra/cadabra/ins/ntest.bam";
 //		String tumor = "/home/lmose/dev/abra/cadabra/ins/ttest.bam";
 		
-		if (args.length < 3) {
-			System.out.println("Usage: java -cp abra.jar abra.cadabra.Cadabra <reference> <bam> <num_threads>");
-			System.exit(-1);
-		}
+		CadabraOptions options = new CadabraOptions();
+		options.parseOptions(args);
 		
-		String reference = args[0];
-		int threads = Integer.parseInt(args[1]);
-		String tumor = args[2];
-		String normal = null;
-		if (args.length > 3) {
-			normal = args[3];
+		if (options.isValid()) {
+			new Cadabra().call(options);
 		}
-		
-		new Cadabra().call(reference, normal, tumor, threads);
 	}
 }

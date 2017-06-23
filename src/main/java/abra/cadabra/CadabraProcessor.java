@@ -19,8 +19,6 @@ import htsjdk.samtools.TextCigarCodec;
 public class CadabraProcessor {
 
 	private static final int MIN_SUPPORTING_READS = 2;
-	private static final double MIN_ALLELE_FRACTION = 0.10;
-	private static final int MIN_MAPQ = 20;
 	
 	private Cadabra cadabra;
 	private String normalBam;
@@ -30,19 +28,17 @@ public class CadabraProcessor {
 	private CompareToReference2 c2r;
 	private Feature region;
 	private int lastPos = 0;
+	CadabraOptions options;
 	
 	List<SampleCall> sampleRecords = new ArrayList<SampleCall>();
 	List<SomaticCall> somaticCalls = new ArrayList<SomaticCall>();
 	
-	CadabraProcessor(Cadabra cadabra, String tumorBam, CompareToReference2 c2r) {
+	CadabraProcessor(Cadabra cadabra, CadabraOptions options, CompareToReference2 c2r) {
 		this.cadabra = cadabra;
-		this.tumorBam = tumorBam;
+		this.options = options;
 		this.c2r = c2r;
-	}
-	
-	CadabraProcessor(Cadabra cadabra, String normalBam, String tumorBam, CompareToReference2 c2r) {
-		this(cadabra, tumorBam, c2r);
-		this.normalBam = normalBam;
+		this.tumorBam = options.getTumor();
+		this.normalBam = options.getNormal();
 	}
 	
 	void process(Feature region) {
@@ -75,7 +71,7 @@ public class CadabraProcessor {
 	
 	private boolean sampleCallExceedsThresholds(SampleCall call) {
 		return call.alt != null && call.alt != Allele.UNK && call.alleleCounts.get(call.alt).getCount() >= MIN_SUPPORTING_READS &&
-				call.getVaf() >= MIN_ALLELE_FRACTION;
+				call.getVaf() >= options.getMinVaf() && call.qual >= options.getMinQual();
 	}
 	
 	private void processSomatic() {
@@ -109,8 +105,10 @@ public class CadabraProcessor {
 								refSeq = c2r.getSequence(tumorCall.chromosome, tumorCall.position-9, 20);
 							}
 							
-							SomaticCall somaticCall = new SomaticCall(normalCall, tumorCall, refSeq);
-							somaticCalls.add(somaticCall);
+							SomaticCall somaticCall = new SomaticCall(normalCall, tumorCall, refSeq, options);
+							if (somaticCall.qual >= options.getMinQual() && somaticCall.tumor.getVaf() >= options.getMinVaf()) {
+								somaticCalls.add(somaticCall);
+							}
 						}
 					}
 					
@@ -223,10 +221,8 @@ public class CadabraProcessor {
 
 				totalDepth += 1;
 				
-				if (read.getMappingQuality() < MIN_MAPQ) {
-					if (read.getMappingQuality() == 0) {
-						tumorMapq0 += 1;
-					}
+				if (read.getMappingQuality() < options.getMinMapq()) {
+					tumorMapq0 += 1;
 					continue;
 				}
 				
@@ -323,7 +319,7 @@ public class CadabraProcessor {
 			}
 			
 			call = new SampleCall(chromosome, position, refAllele, alt, alleleCounts, totalDepth, 
-					usableDepth, qual, repeatPeriod, tumorMapq0, refField, altField, mismatchExceededReads, refSeq);
+					usableDepth, qual, repeatPeriod, tumorMapq0, refField, altField, mismatchExceededReads, refSeq, options);
 		} else {
 			String refField = getInsRefField(chromosome, position);
 			String altField = ".";
@@ -331,7 +327,7 @@ public class CadabraProcessor {
 			int rp = 0;
 			
 			call = new SampleCall(chromosome, position, refAllele, Allele.UNK, alleleCounts, totalDepth, 
-					usableDepth, qual, rp, tumorMapq0, refField, altField, mismatchExceededReads, refSeq);
+					usableDepth, qual, rp, tumorMapq0, refField, altField, mismatchExceededReads, refSeq, options);
 		}
 		
 		return call;
@@ -353,7 +349,7 @@ public class CadabraProcessor {
 	
 	public static class SampleCall {
 		
-		public static final String FORMAT = "DP:DP2:AD:AD2:SOR:MQ0:ISPAN:VAF:MER:GT";
+		public static final String FORMAT = "DP:DP2:AD:AD2:SOR:MQ0:ISPAN:VAF:MER:FS:GT";
 		
 		String chromosome;
 		int position;
@@ -371,10 +367,12 @@ public class CadabraProcessor {
 		HomopolymerRun hrun;
 		String context;
 		int ispan;
+		double fs;
+		CadabraOptions options;
 		
 		SampleCall(String chromosome, int position, Allele ref, Allele alt, Map<Allele, AlleleCounts> alleleCounts, 
 				int totalReads, int usableDepth, double qual, int repeatPeriod, int mapq0, String refField, String altField,
-				int mismatchExceededReads, String context) {
+				int mismatchExceededReads, String context, CadabraOptions options) {
 			this.chromosome = chromosome;
 			this.position = position;
 			this.ref = ref;
@@ -398,6 +396,7 @@ public class CadabraProcessor {
 			}
 			
 			ispan = altCounts == null ? 0 : altCounts.getMaxReadIdx()-altCounts.getMinReadIdx();
+			this.options = options;
 		}
 		
 		public float getVaf() {
@@ -424,11 +423,22 @@ public class CadabraProcessor {
 			
 			float vaf = getVaf();
 			
-			String sampleInfo = String.format("%d:%d:%d,%d:%d,%d:%d,%d,%d,%d:%d:%d:%.2f:%d:0/1", usableDepth, totalReads, 
+			// Calculate phred scaled probability of read orientations occurring by chance
+			int refFwd = refCounts.getFwd();
+			int refRev = refCounts.getRev();
+			int altFwd = altCounts.getFwd();
+			int altRev = altCounts.getRev();
+			
+			FishersExactTest test = new FishersExactTest();
+			double fsP = test.twoTailedTest(refFwd, refRev, altFwd, altRev);
+			// Use abs to get rid of -0
+			this.fs = Math.abs(-10 * Math.log10(fsP));
+			
+			String sampleInfo = String.format("%d:%d:%d,%d:%d,%d:%d,%d,%d,%d:%d:%d:%.2f:%d:%.2f:0/1", usableDepth, totalReads, 
 					refCounts.getCount(), altCounts.getCount(),
 					refCounts.getTotalCount(), altCounts.getTotalCount(),
 					refCounts.getFwd(), refCounts.getRev(), altCounts.getFwd(), altCounts.getRev(),
-					mapq0, ispan, vaf, mismatchExceededReads);
+					mapq0, ispan, vaf, mismatchExceededReads, fs);
 
 			return sampleInfo;
 		}
@@ -447,26 +457,50 @@ public class CadabraProcessor {
 			
 			String sampleInfo = getSampleInfo(ref, alt);
 			
-			String filter = "";			
-			if (ispan < 20) {
-				filter += "ISPAN;";
-			}
-			
-			if (repeatPeriod >= 6) {
-				filter += "STR;";
-			}
-			
-			// Filter short indels near homopolymer runs
-			if (hrunLen >= 6 && Math.abs(ref.getLength() - alt.getLength())<10) {
-				filter += "HRUN;";
-			}
-			
-			if (filter.equals("")) {
-				filter = "PASS";
-			}
-			
+			String filter = CadabraProcessor.applyFilters(this, null, options, hrunLen, qual);
+						
 			return String.join("\t", chromosome, pos, ".", refField, altField, qualStr, filter, info, SampleCall.FORMAT, sampleInfo);
 		}
+	}
+	
+	static String applyFilters(SampleCall tumor, SampleCall normal, CadabraOptions options, int hrunLen, double qual) {
+		String filter = "";
+		
+		// Filter variants that do not appear in sufficiently varying read positions
+		if (tumor.ispan < options.getIspanFilter()) {
+			filter += "ISPAN;";
+		}
+		
+		// Filter short tandem repeat expansion / contraction
+		if (options.getStrpFilter() > 0 && tumor.repeatPeriod >= options.getStrpFilter()) {
+			filter += "STR;";
+		}
+		
+		// Filter short indels near homopolymer runs
+		if (options.getHrunFilter() > 0 && hrunLen >= options.getHrunFilter() && Math.abs(tumor.ref.getLength() - tumor.alt.getLength())<10) {
+			filter += "HRUN;";
+		}
+		
+		// Too many low mapq reads
+		if ((float)tumor.mapq0 / (float)tumor.totalReads > options.getLowMQFilter()) {
+			filter += "LOW_MAPQ;";
+		} else if (normal != null && (float)normal.mapq0 / (float)normal.totalReads > options.getLowMQFilter()) {
+			filter += "LOW_MAPQ;";
+		}
+		
+		if (tumor.fs > options.getFsFilter()) {
+			filter += "FS;";
+		}
+		
+		if (qual < options.getQualFilter()) {
+			filter += "LOW_QUAL;";
+		}
+		
+		if (filter.equals("")) {
+			filter = "PASS";
+		}
+		
+		return filter;
 	}
 	
 	static double calcFisherExactPhredScaledQuality(int normalRefObs, int normalAltObs, int tumorRefObs, int tumorAltObs) {
@@ -489,10 +523,12 @@ public class CadabraProcessor {
 		SampleCall tumor;
 		
 		double qual;
+		double fs;
 		HomopolymerRun hrun;
 		String context;
+		CadabraOptions options;
 		
-		public SomaticCall(SampleCall normal, SampleCall tumor, String context) {
+		public SomaticCall(SampleCall normal, SampleCall tumor, String context, CadabraOptions options) {
 			this.normal = normal;
 			this.tumor = tumor;
 			
@@ -505,6 +541,7 @@ public class CadabraProcessor {
 			this.qual = calcFisherExactPhredScaledQuality(normalRef, normalAlt, tumorRef, tumorAlt);
 			this.hrun = HomopolymerRun.find(context);
 			this.context = context;
+			this.options = options;
 		}
 		
 		public String toString() {
@@ -521,27 +558,7 @@ public class CadabraProcessor {
 			String normalInfo = normal.getSampleInfo(tumor.ref, tumor.alt);
 			String tumorInfo = tumor.getSampleInfo(tumor.ref, tumor.alt);
 			
-			String filter = "";
-//			if (tumor.getVaf() < .05) {
-//				filter += "TUMOR_VAF;";
-//			}
-			
-			if (tumor.ispan < 20) {
-				filter += "TUMOR_ISPAN;";
-			}
-			
-			if (tumor.repeatPeriod >= 6) {
-				filter += "STR;";
-			}
-			
-			// Filter short indels near homopolymer runs
-			if (hrunLen >= 6 && Math.abs(tumor.ref.getLength() - tumor.alt.getLength())<10) {
-				filter += "HRUN;";
-			}
-			
-			if (filter.equals("")) {
-				filter = "PASS";
-			}
+			String filter = CadabraProcessor.applyFilters(tumor, normal, options, hrunLen, qual);
 			
 			return String.join("\t", tumor.chromosome, pos, ".", tumor.refField, tumor.altField, qualStr, filter, info, SampleCall.FORMAT, normalInfo, tumorInfo);
 		}

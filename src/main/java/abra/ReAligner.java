@@ -859,10 +859,12 @@ public class ReAligner {
 							
 							if (hasExtra) {
 								ContigAligner aligner = getContigAlignerForJunctionPermutation(permutation, region, chromosomeLength);
-								sswResult = aligner.align(contig);
-								if (sswResult != null && sswResult.getScore() > bestScore) {
-									bestScore = sswResult.getScore();
-									bestResult = sswResult;
+								if (aligner != null) {
+									sswResult = aligner.align(contig);
+									if (sswResult != null && sswResult.getScore() > bestScore) {
+										bestScore = sswResult.getScore();
+										bestResult = sswResult;
+									}
 								}
 							}
 						}

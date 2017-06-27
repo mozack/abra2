@@ -1091,15 +1091,15 @@ public class ReAligner {
 							assemblerSettings.getMinNodeFrequncy(), assemblerSettings.getMinBaseQuality(),
 							assemblerSettings.getMinEdgeRatio()/2.0, junctions, chromosomeLength);
 					
-//					if (shouldRetry) {
-//						Logger.debug("RETRY_ASSEMBLY: %s", region);
-//						// Indel near edge of contig indicates that we may have a low coverage indel encountered.
-//						// Try to reassemble using less stringent pruning to see if we can get greater coverage.
-//						results.clear();
-//						assemble(results, region, refSeq, bams, readsList, ssw, junctionAligners,
-//								assemblerSettings.getMinNodeFrequncy()/2, assemblerSettings.getMinBaseQuality()/2,
-//								assemblerSettings.getMinEdgeRatio()/2.0, junctions, chromosomeLength);
-//					}
+					if (shouldRetry) {
+						Logger.debug("RETRY_ASSEMBLY: %s", region);
+						// Indel near edge of contig indicates that we may have a low coverage indel encountered.
+						// Try to reassemble using less stringent pruning to see if we can get greater coverage.
+						results.clear();
+						assemble(results, region, refSeq, bams, readsList, ssw, junctionAligners,
+								assemblerSettings.getMinNodeFrequncy()/2, assemblerSettings.getMinBaseQuality()/2,
+								assemblerSettings.getMinEdgeRatio()/2.0, junctions, chromosomeLength);
+					}
 					
 					for (ContigAlignerResult sswResult : results) {
 						mappedContigs.put(new SimpleMapper(sswResult.getSequence(), maxMismatchRate), sswResult);

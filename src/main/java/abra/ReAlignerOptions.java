@@ -46,6 +46,7 @@ public class ReAlignerOptions extends Options {
 	private static final String CONTIG_ANCHOR = "ca";
 	private static final String NO_SORT = "nosort";
 	private static final String MAX_READ_MOVE_DISTANCE = "dist";
+	private static final String CHROMOSOMES_TO_SKIP = "skip";
 	
 	private OptionParser parser;
 	private boolean isValid;
@@ -90,6 +91,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(CONTIG_ANCHOR, "Contig anchor [M_bases_at_contig_edge, max_mismatches_at_edge").withRequiredArg().ofType(String.class).defaultsTo("10,2");
             parser.accepts(NO_SORT, "Do not attempt to sort final output");
             parser.accepts(MAX_READ_MOVE_DISTANCE, "Max read move distance").withRequiredArg().ofType(Integer.class).defaultsTo(1000);
+            parser.accepts(CHROMOSOMES_TO_SKIP, "If no target specified, skip realignment of chromosomes matching specified regex.  Skipped reads are output without modification.  Specify none to disable.").withRequiredArg().ofType(String.class).defaultsTo(ChromosomeRegex.DEFAULT_SKIP_REGEX);
     	}
     	
     	return parser;
@@ -149,6 +151,10 @@ public class ReAlignerOptions extends Options {
 			files = sams.split(",");
 		}
 		return files;
+	}
+	
+	public String getChromosomesToSkipRegex() {
+		return (String) getOptions().valueOf(CHROMOSOMES_TO_SKIP);
 	}
 		
 	public String getReference() {

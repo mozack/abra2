@@ -132,6 +132,10 @@ public class ReAligner {
 	
 	private ChromosomeChunker chromosomeChunker;
 	
+	private String chromosomesToSkipRegex;
+	private ChromosomeRegex chromosomeSkipRegex;
+	
+	
 	public void reAlign(String[] inputFiles, String[] outputFiles) throws Exception {
 		
 		this.inputSams = inputFiles;
@@ -1161,15 +1165,17 @@ public class ReAligner {
 		return regions;
 	}
 	
-	static List<Feature> getRegionsNoBed(int readLength, SAMFileHeader header) throws IOException {
+	private List<Feature> getRegionsNoBed(int readLength, SAMFileHeader header) throws IOException {
 		
 		List<Feature> regions = new ArrayList<Feature>();
 		
 		List<SAMSequenceRecord> refSeq = header.getSequenceDictionary().getSequences();
 		
 		for (SAMSequenceRecord seq : refSeq) {
-			Feature region = new Feature(seq.getSequenceName(), 1, seq.getSequenceLength());
-			regions.add(region);
+			if (!chromosomeSkipRegex.matches(seq.getSequenceName())) {
+				Feature region = new Feature(seq.getSequenceName(), 1, seq.getSequenceLength());
+				regions.add(region);
+			}
 		}
 		
 		regions = RegionLoader.collapseRegions(regions, readLength);
@@ -1404,6 +1410,8 @@ public class ReAligner {
 			System.setProperty("java.io.tmpdir", tmpDir);
 		}
 		
+		this.chromosomeSkipRegex = new ChromosomeRegex(chromosomesToSkipRegex);
+		
 		ContigAligner.init(swScoring);
 		
 		Set<PosixFilePermission> perms = new HashSet<PosixFilePermission>();
@@ -1560,6 +1568,7 @@ public class ReAligner {
 			realigner.finalCompressionLevel = options.getCompressionLevel();
 			realigner.minAnchorLen = options.getContigAnchor()[0];
 			realigner.maxAnchorMismatches = options.getContigAnchor()[1];
+			realigner.chromosomesToSkipRegex = options.getChromosomesToSkipRegex();
 			MAX_REGION_LENGTH = options.getWindowSize();
 			MIN_REGION_REMAINDER = options.getWindowOverlap();
 			REGION_OVERLAP = options.getWindowOverlap();

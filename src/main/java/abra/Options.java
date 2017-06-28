@@ -40,6 +40,7 @@ public abstract class Options {
         } catch (joptsimple.OptionException e) {
             System.err.println(e.getMessage());
             printHelp();
+            throw e;
         }
     }
     

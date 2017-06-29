@@ -508,12 +508,23 @@ public class CadabraProcessor {
 		// Calc p-value
 		double p = test.oneTailedTest(normalRefObs, normalAltObs, tumorRefObs, tumorAltObs);
 		
-		// Convert to phred scale
-		double qual = -10 * Math.log10(p);
+		double qual;
 		
-		// Round to tenths
-		qual = (int) (qual * 10);
-		qual = qual / 10.0;
+		if (p <= 0) {
+			// Don't allow division by 0 or rounding to negative value.
+			qual = 5000.0;
+		} else {
+			// Convert to phred scale
+			qual = -10 * Math.log10(p);
+			
+			// Round to tenths
+			qual = (int) (qual * 10);
+			qual = qual / 10.0;
+			
+			if (qual > 5000.0) {
+				qual = 5000.0;
+			}
+		}
 		
 		return qual;
 	}

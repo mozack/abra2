@@ -586,15 +586,8 @@ public class CadabraProcessor {
 			bases = indelCounts.getPreferredInsertBases();
 		}
 		
-		int period = 0;
-		
-		if (bases.length() > 0) {
-			int index = 0;
-			while ((index+bases.length() < length) && (bases.equals(sequence.substring(index, index+bases.length())))) {
-				period += 1;
-				index += bases.length();
-			}
-		}
+		String repeatUnit = RepeatUtils.getRepeatUnit(bases);
+		int period = RepeatUtils.getRepeatPeriod(repeatUnit, sequence);
 		
 		return period;
 	}

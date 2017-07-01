@@ -6,6 +6,8 @@ import htsjdk.samtools.SAMRecord;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -82,12 +84,14 @@ public class AltContigGenerator {
 		
 		return hasHighQualitySoftClipping;
 	}
-
-	public Collection<String> getAltContigs(List<List<SAMRecordWrapper>> readsList, CompareToReference2 c2r, int readLength) {
+	
+	public Collection<String> getAltContigs(List<List<SAMRecordWrapper>> readsList, CompareToReference2 c2r, int readLength, int numJuncPerms, Feature region) {
 		
 		List<ScoredContig> softClipContigs = new ArrayList<ScoredContig>();
 		
-		HashSet<Indel> indels = new HashSet<Indel>();
+		// TODO: Hacky, clean up...
+		Map<Indel, Indel> indels = new HashMap<Indel, Indel>();
+		List<Indel> indelList = new ArrayList<Indel>();
 		
 		Map<String, List<ScoredContig>> softClipByPos = new HashMap<String, List<ScoredContig>>();
 		
@@ -116,12 +120,17 @@ public class AltContigGenerator {
 								insertBases = read.getReadString().substring(start, stop);
 							}
 							
-							Indel indel = new Indel(type, read.getReferenceName(), read.getAlignmentStart() + elems.get(0).getLength(), elems.get(1).getLength(), insertBases);
-							indels.add(indel);
+							Indel indel = new Indel(type, read.getReferenceName(), read.getAlignmentStart() + elems.get(0).getLength(), elems.get(1).getLength(), insertBases, elems.get(0).getLength());
+							if (indels.containsKey(indel)) {
+								indels.get(indel).addReadPosition(elems.get(0).getLength());
+							} else {
+								indels.put(indel, indel);
+							}
 						} else if(SAMRecordUtils.getNumIndels(read) > 1) {
 							// Handle read containing multiple indels (create single contig)
 							List<Indel> indelComponents = new ArrayList<Indel>();
 							List<ReadBlock> readBlocks = SAMRecordUtils.getReadBlocks(read.getCigar(), read.getAlignmentStart());
+							int firstIdx = -1;
 							
 							// Loop through cigar ignoring edge elements
 							for (int i=1; i<read.getCigar().getCigarElements().size()-1; i++) {
@@ -139,13 +148,20 @@ public class AltContigGenerator {
 										insertBases = read.getReadString().substring(start, stop);
 									}
 									
-									Indel indel = new Indel(type, read.getReferenceName(), block.getRefPos(), elem.getLength(), insertBases);
+									if (firstIdx == -1) {
+										firstIdx = block.getReadPos()-1;
+									}
+									Indel indel = new Indel(type, read.getReferenceName(), block.getRefPos(), elem.getLength(), insertBases, block.getReadPos()-1);
 									indelComponents.add(indel);
 								}
 							}
 							
-							Indel indel = new Indel('C', read.getReferenceName(), indelComponents);
-							indels.add(indel);
+							Indel indel = new Indel('C', read.getReferenceName(), indelComponents, firstIdx);
+							if (indels.containsKey(indel)) {
+								indels.get(indel).addReadPosition(firstIdx);
+							} else {
+								indels.put(indel, indel);
+							}
 						}
 					}
 					
@@ -173,7 +189,12 @@ public class AltContigGenerator {
 		}
 
 		// Current set of contigs is from soft clipping.  These can grow to be too big.  Downsample if necessary.;
-		List<ScoredContig> filteredContigs = ScoredContig.filter(new ArrayList<ScoredContig>(softClipContigs),  this.maxSoftClipContigs);
+		int maxCombos = 1024;
+		int maxSCContigs = numJuncPerms == 0 ? maxSoftClipContigs : Math.min(maxSoftClipContigs, maxCombos/numJuncPerms);
+		List<ScoredContig> filteredContigs = ScoredContig.filter(new ArrayList<ScoredContig>(softClipContigs), maxSCContigs);
+		if (maxSCContigs != maxSoftClipContigs) {
+			Logger.info("MAX_SC_CONTIG\t%s\t%d", region, maxSCContigs);
+		}
 		
 		Set<String> contigs = new HashSet<String>();
 		for (ScoredContig contig : filteredContigs) {
@@ -185,7 +206,18 @@ public class AltContigGenerator {
 			contigs.add(cs.buildConsensus(posList));
 		}
 		
-		for (Indel indel : indels) {
+		// Do not allow obs indel list to grow too big.
+		// Score based upon number of unique read index start positions
+		// TODO: parameterize?
+		indelList.addAll(indels.values());
+		int maxObsIndels = numJuncPerms == 0 ? 8 : Math.min(8, maxCombos/numJuncPerms);
+		indelList = Indel.filter(indelList, maxObsIndels);
+		
+		if (maxObsIndels != 8) {
+			Logger.info("MAX_OBS_CONTIG\t%s\t%d", region, maxObsIndels);
+		}
+		
+		for (Indel indel : indelList) {
 			if (indel.type == 'D') {
 				// Pull in read length sequence from both sides of deletion.
 				int leftStart = indel.pos - readLength;
@@ -262,20 +294,27 @@ public class AltContigGenerator {
 		int length;
 		String insert;
 		List<Indel> components;
+		Set<Integer> readPositions = new HashSet<Integer>();
 		
-		Indel(char type, String chr, int pos, int length, String insert) {
+		Indel(char type, String chr, int pos, int length, String insert, int readPos) {
 			this.type = type;
 			this.chr = chr;
 			this.pos = pos;
 			this.length = length;
 			this.insert = insert;
+			readPositions.add(readPos);
 		}
 		
 		// For complex indels
-		Indel(char type, String chr, List<Indel> indels) {
+		Indel(char type, String chr, List<Indel> indels, int readPos) {
 			this.type = type;
 			this.chr = chr;
 			this.components = indels;
+			readPositions.add(readPos);
+		}
+		
+		void addReadPosition(int readPos) {
+			readPositions.add(readPos);
 		}
 
 		@Override
@@ -324,5 +363,31 @@ public class AltContigGenerator {
 			return true;
 		}
 
+		static class IndelFreqComparator implements Comparator<Indel> {
+
+			@Override
+			public int compare(Indel i1, Indel i2) {
+				if (i1.readPositions.size() < i2.readPositions.size()) {
+					return 1;
+				} else if (i1.readPositions.size() > i2.readPositions.size()) {
+					return -1;
+				} else {
+					return 0;
+				}
+			}
+		}
+		
+		static List<Indel> filter(List<Indel> indels, int maxIndels) {
+			if (indels.size() > maxIndels) {
+				Logger.debug("Shrinking observed indels from %d to %d", indels.size(), indels);
+				Collections.shuffle(indels);
+				Collections.sort(indels, new IndelFreqComparator());
+				
+				// Subset to only the first MAX_CONTIGS
+				indels = indels.subList(0, maxIndels);
+			}
+
+			return indels;
+		}
 	}
 }

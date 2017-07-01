@@ -1135,7 +1135,7 @@ public class ReAligner {
 					// Go through artificial contig generation using indels observed in the original reads
 					AltContigGenerator altContigGenerator = new AltContigGenerator(softClipParams[0], softClipParams[1], softClipParams[2], softClipParams[3],
 							useObservedIndels, useSoftClippedReads, useConsensusSeq, minMappingQuality);
-					Collection<String> altContigs = altContigGenerator.getAltContigs(readsList, c2r, readLength);
+					Collection<String> altContigs = altContigGenerator.getAltContigs(readsList, c2r, readLength, junctionPermutations.size(), region);
 					
 					nonAssembledContigCount = altContigs.size();
 					

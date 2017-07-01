@@ -40,9 +40,9 @@ public class ScoredContig implements Comparable<ScoredContig> {
 		}
 	}
 	
-	public static List<ScoredContig> convertAndFilter(String contigStrings) {
-		return convertAndFilter(contigStrings, MAX_CONTIGS);
-	}
+//	public static List<ScoredContig> convertAndFilter(String contigStrings) {
+//		return convertAndFilter(contigStrings, MAX_CONTIGS);
+//	}
 	
 	public static List<ScoredContig> convertAndFilter(String contigStrings, int maxContigs) {
 		List<ScoredContig> contigs = new ArrayList<ScoredContig>();

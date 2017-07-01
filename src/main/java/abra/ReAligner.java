@@ -930,7 +930,7 @@ public class ReAligner {
 	private boolean assemble(List<ContigAlignerResult> results, Feature region, 
 			String refSeq, List<String> bams, List<List<SAMRecordWrapper>> readsList, ContigAligner contigAligner,
 			List<ContigAligner> junctionAligners, int mnf, int mbq, double mer, List<Feature> junctions,
-			int chromosomeLength) throws IOException {
+			int chromosomeLength, int maxNumContigs) throws IOException {
 		
 		boolean shouldRetry = false;
 		
@@ -945,7 +945,7 @@ public class ReAligner {
 				appendContigs(contigs);
 			}
 			
-			List<ScoredContig> scoredContigs = ScoredContig.convertAndFilter(contigs);
+			List<ScoredContig> scoredContigs = ScoredContig.convertAndFilter(contigs, maxNumContigs);
 			
 			// Map contigs to reference
 			for (ScoredContig contig : scoredContigs) {
@@ -1050,6 +1050,10 @@ public class ReAligner {
 			}
 		}
 		
+		int assembledContigCount = 0;
+		int nonAssembledContigCount = 0;
+		int juncPermCount = 0;
+		
 		if (isRegionOk) {
 			List<String> bams = new ArrayList<String>(Arrays.asList(this.inputSams));
 			
@@ -1079,9 +1083,12 @@ public class ReAligner {
 				Logger.warn("TOO_MANY_JUNCTION_PERMUTATIONS: " + region.getDescriptor() + "\t" + junctionPermutations.size());
 			} else {
 			
+				juncPermCount = junctionPermutations.size();
+				
 				for (List<Feature> junctionPerm : junctionPermutations) {
 					ContigAligner aligner = getContigAlignerForJunctionPermutation(junctionPerm, region, chromosomeLength);
 					if (aligner != null) {
+						Logger.debug("JUNC_REF_SEQ:\t%s\t%d", region.getDescriptor(), aligner.ref.length());
 						junctionAligners.add(aligner);
 					}
 				}
@@ -1090,10 +1097,21 @@ public class ReAligner {
 				if (this.isSkipAssembly || region.getKmer() > this.readLength-15) {
 					Logger.debug("Skipping assembly of region: " + region.getDescriptor() + " - " + region.getKmer());
 				} else {
+					
+					//
+					// Restrict # of contigs if junction count grows high.
+					// TODO: Paramaterize
+					int maxCombos = 1024;
+					int maxNumContigs = junctionPermutations.size() == 0 ? 128 : Math.min(128, maxCombos/junctionPermutations.size());
+					
+					if (maxNumContigs != 128) {
+						Logger.info("MAX_ASSEM_CONTIG\t%s\t%d", region, maxNumContigs);
+					}
+					
 					List<ContigAlignerResult> results = new ArrayList<ContigAlignerResult>();
 					boolean shouldRetry = assemble(results, region, refSeq, bams, readsList, ssw, junctionAligners,
 							assemblerSettings.getMinNodeFrequncy(), assemblerSettings.getMinBaseQuality(),
-							assemblerSettings.getMinEdgeRatio()/2.0, junctions, chromosomeLength);
+							assemblerSettings.getMinEdgeRatio()/2.0, junctions, chromosomeLength, maxNumContigs);
 					
 					if (shouldRetry) {
 						Logger.debug("RETRY_ASSEMBLY: %s", region);
@@ -1102,12 +1120,14 @@ public class ReAligner {
 						results.clear();
 						assemble(results, region, refSeq, bams, readsList, ssw, junctionAligners,
 								assemblerSettings.getMinNodeFrequncy()/2, assemblerSettings.getMinBaseQuality()/2,
-								assemblerSettings.getMinEdgeRatio()/2.0, junctions, chromosomeLength);
+								assemblerSettings.getMinEdgeRatio()/2.0, junctions, chromosomeLength, maxNumContigs);
 					}
 					
 					for (ContigAlignerResult sswResult : results) {
 						mappedContigs.put(new SimpleMapper(sswResult.getSequence(), maxMismatchRate), sswResult);
 					}
+					
+					assembledContigCount = mappedContigs.size();
 				}
 				
 				if (useSoftClippedReads || useObservedIndels) {
@@ -1116,6 +1136,8 @@ public class ReAligner {
 					AltContigGenerator altContigGenerator = new AltContigGenerator(softClipParams[0], softClipParams[1], softClipParams[2], softClipParams[3],
 							useObservedIndels, useSoftClippedReads, useConsensusSeq, minMappingQuality);
 					Collection<String> altContigs = altContigGenerator.getAltContigs(readsList, c2r, readLength);
+					
+					nonAssembledContigCount = altContigs.size();
 					
 					for (String contig : altContigs) {
 						// TODO: Check to see if this contig is already in the map before aligning
@@ -1134,7 +1156,10 @@ public class ReAligner {
 		
 		long stop = System.currentTimeMillis();
 		
-		Logger.debug("PROCESS_REGION_MSECS:\t%d\t%s", (stop-start), region.getDescriptor());
+		synchronized(this.getClass()) {
+			Logger.info("PROCESS_REGION_MSECS:\t%s\t%d\t%d\t%d\t%d", region.getDescriptor(), (stop-start), 
+					assembledContigCount, nonAssembledContigCount, juncPermCount);
+		}
 		
 		return mappedContigs;
 	}

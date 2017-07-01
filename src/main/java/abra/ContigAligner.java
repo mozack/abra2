@@ -19,7 +19,7 @@ public class ContigAligner {
 	
 	private String refChr;
 	private int refContextStart;
-	private String ref;
+	String ref;
 	private int minAnchorLength;
 	private int maxAnchorMismatches;
 	

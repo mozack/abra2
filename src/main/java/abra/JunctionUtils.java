@@ -16,7 +16,7 @@ import java.util.Set;
 
 public class JunctionUtils {
 
-	public static final int MAX_JUNCTION_PERMUTATIONS = 2056;
+	public static final int MAX_JUNCTION_PERMUTATIONS = 1024;
 	public static final int MAX_POTENTIAL_PERMUTATIONS = 65536;
 	/**
 	 * Load junctions from GTF using exons grouped by transcript_id
@@ -104,9 +104,7 @@ public class JunctionUtils {
 			// Junctions for current region
 			Set<Feature> localJunctions = new HashSet<Feature>();;
 			
-			// TODO: Use read length instead of maxRegionLength??
-			// TODO: Should this be window overlap?
-			int regionOverlap = maxRegionLength / 2;
+			int regionOverlap = readLength;
 //			for (int pos=(int) region.getStart()-maxRegionLength; pos<region.getEnd()+maxRegionLength; pos++) {
 //			for (int pos=(int) region.getStart()-readLength; pos<region.getEnd()+readLength; pos++) {
 			for (int pos=(int) region.getStart()-regionOverlap; pos<region.getEnd()+regionOverlap; pos++) {
@@ -173,7 +171,8 @@ public class JunctionUtils {
 		List<List<Feature>> junctionLists = combineAllJunctions(region, junctions, maxJuncDist, readLength);
 		
 		for (List<Feature> currJunctions : junctionLists) {
-			if (isJunctionCombinationValid(region, currJunctions, maxJuncDist, readLength)) {
+			if (isJunctionCombinationValid(region, currJunctions, maxJuncDist, readLength) &&
+				containsInRegionJunction(region, currJunctions, readLength)) {
 				combinedJunctions.add(currJunctions);
 			}
 		}
@@ -215,6 +214,26 @@ public class JunctionUtils {
 		}
 		
 		return junctionLists;
+	}
+	
+	private static boolean containsInRegionJunction(Feature region, List<Feature> junctions, int readLength) {
+		
+		// Require at least one junction endpoint to be within the region.
+		long start = region.getStart() - readLength;
+		long end = region.getEnd() + readLength;
+
+		for (Feature junction : junctions) {
+		
+			if (junction.getStart() > start && junction.getStart() < end) {
+				return true;
+			}
+			
+			if (junction.getEnd() > start && junction.getEnd() < end) {
+				return true;
+			}
+		}
+		
+		return false;
 	}
 	
 	// Assuming all inputs on same chromosome

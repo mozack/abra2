@@ -103,6 +103,7 @@ public class ReAligner {
 	private String tmpDir;
 	private int finalCompressionLevel;
 	private int maxRealignDist;
+	private int maxAssembledContigs;
 	
 	// If true, the input target file specifies kmer values
 	private boolean hasPresetKmers = false;
@@ -1102,9 +1103,9 @@ public class ReAligner {
 					// Restrict # of contigs if junction count grows high.
 					// TODO: Paramaterize
 					int maxCombos = 1024;
-					int maxNumContigs = junctionPermutations.size() == 0 ? 128 : Math.min(128, maxCombos/junctionPermutations.size());
+					int maxNumContigs = junctionPermutations.size() == 0 ? maxAssembledContigs : Math.min(maxAssembledContigs, maxCombos/junctionPermutations.size());
 					
-					if (maxNumContigs != 128) {
+					if (maxNumContigs != maxAssembledContigs) {
 						Logger.info("MAX_ASSEM_CONTIG\t%s\t%d", region, maxNumContigs);
 					}
 					
@@ -1580,6 +1581,7 @@ public class ReAligner {
 			realigner.useObservedIndels = options.useObservedIndels();
 			realigner.shouldSort = options.shouldSort();
 			realigner.maxRealignDist = options.getMaxRealignDist();
+			realigner.maxAssembledContigs = options.getMaxAssembledContigs();
 			realigner.useConsensusSeq = options.useConsensusSequence();
 			realigner.isKeepTmp = options.isKeepTmp();
 			realigner.tmpDir = options.getTmpDir();

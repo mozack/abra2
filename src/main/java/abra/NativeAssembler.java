@@ -134,6 +134,18 @@ public class NativeAssembler {
 		return len;
 	}
 	
+	public static int getInsertBases(SAMRecord read) {
+		int numInsertBases = 0;
+		
+		for (CigarElement element : read.getCigar().getCigarElements()) {
+			if (element.getOperator() == CigarOperator.I) {
+				numInsertBases += element.getLength();
+			}
+		}
+		
+		return numInsertBases;	
+	}
+	
 	//TODO: Consider always assembling regions that contain a junction as specified by input file.
 	private boolean isAssemblyTriggerCandidate(SAMRecord read, CompareToReference2 c2r) {
 		
@@ -145,14 +157,27 @@ public class NativeAssembler {
 		}
 		
 		int numGaps = countGaps(read.getCigar());
+		
+		int insertBases = getInsertBases(read);
+		
 		// More than one indel and/or splice in read
 //		if (numGaps > 1) {
 //			return true;
 //		}
 		
-		if (numGaps > 0 || maxSoftClipLength(read) > readLength/10) {
-			int qualAdjustedEditDist = c2r.numHighQualityMismatches(read, MIN_CANDIDATE_BASE_QUALITY) + SAMRecordUtils.getNumIndelBases(read);
-			if (qualAdjustedEditDist > (readLength/10)) {
+//		if (numGaps > 0) {
+//			int qualAdjustedEditDist = c2r.numHighQualityMismatches(read, MIN_CANDIDATE_BASE_QUALITY) + SAMRecordUtils.getNumIndelBases(read);
+//			if (qualAdjustedEditDist > (readLength * .25)) {
+//				return true;
+//			}			
+//		}
+		
+		if (insertBases > readLength * .15) {
+			return true;
+		}
+		
+		if (maxSoftClipLength(read) > readLength * .25) {
+			if (SAMRecordUtils.getNumHighQualBases(read, MIN_CANDIDATE_BASE_QUALITY) >= readLength * .9) {
 				return true;
 			}
 		}

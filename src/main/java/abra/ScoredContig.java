@@ -6,9 +6,6 @@ import java.util.List;
 
 public class ScoredContig implements Comparable<ScoredContig> {
 	
-	// TODO: Parameterize and optimize.
-	public static int MAX_CONTIGS = 128;
-
 	private double score;
 	private String contig;
 	

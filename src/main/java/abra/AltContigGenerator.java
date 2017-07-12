@@ -102,8 +102,8 @@ public class AltContigGenerator {
 				if (read.getMappingQuality() > minMapq) {
 					
 					if (useObservedIndels) {
-						// For now only use indels bracketed by 2 M elements
 						List<CigarElement> elems = read.getCigar().getCigarElements();
+						// Here we require indel to be bracketed by to M elements
 						if (elems.size() == 3 && 
 							elems.get(0).getOperator() == CigarOperator.M && 
 							elems.get(2).getOperator() == CigarOperator.M &&
@@ -166,7 +166,8 @@ public class AltContigGenerator {
 					}
 					
 					// Add high quality soft clipped reads
-					if (useSoftClippedReads && hasHighQualitySoftClipping(readWrapper.getSamRecord())) {
+					if (useSoftClippedReads && !SAMRecordUtils.hasPossibleAdapterReadThrough(readWrapper.getSamRecord()) &&
+							hasHighQualitySoftClipping(readWrapper.getSamRecord())) {
 						
 						ScoredContig sc = new ScoredContig((double) SAMRecordUtils.sumBaseQuals(read) / (double) read.getReadLength(), read.getReadString());
 						
@@ -295,6 +296,7 @@ public class AltContigGenerator {
 		String insert;
 		List<Indel> components;
 		Set<Integer> readPositions = new HashSet<Integer>();
+		int count;
 		
 		Indel(char type, String chr, int pos, int length, String insert, int readPos) {
 			this.type = type;
@@ -303,6 +305,7 @@ public class AltContigGenerator {
 			this.length = length;
 			this.insert = insert;
 			readPositions.add(readPos);
+			count = 1;
 		}
 		
 		// For complex indels
@@ -311,10 +314,12 @@ public class AltContigGenerator {
 			this.chr = chr;
 			this.components = indels;
 			readPositions.add(readPos);
+			count = 1;
 		}
 		
 		void addReadPosition(int readPos) {
 			readPositions.add(readPos);
+			count += 1;
 		}
 
 		@Override

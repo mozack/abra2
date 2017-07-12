@@ -512,6 +512,19 @@ public class SAMRecordUtils {
         return Collections.unmodifiableList(alignmentBlocks);
     }
 	
+	public static boolean hasPossibleAdapterReadThrough(SAMRecord read) {
+		
+		boolean ret = false;
+		
+		if (read.getReadPairedFlag() && !read.getReadUnmappedFlag() && !read.getMateUnmappedFlag()) {
+			if (read.getAlignmentStart() == read.getMateAlignmentStart()) {
+				ret = true;
+			}
+		}
+		
+		return ret;
+	}
+	
 	public static class ReadBlock {
 		private int readPos;
 		private int refPos;

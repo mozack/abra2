@@ -146,7 +146,6 @@ public class NativeAssembler {
 		return numInsertBases;	
 	}
 	
-	//TODO: Consider always assembling regions that contain a junction as specified by input file.
 	private boolean isAssemblyTriggerCandidate(SAMRecord read, CompareToReference2 c2r) {
 		
 		// High quality unmapped read anchored by mate

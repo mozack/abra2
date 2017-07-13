@@ -5,6 +5,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import htsjdk.samtools.Cigar;
 import htsjdk.samtools.CigarElement;
@@ -429,6 +430,51 @@ public class SAMRecordUtils {
 		return ((isPairedEnd) && (!read.getReadPairedFlag()));
 	}
 	
+	public static boolean hasPossibleAdapterReadThrough(SAMRecord read, Map<String, SAMRecord> firstReads, Map<String, SAMRecord> secondReads) {
+		
+		boolean hasReadThrough = false;
+		
+		// Check for fragment read through in paired end
+		if (read.getReadPairedFlag() && !read.getReadUnmappedFlag() && !read.getMateUnmappedFlag() &&
+				read.getAlignmentStart() == read.getMateAlignmentStart() &&
+				read.getReadNegativeStrandFlag() != read.getMateNegativeStrandFlag()) {
+			
+			SAMRecord pair = null;
+			
+			if (read.getFirstOfPairFlag()) {
+				pair = secondReads.get(read.getReadName() + "_" + read.getMateAlignmentStart());
+			} else {
+				pair = firstReads.get(read.getReadName() + "_" + read.getMateAlignmentStart());
+			}
+			
+			if (pair != null && read.getCigar().getCigarElements().size() > 0 && pair.getCigar().getCigarElements().size() > 0) {
+				
+				// Looking for something like:
+				//     -------->
+				//  <--------
+				SAMRecord first = null;
+				SAMRecord second = null;
+				if (read.getReadNegativeStrandFlag()) {
+					first = read;
+					second = pair;
+				} else {
+					first = pair;
+					second = read;
+				}
+				
+				CigarElement firstElement = first.getCigar().getFirstCigarElement();
+				CigarElement lastElement = second.getCigar().getLastCigarElement();
+				
+				if (firstElement.getOperator() == CigarOperator.S && lastElement.getOperator() == CigarOperator.S) {
+					// We likely have read through into adapter here.
+					hasReadThrough = true;
+				}
+			}
+		}
+
+		return hasReadThrough;
+	}
+	
 	/**
 	 * Returns true if the input read is primary.
 	 * i.e. Bit flag not secondary 0x200 or supplemental 0x800
@@ -511,20 +557,7 @@ public class SAMRecordUtils {
         }
         return Collections.unmodifiableList(alignmentBlocks);
     }
-	
-	public static boolean hasPossibleAdapterReadThrough(SAMRecord read) {
 		
-		boolean ret = false;
-		
-		if (read.getReadPairedFlag() && !read.getReadUnmappedFlag() && !read.getMateUnmappedFlag()) {
-			if (read.getAlignmentStart() == read.getMateAlignmentStart()) {
-				ret = true;
-			}
-		}
-		
-		return ret;
-	}
-	
 	public static class ReadBlock {
 		private int readPos;
 		private int refPos;

@@ -46,6 +46,9 @@ public class SAMRecordWrapper {
 		this.isUnalignedRc = isUnalignedRc;
 	}
 
+	public void setShouldAssemble(boolean shouldAssemble) {
+		this.shouldAssemble = false;
+	}
 	public int getAdjustedAlignmentStart() {
 		
 		//TODO: Adjust unmapped reads by fragment length??

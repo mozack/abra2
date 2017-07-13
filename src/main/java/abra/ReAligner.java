@@ -645,12 +645,29 @@ public class ReAligner {
 		
 		// Initialize per sample lists
 		for (List<SAMRecordWrapper> origSample : readsList) {
+			
+			// Track read pair ends
+			Map<String, SAMRecord> firstReads = new HashMap<String, SAMRecord>();
+			Map<String, SAMRecord> secondReads = new HashMap<String, SAMRecord>();
+			
 			List<SAMRecordWrapper> subsetSample = new ArrayList<SAMRecordWrapper>();
 			subset.add(subsetSample);
 			
 			for (SAMRecordWrapper read : origSample) {
 				if (region.overlapsRead(read.getSamRecord())) {
 					subsetSample.add(read);
+					
+					if (read.getSamRecord().getFirstOfPairFlag()) {
+						firstReads.put(read.getSamRecord().getReadName() + "_" + read.getSamRecord().getAlignmentStart(), read.getSamRecord());
+					} else if (read.getSamRecord().getSecondOfPairFlag()) {
+						secondReads.put(read.getSamRecord().getReadName() + "_" + read.getSamRecord().getAlignmentStart(), read.getSamRecord());
+					}
+				}
+			}
+			
+			for (SAMRecordWrapper read : subsetSample) {
+				if (SAMRecordUtils.hasPossibleAdapterReadThrough(read.getSamRecord(), firstReads, secondReads)) {
+					read.setShouldAssemble(false);
 				}
 			}
 		}
@@ -1050,6 +1067,8 @@ public class ReAligner {
 				break;
 			}
 		}
+		
+
 		
 		int assembledContigCount = 0;
 		int nonAssembledContigCount = 0;

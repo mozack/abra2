@@ -82,7 +82,6 @@ public class MultiSamReader implements Iterable<SAMRecordWrapper> {
 	
 	private boolean shouldAssemble(SAMRecord read) {
 		return (
-			!SAMRecordUtils.hasPossibleAdapterReadThrough(read) &&
 			(!read.getDuplicateReadFlag()) && 
 			(!read.getReadFailsVendorQualityCheckFlag()) &&
 			(read.getMappingQuality() >= this.minMapqForAssembly || read.getReadUnmappedFlag()) &&

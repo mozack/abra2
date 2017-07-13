@@ -166,7 +166,7 @@ public class AltContigGenerator {
 					}
 					
 					// Add high quality soft clipped reads
-					if (useSoftClippedReads && !SAMRecordUtils.hasPossibleAdapterReadThrough(readWrapper.getSamRecord()) &&
+					if (useSoftClippedReads && readWrapper.shouldAssemble() &&
 							hasHighQualitySoftClipping(readWrapper.getSamRecord())) {
 						
 						ScoredContig sc = new ScoredContig((double) SAMRecordUtils.sumBaseQuals(read) / (double) read.getReadLength(), read.getReadString());

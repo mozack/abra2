@@ -42,6 +42,7 @@ public class NativeAssembler {
 	private boolean isCycleExceedingThresholdDetected = false;
 	private double minEdgeRatio;
 	private int maxNodes;
+	private boolean isSkipUnmappedTrigger = false;
 
 	private native String assemble(String input, String output, String prefix,
 			int truncateOnRepeat, int maxContigs, int maxPathsFromRoot, int readLength, 
@@ -117,16 +118,18 @@ public class NativeAssembler {
 		return len;
 	}
 	
-	private int maxSoftClipLength(SAMRecord read) {
+	// Get length of longest soft clip element that also overlaps the current region.
+	private int maxSoftClipLength(SAMRecord read, Feature region) {
 		int len = 0;
 		if (read.getCigarLength() > 1) {
+			
 			CigarElement elem = read.getCigar().getCigarElement(0);
-			if (elem.getOperator() == CigarOperator.S) {
+			if (elem.getOperator() == CigarOperator.S && read.getAlignmentStart() >= region.getStart()) {
 				len = elem.getLength();
 			}
 			
 			elem = read.getCigar().getCigarElement(read.getCigarLength()-1);
-			if (elem.getOperator() == CigarOperator.S && elem.getLength() > len) {
+			if (elem.getOperator() == CigarOperator.S && elem.getLength() > len && read.getAlignmentEnd() <= region.getEnd()) {
 				len = elem.getLength();
 			}			
 		}
@@ -134,7 +137,7 @@ public class NativeAssembler {
 		return len;
 	}
 	
-	public static int getInsertBases(SAMRecord read) {
+	private int getInsertBases(SAMRecord read) {
 		int numInsertBases = 0;
 		
 		for (CigarElement element : read.getCigar().getCigarElements()) {
@@ -146,10 +149,10 @@ public class NativeAssembler {
 		return numInsertBases;	
 	}
 	
-	private boolean isAssemblyTriggerCandidate(SAMRecord read, CompareToReference2 c2r) {
+	private boolean isAssemblyTriggerCandidate(SAMRecord read, CompareToReference2 c2r, Feature region) {
 		
 		// High quality unmapped read anchored by mate
-		if (read.getReadUnmappedFlag() && !read.getMateUnmappedFlag() &&
+		if (!isSkipUnmappedTrigger && read.getReadUnmappedFlag() && !read.getMateUnmappedFlag() &&
 			read.getReadLength() >= readLength * .9 && 
 			SAMRecordUtils.getNumHighQualBases(read, MIN_CANDIDATE_BASE_QUALITY) >= readLength * .9) {
 			return true;
@@ -175,7 +178,7 @@ public class NativeAssembler {
 			return true;
 		}
 		
-		if (maxSoftClipLength(read) > readLength * .25) {
+		if (maxSoftClipLength(read, region) > readLength * .25) {
 			if (SAMRecordUtils.getNumHighQualBases(read, MIN_CANDIDATE_BASE_QUALITY) >= readLength * .9) {
 				return true;
 			}
@@ -242,7 +245,7 @@ public class NativeAssembler {
 				for (SAMRecordWrapper read : reads) {
 					
 					if (read.shouldAssemble()) {
-						if (!isAssemblyCandidate && isAssemblyTriggerCandidate(read.getSamRecord(), c2r)) {
+						if (!isAssemblyCandidate && isAssemblyTriggerCandidate(read.getSamRecord(), c2r, regions.get(0))) {
 //							System.err.println("trigger: " + sampleIdx + " : " + read.getSamRecord().getSAMString());
 							candidateReadCount++;
 						}
@@ -439,6 +442,10 @@ public class NativeAssembler {
 	
 	public void setMinReadCandidateFraction(double minReadCandidateFraction) {
 		this.minReadCandidateFraction = minReadCandidateFraction;
+	}
+	
+	public void setSkipUnmappedTrigger(boolean shouldSkip) {
+		this.isSkipUnmappedTrigger = shouldSkip;
 	}
 		
 	public boolean isCycleExceedingThresholdDetected() {

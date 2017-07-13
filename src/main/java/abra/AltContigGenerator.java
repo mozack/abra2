@@ -60,14 +60,14 @@ public class AltContigGenerator {
 	}
 	
 	// Return true if read contains a soft clip element >= 5 bases long with 80% or more of bases exceeding min base qual
-	private boolean hasHighQualitySoftClipping(SAMRecord read) {
+	private boolean hasHighQualitySoftClipping(SAMRecord read, Feature region) {
 		
 		boolean hasHighQualitySoftClipping = false;
 		
 		if (read.getCigarLength() > 1) {
 			// Check first cigar element
 			CigarElement elem = read.getCigar().getCigarElement(0);
-			if (elem.getOperator() == CigarOperator.S  && elem.getLength() > minSoftClipLength) {
+			if (elem.getOperator() == CigarOperator.S  && elem.getLength() > minSoftClipLength && read.getAlignmentStart() >= region.getStart()) {
 				int elemStart = 0;
 				hasHighQualitySoftClipping = hasHighQualitySoftClipping(read, elemStart, elem.getLength());
 			}
@@ -75,7 +75,7 @@ public class AltContigGenerator {
 			// Check last Cigar element
 			if (!hasHighQualitySoftClipping) {
 				elem = read.getCigar().getCigarElement(read.getCigarLength()-1);
-				if (elem.getOperator() == CigarOperator.S  && elem.getLength() > minSoftClipLength) {
+				if (elem.getOperator() == CigarOperator.S  && elem.getLength() > minSoftClipLength && read.getAlignmentEnd() <= region.getEnd()) {
 					int elemStart = read.getReadLength() - elem.getLength();
 					hasHighQualitySoftClipping = hasHighQualitySoftClipping(read, elemStart, elem.getLength());
 				}
@@ -103,7 +103,7 @@ public class AltContigGenerator {
 					
 					if (useObservedIndels) {
 						List<CigarElement> elems = read.getCigar().getCigarElements();
-						// Here we require indel to be bracketed by to M elements
+						// Here we require indel to be bracketed by 2 M elements
 						if (elems.size() == 3 && 
 							elems.get(0).getOperator() == CigarOperator.M && 
 							elems.get(2).getOperator() == CigarOperator.M &&
@@ -111,6 +111,7 @@ public class AltContigGenerator {
 							
 							String insertBases = null;
 							char type = '0';
+							
 							if (elems.get(1).getOperator() == CigarOperator.D) {
 								type = 'D';
 							} else if (elems.get(1).getOperator() == CigarOperator.I) {
@@ -120,11 +121,16 @@ public class AltContigGenerator {
 								insertBases = read.getReadString().substring(start, stop);
 							}
 							
-							Indel indel = new Indel(type, read.getReferenceName(), read.getAlignmentStart() + elems.get(0).getLength(), elems.get(1).getLength(), insertBases, elems.get(0).getLength());
-							if (indels.containsKey(indel)) {
-								indels.get(indel).addReadPosition(elems.get(0).getLength());
-							} else {
-								indels.put(indel, indel);
+							int refStart = read.getAlignmentStart() + elems.get(0).getLength();
+							
+							// Require indel start to be within region
+							if (refStart >= region.getStart() && refStart <= region.getEnd()) {
+								Indel indel = new Indel(type, read.getReferenceName(), refStart, elems.get(1).getLength(), insertBases, elems.get(0).getLength());
+								if (indels.containsKey(indel)) {
+									indels.get(indel).addReadPosition(elems.get(0).getLength());
+								} else {
+									indels.put(indel, indel);
+								}
 							}
 						} else if(SAMRecordUtils.getNumIndels(read) > 1) {
 							// Handle read containing multiple indels (create single contig)
@@ -151,6 +157,7 @@ public class AltContigGenerator {
 									if (firstIdx == -1) {
 										firstIdx = block.getReadPos()-1;
 									}
+																		
 									Indel indel = new Indel(type, read.getReferenceName(), block.getRefPos(), elem.getLength(), insertBases, block.getReadPos()-1);
 									indelComponents.add(indel);
 								}
@@ -167,7 +174,7 @@ public class AltContigGenerator {
 					
 					// Add high quality soft clipped reads
 					if (useSoftClippedReads && readWrapper.shouldAssemble() &&
-							hasHighQualitySoftClipping(readWrapper.getSamRecord())) {
+							hasHighQualitySoftClipping(readWrapper.getSamRecord(), region)) {
 						
 						ScoredContig sc = new ScoredContig((double) SAMRecordUtils.sumBaseQuals(read) / (double) read.getReadLength(), read.getReadString());
 						

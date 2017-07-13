@@ -95,6 +95,7 @@ public class ReAligner {
 	
 	private boolean isDebug;
 	private boolean isSkipAssembly;
+	private boolean isSkipUnmappedTrigger;
 	private boolean useSoftClippedReads;
 	private boolean useObservedIndels;
 	private boolean useConsensusSeq;
@@ -1437,6 +1438,7 @@ public class ReAligner {
 		assem.setMaxNodes(assemblerSettings.getMaxNodes());
 		assem.setMinReadCandidateFraction(assemblerSettings.getMinReadCandidateFraction());
 		assem.setMaxAverageDepth(assemblerSettings.getMaxAverageDepth());
+		assem.setSkipUnmappedTrigger(this.isSkipUnmappedTrigger);
 
 		return assem;
 	}
@@ -1597,6 +1599,7 @@ public class ReAligner {
 			realigner.maxReadsInRegion = options.getMaxReadsInRegion();
 			realigner.hasPresetKmers = options.hasPresetKmers();
 			realigner.isSkipAssembly = options.isSkipAssembly();
+			realigner.isSkipUnmappedTrigger = options.isSkipUnmappedAssemblyTrigger();
 			realigner.useObservedIndels = options.useObservedIndels();
 			realigner.shouldSort = options.shouldSort();
 			realigner.maxRealignDist = options.getMaxRealignDist();

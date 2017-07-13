@@ -48,6 +48,7 @@ public class ReAlignerOptions extends Options {
 	private static final String MAX_READ_MOVE_DISTANCE = "dist";
 	private static final String CHROMOSOMES_TO_SKIP = "skip";
 	private static final String MAX_ASSEMBLED_CONTIGS = "mac";
+	private static final String SKIP_UNMAPPED_ASSEMBLY_TRIGGER = "sua";
 	
 	private OptionParser parser;
 	private boolean isValid;
@@ -94,6 +95,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(MAX_READ_MOVE_DISTANCE, "Max read move distance").withRequiredArg().ofType(Integer.class).defaultsTo(1000);
             parser.accepts(CHROMOSOMES_TO_SKIP, "If no target specified, skip realignment of chromosomes matching specified regex.  Skipped reads are output without modification.  Specify none to disable.").withRequiredArg().ofType(String.class).defaultsTo(ChromosomeRegex.DEFAULT_SKIP_REGEX);
             parser.accepts(MAX_ASSEMBLED_CONTIGS, "Max assembled contigs").withRequiredArg().ofType(Integer.class).defaultsTo(64);
+            parser.accepts(SKIP_UNMAPPED_ASSEMBLY_TRIGGER, "Do not use unmapped reads anchored by mate to trigger assembly.  These reads are still eligible to contribute to assembly");
     	}
     	
     	return parser;
@@ -250,6 +252,10 @@ public class ReAlignerOptions extends Options {
 	
 	public boolean isSkipAssembly() {
 		return getOptions().has(SKIP_ASSEMBLY);
+	}
+	
+	public boolean isSkipUnmappedAssemblyTrigger() {
+		return getOptions().has(SKIP_UNMAPPED_ASSEMBLY_TRIGGER);
 	}
 	
 	public boolean isKeepTmp() {

@@ -391,7 +391,7 @@ public class AltContigGenerator {
 		
 		static List<Indel> filter(List<Indel> indels, int maxIndels) {
 			if (indels.size() > maxIndels) {
-				Logger.debug("Shrinking observed indels from %d to %d", indels.size(), indels);
+				Logger.debug("Shrinking observed indels from %d to %d", indels.size(), maxIndels);
 				Collections.shuffle(indels);
 				Collections.sort(indels, new IndelFreqComparator());
 				

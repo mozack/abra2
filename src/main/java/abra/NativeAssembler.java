@@ -124,12 +124,12 @@ public class NativeAssembler {
 		if (read.getCigarLength() > 1) {
 			
 			CigarElement elem = read.getCigar().getCigarElement(0);
-			if (elem.getOperator() == CigarOperator.S && read.getAlignmentStart() >= region.getStart()) {
+			if (elem.getOperator() == CigarOperator.S && read.getAlignmentStart() >= region.getStart()-readLength) {
 				len = elem.getLength();
 			}
 			
 			elem = read.getCigar().getCigarElement(read.getCigarLength()-1);
-			if (elem.getOperator() == CigarOperator.S && elem.getLength() > len && read.getAlignmentEnd() <= region.getEnd()) {
+			if (elem.getOperator() == CigarOperator.S && elem.getLength() > len && read.getAlignmentEnd() <= region.getEnd()+readLength) {
 				len = elem.getLength();
 			}			
 		}

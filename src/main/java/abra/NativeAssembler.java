@@ -337,8 +337,8 @@ public class NativeAssembler {
 							readLength,
 							kmer,
 							Math.max(mnf, 1),
-							Math.max(mbq, 20),  // TODO: Define  min mbq/mer elsewhere.
-							Math.max(mer, .001),
+							Math.max(mbq, 2),
+							Math.max(mer, .0001),
 							Logger.LEVEL == Logger.Level.DEBUG || Logger.LEVEL == Logger.Level.TRACE ? 1 : 0,
 							maxNodes);
 					

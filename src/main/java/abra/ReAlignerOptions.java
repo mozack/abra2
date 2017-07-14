@@ -63,12 +63,12 @@ public class ReAlignerOptions extends Options {
             parser.accepts(TARGET_REGIONS, "BED file containing target regions").withRequiredArg().ofType(String.class);
             parser.accepts(TARGET_REGIONS_WITH_KMERS, "BED-like file containing target regions with per region kmer sizes in 4th column").withRequiredArg().ofType(String.class);
             parser.accepts(KMER_SIZE, "Optional assembly kmer size(delimit with commas if multiple sizes specified)").withOptionalArg().ofType(String.class);
-            parser.accepts(MIN_NODE_FREQUENCY, "Assembly minimum node frequency").withRequiredArg().ofType(Integer.class).defaultsTo(2);
+            parser.accepts(MIN_NODE_FREQUENCY, "Assembly minimum node frequency").withRequiredArg().ofType(Integer.class).defaultsTo(1);
             parser.accepts(MIN_CONTIG_LENGTH, "Assembly minimum contig length").withOptionalArg().ofType(Integer.class).defaultsTo(-1);
             parser.accepts(NUM_THREADS, "Number of threads").withRequiredArg().ofType(Integer.class).defaultsTo(4);
             parser.accepts(MIN_MAPQ, "Minimum mapping quality for a read to be used in assembly and be eligible for realignment").withOptionalArg().ofType(Integer.class).defaultsTo(20);
             parser.accepts(SINGLE_END, "Input is single end");
-            parser.accepts(MIN_BASE_QUALITY, "Minimum base quality for inclusion in assembly.  This value is compared against the sum of base qualities per kmer position").withOptionalArg().ofType(Integer.class).defaultsTo(60);
+            parser.accepts(MIN_BASE_QUALITY, "Minimum base quality for inclusion in assembly.  This value is compared against the sum of base qualities per kmer position").withOptionalArg().ofType(Integer.class).defaultsTo(20);
             parser.accepts(MIN_READ_CANDIDATE_FRACTION, "Minimum read candidate fraction for triggering assembly").withRequiredArg().ofType(Double.class).defaultsTo(.01);
             parser.accepts(MAX_AVERAGE_REGION_DEPTH, "Regions with average depth exceeding this value will be downsampled").withRequiredArg().ofType(Integer.class).defaultsTo(250);
             parser.accepts(MIN_EDGE_RATIO, "Min edge pruning ratio.  Default value is appropriate for relatively sensitive somatic cases.  May be increased for improved speed in germline only cases.").withRequiredArg().ofType(Double.class).defaultsTo(.02);

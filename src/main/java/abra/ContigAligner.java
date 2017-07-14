@@ -83,18 +83,18 @@ public class ContigAligner {
 				(first.getOperator() != CigarOperator.M || first.getLength() < minAnchorLength || 
 				last.getOperator() != CigarOperator.M || last.getLength() < minAnchorLength)) {
 
-				if ((first.getOperator() != CigarOperator.M || last.getOperator() != CigarOperator.M) &&
-						cigar.toString().contains("I")) {
-					Logger.trace("INDEL_NEAR_END: %s", cigar.toString());
-					return ContigAlignerResult.INDEL_NEAR_END;
-				}
-				
-				if ((first.getLength() < 5 || last.getLength() < 5) && 
-						cigar.toString().contains("I") &&
-						minAnchorLength >= 5) {
-					Logger.trace("INDEL_NEAR_END: %s", cigar.toString());
-					return ContigAlignerResult.INDEL_NEAR_END;						
-				}
+//				if ((first.getOperator() != CigarOperator.M || last.getOperator() != CigarOperator.M) &&
+//						cigar.toString().contains("I")) {
+//					Logger.trace("INDEL_NEAR_END: %s", cigar.toString());
+//					return ContigAlignerResult.INDEL_NEAR_END;
+//				}
+//				
+//				if ((first.getLength() < 5 || last.getLength() < 5) && 
+//						cigar.toString().contains("I") &&
+//						minAnchorLength >= 5) {
+//					Logger.trace("INDEL_NEAR_END: %s", cigar.toString());
+//					return ContigAlignerResult.INDEL_NEAR_END;						
+//				}
 
 				return null;
 			}

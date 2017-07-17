@@ -419,8 +419,8 @@ void build_graph2(const char* input, dense_hash_map<const char*, struct node*, m
 		record++;
 	}
 
-	fprintf(stderr,"Num reads: %d\n", record);
-	fprintf(stderr,"Num nodes: %d\n", nodes->size());
+//	fprintf(stderr,"Num reads: %d\n", record);
+//	fprintf(stderr,"Num nodes: %d\n", nodes->size());
 }
 /*
 void build_graph(const char* read_file, sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, struct_pool* pool) {
@@ -714,7 +714,7 @@ void prune_graph(dense_hash_map<const char*, struct node*, my_hash, eqstr>* node
 		}
 	}
 
-	fprintf(stderr,"Remaining nodes after edge pruning: %d\n", nodes->size());
+//	fprintf(stderr,"Remaining nodes after edge pruning: %d\n", nodes->size());
 }
 
 void print_kmer(struct node* node) {

@@ -7,6 +7,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang.mutable.MutableFloat;
+
 import abra.ReAligner.Pair;
 import htsjdk.samtools.Cigar;
 import htsjdk.samtools.CigarElement;
@@ -431,7 +433,8 @@ public class SAMRecordUtils {
 		return ((isPairedEnd) && (!read.getReadPairedFlag()));
 	}
 	
-	private static Pair<String, String> consensusSeq(String s1, String s2, String qual1, String qual2, int maxMismatches) {
+	private static Pair<String, String> consensusSeq(String s1, String s2, String qual1, String qual2, int maxMismatches,
+			MutableFloat mismatchFrac) {
 		StringBuffer consensus = new StringBuffer();
 		StringBuffer consensusQual = new StringBuffer();
 		int numMismatches = 0;
@@ -461,6 +464,8 @@ public class SAMRecordUtils {
 			}
 		}
 		
+		mismatchFrac.setValue((float) numMismatches / (float) s1.length());
+		
 		return new Pair<String,String>(consensus.toString(), consensusQual.toString());
 	}
 	
@@ -470,34 +475,48 @@ public class SAMRecordUtils {
 	public static Pair<String,String> mergeSequences(String seq1, String seq2, String qual1, String qual2) {
 		
 		String head2 = seq2.substring(0, MIN_OVERLAP);
-		int idx = seq1.lastIndexOf(head2);
 		
-		if (idx > 0) {
-			String tail1 = seq1.substring(idx);
-			int overlap = tail1.length();
-			if (seq2.length() > overlap) {
-				head2 = seq2.substring(0, overlap);
-
-				
-				String qualTail1 = qual1.substring(idx);
-				String qualHead2 = qual2.substring(0, overlap);
-
-				
-				// Require 95% of bases to match
-				Pair<String,String> consensus = consensusSeq(tail1, head2, qualTail1, qualHead2, (int) (overlap *.95));
-
-				String mergedSeq  = seq1.substring(0, idx) + consensus.getFirst() + seq2.substring(overlap);
-				String mergedQual = qual1.substring(0, idx) + consensus.getSecond() + qual2.substring(overlap);
-				
-				return new Pair<String,String>(mergedSeq,mergedQual);
+		Pair<String,String> bestResult = null;
+		float bestMismatchFrac = 2;
+		
+		int idx = 0;
+		while (idx > -1) {
+			idx = seq1.indexOf(head2, idx+1);
+			
+			if (idx > -1) {
+				String tail1 = seq1.substring(idx);
+				int overlap = tail1.length();
+				if (seq2.length() > overlap) {
+					head2 = seq2.substring(0, overlap);
+	
+					String qualTail1 = qual1.substring(idx);
+					String qualHead2 = qual2.substring(0, overlap);
+					
+					MutableFloat mismatchFrac = new MutableFloat(0);
+					
+					// Require 95% of bases to match
+					Pair<String,String> consensus = consensusSeq(tail1, head2, qualTail1, qualHead2, (int) (overlap *.10), mismatchFrac);
+	
+					if (consensus != null) {
+						if (mismatchFrac.floatValue() < bestMismatchFrac) {
+							bestMismatchFrac = mismatchFrac.floatValue();
+							
+							String mergedSeq  = seq1.substring(0, idx) + consensus.getFirst() + seq2.substring(overlap);
+							String mergedQual = qual1.substring(0, idx) + consensus.getSecond() + qual2.substring(overlap);
+							bestResult = new Pair<String,String>(mergedSeq,mergedQual);
+						}
+					}
+				}
 			}
+		
 		}
 		
-		return null;
+		return bestResult;
 	}
 	
-	public static void mergeReadPair(SAMRecordWrapper readWrapper, Map<String, SAMRecordWrapper> firstReads, Map<String, SAMRecordWrapper> secondReads) {
+	public static int mergeReadPair(SAMRecordWrapper readWrapper, Map<String, SAMRecordWrapper> firstReads, Map<String, SAMRecordWrapper> secondReads) {
 		
+		int alignmentStart = -1;
 		SAMRecord read = readWrapper.getSamRecord();
 		
 		if (read.getReadPairedFlag() && !read.getReadUnmappedFlag() && !read.getMateUnmappedFlag() &&
@@ -534,11 +553,16 @@ public class SAMRecordUtils {
 					if (merged != null) {
 						readWrapper.setMergedSeqAndQual(merged.getFirst(), merged.getSecond());
 						pair.setMergedSeqAndQual(merged.getFirst(), merged.getSecond());
-						Logger.trace("Merging: %s : %s", readWrapper.getSamRecord().getReadName(), merged.getFirst());
+						
+						alignmentStart = first.getAdjustedAlignmentStart();
+						
+						Logger.trace("New Merging: %s : %s : %s", readWrapper.getSamRecord().getReadName(), merged.getFirst(), merged.getSecond());
 					}
 				}
 			}
 		}
+		
+		return alignmentStart;
 	}
 	
 	public static void mergeReadPairOld(SAMRecordWrapper readWrapper, Map<String, SAMRecordWrapper> firstReads, Map<String, SAMRecordWrapper> secondReads) {
@@ -593,7 +617,7 @@ public class SAMRecordUtils {
 								readWrapper.setMergedSeqAndQual(mergeSeq, mergedQual);
 								pair.setMergedSeqAndQual(mergeSeq, mergedQual);
 								
-								Logger.trace("Merging: %s : %s", firstRead.getReadName(), mergeSeq);
+								Logger.trace("OLD Merging: %s : %s", firstRead.getReadName(), mergeSeq);
 							}
 						}
 					}

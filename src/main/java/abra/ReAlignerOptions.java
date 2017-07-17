@@ -70,9 +70,9 @@ public class ReAlignerOptions extends Options {
             parser.accepts(SINGLE_END, "Input is single end");
             parser.accepts(MIN_BASE_QUALITY, "Minimum base quality for inclusion in assembly.  This value is compared against the sum of base qualities per kmer position").withOptionalArg().ofType(Integer.class).defaultsTo(20);
             parser.accepts(MIN_READ_CANDIDATE_FRACTION, "Minimum read candidate fraction for triggering assembly").withRequiredArg().ofType(Double.class).defaultsTo(.01);
-            parser.accepts(MAX_AVERAGE_REGION_DEPTH, "Regions with average depth exceeding this value will be downsampled").withRequiredArg().ofType(Integer.class).defaultsTo(250);
-            parser.accepts(MIN_EDGE_RATIO, "Min edge pruning ratio.  Default value is appropriate for relatively sensitive somatic cases.  May be increased for improved speed in germline only cases.").withRequiredArg().ofType(Double.class).defaultsTo(.02);
-            parser.accepts(MAX_NODES, "Maximum pre-pruned nodes in regional assembly").withOptionalArg().ofType(Integer.class).defaultsTo(9000);
+            parser.accepts(MAX_AVERAGE_REGION_DEPTH, "Regions with average depth exceeding this value will be downsampled").withRequiredArg().ofType(Integer.class).defaultsTo(1000);
+            parser.accepts(MIN_EDGE_RATIO, "Min edge pruning ratio.  Default value is appropriate for relatively sensitive somatic cases.  May be increased for improved speed in germline only cases.").withRequiredArg().ofType(Double.class).defaultsTo(.01);
+            parser.accepts(MAX_NODES, "Maximum pre-pruned nodes in regional assembly").withOptionalArg().ofType(Integer.class).defaultsTo(150000);
             parser.accepts(SKIP_ASSEMBLY, "Skip assembly");
             parser.accepts(JUNCTIONS, "Splice junctions definition file").withRequiredArg().ofType(String.class);
             parser.accepts(LOG_LEVEL, "Logging level (trace,debug,info,warn,error)").withRequiredArg().ofType(String.class).defaultsTo("info");
@@ -88,7 +88,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(CONSENSUS_SEQ, "Use positional consensus sequence when aligning high quality soft clipping");
             parser.accepts(MAX_MISMATCH_RATE, "Max allowed mismatch rate when mapping reads back to contigs").withRequiredArg().ofType(Double.class).defaultsTo(.05);
             parser.accepts(WINDOW_SIZE, "Processing window size and overlap (size,overlap)").withRequiredArg().ofType(String.class).defaultsTo("400,200");
-            parser.accepts(MAX_READS_IN_REGION, "Regions containing more reads than this value are not processed.  Use -1 to disable.").withRequiredArg().ofType(Integer.class).defaultsTo(10000);
+            parser.accepts(MAX_READS_IN_REGION, "Regions containing more reads than this value are not processed.  Use -1 to disable.").withRequiredArg().ofType(Integer.class).defaultsTo(100000);
             parser.accepts(COMPRESSION_LEVEL, "Compression level of output bam file(s)").withRequiredArg().ofType(Integer.class).defaultsTo(5);
             parser.accepts(CONTIG_ANCHOR, "Contig anchor [M_bases_at_contig_edge, max_mismatches_at_edge").withRequiredArg().ofType(String.class).defaultsTo("10,2");
             parser.accepts(NO_SORT, "Do not attempt to sort final output");

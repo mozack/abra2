@@ -47,7 +47,7 @@ using google::dense_hash_set;
 #define MAX_SAMPLES 8
 
 // Kmers containing bases below this threshold are excluded from assembly.
-#define MIN_BASE_QUALITY 13
+#define MIN_BASE_QUALITY 8
 
 // Minimum edge frequency as percent
 // #define MIN_EDGE_FREQUENCY .01
@@ -419,8 +419,8 @@ void build_graph2(const char* input, dense_hash_map<const char*, struct node*, m
 		record++;
 	}
 
-//	fprintf(stderr,"Num reads: %d\n", record);
-//	fprintf(stderr,"Num nodes: %d\n", nodes->size());
+	fprintf(stderr,"Num reads: %d\n", record);
+	fprintf(stderr,"Num nodes: %d\n", nodes->size());
 }
 /*
 void build_graph(const char* read_file, sparse_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, struct_pool* pool) {
@@ -674,6 +674,7 @@ void prune_graph(dense_hash_map<const char*, struct node*, my_hash, eqstr>* node
 	// Now go back through and ensure that each node reaches minimum frequency threshold.
 	int freq = min_node_freq;
 
+	/*
 	if (!isUnalignedRegion) {
 		int increase_freq = nodes->size() / INCREASE_MIN_NODE_FREQ_THRESHOLD;
 
@@ -682,6 +683,7 @@ void prune_graph(dense_hash_map<const char*, struct node*, my_hash, eqstr>* node
 //			fprintf(stderr,"Increased mnf to: %d for nodes size: %d\n", freq, nodes->size());
 		}
 	}
+	*/
 
 	if (freq > 1) {
 		for (dense_hash_map<const char*, struct node*, my_hash, eqstr>::const_iterator it = nodes->begin();
@@ -712,7 +714,7 @@ void prune_graph(dense_hash_map<const char*, struct node*, my_hash, eqstr>* node
 		}
 	}
 
-//	fprintf(stderr,"Remaining nodes after edge pruning: %d\n", nodes->size());
+	fprintf(stderr,"Remaining nodes after edge pruning: %d\n", nodes->size());
 }
 
 void print_kmer(struct node* node) {
@@ -748,6 +750,10 @@ int is_root(struct node* node) {
 	if (node != NULL) {
 		if (node->fromNodes == NULL) {
 			// No from nodes means this is a root node.
+//			if (node->frequency > 1) {
+//				// Don't allow singleton to be a root
+//				is_root = 1;
+//			}
 			is_root = 1;
 		} else {
 			// Identify nodes that point to themselves with no other incoming edges.
@@ -790,7 +796,7 @@ struct linked_node* identify_root_nodes(dense_hash_map<const char*, struct node*
 //		fprintf(stderr,"\n");
 	}
 
-//	fprintf(stderr,"num root nodes: %d\n", count);
+	fprintf(stderr,"num root nodes: %d\n", count);
 
 	return root_nodes;
 }

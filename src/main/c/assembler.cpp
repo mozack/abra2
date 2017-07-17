@@ -796,7 +796,7 @@ struct linked_node* identify_root_nodes(dense_hash_map<const char*, struct node*
 //		fprintf(stderr,"\n");
 	}
 
-	fprintf(stderr,"num root nodes: %d\n", count);
+//	fprintf(stderr,"num root nodes: %d\n", count);
 
 	return root_nodes;
 }

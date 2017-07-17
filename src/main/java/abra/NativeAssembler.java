@@ -43,6 +43,7 @@ public class NativeAssembler {
 	private double minEdgeRatio;
 	private int maxNodes;
 	private boolean isSkipUnmappedTrigger = false;
+	private int maxReadLength; // Includes merged reads
 
 	private native String assemble(String input, String output, String prefix,
 			int truncateOnRepeat, int maxContigs, int maxPathsFromRoot, int readLength, 
@@ -53,16 +54,7 @@ public class NativeAssembler {
 	private boolean isHardClipped(SAMRecord read) {
 		return read.getCigarString().contains("H");
 	}
-	
-	private void filterPositionList(List<Integer> positions, int currentPos) {
-		Iterator<Integer> iter = positions.iterator();
-		while (iter.hasNext()) {
-			if (iter.next() < currentPos-readLength) {
-				iter.remove();
-			}
-		}
-	}
-	
+		
 	//
 	//  Require at lest <fraction> number of candidate reads per average region depth
 	//  inclusive of overlapping reads.
@@ -239,6 +231,8 @@ public class NativeAssembler {
 			
 			int sampleIdx = 0;
 			
+			maxReadLength = readLength;
+			
 			for (List<SAMRecordWrapper> reads : readsList) {
 				int candidateReadCount = 0;
 			
@@ -250,6 +244,8 @@ public class NativeAssembler {
 							candidateReadCount++;
 						}
 						unfilteredReads[sampleIdx] += 1;
+						
+						maxReadLength = Math.max(maxReadLength, read.getReadLength());
 					}
 				}
 				
@@ -269,8 +265,9 @@ public class NativeAssembler {
 				
 				if ((kmers.length == 0) || (kmers[0] < KmerSizeEvaluator.MIN_KMER)) {
 					KmerSizeEvaluator kmerEval = new KmerSizeEvaluator();
-					int kmer = kmerEval.identifyMinKmer(readLength, c2r, regions);
-					this.kmers = realigner.toKmerArray(kmer, readLength);
+					int kmer = kmerEval.identifyMinKmer(maxReadLength, c2r, regions);
+					// Cap max kmer size below buffer size in C code
+					this.kmers = realigner.toKmerArray(kmer, Math.min(maxReadLength,199));
 				}
 				
 				int downsampleTarget = desiredNumberOfReads(regions);
@@ -286,30 +283,41 @@ public class NativeAssembler {
 						keepProbability = (double) downsampleTarget / (double) unfilteredReads[sampleIdx];
 					}
 					
+					Set<String> mergedReadIds = new HashSet<String>();
+					
 					Random random = new Random(1);
+					//Random random = new Random(System.currentTimeMillis());
 					
 					for (SAMRecordWrapper readWrapper : reads) {
+						
 						SAMRecord read = readWrapper.getSamRecord();
+						
+						if (readWrapper.hasMergedSeq() && mergedReadIds.contains(read.getReadName())) {
+							// Only include merged sequence once
+							continue;
+						}
+						
+						mergedReadIds.add(read.getReadName());
 												
 						if (readWrapper.shouldAssemble() && random.nextDouble() < keepProbability) {
 							
 							readBuffer.append(sampleId);
 							readBuffer.append(read.getReadNegativeStrandFlag() ? "1" : "0");
 							
-							if (read.getReadString().length() == readLength) {
-								readBuffer.append(read.getReadString());
-								readBuffer.append(read.getBaseQualityString());
+							if (readWrapper.getReadLength() == maxReadLength) {
+								readBuffer.append(readWrapper.getSeq());
+								readBuffer.append(readWrapper.getQual());
 							} else {
 								StringBuffer basePadding = new StringBuffer();
 								StringBuffer qualPadding = new StringBuffer();
 								
-								for (int i=0; i<readLength-read.getReadString().length(); i++) {
+								for (int i=0; i<maxReadLength-readWrapper.getReadLength(); i++) {
 									basePadding.append('N');
 									qualPadding.append('!');
 								}
 								
-								readBuffer.append(read.getReadString() + basePadding.toString());
-								readBuffer.append(read.getBaseQualityString() + qualPadding.toString());							
+								readBuffer.append(readWrapper.getSeq() + basePadding.toString());
+								readBuffer.append(readWrapper.getQual() + qualPadding.toString());							
 							}
 						}
 					}
@@ -334,7 +342,7 @@ public class NativeAssembler {
 							truncateOnRepeat ? 1 : 0,
 							maxContigs,
 							maxPathsFromRoot,
-							readLength,
+							maxReadLength,
 							kmer,
 							Math.max(mnf, 1),
 							Math.max(mbq, 2),

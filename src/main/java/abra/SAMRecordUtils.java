@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import abra.ReAligner.Pair;
 import htsjdk.samtools.Cigar;
 import htsjdk.samtools.CigarElement;
 import htsjdk.samtools.CigarOperator;
@@ -430,7 +431,178 @@ public class SAMRecordUtils {
 		return ((isPairedEnd) && (!read.getReadPairedFlag()));
 	}
 	
-	public static boolean hasPossibleAdapterReadThrough(SAMRecord read, Map<String, SAMRecord> firstReads, Map<String, SAMRecord> secondReads) {
+	private static Pair<String, String> consensusSeq(String s1, String s2, String qual1, String qual2, int maxMismatches) {
+		StringBuffer consensus = new StringBuffer();
+		StringBuffer consensusQual = new StringBuffer();
+		int numMismatches = 0;
+		
+		for (int i=0; i<s1.length(); i++) {
+			if (s1.charAt(i) != s2.charAt(i)) {
+
+				numMismatches += 1;
+				if (numMismatches > maxMismatches) {
+					return null;
+				} else {
+					if (qual1.charAt(i) >= qual2.charAt(i) + 10) {
+						consensus.append(s1.charAt(i));
+						consensusQual.append(qual1.charAt(i));
+					} else if (qual2.charAt(i) >= qual1.charAt(i) + 10) {
+						consensus.append(s2.charAt(i));
+						consensusQual.append(qual2.charAt(i));						
+					} else {
+						consensus.append('N');
+						consensusQual.append('!');
+					}
+				}
+				
+			} else {
+				consensus.append(s1.charAt(i));
+				consensusQual.append((char) Math.max(qual1.charAt(i), qual2.charAt(i))); 
+			}
+		}
+		
+		return new Pair<String,String>(consensus.toString(), consensusQual.toString());
+	}
+	
+	// TODO: Parameterize
+	private static int MIN_OVERLAP = 10;
+	
+	public static Pair<String,String> mergeSequences(String seq1, String seq2, String qual1, String qual2) {
+		
+		String head2 = seq2.substring(0, MIN_OVERLAP);
+		int idx = seq1.lastIndexOf(head2);
+		
+		if (idx > 0) {
+			String tail1 = seq1.substring(idx);
+			int overlap = tail1.length();
+			if (seq2.length() > overlap) {
+				head2 = seq2.substring(0, overlap);
+
+				
+				String qualTail1 = qual1.substring(idx);
+				String qualHead2 = qual2.substring(0, overlap);
+
+				
+				// Require 95% of bases to match
+				Pair<String,String> consensus = consensusSeq(tail1, head2, qualTail1, qualHead2, (int) (overlap *.95));
+
+				String mergedSeq  = seq1.substring(0, idx) + consensus.getFirst() + seq2.substring(overlap);
+				String mergedQual = qual1.substring(0, idx) + consensus.getSecond() + qual2.substring(overlap);
+				
+				return new Pair<String,String>(mergedSeq,mergedQual);
+			}
+		}
+		
+		return null;
+	}
+	
+	public static void mergeReadPair(SAMRecordWrapper readWrapper, Map<String, SAMRecordWrapper> firstReads, Map<String, SAMRecordWrapper> secondReads) {
+		
+		SAMRecord read = readWrapper.getSamRecord();
+		
+		if (read.getReadPairedFlag() && !read.getReadUnmappedFlag() && !read.getMateUnmappedFlag() &&
+				read.getReadNegativeStrandFlag() != read.getMateNegativeStrandFlag()) {
+			
+			SAMRecordWrapper pair = null;
+			
+			if (read.getFirstOfPairFlag()) {
+				pair = secondReads.get(read.getReadName() + "_" + read.getMateAlignmentStart());
+			} else {
+				pair = firstReads.get(read.getReadName() + "_" + read.getMateAlignmentStart());
+			}
+			
+			if (pair != null) {
+				SAMRecordWrapper first = null;
+				SAMRecordWrapper second = null;
+				if (read.getReadNegativeStrandFlag()) {
+					first = pair;
+					second = readWrapper;
+				} else {
+					first = readWrapper;
+					second = pair;
+				}
+
+				
+				if (first.getAdjustedAlignmentStart() < second.getAdjustedAlignmentStart() &&
+						first.getAdjustedAlignmentEnd() > second.getAdjustedAlignmentStart() &&
+						first.getSamRecord().getReadLength() > MIN_OVERLAP && 
+						second.getSamRecord().getReadLength() > MIN_OVERLAP) {
+
+					Pair<String, String> merged = mergeSequences(first.getSamRecord().getReadString(), second.getSamRecord().getReadString(),
+							first.getSamRecord().getBaseQualityString(), second.getSamRecord().getBaseQualityString());
+					
+					if (merged != null) {
+						readWrapper.setMergedSeqAndQual(merged.getFirst(), merged.getSecond());
+						pair.setMergedSeqAndQual(merged.getFirst(), merged.getSecond());
+						Logger.trace("Merging: %s : %s", readWrapper.getSamRecord().getReadName(), merged.getFirst());
+					}
+				}
+			}
+		}
+	}
+	
+	public static void mergeReadPairOld(SAMRecordWrapper readWrapper, Map<String, SAMRecordWrapper> firstReads, Map<String, SAMRecordWrapper> secondReads) {
+		
+		SAMRecord read = readWrapper.getSamRecord();
+		
+		if (read.getReadPairedFlag() && !read.getReadUnmappedFlag() && !read.getMateUnmappedFlag() &&
+				read.getReadNegativeStrandFlag() != read.getMateNegativeStrandFlag()) {
+			
+			SAMRecordWrapper pair = null;
+			
+			if (read.getFirstOfPairFlag()) {
+				pair = secondReads.get(read.getReadName() + "_" + read.getMateAlignmentStart());
+			} else {
+				pair = firstReads.get(read.getReadName() + "_" + read.getMateAlignmentStart());
+			}
+			
+			if (pair != null) {
+				SAMRecordWrapper first = null;
+				SAMRecordWrapper second = null;
+				if (read.getReadNegativeStrandFlag()) {
+					first = pair;
+					second = readWrapper;
+				} else {
+					first = readWrapper;
+					second = pair;
+				}
+				
+				int MIN_OVERLAP = 10;
+
+				if (first.getAdjustedAlignmentStart() < second.getAdjustedAlignmentStart() &&
+						first.getAdjustedAlignmentEnd() > second.getAdjustedAlignmentStart() &&
+						first.getSamRecord().getReadLength() > MIN_OVERLAP && 
+						second.getSamRecord().getReadLength() > MIN_OVERLAP) {
+					
+					SAMRecord firstRead = first.getSamRecord();
+					SAMRecord secondRead = second.getSamRecord();
+					String tail = firstRead.getReadString().substring(firstRead.getReadLength()-MIN_OVERLAP);
+					int idx = secondRead.getReadString().indexOf(tail);
+					if (idx >= 0) {
+						int overlap = idx + MIN_OVERLAP; // Number of overlapping bases
+						if (overlap < firstRead.getReadLength()) {
+							tail = firstRead.getReadString().substring(firstRead.getReadLength()-overlap);
+							String head = secondRead.getReadString().substring(0, overlap);
+							
+							// Requiring exact match here
+							if (tail.equals(head)) {
+								String mergeSeq = firstRead.getReadString() + secondRead.getReadString().substring(overlap);
+								
+								// TODO: Adjust base quality for merged sequence
+								String mergedQual = firstRead.getBaseQualityString() + secondRead.getBaseQualityString().substring(overlap);
+								readWrapper.setMergedSeqAndQual(mergeSeq, mergedQual);
+								pair.setMergedSeqAndQual(mergeSeq, mergedQual);
+								
+								Logger.trace("Merging: %s : %s", firstRead.getReadName(), mergeSeq);
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	
+	public static boolean hasPossibleAdapterReadThrough(SAMRecord read, Map<String, SAMRecordWrapper> firstReads, Map<String, SAMRecordWrapper> secondReads) {
 		
 		boolean hasReadThrough = false;
 		
@@ -439,7 +611,7 @@ public class SAMRecordUtils {
 				read.getAlignmentStart() == read.getMateAlignmentStart() &&
 				read.getReadNegativeStrandFlag() != read.getMateNegativeStrandFlag()) {
 			
-			SAMRecord pair = null;
+			SAMRecordWrapper pair = null;
 			
 			if (read.getFirstOfPairFlag()) {
 				pair = secondReads.get(read.getReadName() + "_" + read.getMateAlignmentStart());
@@ -447,7 +619,7 @@ public class SAMRecordUtils {
 				pair = firstReads.get(read.getReadName() + "_" + read.getMateAlignmentStart());
 			}
 			
-			if (pair != null && read.getCigar().getCigarElements().size() > 0 && pair.getCigar().getCigarElements().size() > 0) {
+			if (pair != null && read.getCigar().getCigarElements().size() > 0 && pair.getSamRecord().getCigar().getCigarElements().size() > 0) {
 				
 				// Looking for something like:
 				//     -------->
@@ -456,9 +628,9 @@ public class SAMRecordUtils {
 				SAMRecord second = null;
 				if (read.getReadNegativeStrandFlag()) {
 					first = read;
-					second = pair;
+					second = pair.getSamRecord();
 				} else {
-					first = pair;
+					first = pair.getSamRecord();
 					second = read;
 				}
 				
@@ -492,6 +664,17 @@ public class SAMRecordUtils {
 		}
 		
 		return length;
+	}
+	
+	public static int sumBaseQuals(String quals) {
+		int sum = 0;
+		
+		for (int i=0; i<quals.length(); i++) {
+			char ch = (char) (quals.charAt(i) - '!');
+			sum += ch;
+		}
+		
+		return sum;
 	}
 
 	public static int sumBaseQuals(SAMRecord read) {

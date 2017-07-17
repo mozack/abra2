@@ -176,7 +176,15 @@ public class AltContigGenerator {
 					if (useSoftClippedReads && readWrapper.shouldAssemble() &&
 							hasHighQualitySoftClipping(readWrapper.getSamRecord(), region)) {
 						
-						ScoredContig sc = new ScoredContig((double) SAMRecordUtils.sumBaseQuals(read) / (double) read.getReadLength(), read.getReadString());
+						ScoredContig sc;
+						
+						if (readWrapper.hasMergedSeq()) {
+							sc = new ScoredContig((double) SAMRecordUtils.sumBaseQuals(readWrapper.getMergedQual()) / (double) readWrapper.getReadLength(), readWrapper.getMergedSeq());
+						} else {
+							sc = new ScoredContig((double) SAMRecordUtils.sumBaseQuals(read) / (double) read.getReadLength(), read.getReadString());
+						}
+						
+//						ScoredContig sc = new ScoredContig((double) SAMRecordUtils.sumBaseQuals(read) / (double) read.getReadLength(), read.getReadString());
 						
 						if (useConsensusSeq) {
 							// Group by position and read length

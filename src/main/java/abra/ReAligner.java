@@ -648,8 +648,8 @@ public class ReAligner {
 		for (List<SAMRecordWrapper> origSample : readsList) {
 			
 			// Track read pair ends
-			Map<String, SAMRecord> firstReads = new HashMap<String, SAMRecord>();
-			Map<String, SAMRecord> secondReads = new HashMap<String, SAMRecord>();
+			Map<String, SAMRecordWrapper> firstReads = new HashMap<String, SAMRecordWrapper>();
+			Map<String, SAMRecordWrapper> secondReads = new HashMap<String, SAMRecordWrapper>();
 			
 			List<SAMRecordWrapper> subsetSample = new ArrayList<SAMRecordWrapper>();
 			subset.add(subsetSample);
@@ -659,9 +659,9 @@ public class ReAligner {
 					subsetSample.add(read);
 					
 					if (read.getSamRecord().getFirstOfPairFlag()) {
-						firstReads.put(read.getSamRecord().getReadName() + "_" + read.getSamRecord().getAlignmentStart(), read.getSamRecord());
+						firstReads.put(read.getSamRecord().getReadName() + "_" + read.getSamRecord().getAlignmentStart(), read);
 					} else if (read.getSamRecord().getSecondOfPairFlag()) {
-						secondReads.put(read.getSamRecord().getReadName() + "_" + read.getSamRecord().getAlignmentStart(), read.getSamRecord());
+						secondReads.put(read.getSamRecord().getReadName() + "_" + read.getSamRecord().getAlignmentStart(), read);
 					}
 				}
 			}
@@ -669,6 +669,11 @@ public class ReAligner {
 			for (SAMRecordWrapper read : subsetSample) {
 				if (SAMRecordUtils.hasPossibleAdapterReadThrough(read.getSamRecord(), firstReads, secondReads)) {
 					read.setShouldAssemble(false);
+				}
+				
+				// If reads overlap, attempt to generate merged sequence
+				if (!read.hasMergedSeq()) {
+					SAMRecordUtils.mergeReadPair(read, firstReads, secondReads);
 				}
 			}
 		}
@@ -1132,7 +1137,7 @@ public class ReAligner {
 					List<ContigAlignerResult> results = new ArrayList<ContigAlignerResult>();
 					boolean shouldRetry = assemble(results, region, refSeq, bams, readsList, ssw, junctionAligners,
 							assemblerSettings.getMinNodeFrequncy(), assemblerSettings.getMinBaseQuality(),
-							assemblerSettings.getMinEdgeRatio()/2.0, junctions, chromosomeLength, maxNumContigs);
+							assemblerSettings.getMinEdgeRatio(), junctions, chromosomeLength, maxNumContigs);
 					
 					if (shouldRetry) {
 						Logger.debug("RETRY_ASSEMBLY: %s", region);

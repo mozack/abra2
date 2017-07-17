@@ -14,6 +14,8 @@ public class SAMRecordWrapper {
 	private boolean shouldFilter;
 	private int sampleIdx;
 	private boolean isUnalignedRc = false;
+	private String mergedSeq = null;
+	private String mergedQual = null;
 	
 	public SAMRecordWrapper(SAMRecord record, boolean shouldFilter, boolean shouldAssemble, int sampleIdx) {
 		this.samRecord = record;
@@ -86,6 +88,54 @@ public class SAMRecordWrapper {
 		}
 
 		return end;
+	}
+	
+	public int getReadLength() {
+		int length = this.samRecord.getReadLength();
+		if (hasMergedSeq()) {
+			length = mergedSeq.length();
+		}
+		
+		return length;
+	}
+	
+	public String getMergedSeq() {
+		return mergedSeq;
+	}
+	
+	public String getMergedQual() {
+		return mergedQual;
+	}
+	
+	public String getSeq() {
+		String seq;
+		if (mergedSeq != null) {
+			seq = mergedSeq;
+		} else {
+			seq = samRecord.getReadString();
+		}
+		
+		return seq;
+	}
+	
+	public String getQual() {
+		String qual;
+		if (mergedQual != null) {
+			qual = mergedQual;
+		} else {
+			qual = samRecord.getBaseQualityString();
+		}
+		
+		return qual;
+	}
+
+	public void setMergedSeqAndQual(String mergedSeq, String mergedQual) {
+		this.mergedSeq = mergedSeq;
+		this.mergedQual = mergedQual;
+	}
+	
+	public boolean hasMergedSeq() {
+		return this.mergedSeq != null;
 	}
 	
 	public List<Span> getSpanningRegions() {

@@ -85,7 +85,7 @@ public class MultiSamReader implements Iterable<SAMRecordWrapper> {
 			(!read.getDuplicateReadFlag()) && 
 			(!read.getReadFailsVendorQualityCheckFlag()) &&
 			(read.getMappingQuality() >= this.minMapqForAssembly || read.getReadUnmappedFlag()) &&
-			(!read.getNotPrimaryAlignmentFlag()));  // Was previously an id check, so supplemental / secondary alignments could be included
+			SAMRecordUtils.isPrimary(read));  // Was previously an id check, so supplemental / secondary alignments could be included
 	}
 	
 	@Override

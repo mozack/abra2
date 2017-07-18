@@ -338,6 +338,8 @@ public class ReAligner {
 			}
 			*/
 			
+			int MAX_READ_RANGE = 1000 + this.readLength;
+			
 			// Check for out of scope reads every 2500 reads (TODO: is 2500 the best number?)
 			if (readCount % 2500 == 0) {
 				// Remap / output / clear out of scope reads
@@ -353,7 +355,7 @@ public class ReAligner {
 						SAMRecordWrapper read = iter.next();
 						
 						// record == most recent read.  read = cached read
-						if (record.getSamRecord().getAlignmentStart() - read.getSamRecord().getAlignmentStart() > this.maxRealignDist) {
+						if (record.getSamRecord().getAlignmentStart() - read.getSamRecord().getAlignmentStart() > MAX_READ_RANGE) {
 
 							// Only output reads with start pos within current chromosomeChunk
 							if (read.getSamRecord().getAlignmentStart() >= chromosomeChunk.getStart() &&
@@ -376,7 +378,7 @@ public class ReAligner {
 				// Remove out of scope region assemblies
 				List<Feature> regionsToRemove = new ArrayList<Feature>();
 				for (Feature region : regionContigs.keySet()) {
-					if (getFirstStartPos(currReads)-region.getStart() > maxRealignDist) {
+					if (getFirstStartPos(currReads)-region.getStart() > MAX_READ_RANGE) {
 						regionsToRemove.add(region);
 					}
 				}

@@ -220,6 +220,65 @@ public class SAMRecordUtilsTest {
 	}
 	
 	@Test (groups = "unit")
+	public void testMergeSequences() {
+		String s1 = "ATCGATTACGACTTGGGCAA";
+		String s2 =    "GATTACGACTTGGGCAACGC";
+		String q1 = "01234567890123456789";
+		String q2 =    "ABCDEF!ABCDEF!FF!!!!";
+		
+		Pair<String, String> merged = SAMRecordUtils.mergeSequences(s1, s2, q1, q2);
+		Assert.assertEquals(merged.getFirst(),  "ATCGATTACGACTTGGGCAACGC");
+		Assert.assertEquals(merged.getSecond(), "012ABCDEF9ABCDEF6FF9!!!");
+	}
+	
+	@Test (groups = "unit")
+	public void testMergeSequences_discordantMismatch() {
+		String s1 = "ATCGATTACGACTTGGGCTTTAA";
+		String s2 =    "GATTACGACTTGGGCCTTAACGC";
+		String q1 = "AAAAAAAAAAAAAAAAAAAAAAA";
+		String q2 =    "BBBBBBBBBBBBBBBBBBBBBBB";
+		
+		Pair<String, String> merged = SAMRecordUtils.mergeSequences(s1, s2, q1, q2);
+		Assert.assertEquals(merged.getFirst(),  "ATCGATTACGACTTGGGCNTTAACGC");
+		Assert.assertEquals(merged.getSecond(), "AAABBBBBBBBBBBBBBB!BBBBBBB");
+	}
+	
+	@Test (groups = "unit")
+	public void testMergeSequences_preferredMismatch() {
+		String s1 = "ATCGATTACGACTTGGGCTTTAA";
+		String s2 =    "GATTACGACTTGGGCCTTAACGC";
+		String q1 = "#######################";
+		String q2 =    "BBBBBBBBBBBBBBBBBBBBBBB";
+		
+		Pair<String, String> merged = SAMRecordUtils.mergeSequences(s1, s2, q1, q2);
+		Assert.assertEquals(merged.getFirst(),  "ATCGATTACGACTTGGGCCTTAACGC");
+		Assert.assertEquals(merged.getSecond(), "###BBBBBBBBBBBBBBBBBBBBBBB");
+	}
+	
+	@Test (groups = "unit")
+	public void testMergeSequences_tooManyMismatches() {
+		String s1 = "ATCGATTACGACTTGGGCTTTAA";
+		String s2 =    "GATTACGACTTGGGCCCCTAACGC";
+		String q1 = "#######################";
+		String q2 =    "BBBBBBBBBBBBBBBBBBBBBBB";
+		
+		Pair<String, String> merged = SAMRecordUtils.mergeSequences(s1, s2, q1, q2);
+		Assert.assertEquals(merged,  null);
+	}
+	
+//	@Test (groups = "unit")
+//	public void testMergeSequences_mismatchNearStart() {
+//		String s1 = "ATCGAATACGACTTGGGCAA";
+//		String s2 =    "GATTACGACTTGGGCAACGC";
+//		String q1 = "01234567890123456789";
+//		String q2 =    "ABCDEF!ABCDEF!FF!!!!";
+//		
+//		Pair<String, String> merged = SAMRecordUtils.mergeSequences(s1, s2, q1, q2);
+//		Assert.assertEquals(merged.getFirst(),  "ATCGATTACGACTTGGGCAACGC");
+//		Assert.assertEquals(merged.getSecond(), "012ABCDEF9ABCDEF6FF9!!!");
+//	}
+	
+	@Test (groups = "unit")
 	public void testMergeSequences_multipleHeadHits() {
 		String s1 = "AAATCAGGCTAGGCTAAGCTATGATGTTCCTTAGATTAGGTGTATTAAATCCATTTTCAACTTACAATATTTTCAACTTACGACGAGTTTATCAGGAAGT";
 		String s2 = "TTCAACTTACAATATTTTCAACTTACGACGAGTTTATCAGGAAGTAACACCATCGTAAGTCAAGTAGCATCTGTATCAGGCAAAGTCATAGAACCATTTT";

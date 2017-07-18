@@ -4,8 +4,10 @@ package abra;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.lang.mutable.MutableFloat;
 
@@ -474,41 +476,57 @@ public class SAMRecordUtils {
 	
 	public static Pair<String,String> mergeSequences(String seq1, String seq2, String qual1, String qual2) {
 		
-		String head2 = seq2.substring(0, MIN_OVERLAP);
+		if (seq1.length() < MIN_OVERLAP+10 || seq2.length() < MIN_OVERLAP+10) {
+			return null;
+		}
+		
+		// Identify first 1 kmers in seq2
+		String[] head2Kmers = new String[1];
+		for (int i=0; i<head2Kmers.length; i++) {
+			head2Kmers[i] = seq2.substring(i, i+MIN_OVERLAP);
+		}
+		
+		// Search for seq2 head kmers in seq1
+		// Identify set of possible start positions in seq1
+		Set<Integer> indices = new HashSet<Integer>();
+		
+		for (int i=0; i<head2Kmers.length; i++) {
+			String head2Kmer = head2Kmers[i];
+			int idx = seq1.indexOf(head2Kmer, i);
+			while (idx > -1) {
+				indices.add(idx - i);
+				idx = seq1.indexOf(head2Kmer, idx+1);
+			}
+		}
 		
 		Pair<String,String> bestResult = null;
 		float bestMismatchFrac = 2;
 		
-		int idx = 0;
-		while (idx > -1) {
-			idx = seq1.indexOf(head2, idx+1);
+		for (int idx : indices) {
 			
-			if (idx > -1) {
-				String tail1 = seq1.substring(idx);
-				int overlap = tail1.length();
-				if (seq2.length() > overlap) {
-					head2 = seq2.substring(0, overlap);
-	
-					String qualTail1 = qual1.substring(idx);
-					String qualHead2 = qual2.substring(0, overlap);
-					
-					MutableFloat mismatchFrac = new MutableFloat(0);
-					
-					// Require 95% of bases to match
-					Pair<String,String> consensus = consensusSeq(tail1, head2, qualTail1, qualHead2, (int) (overlap *.10), mismatchFrac);
-	
-					if (consensus != null) {
-						if (mismatchFrac.floatValue() < bestMismatchFrac) {
-							bestMismatchFrac = mismatchFrac.floatValue();
-							
-							String mergedSeq  = seq1.substring(0, idx) + consensus.getFirst() + seq2.substring(overlap);
-							String mergedQual = qual1.substring(0, idx) + consensus.getSecond() + qual2.substring(overlap);
-							bestResult = new Pair<String,String>(mergedSeq,mergedQual);
-						}
+			String tail1 = seq1.substring(idx);
+			int overlap = tail1.length();
+			if (seq2.length() > overlap) {
+				String head2 = seq2.substring(0, overlap);
+
+				String qualTail1 = qual1.substring(idx);
+				String qualHead2 = qual2.substring(0, overlap);
+				
+				MutableFloat mismatchFrac = new MutableFloat(0);
+				
+				// Require 90% of bases to match
+				Pair<String,String> consensus = consensusSeq(tail1, head2, qualTail1, qualHead2, (int) (overlap * .10), mismatchFrac);
+
+				if (consensus != null) {
+					if (mismatchFrac.floatValue() < bestMismatchFrac) {
+						bestMismatchFrac = mismatchFrac.floatValue();
+						
+						String mergedSeq  = seq1.substring(0, idx) + consensus.getFirst() + seq2.substring(overlap);
+						String mergedQual = qual1.substring(0, idx) + consensus.getSecond() + qual2.substring(overlap);
+						bestResult = new Pair<String,String>(mergedSeq,mergedQual);
 					}
 				}
 			}
-		
 		}
 		
 		return bestResult;

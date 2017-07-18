@@ -96,8 +96,20 @@ public class AltContigGenerator {
 		Map<String, List<ScoredContig>> softClipByPos = new HashMap<String, List<ScoredContig>>();
 		
 		for (List<SAMRecordWrapper> reads : readsList) {
+			
+			Set<String> mergedReadIds = new HashSet<String>();
+			
 			for (SAMRecordWrapper readWrapper : reads) {
 				SAMRecord read = readWrapper.getSamRecord();
+				
+				if (readWrapper.hasMergedSeq()) {
+					if (mergedReadIds.contains(read.getReadName())) {
+						// Only process merged read pair once.
+						continue;
+					} else {
+						mergedReadIds.add(read.getReadName());
+					}
+				}
 				
 				if (read.getMappingQuality() > minMapq) {
 					

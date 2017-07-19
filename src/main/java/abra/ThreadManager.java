@@ -56,8 +56,11 @@ public class ThreadManager {
 	
 	public void waitForAllThreadsToComplete() throws InterruptedException, IOException {
 		executor.shutdown();
-		while (!executor.awaitTermination(300, TimeUnit.SECONDS)) {
-			Logger.info("Waiting on " + threads.size() + " queued threads.");
+		while (!executor.awaitTermination(1, TimeUnit.SECONDS)) {
+			Runtime runtime = Runtime.getRuntime(); 
+			
+			Logger.info("Waiting on %d queued threads.\tmax_mem\t%d\ttotal_mem\t%d\tfree_mem\t%d", threads.size(),
+					runtime.maxMemory()/1024, runtime.totalMemory()/1024, runtime.freeMemory()/1024);
 		}
 	}
 

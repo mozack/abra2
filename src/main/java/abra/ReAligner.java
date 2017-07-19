@@ -1407,7 +1407,7 @@ public class ReAligner {
 	int[] toKmerArray(int kmerSize, int readLength) {
 		int[] kmerSizes = null;
 		
-		int maxKmerSize = this.readLength-5; 
+		int maxKmerSize = readLength-5; 
 		if (maxKmerSize > MAX_KMER_SIZE) {
 			maxKmerSize = MAX_KMER_SIZE;
 		}

@@ -395,6 +395,10 @@ public class CadabraProcessor {
 				this.context = context;
 			}
 			
+//			if (altCounts != null && position == 105243047) {
+//				System.out.println("foo");
+//			}
+			
 			ispan = altCounts == null ? 0 : altCounts.getMaxReadIdx()-altCounts.getMinReadIdx();
 			this.options = options;
 		}
@@ -614,6 +618,10 @@ public class CadabraProcessor {
 	private IndelInfo checkForIndelAtLocus(SAMRecord read, int refPos) {
 		IndelInfo elem = null;
 		
+//		if (refPos == 105243047 && read.getReadName().equals("D7T4KXP1:400:C5F94ACXX:5:2302:20513:30410")) {
+//			System.out.println("bar");
+//		}
+		
 		String contigInfo = read.getStringAttribute("YA");
 		if (contigInfo != null) {
 			// Get assembled contig info.
@@ -639,11 +647,22 @@ public class CadabraProcessor {
 					elem.setReadIndex(readElem.getReadIndex());
 					
 					// If this read overlaps the entire insert, capture the bases.
-					if (elem.getCigarElement().getOperator() == CigarOperator.I && 
-						elem.getCigarElement().getLength() == readElem.getCigarElement().getLength()) {
+					if (elem.getCigarElement().getOperator() == CigarOperator.I) {
+
+						if (elem.getCigarElement().getLength() == readElem.getCigarElement().getLength()) {
 					
-						String insertBases = read.getReadString().substring(readElem.getReadIndex(), readElem.getReadIndex()+readElem.getCigarElement().getLength());
-						elem.setInsertBases(insertBases);
+							String insertBases = read.getReadString().substring(readElem.getReadIndex(), readElem.getReadIndex()+readElem.getCigarElement().getLength());
+							elem.setInsertBases(insertBases);
+						} else if (readElem.getCigarElement().getLength() < elem.getCigarElement().getLength()) {
+							
+							int lengthDiff = elem.getCigarElement().getLength() - readElem.getCigarElement().getLength();
+							
+							if (readElem.getReadIndex() == 0) {
+								elem.setReadIndex(readElem.getReadIndex() - lengthDiff);
+							} else if (readElem.getReadIndex() == read.getReadLength()-1) {
+								elem.setReadIndex(readElem.getReadIndex() + lengthDiff);
+							}
+						}
 					}
 				}
 			}

@@ -573,8 +573,6 @@ public class SAMRecordUtils {
 						pair.setMergedSeqAndQual(merged.getFirst(), merged.getSecond());
 						
 						alignmentStart = first.getAdjustedAlignmentStart();
-						
-						Logger.trace("New Merging: %s : %s : %s", readWrapper.getSamRecord().getReadName(), merged.getFirst(), merged.getSecond());
 					}
 				}
 			}
@@ -722,7 +720,7 @@ public class SAMRecordUtils {
 	public static int sumBaseQuals(SAMRecord read) {
 		int sum = 0;
 		for (byte b : read.getBaseQualities()) {
-			sum += b - '!';
+			sum += b;
 		}
 		return sum;
 	}

@@ -395,10 +395,6 @@ public class CadabraProcessor {
 				this.context = context;
 			}
 			
-//			if (altCounts != null && position == 105243047) {
-//				System.out.println("foo");
-//			}
-			
 			ispan = altCounts == null ? 0 : altCounts.getMaxReadIdx()-altCounts.getMinReadIdx();
 			this.options = options;
 		}

@@ -47,11 +47,10 @@ public class ReadLocusReader implements Iterable<ReadsAtLocus> {
 		public ReadLocusIterator(SamReader samReader, Feature region) {
 	        	  
 			if (region != null) {
-				samIter = samReader.queryOverlapping(region.getSeqname(), (int) region.getStart(), (int) region.getEnd());
+				samIter = new ForwardShiftInsertIterator(samReader.queryOverlapping(region.getSeqname(), (int) region.getStart(), (int) region.getEnd()));
 			} else {
 				samIter = new ForwardShiftInsertIterator(samReader.iterator());
 			}
-//	        samIter = samReader.iterator();
 		}
 		
 		@Override

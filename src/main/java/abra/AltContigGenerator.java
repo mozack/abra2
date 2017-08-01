@@ -137,9 +137,9 @@ public class AltContigGenerator {
 							
 							// Require indel start to be within region
 							if (refStart >= region.getStart() && refStart <= region.getEnd()) {
-								Indel indel = new Indel(type, read.getReferenceName(), refStart, elems.get(1).getLength(), insertBases, elems.get(0).getLength());
+								Indel indel = new Indel(type, read.getReferenceName(), refStart, elems.get(1).getLength(), insertBases, elems.get(0).getLength(), SAMRecordUtils.sumBaseQuals(read));
 								if (indels.containsKey(indel)) {
-									indels.get(indel).addReadPosition(elems.get(0).getLength());
+									indels.get(indel).addReadPosition(elems.get(0).getLength(), SAMRecordUtils.sumBaseQuals(read));
 								} else {
 									indels.put(indel, indel);
 								}
@@ -170,14 +170,14 @@ public class AltContigGenerator {
 										firstIdx = block.getReadPos()-1;
 									}
 																		
-									Indel indel = new Indel(type, read.getReferenceName(), block.getRefPos(), elem.getLength(), insertBases, block.getReadPos()-1);
+									Indel indel = new Indel(type, read.getReferenceName(), block.getRefPos(), elem.getLength(), insertBases, block.getReadPos()-1, SAMRecordUtils.sumBaseQuals(read));
 									indelComponents.add(indel);
 								}
 							}
 							
-							Indel indel = new Indel('C', read.getReferenceName(), indelComponents, firstIdx);
+							Indel indel = new Indel('C', read.getReferenceName(), indelComponents, firstIdx, SAMRecordUtils.sumBaseQuals(read));
 							if (indels.containsKey(indel)) {
-								indels.get(indel).addReadPosition(firstIdx);
+								indels.get(indel).addReadPosition(firstIdx, SAMRecordUtils.sumBaseQuals(read));
 							} else {
 								indels.put(indel, indel);
 							}
@@ -324,8 +324,9 @@ public class AltContigGenerator {
 		List<Indel> components;
 		Set<Integer> readPositions = new HashSet<Integer>();
 		int count;
+		long baseQualSum;
 		
-		Indel(char type, String chr, int pos, int length, String insert, int readPos) {
+		Indel(char type, String chr, int pos, int length, String insert, int readPos, int readBaseQuals) {
 			this.type = type;
 			this.chr = chr;
 			this.pos = pos;
@@ -333,20 +334,48 @@ public class AltContigGenerator {
 			this.insert = insert;
 			readPositions.add(readPos);
 			count = 1;
+			baseQualSum = readBaseQuals;
 		}
 		
 		// For complex indels
-		Indel(char type, String chr, List<Indel> indels, int readPos) {
+		Indel(char type, String chr, List<Indel> indels, int readPos, int readBaseQuals) {
 			this.type = type;
 			this.chr = chr;
 			this.components = indels;
 			readPositions.add(readPos);
 			count = 1;
+			baseQualSum = readBaseQuals;
 		}
 		
-		void addReadPosition(int readPos) {
+		void addReadPosition(int readPos, int readBaseQuals) {
 			readPositions.add(readPos);
 			count += 1;
+			
+			if (baseQualSum > Long.MAX_VALUE - 10000) {
+				// Don't allow overflow...
+				baseQualSum = Long.MAX_VALUE;
+			} else {
+				baseQualSum += readBaseQuals;
+			}
+		}
+
+		@Override
+		public String toString() {
+			String str = "";
+			if (type == 'C') {
+				str += "{";
+				for (Indel i : components) {
+					str += i + "; ";
+				}
+				
+				str += " : " + this.readPositions.size();
+				
+				str += "}";
+			} else {
+				str = String.format("%d%c:%d:%d", this.length, this.type, this.pos, this.readPositions.size());
+			}
+			
+			return str;
 		}
 
 		@Override
@@ -404,7 +433,13 @@ public class AltContigGenerator {
 				} else if (i1.readPositions.size() > i2.readPositions.size()) {
 					return -1;
 				} else {
-					return 0;
+					if (i1.baseQualSum < i2.baseQualSum) {
+						return 1;
+					} else if (i1.baseQualSum > i2.baseQualSum) {
+						return -1;
+					} else {
+						return 0;
+					}
 				}
 			}
 		}
@@ -417,6 +452,8 @@ public class AltContigGenerator {
 				
 				// Subset to only the first MAX_CONTIGS
 				indels = indels.subList(0, maxIndels);
+				
+				Logger.debug("Retained: %s", indels);
 			}
 
 			return indels;

@@ -84,6 +84,7 @@ public class CadabraOptions extends Options {
 		this.minQual = (Float) getOptions().valueOf(MIN_QUAL);
 		this.minMapq = (Integer) getOptions().valueOf(MIN_MAPQ);
 		this.minVaf = (Float) getOptions().valueOf(MIN_VAF);
+		this.pcrPenalty = (Integer) getOptions().valueOf(PCR_PENALTY);
 	}
 
 	@Override

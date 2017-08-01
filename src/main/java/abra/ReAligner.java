@@ -137,6 +137,8 @@ public class ReAligner {
 	private String chromosomesToSkipRegex;
 	private ChromosomeRegex chromosomeSkipRegex;
 	
+	private boolean shouldUnsetDuplicates;
+	
 	
 	public void reAlign(String[] inputFiles, String[] outputFiles) throws Exception {
 		
@@ -177,7 +179,7 @@ public class ReAligner {
 		}
 		
 		writer = new SortedSAMWriter(outputFiles, tempDir.toString(), samHeaders, isKeepTmp, chromosomeChunker,
-				finalCompressionLevel, shouldSort, maxRealignDist);
+				finalCompressionLevel, shouldSort, maxRealignDist, shouldUnsetDuplicates);
 
 		// Spawn thread for each chromosome
 		// TODO: Validate identical sequence dictionary for each input file
@@ -1622,6 +1624,7 @@ public class ReAligner {
 			realigner.minAnchorLen = options.getContigAnchor()[0];
 			realigner.maxAnchorMismatches = options.getContigAnchor()[1];
 			realigner.chromosomesToSkipRegex = options.getChromosomesToSkipRegex();
+			realigner.shouldUnsetDuplicates = options.shouldUnsetDuplicates();
 			MAX_REGION_LENGTH = options.getWindowSize();
 			MIN_REGION_REMAINDER = options.getWindowOverlap();
 			REGION_OVERLAP = options.getWindowOverlap();
@@ -1629,7 +1632,6 @@ public class ReAligner {
 			realigner.cl = cl.toString();
 			realigner.version = version;
 			
-
 			long s = System.currentTimeMillis();
 			
 			realigner.reAlign(options.getInputFiles(), options.getOutputFiles());

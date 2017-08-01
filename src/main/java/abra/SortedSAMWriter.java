@@ -39,6 +39,7 @@ public class SortedSAMWriter {
 	private int finalCompressionLevel;
 	private boolean shouldSort;
 	private int genomicRangeToCache;
+	private boolean shouldUnsetDuplicates;
 	
 	private Set<Integer> chunksReady = new HashSet<Integer>();
 	
@@ -46,7 +47,7 @@ public class SortedSAMWriter {
 	
 	public SortedSAMWriter(String[] outputFiles, String tempDir, SAMFileHeader[] samHeaders,
 			boolean isKeepTmp, ChromosomeChunker chromosomeChunker, int finalCompressionLevel,
-			boolean shouldSort, int genomicRangeToCache) {
+			boolean shouldSort, int genomicRangeToCache, boolean shouldUnsetDuplicates) {
 	
 		this.samHeaders = samHeaders;
 		this.outputFiles = outputFiles;
@@ -56,6 +57,7 @@ public class SortedSAMWriter {
 		this.finalCompressionLevel = finalCompressionLevel;
 		this.shouldSort = shouldSort;
 		this.genomicRangeToCache = genomicRangeToCache;
+		this.shouldUnsetDuplicates = shouldUnsetDuplicates;
 		
 		writerFactory.setUseAsyncIo(false);
 //		IntelDeflaterFactory intelDeflater = new IntelDeflaterFactory();
@@ -202,6 +204,10 @@ public class SortedSAMWriter {
 				SamReader reader = SAMRecordUtils.getSamReader(filename);
 		
 				for (SAMRecord read : reader) {
+					if (shouldUnsetDuplicates) {
+						read.setDuplicateReadFlag(false);
+					}
+					
 					if (shouldSort) {
 						reads.add(read);
 	
@@ -449,7 +455,7 @@ public class SortedSAMWriter {
 		header.setSortOrder(SortOrder.coordinate);
 		
 		SortedSAMWriter writer = new SortedSAMWriter(new String[] { "/home/lmose/dev/abra2_dev/sort_issue4/final.bam" }, "/home/lmose/dev/abra2_dev/sort_issue4", new SAMFileHeader[] { reader.getFileHeader() }, true, cc,
-				1,true,1000);
+				1,true,1000,false);
 
 		SAMFileWriterFactory writerFactory = new SAMFileWriterFactory();
 		SAMFileWriter out = writerFactory.makeBAMWriter(reader.getFileHeader(), true, new File("/home/lmose/dev/abra2_dev/sort_issue4/test.bam"),1);

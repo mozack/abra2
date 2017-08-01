@@ -49,6 +49,7 @@ public class ReAlignerOptions extends Options {
 	private static final String CHROMOSOMES_TO_SKIP = "skip";
 	private static final String MAX_ASSEMBLED_CONTIGS = "mac";
 	private static final String SKIP_UNMAPPED_ASSEMBLY_TRIGGER = "sua";
+	private static final String UNSET_DUPLICATES = "undup";
 	
 	private OptionParser parser;
 	private boolean isValid;
@@ -96,6 +97,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(CHROMOSOMES_TO_SKIP, "If no target specified, skip realignment of chromosomes matching specified regex.  Skipped reads are output without modification.  Specify none to disable.").withRequiredArg().ofType(String.class).defaultsTo(ChromosomeRegex.DEFAULT_SKIP_REGEX);
             parser.accepts(MAX_ASSEMBLED_CONTIGS, "Max assembled contigs").withRequiredArg().ofType(Integer.class).defaultsTo(64);
             parser.accepts(SKIP_UNMAPPED_ASSEMBLY_TRIGGER, "Do not use unmapped reads anchored by mate to trigger assembly.  These reads are still eligible to contribute to assembly");
+            parser.accepts(UNSET_DUPLICATES, "Unset duplicate flag");
     	}
     	
     	return parser;
@@ -276,6 +278,10 @@ public class ReAlignerOptions extends Options {
 	
 	public boolean useConsensusSequence() {
 		return getOptions().has(CONSENSUS_SEQ);
+	}
+	
+	public boolean shouldUnsetDuplicates() {
+		return getOptions().has(UNSET_DUPLICATES);
 	}
 	
 	public int getMinBaseQuality() {

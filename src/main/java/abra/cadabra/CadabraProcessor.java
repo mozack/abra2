@@ -471,15 +471,7 @@ public class CadabraProcessor {
 			filter += "ISPAN;";
 		}
 		
-		// Filter short tandem repeat expansion / contraction
-		if (options.getStrpFilter() > 0 && tumor.repeatPeriod >= options.getStrpFilter()) {
-			filter += "STR;";
-		}
-		
-		// Filter short indels near homopolymer runs
-		if (options.getHrunFilter() > 0 && hrunLen >= options.getHrunFilter() && Math.abs(tumor.ref.getLength() - tumor.alt.getLength())<10) {
-			filter += "HRUN;";
-		}
+
 		
 		// Too many low mapq reads
 		if ((float)tumor.mapq0 / (float)tumor.totalReads > options.getLowMQFilter()) {
@@ -550,7 +542,18 @@ public class CadabraProcessor {
 			int tumorAlt = tumor.alleleCounts.get(tumor.alt).getCount();
 			
 			this.qual = calcFisherExactPhredScaledQuality(normalRef, normalAlt, tumorRef, tumorAlt);
+						
 			this.hrun = HomopolymerRun.find(context);
+			
+			// Adjust qual score for PCR slippage
+			if (options.getStrpThreshold() > 0 && tumor.repeatPeriod >= options.getStrpThreshold()) {
+				// Penalize short tandem repeat expansion / contraction
+				qual -= options.getPcrPenalty();
+			} else if (options.getHrunThreshold() > 0 && hrun != null && hrun.getLength() >= options.getHrunThreshold() && Math.abs(tumor.ref.getLength() - tumor.alt.getLength())<10) {
+				// Filter short indels near homopolymer runs
+				qual -= options.getPcrPenalty();
+			}
+			
 			this.context = context;
 			this.options = options;
 		}

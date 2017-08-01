@@ -11,8 +11,8 @@ public class CadabraOptions extends Options {
 	private static final String NORMAL = "normal";
 	private static final String SAMPLE = "sample";
 	private static final String REFERENCE = "ref";
-	private static final String STRP_FILTER = "strp";
-	private static final String HRUN_FILTER = "hrun";
+	private static final String STRP_THRESHOLD = "strp";
+	private static final String HRUN_THRESHOLD = "hrun";
 	private static final String ISPAN_FILTER = "ispan";
 	// Filter variants below this qual threshold
 	private static final String QUAL_FILTER = "qual";
@@ -22,6 +22,7 @@ public class CadabraOptions extends Options {
 	private static final String MIN_QUAL = "mq";
 	private static final String MIN_MAPQ = "mapq";
 	private static final String MIN_VAF = "mf";
+	private static final String PCR_PENALTY = "pen";
 	
 
 	private OptionParser parser;
@@ -31,8 +32,9 @@ public class CadabraOptions extends Options {
 	private String tumor;
 	private String normal;
 	private String reference;
-	private int strpFilter;
-	private int hrunFilter;
+	private int strpThreshold;
+	private int hrunThreshold;
+	private int pcrPenalty;
 	private int ispanFilter;
 	private float qualFilter;
 	private int fsFilter;
@@ -50,8 +52,9 @@ public class CadabraOptions extends Options {
             parser.accepts(NORMAL, "Normal BAM file").withRequiredArg().ofType(String.class);
             parser.accepts(SAMPLE, "BAM file to be used for single sample calling").withRequiredArg().ofType(String.class);
             parser.accepts(REFERENCE, "Reference fasta").withRequiredArg().ofType(String.class);
-            parser.accepts(STRP_FILTER, "Filter variants with short tandem repeat period at or above this threshold(-1 to disable)").withRequiredArg().ofType(Integer.class).defaultsTo(5); 
-            parser.accepts(HRUN_FILTER, "Filter short indels with a nearby homopolymer run of this length or greater - only neighboring 20 bases searched (-1 to disable)").withRequiredArg().ofType(Integer.class).defaultsTo(6);
+            parser.accepts(STRP_THRESHOLD, "Filter variants with short tandem repeat period at or above this threshold(-1 to disable)").withRequiredArg().ofType(Integer.class).defaultsTo(5); 
+            parser.accepts(HRUN_THRESHOLD, "Filter short indels with a nearby homopolymer run of this length or greater - only neighboring 20 bases searched (-1 to disable)").withRequiredArg().ofType(Integer.class).defaultsTo(6);
+            parser.accepts(PCR_PENALTY, "Penalize quality score for variants reaching strp or hrun thresholds by specified amount.").withRequiredArg().ofType(Integer.class).defaultsTo(30);
             parser.accepts(ISPAN_FILTER, "Filter variants with max index span less than specified value").withRequiredArg().ofType(Integer.class).defaultsTo(20);
             parser.accepts(QUAL_FILTER, "Filter variants with quality score less than specified value").withRequiredArg().ofType(Float.class).defaultsTo(5f);
             parser.accepts(FS_FILTER, "Filter variants with FS score greater than specified value").withRequiredArg().ofType(Integer.class).defaultsTo(70);
@@ -72,8 +75,8 @@ public class CadabraOptions extends Options {
 		}
 		this.normal = (String) getOptions().valueOf(NORMAL);
 		this.reference = (String) getOptions().valueOf(REFERENCE);
-		this.strpFilter = (Integer) getOptions().valueOf(STRP_FILTER);
-		this.hrunFilter = (Integer) getOptions().valueOf(HRUN_FILTER);
+		this.strpThreshold = (Integer) getOptions().valueOf(STRP_THRESHOLD);
+		this.hrunThreshold = (Integer) getOptions().valueOf(HRUN_THRESHOLD);
 		this.ispanFilter = (Integer) getOptions().valueOf(ISPAN_FILTER);
 		this.qualFilter = (Float) getOptions().valueOf(QUAL_FILTER);
 		this.fsFilter = (Integer) getOptions().valueOf(FS_FILTER);
@@ -119,12 +122,16 @@ public class CadabraOptions extends Options {
 		return reference;
 	}
 
-	public int getStrpFilter() {
-		return strpFilter;
+	public int getStrpThreshold() {
+		return strpThreshold;
 	}
 
-	public int getHrunFilter() {
-		return hrunFilter;
+	public int getHrunThreshold() {
+		return hrunThreshold;
+	}
+	
+	public int getPcrPenalty() {
+		return pcrPenalty;
 	}
 
 	public int getIspanFilter() {

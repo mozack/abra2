@@ -54,7 +54,7 @@ public class CadabraOptions extends Options {
             parser.accepts(HRUN_FILTER, "Filter short indels with a nearby homopolymer run of this length or greater - only neighboring 20 bases searched (-1 to disable)").withRequiredArg().ofType(Integer.class).defaultsTo(6);
             parser.accepts(ISPAN_FILTER, "Filter variants with max index span less than specified value").withRequiredArg().ofType(Integer.class).defaultsTo(20);
             parser.accepts(QUAL_FILTER, "Filter variants with quality score less than specified value").withRequiredArg().ofType(Float.class).defaultsTo(5f);
-            parser.accepts(FS_FILTER, "Filter variants with FS score greater than specified value").withRequiredArg().ofType(Integer.class).defaultsTo(30);
+            parser.accepts(FS_FILTER, "Filter variants with FS score greater than specified value").withRequiredArg().ofType(Integer.class).defaultsTo(70);
             parser.accepts(LOW_MQ_FILTER, "Filter variants with fraction of low quality reads greater than specified value").withRequiredArg().ofType(Float.class).defaultsTo(.5f);
             parser.accepts(MIN_QUAL, "Variants with quality below specified threshold are not output").withRequiredArg().ofType(Float.class).defaultsTo(5.0f);
             parser.accepts(MIN_MAPQ, "Reads with mapping quality below specified value are excluded from processing (except unmapped reads)").withRequiredArg().ofType(Integer.class).defaultsTo(20);

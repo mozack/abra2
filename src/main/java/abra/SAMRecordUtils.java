@@ -569,8 +569,8 @@ public class SAMRecordUtils {
 							first.getSamRecord().getBaseQualityString(), second.getSamRecord().getBaseQualityString());
 					
 					if (merged != null) {
-						readWrapper.setMergedSeqAndQual(merged.getFirst(), merged.getSecond());
-						pair.setMergedSeqAndQual(merged.getFirst(), merged.getSecond());
+						readWrapper.setMerged(merged.getFirst(), merged.getSecond(), first.getAdjustedAlignmentStart(), second.getAdjustedAlignmentEnd());
+						pair.setMerged(merged.getFirst(), merged.getSecond(), first.getAdjustedAlignmentStart(), second.getAdjustedAlignmentEnd());
 						
 						alignmentStart = first.getAdjustedAlignmentStart();
 					}
@@ -580,7 +580,7 @@ public class SAMRecordUtils {
 		
 		return alignmentStart;
 	}
-	
+	/*
 	public static void mergeReadPairOld(SAMRecordWrapper readWrapper, Map<String, SAMRecordWrapper> firstReads, Map<String, SAMRecordWrapper> secondReads) {
 		
 		SAMRecord read = readWrapper.getSamRecord();
@@ -641,6 +641,7 @@ public class SAMRecordUtils {
 			}
 		}
 	}
+	*/
 	
 	public static boolean hasPossibleAdapterReadThrough(SAMRecord read, Map<String, SAMRecordWrapper> firstReads, Map<String, SAMRecordWrapper> secondReads) {
 		

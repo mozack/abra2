@@ -16,6 +16,10 @@ public class SAMRecordWrapper {
 	private boolean isUnalignedRc = false;
 	private String mergedSeq = null;
 	private String mergedQual = null;
+	private int adjustedAlignmentStart = -1;
+	private int adjustedAlignmentEnd = -1;
+	
+	private int bqSum = -1;
 	
 	public SAMRecordWrapper(SAMRecord record, boolean shouldFilter, boolean shouldAssemble, int sampleIdx) {
 		this.samRecord = record;
@@ -53,16 +57,21 @@ public class SAMRecordWrapper {
 	}
 	public int getAdjustedAlignmentStart() {
 		
-		//TODO: Adjust unmapped reads by fragment length??
+		int start = 0;
 		
-		int start = samRecord.getAlignmentStart();
+		if (adjustedAlignmentStart > -1) {
+			start = adjustedAlignmentStart;
+		} else {
 		
-		if (samRecord.getCigar().numCigarElements() > 0) {
-			CigarElement elem = samRecord.getCigar().getCigarElement(0);
-			if (elem.getOperator() == CigarOperator.S) {
-				start -= elem.getLength();
-				if (start < 1) {
-					start = 1;
+			start = samRecord.getAlignmentStart();
+			
+			if (samRecord.getCigar().numCigarElements() > 0) {
+				CigarElement elem = samRecord.getCigar().getCigarElement(0);
+				if (elem.getOperator() == CigarOperator.S) {
+					start -= elem.getLength();
+					if (start < 1) {
+						start = 1;
+					}
 				}
 			}
 		}
@@ -72,17 +81,22 @@ public class SAMRecordWrapper {
 	
 	public int getAdjustedAlignmentEnd() {
 		int end = -1;
-		if (samRecord.getReadUnmappedFlag()) {
-			// TODO: Pad by fragment length here?
-			end = samRecord.getAlignmentStart() + samRecord.getReadLength();
+		
+		if (adjustedAlignmentEnd > -1) {
+			end = adjustedAlignmentEnd;
 		} else {
-			// Use standard alignment end and pad for soft clipping if necessary
-			end = samRecord.getAlignmentEnd();
-			
-			if (samRecord.getCigar().numCigarElements() > 0) {
-				CigarElement elem = samRecord.getCigar().getCigarElement(samRecord.getCigar().numCigarElements()-1);
-				if (elem.getOperator() == CigarOperator.S) {
-					end += elem.getLength();
+		
+			if (samRecord.getReadUnmappedFlag()) {
+				end = samRecord.getAlignmentStart() + samRecord.getReadLength();
+			} else {
+				// Use standard alignment end and pad for soft clipping if necessary
+				end = samRecord.getAlignmentEnd();
+				
+				if (samRecord.getCigar().numCigarElements() > 0) {
+					CigarElement elem = samRecord.getCigar().getCigarElement(samRecord.getCigar().numCigarElements()-1);
+					if (elem.getOperator() == CigarOperator.S) {
+						end += elem.getLength();
+					}
 				}
 			}
 		}
@@ -128,14 +142,34 @@ public class SAMRecordWrapper {
 		
 		return qual;
 	}
+	
+	public void setMerged(String mergedSeq, String mergedQual, int adjustedAlignmentStart, int adjustedAlignmentEnd) {
+		this.mergedSeq = mergedSeq;
+		this.mergedQual = mergedQual;		
+	}
 
 	public void setMergedSeqAndQual(String mergedSeq, String mergedQual) {
 		this.mergedSeq = mergedSeq;
 		this.mergedQual = mergedQual;
+		
+		// Result qual sum
+		this.bqSum = -1;
 	}
 	
 	public boolean hasMergedSeq() {
 		return this.mergedSeq != null;
+	}
+	
+	public int baseQualSum() {
+		if (bqSum < 0) {
+			if (hasMergedSeq()) {
+				bqSum = SAMRecordUtils.sumBaseQuals(mergedQual);
+			} else {
+				bqSum = SAMRecordUtils.sumBaseQuals(samRecord);
+			}
+		}
+		
+		return bqSum;
 	}
 	
 	public List<Span> getSpanningRegions() {
@@ -183,6 +217,31 @@ public class SAMRecordWrapper {
 		public Span(int start, int end) {
 			this.start = start;
 			this.end = end;
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + end;
+			result = prime * result + start;
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			Span other = (Span) obj;
+			if (end != other.end)
+				return false;
+			if (start != other.start)
+				return false;
+			return true;
 		}
 	}
 }

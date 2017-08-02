@@ -12,28 +12,35 @@ public class ConsensusSequence {
 		// Subset to the contigs with highest qual scores
 		contigs = ScoredContig.filter(contigs, 31);
 		
-		for (int i=0; i<contigs.get(0).getContig().length(); i++) {
+		int maxLen = 0;
+		for (ScoredContig contig : contigs) {
+			maxLen = Math.max(maxLen, contig.getContig().length());
+		}
+		
+		for (int i=0; i<maxLen; i++) {
 			int a = 0;
 			int c = 0;
 			int t = 0;
 			int g = 0;
 			
 			for (ScoredContig contig : contigs) {
-				switch (contig.getContig().charAt(i)) {
-					case 'A':
-						a++;
-						break;
-					case 'C':
-						c++;
-						break;
-					case 'T':
-						t++;
-						break;
-					case 'G':
-						g++;
-						break;
-					default:
-						break;
+				if (i < contig.getContig().length()) {
+					switch (contig.getContig().charAt(i)) {
+						case 'A':
+							a++;
+							break;
+						case 'C':
+							c++;
+							break;
+						case 'T':
+							t++;
+							break;
+						case 'G':
+							g++;
+							break;
+						default:
+							break;
+					}
 				}
 			}
 			

@@ -104,7 +104,7 @@ public class AltContigGenerator {
 				
 				if (readWrapper.hasMergedSeq()) {
 					if (mergedReadIds.contains(read.getReadName())) {
-						// Only process merged read pair once.
+						// Only process merged read pair once. (TODO: Allow both ends to be used for observed indels?)
 						continue;
 					} else {
 						mergedReadIds.add(read.getReadName());
@@ -202,7 +202,8 @@ public class AltContigGenerator {
 							// Group by position and read length
 							int start = readWrapper.getAdjustedAlignmentStart();
 							int end = readWrapper.getAdjustedAlignmentEnd();
-							String pos = "" + start + ":" + end + ":" + readWrapper.getSamRecord().getReadLength();
+							String pos = "" + start + ":" + end + ":" + readWrapper.getReadLength();
+							
 							if (!softClipByPos.containsKey(pos)) {
 								softClipByPos.put(pos, new ArrayList<ScoredContig>());
 							}

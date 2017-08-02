@@ -138,7 +138,9 @@ public class ReAligner {
 	private ChromosomeRegex chromosomeSkipRegex;
 	
 	private boolean shouldUnsetDuplicates;
+	private String inputVcf;
 	
+	private Map<String, List<Variant>> knownVariants;;
 	
 	public void reAlign(String[] inputFiles, String[] outputFiles) throws Exception {
 		
@@ -264,7 +266,11 @@ public class ReAligner {
 			}
 		}
 		
+		List<Variant> knownVariants = getKnownVariants(chromosome);
+		
 		Map<Feature, List<Feature>> regionJunctions = JunctionUtils.getRegionJunctions(chromosomeRegions, chromosomeJunctions, readLength, MAX_REGION_LENGTH);
+		
+		Map<Feature, List<Variant>> regionVariants = Variant.groupByRegion(chromosomeRegions, knownVariants);
 		
 		Set<Integer> regionsToProcess = new TreeSet<Integer>();
 	
@@ -312,7 +318,7 @@ public class ReAligner {
 				Feature currRegion = chromosomeRegions.get(currRegionIdx);
 				if (record.getAdjustedAlignmentStart() > currRegion.getEnd() + this.readLength*2) {
 					Logger.debug("Processing region: %s", currRegion);
-					Map<SimpleMapper, ContigAlignerResult> mappedContigs = processRegion(currRegion, currReads, regionJunctions.get(currRegion));
+					Map<SimpleMapper, ContigAlignerResult> mappedContigs = processRegion(currRegion, currReads, regionJunctions.get(currRegion), regionVariants.get(currRegion));
 					Logger.debug("Region: %s assembled: %d contigs", currRegion, mappedContigs.keySet().size());
 					regionContigs.put(currRegion, mappedContigs);
 					// Remove curr region from list of regions to process
@@ -450,7 +456,7 @@ public class ReAligner {
 			// Assemble reads
 			Feature region = chromosomeRegions.get(currRegionIdx);
 			Logger.debug("Processing region: %s", region);
-			Map<SimpleMapper, ContigAlignerResult> mappedContigs = processRegion(region, currReads, regionJunctions.get(region));
+			Map<SimpleMapper, ContigAlignerResult> mappedContigs = processRegion(region, currReads, regionJunctions.get(region), regionVariants.get(region));
 			Logger.debug("Region: %s assembled: %d contigs", region, mappedContigs.keySet().size());
 			regionContigs.put(region, mappedContigs);
 		}
@@ -1049,7 +1055,7 @@ public class ReAligner {
 		return contigAligner;
 	}
 	
-	public Map<SimpleMapper, ContigAlignerResult> processRegion(Feature region, List<List<SAMRecordWrapper>> reads, List<Feature> junctions) throws Exception {
+	public Map<SimpleMapper, ContigAlignerResult> processRegion(Feature region, List<List<SAMRecordWrapper>> reads, List<Feature> junctions, List<Variant> knownVariants) throws Exception {
 		
 		long start = System.currentTimeMillis();
 		if (isDebug) {
@@ -1157,12 +1163,12 @@ public class ReAligner {
 					assembledContigCount = mappedContigs.size();
 				}
 				
-				if (useSoftClippedReads || useObservedIndels) {
+				if (useSoftClippedReads || useObservedIndels || (knownVariants != null && knownVariants.size() > 0)) {
 					Logger.debug("Processing non-assembled contigs for region: [" + region + "]");
 					// Go through artificial contig generation using indels observed in the original reads
 					AltContigGenerator altContigGenerator = new AltContigGenerator(softClipParams[0], softClipParams[1], softClipParams[2], softClipParams[3],
 							useObservedIndels, useSoftClippedReads, useConsensusSeq, minMappingQuality);
-					Collection<String> altContigs = altContigGenerator.getAltContigs(readsList, c2r, readLength, junctionPermutations.size(), region);
+					Collection<String> altContigs = altContigGenerator.getAltContigs(readsList, c2r, readLength, junctionPermutations.size(), region, knownVariants);
 					
 					nonAssembledContigCount = altContigs.size();
 					
@@ -1486,7 +1492,24 @@ public class ReAligner {
 		
 		threadManager = new ThreadManager(numThreads);
 		
+		if (inputVcf != null) {
+			this.knownVariants = Variant.loadFromFile(inputVcf);
+		}
+		
 		return tempDir.toString();
+	}
+	
+	public List<Variant> getKnownVariants(String chromosome) {
+		List<Variant> variants = null;
+		if (knownVariants != null) {
+			variants = knownVariants.get(chromosome);
+		}
+		
+		if (variants == null) {
+			variants = Collections.emptyList();
+		}
+		
+		return variants;
 	}
 	
 	public void setReference(String reference) {
@@ -1625,6 +1648,7 @@ public class ReAligner {
 			realigner.maxAnchorMismatches = options.getContigAnchor()[1];
 			realigner.chromosomesToSkipRegex = options.getChromosomesToSkipRegex();
 			realigner.shouldUnsetDuplicates = options.shouldUnsetDuplicates();
+			realigner.inputVcf = options.getInputVcf();
 			MAX_REGION_LENGTH = options.getWindowSize();
 			MIN_REGION_REMAINDER = options.getWindowOverlap();
 			REGION_OVERLAP = options.getWindowOverlap();

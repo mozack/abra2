@@ -50,6 +50,7 @@ public class ReAlignerOptions extends Options {
 	private static final String MAX_ASSEMBLED_CONTIGS = "mac";
 	private static final String SKIP_UNMAPPED_ASSEMBLY_TRIGGER = "sua";
 	private static final String UNSET_DUPLICATES = "undup";
+	private static final String INPUT_VCF = "in-vcf";
 	
 	private OptionParser parser;
 	private boolean isValid;
@@ -91,13 +92,14 @@ public class ReAlignerOptions extends Options {
             parser.accepts(WINDOW_SIZE, "Processing window size and overlap (size,overlap)").withRequiredArg().ofType(String.class).defaultsTo("400,200");
             parser.accepts(MAX_READS_IN_REGION, "Regions containing more reads than this value are not processed.  Use -1 to disable.").withRequiredArg().ofType(Integer.class).defaultsTo(100000);
             parser.accepts(COMPRESSION_LEVEL, "Compression level of output bam file(s)").withRequiredArg().ofType(Integer.class).defaultsTo(5);
-            parser.accepts(CONTIG_ANCHOR, "Contig anchor [M_bases_at_contig_edge, max_mismatches_at_edge").withRequiredArg().ofType(String.class).defaultsTo("10,2");
+            parser.accepts(CONTIG_ANCHOR, "Contig anchor [M_bases_at_contig_edge, max_mismatches_near_edge]").withRequiredArg().ofType(String.class).defaultsTo("10,2");
             parser.accepts(NO_SORT, "Do not attempt to sort final output");
             parser.accepts(MAX_READ_MOVE_DISTANCE, "Max read move distance").withRequiredArg().ofType(Integer.class).defaultsTo(1000);
             parser.accepts(CHROMOSOMES_TO_SKIP, "If no target specified, skip realignment of chromosomes matching specified regex.  Skipped reads are output without modification.  Specify none to disable.").withRequiredArg().ofType(String.class).defaultsTo(ChromosomeRegex.DEFAULT_SKIP_REGEX);
             parser.accepts(MAX_ASSEMBLED_CONTIGS, "Max assembled contigs").withRequiredArg().ofType(Integer.class).defaultsTo(64);
             parser.accepts(SKIP_UNMAPPED_ASSEMBLY_TRIGGER, "Do not use unmapped reads anchored by mate to trigger assembly.  These reads are still eligible to contribute to assembly");
             parser.accepts(UNSET_DUPLICATES, "Unset duplicate flag");
+            parser.accepts(INPUT_VCF, "VCF containing known (or suspected) variant sites.  Very large files should be avoided.").withRequiredArg().ofType(String.class);
     	}
     	
     	return parser;
@@ -266,6 +268,10 @@ public class ReAlignerOptions extends Options {
 	
 	public String getTmpDir() {
 		return getOptions().has(TMP_DIR) ? (String) getOptions().valueOf(TMP_DIR) : null;
+	}
+	
+	public String getInputVcf() {
+		return getOptions().has(INPUT_VCF) ? (String) getOptions().valueOf(INPUT_VCF) : null;
 	}
 	
 	public boolean useObservedIndels() {

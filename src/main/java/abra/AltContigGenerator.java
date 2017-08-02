@@ -85,7 +85,8 @@ public class AltContigGenerator {
 		return hasHighQualitySoftClipping;
 	}
 	
-	public Collection<String> getAltContigs(List<List<SAMRecordWrapper>> readsList, CompareToReference2 c2r, int readLength, int numJuncPerms, Feature region) {
+	public Collection<String> getAltContigs(List<List<SAMRecordWrapper>> readsList, CompareToReference2 c2r,
+			int readLength, int numJuncPerms, Feature region, List<Variant> knownVariants) {
 		
 		List<ScoredContig> softClipContigs = new ArrayList<ScoredContig>();
 		
@@ -310,6 +311,22 @@ public class AltContigGenerator {
 				seq.append(rightSeq);
 				
 				contigs.add(seq.toString());
+			}
+		}
+		
+		// Process known variants
+		if (knownVariants != null) {
+			for (Variant variant : knownVariants) {
+				if (c2r.getReferenceLength(variant.getChr()) > variant.getPosition() + readLength + variant.getRefSpan()) {
+					int leftStart = variant.getPosition() - readLength;
+					int rightStart = variant.getPosition() + variant.getRef().length();
+					String leftSeq = c2r.getSequence(variant.getChr(), leftStart, readLength);
+					String varSeq = variant.getAlt();
+					String rightSeq = c2r.getSequence(variant.getChr(), rightStart, readLength);
+					
+					String seq = leftSeq + varSeq + rightSeq;
+					contigs.add(seq.toString());
+				}
 			}
 		}
 		

@@ -60,10 +60,10 @@ public class SortedSAMWriter {
 		this.shouldUnsetDuplicates = shouldUnsetDuplicates;
 		
 		writerFactory.setUseAsyncIo(false);
-//		IntelDeflaterFactory intelDeflater = new IntelDeflaterFactory();
-//		writerFactory.setDeflaterFactory(intelDeflater);
-//		
-//		Logger.info("Using intel deflator: " + intelDeflater.usingIntelDeflater());
+		IntelDeflaterFactory intelDeflater = new IntelDeflaterFactory();
+		writerFactory.setDeflaterFactory(intelDeflater);
+		
+		Logger.info("Using intel deflator: " + intelDeflater.usingIntelDeflater());
 		
 		writers = new SAMFileWriter[outputFiles.length][];
 		
@@ -136,6 +136,7 @@ public class SortedSAMWriter {
 			// Only allow buffering if sorting
 			writerFactory.setUseAsyncIo(true);
 			writerFactory.setAsyncOutputBufferSize(ASYNC_READ_CACHE_SIZE);
+			writerFactory.setCreateIndex(true);
 		} else {
 			writerFactory.setUseAsyncIo(false);
 		}

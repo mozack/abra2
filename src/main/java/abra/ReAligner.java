@@ -547,7 +547,7 @@ public class ReAligner {
 	
 	private void remapRead(ReadEvaluator readEvaluator, SAMRecord read, int origEditDist) {
 		
-		Alignment alignment = readEvaluator.getImprovedAlignment(origEditDist, read);
+		Alignment alignment = readEvaluator.getImprovedAlignment(origEditDist, read, c2r);
 		if (alignment != null) {
 			
 			if (Math.abs(read.getAlignmentStart() - alignment.pos) > maxRealignDist) {
@@ -598,7 +598,7 @@ public class ReAligner {
 					read.setAttribute("YX",  origEditDist);
 					
 					// Updated edit distance
-					read.setAttribute("NM", SAMRecordUtils.getEditDistance(read, c2r));
+					read.setAttribute("NM", SAMRecordUtils.getEditDistance(read, c2r, false));
 					
 					//TODO: Compute mapq intelligently???
 					read.setMappingQuality(Math.min(read.getMappingQuality()+10, this.maxMapq));
@@ -627,7 +627,7 @@ public class ReAligner {
 						read.getReferenceName().equals(read.getMateReferenceName())) {
 					
 						// TODO: Use NM tag if available (need to handle soft clipping though!)
-						int origEditDist = SAMRecordUtils.getEditDistance(read, c2r);
+						int origEditDist = SAMRecordUtils.getEditDistance(read, c2r, true);
 		//				int origEditDist = c2r.numMismatches(read);
 											
 						if (origEditDist > 0 || SAMRecordUtils.getNumSplices(read) > 0) {

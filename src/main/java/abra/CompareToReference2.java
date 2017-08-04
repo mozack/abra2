@@ -72,11 +72,15 @@ public class CompareToReference2 {
 	}
 	
 	public int numMismatches(SAMRecord read) {
+		return numMismatches(read, true);
+	}
+	
+	public int numMismatches(SAMRecord read, boolean includeSoftClipping) {
 		int mismatches = 0;
 		
 		if (!read.getReadUnmappedFlag()) {
 			
-			mismatches = numDifferences(read, 0);
+			mismatches = numDifferences(read, 0, includeSoftClipping);
 		}
 
 		return mismatches;
@@ -195,6 +199,14 @@ public class CompareToReference2 {
 	}
 	
 	private int numDifferences(SAMRecord read, int minBaseQual) {
+		return numDifferences(read, minBaseQual, true);
+	}
+	
+	private int numDifferencesNoClipping(SAMRecord read, int minBaseQual) {
+		return numDifferences(read, minBaseQual, false);
+	}
+	
+	private int numDifferences(SAMRecord read, int minBaseQual, boolean includeSoftClipping) {
 		
 		int diffs = 0;
 		
@@ -238,12 +250,16 @@ public class CompareToReference2 {
 							char refBase = getRefBase(refIdx, read.getReferenceName());
 							if ((readBase != refBase) && (readBase != 'N') && (refBase != 'N')) {
 								if (minBaseQual == 0 || getBaseQuality(read, readIdx) >= minBaseQual) {
-									diffs++;
+									if (includeSoftClipping) {
+										diffs++;
+									}
 								}
 							}
 						} else {
 							if (minBaseQual > 0) {
-								diffs++;
+								if (includeSoftClipping) {
+									diffs++;
+								}
 							}
 						}
 						

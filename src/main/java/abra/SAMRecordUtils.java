@@ -173,12 +173,16 @@ public class SAMRecordUtils {
 		return new Cigar(subElements);
 	}
 	
+//	public static int getEditDistance(SAMRecord read) {
+//		return getEditDistance(read, null);
+//	}
+	
 	/**
 	 * Calculates edit distance for the input read.
 	 * If the input c2r is not null, compare to the actual reference.
 	 * If c2r is null, check the input NM tag.
 	 */
-	public static int getEditDistance(SAMRecord read, CompareToReference2 c2r) {
+	public static int getEditDistance(SAMRecord read, CompareToReference2 c2r, boolean includeSoftClipping) {
 		
 		Integer distance = null;
 		
@@ -186,7 +190,7 @@ public class SAMRecordUtils {
 			distance = read.getReadLength();
 		} else if (c2r != null) {
 			//distance = c2r.numMismatches(read) + getNumIndelBases(read);
-			distance = c2r.numMismatches(read) + getNumIndelBases(read);
+			distance = c2r.numMismatches(read, includeSoftClipping) + getNumIndelBases(read);
 		} else {
 			distance = read.getIntegerAttribute("NM");
 			

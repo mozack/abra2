@@ -230,7 +230,7 @@ public class CadabraProcessor {
 					// Cap # mismatches in read that can be counted as reference
 					// This is done because realigner caps # of mismatches for remapped indel reads.
 					// This is needed to remove ref bias
-					int editDist = SAMRecordUtils.getEditDistance(read, null);
+					int editDist = SAMRecordUtils.getEditDistance(read, null, false);
 					int indelBases = SAMRecordUtils.getNumIndelBases(read);
 					int numMismatches = editDist - indelBases;
 					

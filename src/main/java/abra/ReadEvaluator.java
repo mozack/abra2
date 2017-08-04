@@ -30,17 +30,24 @@ public class ReadEvaluator {
 	 * A read may align to multiple contigs, but result in the same alignment in
 	 * the context of the reference.  In this case the alignment is considered distinct. 
 	 */
-	public Alignment getImprovedAlignment(int origEditDist, SAMRecord samRecord) {
+	public Alignment getImprovedAlignment(int origEditDist, SAMRecord samRecord, CompareToReference2 c2r) {
 		Alignment result = getImprovedAlignment(origEditDist, samRecord.getReadString());
 		
 		if (result == null) {
 			// If soft clipped, attempt to map only the unclipped portion of the read
 			// Relying on the original mapper to handle clipping here
 			if (samRecord.getCigarString().contains("S")) {
-				String unclipped = SAMRecordUtils.getMappedReadPortion(samRecord);
-				result = getImprovedAlignment(origEditDist, unclipped);
-				if (result != null) {
-					result.cigar = SAMRecordUtils.getLeadingClips(samRecord) + result.cigar + SAMRecordUtils.getTrailingClips(samRecord);
+				
+				// Use mapper's edit distance which should be for the unclipped portion of the read only
+				int unclippedEditDist = SAMRecordUtils.getEditDistance(samRecord, c2r, false);
+				
+				// Don't bother remapping if alignment cannot be improved
+				if (unclippedEditDist > 0) {
+					String unclipped = SAMRecordUtils.getMappedReadPortion(samRecord);
+					result = getImprovedAlignment(unclippedEditDist, unclipped);
+					if (result != null) {
+						result.cigar = SAMRecordUtils.getLeadingClips(samRecord) + result.cigar + SAMRecordUtils.getTrailingClips(samRecord);
+					}
 				}
 			}
 		}
@@ -61,13 +68,16 @@ public class ReadEvaluator {
 			
 			for (SimpleMapper mapper : regionContigs.keySet()) {
 				SimpleMapperResult mapResult = mapper.map(read);
+				
+				if (mapResult.getMismatches() < origEditDist) {
 									
-				if (mapResult.getMismatches() < bestMismatches) {
-					bestMismatches = mapResult.getMismatches();
-					alignmentHits.clear();
-					alignmentHits.add(new AlignmentHit(mapResult, mapper, region));
-				} else if (mapResult.getMismatches() == bestMismatches && bestMismatches < origEditDist) {
-					alignmentHits.add(new AlignmentHit(mapResult, mapper, region));
+					if (mapResult.getMismatches() < bestMismatches) {
+						bestMismatches = mapResult.getMismatches();
+						alignmentHits.clear();
+						alignmentHits.add(new AlignmentHit(mapResult, mapper, region));
+					} else if (mapResult.getMismatches() == bestMismatches) {
+						alignmentHits.add(new AlignmentHit(mapResult, mapper, region));
+					}
 				}
 			}
 		}

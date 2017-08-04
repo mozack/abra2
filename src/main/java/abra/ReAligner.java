@@ -300,15 +300,19 @@ public class ReAligner {
 				}				
 			}
 			
-			// Advance currRegion to current locus @ record start - 1000000
-			// TODO: Use move dist instead of 1000000 ?
-			Feature searchStartRegion = chromosomeRegions.get(searchStartRegionIdx);
-			while (searchStartRegion != null && searchStartRegionIdx < chromosomeRegions.size()-1 && searchStartRegion.getEnd() < record.getAdjustedAlignmentStart() - 1000000) {
-				searchStartRegionIdx += 1;
-				searchStartRegion = chromosomeRegions.get(searchStartRegionIdx);
-			}
+			List<Integer> overlappingRegions = new ArrayList<Integer>();
 			
-			List<Integer> overlappingRegions = Feature.findAllOverlappingRegions(reader.getSAMFileHeader(), record, chromosomeRegions, searchStartRegionIdx);
+			if (chromosomeRegions.size() > 0) {
+				// Advance currRegion to current locus @ record start - 1000000
+				// TODO: Use move dist instead of 1000000 ?
+				Feature searchStartRegion = chromosomeRegions.get(searchStartRegionIdx);
+				while (searchStartRegion != null && searchStartRegionIdx < chromosomeRegions.size()-1 && searchStartRegion.getEnd() < record.getAdjustedAlignmentStart() - 1000000) {
+					searchStartRegionIdx += 1;
+					searchStartRegion = chromosomeRegions.get(searchStartRegionIdx);
+				}
+				
+				overlappingRegions = Feature.findAllOverlappingRegions(reader.getSAMFileHeader(), record, chromosomeRegions, searchStartRegionIdx);
+			}
 			
 //			int regionIdx = Feature.findFirstOverlappingRegion(reader.getSAMFileHeader(), record, chromosomeRegions, currRegionIdx);
 						
@@ -327,7 +331,6 @@ public class ReAligner {
 				int regionToProcessIdx = regionIter.next();
 				// If start position for current read is beyond current region, trigger assembly
 				Feature currRegion = chromosomeRegions.get(regionToProcessIdx);
-				Logger.debug("currRegion: " + currRegion);
 				if (record.getAdjustedAlignmentStart() > currRegion.getEnd() + this.readLength*2) {
 					Logger.debug("Processing region: %s", currRegion);
 					Map<SimpleMapper, ContigAlignerResult> mappedContigs = processRegion(currRegion, currReads, regionJunctions.get(currRegion), regionVariants.get(currRegion));
@@ -558,6 +561,10 @@ public class ReAligner {
 	}
 	
 	private void remapRead(ReadEvaluator readEvaluator, SAMRecord read, int origEditDist) {
+		
+		if (read.getReadName().equals("DGR4KXP1:542:HKMC5ADXX:2:2203:14118:5818")) {
+			System.out.println("Foo");
+		}
 		
 		Alignment alignment = readEvaluator.getImprovedAlignment(origEditDist, read, c2r);
 		if (alignment != null) {

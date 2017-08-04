@@ -268,18 +268,19 @@ public class SAMRecordUtils {
 	}
 	
 	/**
-	 * Return the number of insertions and deletions in a SAMRecord 
+	 * Return the number of insertions, deletions and introns in a SAMRecord 
 	 */
-	public static int getNumIndels(SAMRecord read) {
-		int numIndels = 0;
+	public static int getNumGaps(SAMRecord read) {
+		int numGaps = 0;
 		
 		for (CigarElement element : read.getCigar().getCigarElements()) {
-			if ((element.getOperator() == CigarOperator.D) || (element.getOperator() == CigarOperator.I)) {
-				numIndels += 1;
+			if ((element.getOperator() == CigarOperator.D) || (element.getOperator() == CigarOperator.I) || 
+				(element.getOperator() == CigarOperator.N)) {
+				numGaps += 1;
 			}
 		}
 		
-		return numIndels;
+		return numGaps;
 	}
 	
 	private static boolean isClip(CigarElement elem) {

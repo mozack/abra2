@@ -145,7 +145,7 @@ public class AltContigGenerator {
 									indels.put(indel, indel);
 								}
 							}
-						} else if(SAMRecordUtils.getNumIndels(read) > 1) {
+						} else if(SAMRecordUtils.getNumGaps(read) > 1) {
 							// Handle read containing multiple indels (create single contig)
 							List<Indel> indelComponents = new ArrayList<Indel>();
 							List<ReadBlock> readBlocks = SAMRecordUtils.getReadBlocks(read.getCigar(), read.getAlignmentStart());
@@ -154,11 +154,12 @@ public class AltContigGenerator {
 							// Loop through cigar ignoring edge elements
 							for (int i=1; i<read.getCigar().getCigarElements().size()-1; i++) {
 								CigarElement elem = read.getCigar().getCigarElements().get(i);
-								if (elem.getOperator() == CigarOperator.D || elem.getOperator() == CigarOperator.I) {
+								if (elem.getOperator() == CigarOperator.D || elem.getOperator() == CigarOperator.I || elem.getOperator() == CigarOperator.N) {
 									ReadBlock block = readBlocks.get(i);
 									char type = '0';
 									String insertBases = null;
-									if (elem.getOperator() == CigarOperator.D) {
+									if (elem.getOperator() == CigarOperator.D || elem.getOperator() == CigarOperator.N) {
+										// For purposes of contig sequence generation, we treat introns as deletions here
 										type = 'D';
 									} else {
 										type = 'I';

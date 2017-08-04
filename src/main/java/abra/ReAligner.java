@@ -142,6 +142,9 @@ public class ReAligner {
 	
 	private Map<String, List<Variant>> knownVariants;;
 	
+	private boolean shouldCreateIndex;
+	private boolean shouldUseGkl;
+	
 	public void reAlign(String[] inputFiles, String[] outputFiles) throws Exception {
 		
 		this.inputSams = inputFiles;
@@ -181,7 +184,7 @@ public class ReAligner {
 		}
 		
 		writer = new SortedSAMWriter(outputFiles, tempDir.toString(), samHeaders, isKeepTmp, chromosomeChunker,
-				finalCompressionLevel, shouldSort, maxRealignDist, shouldUnsetDuplicates);
+				finalCompressionLevel, shouldSort, maxRealignDist, shouldUnsetDuplicates, shouldCreateIndex, shouldUseGkl);
 
 		// Spawn thread for each chromosome
 		// TODO: Validate identical sequence dictionary for each input file
@@ -1649,6 +1652,8 @@ public class ReAligner {
 			realigner.chromosomesToSkipRegex = options.getChromosomesToSkipRegex();
 			realigner.shouldUnsetDuplicates = options.shouldUnsetDuplicates();
 			realigner.inputVcf = options.getInputVcf();
+			realigner.shouldCreateIndex = options.shouldCreateIndex();
+			realigner.shouldUseGkl = options.shouldUseGkl();
 			MAX_REGION_LENGTH = options.getWindowSize();
 			MIN_REGION_REMAINDER = options.getWindowOverlap();
 			REGION_OVERLAP = options.getWindowOverlap();

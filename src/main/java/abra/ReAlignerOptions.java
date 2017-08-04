@@ -51,6 +51,8 @@ public class ReAlignerOptions extends Options {
 	private static final String SKIP_UNMAPPED_ASSEMBLY_TRIGGER = "sua";
 	private static final String UNSET_DUPLICATES = "undup";
 	private static final String INPUT_VCF = "in-vcf";
+	private static final String INDEX = "index";
+	private static final String NO_GKL = "no-gkl";
 	
 	private OptionParser parser;
 	private boolean isValid;
@@ -100,6 +102,8 @@ public class ReAlignerOptions extends Options {
             parser.accepts(SKIP_UNMAPPED_ASSEMBLY_TRIGGER, "Do not use unmapped reads anchored by mate to trigger assembly.  These reads are still eligible to contribute to assembly");
             parser.accepts(UNSET_DUPLICATES, "Unset duplicate flag");
             parser.accepts(INPUT_VCF, "VCF containing known (or suspected) variant sites.  Very large files should be avoided.").withRequiredArg().ofType(String.class);
+            parser.accepts(INDEX, "Enable BAM index generation when outputting sorted alignments (may require additonal memory)");
+            parser.accepts(NO_GKL, "Disable GKL Intel Deflater");
     	}
     	
     	return parser;
@@ -312,6 +316,14 @@ public class ReAlignerOptions extends Options {
 	
 	public boolean shouldSort() {
 		return !getOptions().has(NO_SORT);
+	}
+	
+	public boolean shouldCreateIndex() {
+		return getOptions().has(INDEX);
+	}
+	
+	public boolean shouldUseGkl() {
+		return !getOptions().has(NO_GKL);
 	}
 	
 	public int[] getSmithWatermanScoring() {

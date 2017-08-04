@@ -277,7 +277,7 @@ public class ReAligner {
 		
 		Set<Integer> regionsToProcess = new TreeSet<Integer>();
 	
-		int currRegionIdx = -1;
+		int searchStartRegionIdx = 0;
 		
 		for (SAMRecordWrapper record : reader) {
 			
@@ -300,7 +300,15 @@ public class ReAligner {
 				}				
 			}
 			
-			List<Integer> overlappingRegions = Feature.findAllOverlappingRegions(reader.getSAMFileHeader(), record, chromosomeRegions, currRegionIdx);
+			// Advance currRegion to current locus @ record start - 1000000
+			// TODO: Use move dist instead of 1000000 ?
+			Feature searchStartRegion = chromosomeRegions.get(searchStartRegionIdx);
+			while (searchStartRegion != null && searchStartRegionIdx < chromosomeRegions.size()-1 && searchStartRegion.getEnd() < record.getAdjustedAlignmentStart() - 1000000) {
+				searchStartRegionIdx += 1;
+				searchStartRegion = chromosomeRegions.get(searchStartRegionIdx);
+			}
+			
+			List<Integer> overlappingRegions = Feature.findAllOverlappingRegions(reader.getSAMFileHeader(), record, chromosomeRegions, searchStartRegionIdx);
 			
 //			int regionIdx = Feature.findFirstOverlappingRegion(reader.getSAMFileHeader(), record, chromosomeRegions, currRegionIdx);
 						
@@ -315,10 +323,11 @@ public class ReAligner {
 			currReads.get(record.getSampleIdx()).add(record);
 			
 			Iterator<Integer> regionIter = regionsToProcess.iterator();
-			if (regionIter.hasNext()) {
-				currRegionIdx = regionIter.next();
+			while (regionIter.hasNext()) {
+				int regionToProcessIdx = regionIter.next();
 				// If start position for current read is beyond current region, trigger assembly
-				Feature currRegion = chromosomeRegions.get(currRegionIdx);
+				Feature currRegion = chromosomeRegions.get(regionToProcessIdx);
+				Logger.debug("currRegion: " + currRegion);
 				if (record.getAdjustedAlignmentStart() > currRegion.getEnd() + this.readLength*2) {
 					Logger.debug("Processing region: %s", currRegion);
 					Map<SimpleMapper, ContigAlignerResult> mappedContigs = processRegion(currRegion, currReads, regionJunctions.get(currRegion), regionVariants.get(currRegion));
@@ -453,11 +462,11 @@ public class ReAligner {
 		// Attempt to process last region if applicable
 		Iterator<Integer> regionIter = regionsToProcess.iterator();
 		while (regionIter.hasNext()) {
-			currRegionIdx = regionIter.next();
+			int regionToProcessIdx = regionIter.next();
 			
 			// We've moved beyond the current region
 			// Assemble reads
-			Feature region = chromosomeRegions.get(currRegionIdx);
+			Feature region = chromosomeRegions.get(regionToProcessIdx);
 			Logger.debug("Processing region: %s", region);
 			Map<SimpleMapper, ContigAlignerResult> mappedContigs = processRegion(region, currReads, regionJunctions.get(region), regionVariants.get(region));
 			Logger.debug("Region: %s assembled: %d contigs", region, mappedContigs.keySet().size());

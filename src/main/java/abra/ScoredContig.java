@@ -49,7 +49,12 @@ public class ScoredContig implements Comparable<ScoredContig> {
 		for (String str : contigSeq) {
 			if (str.startsWith(">")) {
 				String[] fields = str.split("_");
-				score = Double.parseDouble(fields[4]);
+				try {
+					score = Double.parseDouble(fields[4]);
+				} catch (ArrayIndexOutOfBoundsException e) {
+					Logger.error("Error parsing assembled contigs.  Line: [" + str + "]\n\nContigs: [\n" + contigStrings + "\n]");
+					throw e;
+				}
 			} else {
 				contigs.add(new ScoredContig(score, str));
 			}

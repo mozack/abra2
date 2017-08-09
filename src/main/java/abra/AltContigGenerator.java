@@ -102,15 +102,6 @@ public class AltContigGenerator {
 			for (SAMRecordWrapper readWrapper : reads) {
 				SAMRecord read = readWrapper.getSamRecord();
 				
-				if (readWrapper.hasMergedSeq()) {
-					if (mergedReadIds.contains(read.getReadName())) {
-						// Only process merged read pair once. (TODO: Allow both ends to be used for observed indels?)
-						continue;
-					} else {
-						mergedReadIds.add(read.getReadName());
-					}
-				}
-				
 				if (read.getMappingQuality() > minMapq) {
 					
 					if (useObservedIndels) {
@@ -188,6 +179,15 @@ public class AltContigGenerator {
 					// Add high quality soft clipped reads
 					if (useSoftClippedReads && readWrapper.shouldAssemble() &&
 							hasHighQualitySoftClipping(readWrapper.getSamRecord(), region)) {
+						
+						// Don't double add merged read sequence
+						if (readWrapper.hasMergedSeq()) {
+							if (mergedReadIds.contains(read.getReadName())) {
+								continue;
+							} else {
+								mergedReadIds.add(read.getReadName());
+							}
+						}
 						
 						ScoredContig sc;
 						

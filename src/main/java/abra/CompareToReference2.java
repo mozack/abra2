@@ -7,7 +7,6 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -101,10 +100,6 @@ public class CompareToReference2 {
 		return mismatches;		
 	}
 	
-	public List<Integer> mismatchPositions(SAMRecord read) {
-		return mismatchPositions(read, -1);
-	}
-	
 	private long getRefLength(String refName) {
 		return refMap.get(refName.trim()).length * 4;
 	}
@@ -152,44 +147,7 @@ public class CompareToReference2 {
 		
 		return alt;
 	}
-	
-	public List<Integer> mismatchPositions(SAMRecord read, int maxMismatches) {
-		if (read.getReadUnmappedFlag()) {
-			return Collections.emptyList();
-		}
 		
-		List<Integer> mismatches = new ArrayList<Integer>();
-		
-		int readIdx = 0;
-		int refIdx = read.getAlignmentStart()-1;
-		for (CigarElement element : read.getCigar().getCigarElements()) {
-			if (element.getOperator() == CigarOperator.M) {
-				for (int i=0; i<element.getLength(); i++) {
-					char readBase = getReadBase(read, readIdx);
-					char refBase = getRefBase(refIdx, read.getReferenceName());
-					if ((readBase != refBase) && (readBase != 'N') && (refBase != 'N')) {
-						mismatches.add(readIdx);
-					}
-					
-					readIdx++;
-					refIdx++;
-				}
-			} else if (element.getOperator() == CigarOperator.I) {
-				readIdx += element.getLength();
-			} else if (element.getOperator() == CigarOperator.D) {
-				refIdx += element.getLength();
-			} else if (element.getOperator() == CigarOperator.S) {
-				readIdx += element.getLength();
-			}
-			
-			if ((maxMismatches > 0) && (mismatches.size() > maxMismatches)) {
-				break;
-			}
-		}
-
-		return mismatches;
-	}
-	
 	private char getReadBase(SAMRecord read, int index) {
 		return (char) read.getReadBases()[index];
 	}
@@ -200,10 +158,6 @@ public class CompareToReference2 {
 	
 	private int numDifferences(SAMRecord read, int minBaseQual) {
 		return numDifferences(read, minBaseQual, true);
-	}
-	
-	private int numDifferencesNoClipping(SAMRecord read, int minBaseQual) {
-		return numDifferences(read, minBaseQual, false);
 	}
 	
 	private int numDifferences(SAMRecord read, int minBaseQual, boolean includeSoftClipping) {
@@ -221,7 +175,8 @@ public class CompareToReference2 {
 					for (int i=0; i<element.getLength(); i++) {
 						char readBase = getReadBase(read, readIdx);
 						char refBase = getRefBase(refIdx, read.getReferenceName());
-						if ((readBase != refBase) && (readBase != 'N') && (refBase != 'N')) {
+//						if ((readBase != refBase) && (readBase != 'N') && (refBase != 'N')) {
+						if (readBase != refBase) {
 							if (minBaseQual == 0 || getBaseQuality(read, readIdx) >= minBaseQual) {
 								diffs++;
 							}
@@ -248,7 +203,8 @@ public class CompareToReference2 {
 //							char readBase = Character.toUpperCase(read.getReadString().charAt(readIdx));
 							char readBase = getReadBase(read, readIdx);
 							char refBase = getRefBase(refIdx, read.getReferenceName());
-							if ((readBase != refBase) && (readBase != 'N') && (refBase != 'N')) {
+//							if ((readBase != refBase) && (readBase != 'N') && (refBase != 'N')) {
+							if (readBase != refBase) {
 								if (minBaseQual == 0 || getBaseQuality(read, readIdx) >= minBaseQual) {
 									if (includeSoftClipping) {
 										diffs++;

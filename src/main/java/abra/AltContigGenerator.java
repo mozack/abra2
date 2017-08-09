@@ -59,7 +59,6 @@ public class AltContigGenerator {
 		return false;
 	}
 	
-	// Return true if read contains a soft clip element >= 5 bases long with 80% or more of bases exceeding min base qual
 	private boolean hasHighQualitySoftClipping(SAMRecord read, Feature region) {
 		
 		boolean hasHighQualitySoftClipping = false;
@@ -67,7 +66,7 @@ public class AltContigGenerator {
 		if (read.getCigarLength() > 1) {
 			// Check first cigar element
 			CigarElement elem = read.getCigar().getCigarElement(0);
-			if (elem.getOperator() == CigarOperator.S  && elem.getLength() > minSoftClipLength && read.getAlignmentStart() >= region.getStart()-read.getReadLength()) {
+			if (elem.getOperator() == CigarOperator.S  && elem.getLength() >= minSoftClipLength && read.getAlignmentStart() >= region.getStart()-read.getReadLength()) {
 				int elemStart = 0;
 				hasHighQualitySoftClipping = hasHighQualitySoftClipping(read, elemStart, elem.getLength());
 			}
@@ -75,7 +74,7 @@ public class AltContigGenerator {
 			// Check last Cigar element
 			if (!hasHighQualitySoftClipping) {
 				elem = read.getCigar().getCigarElement(read.getCigarLength()-1);
-				if (elem.getOperator() == CigarOperator.S  && elem.getLength() > minSoftClipLength && read.getAlignmentEnd() <= region.getEnd()+read.getReadLength()) {
+				if (elem.getOperator() == CigarOperator.S  && elem.getLength() >= minSoftClipLength && read.getAlignmentEnd() <= region.getEnd()+read.getReadLength()) {
 					int elemStart = read.getReadLength() - elem.getLength();
 					hasHighQualitySoftClipping = hasHighQualitySoftClipping(read, elemStart, elem.getLength());
 				}

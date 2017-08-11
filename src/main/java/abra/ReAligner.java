@@ -396,7 +396,7 @@ public class ReAligner {
 				long start = System.currentTimeMillis();
 				int totalReads = remapReads(regionContigs, readsToRemap, chromosomeChunkIdx);
 				long stop = System.currentTimeMillis();
-				Logger.debug("REMAP_READS_MSECS:\t%d\t%d\t%s:%d", (stop-start), totalReads, record.getSamRecord().getReferenceName(), record.getSamRecord().getAlignmentStart());
+//				Logger.debug("REMAP_READS_MSECS:\t%d\t%d\t%s:%d", (stop-start), totalReads, record.getSamRecord().getReferenceName(), record.getSamRecord().getAlignmentStart());
 				
 				// Remove out of scope region assemblies
 				List<Feature> regionsToRemove = new ArrayList<Feature>();
@@ -561,15 +561,15 @@ public class ReAligner {
 	}
 	
 	private void remapRead(ReadEvaluator readEvaluator, SAMRecord read, int origEditDist) {
-		
-		if (read.getReadName().equals("DGR4KXP1:542:HKMC5ADXX:2:2203:14118:5818")) {
-			System.out.println("Foo");
-		}
-		
+				
 		Alignment alignment = readEvaluator.getImprovedAlignment(origEditDist, read, c2r);
 		if (alignment != null) {
 			
-			if (Math.abs(read.getAlignmentStart() - alignment.pos) > maxRealignDist) {
+			if (alignment == Alignment.AMBIGUOUS) {
+				// Read maps equally well to reference and contig.  Flag with mapq of 1.
+				read.setMappingQuality(1);
+			}
+			else if (Math.abs(read.getAlignmentStart() - alignment.pos) > maxRealignDist) {
 				Logger.trace("Not moving read: " + read.getReadName() + " from: " + read.getAlignmentStart() + " to: " + alignment.pos);
 			} else {
 			
@@ -640,6 +640,7 @@ public class ReAligner {
 			for (SAMRecordWrapper readWrapper : reads) {
 				totalReads += 1;
 				SAMRecord read = readWrapper.getSamRecord();
+								
 				if (read.getMappingQuality() >= this.minMappingQuality || read.getReadUnmappedFlag()) {
 					
 					if (Math.abs(read.getAlignmentStart() - read.getMateAlignmentStart()) < maxRealignDist &&
@@ -649,9 +650,7 @@ public class ReAligner {
 						int origEditDist = SAMRecordUtils.getEditDistance(read, c2r, true);
 		//				int origEditDist = c2r.numMismatches(read);
 											
-						if (origEditDist > 0 || SAMRecordUtils.getNumSplices(read) > 0) {
-							remapRead(readEvaluator, read, origEditDist);
-						}
+						remapRead(readEvaluator, read, origEditDist);
 					}
 				}
 			}

@@ -60,8 +60,7 @@ public class ReadEvaluatorTest {
 		// 1 mismatch in alignment to contig versus edit distance 1 in original read
 		// should result in no improved alignment
 		Alignment alignment = re.getImprovedAlignment(1, read);
-//		assertEquals(alignment.numMismatches, 1);
-		assertEquals(alignment, null);
+		assertEquals(alignment, Alignment.AMBIGUOUS);
 	}
 	
 	@Test (groups="unit")

@@ -283,6 +283,18 @@ public class SAMRecordUtils {
 		return numGaps;
 	}
 	
+	public static int getNumIndels(SAMRecord read) {
+		int numGaps = 0;
+		
+		for (CigarElement element : read.getCigar().getCigarElements()) {
+			if ((element.getOperator() == CigarOperator.D) || (element.getOperator() == CigarOperator.I)) {
+				numGaps += 1;
+			}
+		}
+		
+		return numGaps;
+	}
+	
 	private static boolean isClip(CigarElement elem) {
 		return elem.getOperator() == CigarOperator.S || elem.getOperator() == CigarOperator.H;
 	}
@@ -729,6 +741,17 @@ public class SAMRecordUtils {
 			sum += b;
 		}
 		return sum;
+	}
+	
+	public static int getUnclippedLength(SAMRecord read) {
+		int softClipLen = 0;
+		for (CigarElement elem : read.getCigar().getCigarElements()) {
+			if (elem.getOperator() == CigarOperator.S) {
+				softClipLen += elem.getLength();
+			}
+		}
+		
+		return read.getReadLength() - softClipLen;
 	}
 	
 	public static SamReader getSamReader(String filename) {

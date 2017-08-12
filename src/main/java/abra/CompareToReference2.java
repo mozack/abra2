@@ -89,12 +89,12 @@ public class CompareToReference2 {
 	 * Returns # of read mismatches with bases exceeding minBaseQual + indel lengths.
 	 * Soft clipped bases are included in comparison to reference. 
 	 */
-	public int numHighQualityMismatches(SAMRecord read, int minBaseQual) {
+	public int numHighQualityMismatches(SAMRecord read, int minBaseQual, boolean includeSoftClip) {
 		int mismatches = 0;
 		
 		if (!read.getReadUnmappedFlag()) {
 			
-			mismatches = numDifferences(read, minBaseQual);
+			mismatches = numDifferences(read, minBaseQual, includeSoftClip);
 		}
 
 		return mismatches;		

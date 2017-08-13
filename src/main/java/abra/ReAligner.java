@@ -565,73 +565,90 @@ public class ReAligner {
 		Alignment alignment = readEvaluator.getImprovedAlignment(origEditDist, read, c2r);
 		if (alignment != null) {
 			
-			if (alignment == Alignment.AMBIGUOUS) {
-				// Read maps equally well to reference and contig.  Flag with mapq of 1.
-				// TODO: Parameterize
-				read.setMappingQuality(1);
-			}
-			else if (Math.abs(read.getAlignmentStart() - alignment.pos) > maxRealignDist) {
+			if (Math.abs(read.getAlignmentStart() - alignment.pos) > maxRealignDist) {
 				Logger.trace("Not moving read: " + read.getReadName() + " from: " + read.getAlignmentStart() + " to: " + alignment.pos);
-			} else {
-				
-				int numMismatches = c2r.numHighQualityMismatches(read, 20, false); 
-				int numIndels = SAMRecordUtils.getNumIndels(read);
-				
-				int noise = numMismatches + (numIndels * 2);
-				
+			}
+			else if (alignment == Alignment.AMBIGUOUS) {
+				// Read maps equally well to reference and multiple differing contigs.  Flag with mapq of 1.
 				// TODO: Parameterize
-				int maxNoise = (int) (SAMRecordUtils.getUnclippedLength(read) * .10);
+				// TODO: Can cause normal depth to reach 0 due to mapq filter in some cases (possibly use more lenient mapq on normal?)
+				read.setMappingQuality(1);
+			} else if (origEditDist == alignment.numMismatches && (read.getAlignmentStart() != alignment.pos || !read.getCigarString().equals(alignment.cigar))) {
+				// Read maps ambiguously.  Downgrade mapping quality
+				read.setMappingQuality(1);
+			} else if (origEditDist > alignment.numMismatches) {
 				
-				if (noise < maxNoise) {
+				SAMRecord orig = read.deepCopy();
 				
-					int readPos = alignment.pos;
+				int readPos = alignment.pos;
+				
+				// Set contig alignment info for all reads that map to contigs (even if read is unchanged)
+				String ya = alignment.chromosome + ":" + alignment.contigPos + ":" + alignment.contigCigar;
+				
+				// If no change to alignment, just record the YA tag
+				if (!read.getReadUnmappedFlag() && read.getAlignmentStart() == readPos && read.getCigarString().equals(alignment.cigar)) {
+					read.setAttribute("YA", ya);
+				}
+				
+				// If the read has actually moved to an improved alignment, update
+				if (read.getReadUnmappedFlag() || read.getAlignmentStart() != readPos || !read.getCigarString().equals(alignment.cigar)) {
 					
-					// Set contig alignment info for all reads that map to contigs (even if read is unchanged)
-					String ya = alignment.chromosome + ":" + alignment.contigPos + ":" + alignment.contigCigar;
+					read.setAttribute("YA", ya);
+	
+					// Original alignment info
+					String yo = "N/A";
+					if (!read.getReadUnmappedFlag()) {
+						String origOrientation = read.getReadNegativeStrandFlag() ? "-" : "+";
+						yo = read.getReferenceName() + ":" + read.getAlignmentStart() + ":" + origOrientation + ":" + read.getCigarString();
+					} else {
+						read.setReadUnmappedFlag(false);
+						read.setMappingQuality(this.maxMapq);
+					}
+					read.setAttribute("YO", yo);
+	
+					// Update alignment position and cigar and orientation
+					read.setAlignmentStart(alignment.pos);
+					read.setCigarString(alignment.cigar);
 					
-					// If no change to alignment, just record the YA tag
-					if (!read.getReadUnmappedFlag() && read.getAlignmentStart() == readPos && read.getCigarString().equals(alignment.cigar)) {
-						read.setAttribute("YA", ya);
+					// If this is true, the read was already reverse complemented in the original alignment
+					if (read.getReadNegativeStrandFlag()) {
+						read.setReadNegativeStrandFlag(alignment.orientation == Orientation.FORWARD ? true : false);
+					} else {
+						read.setReadNegativeStrandFlag(alignment.orientation == Orientation.FORWARD ? false : true);
 					}
 					
-					// If the read has actually moved to an improved alignment, update
-					if (origEditDist > alignment.numMismatches && (read.getReadUnmappedFlag() || read.getAlignmentStart() != readPos || !read.getCigarString().equals(alignment.cigar))) {
-						
-						read.setAttribute("YA", ya);
-		
-						// Original alignment info
-						String yo = "N/A";
-						if (!read.getReadUnmappedFlag()) {
-							String origOrientation = read.getReadNegativeStrandFlag() ? "-" : "+";
-							yo = read.getReferenceName() + ":" + read.getAlignmentStart() + ":" + origOrientation + ":" + read.getCigarString();
-						} else {
-							read.setReadUnmappedFlag(false);
-							read.setMappingQuality(this.maxMapq);
-						}
-						read.setAttribute("YO", yo);
-		
-						// Update alignment position and cigar and orientation
-						read.setAlignmentStart(alignment.pos);
-						read.setCigarString(alignment.cigar);
-						
-						// If this is true, the read was already reverse complemented in the original alignment
-						if (read.getReadNegativeStrandFlag()) {
-							read.setReadNegativeStrandFlag(alignment.orientation == Orientation.FORWARD ? true : false);
-						} else {
-							read.setReadNegativeStrandFlag(alignment.orientation == Orientation.FORWARD ? false : true);
-						}
-						
-						// Number of mismatches to contig
-						read.setAttribute("YM", alignment.numMismatches);
-		
-						// Original edit distance
-						read.setAttribute("YX",  origEditDist);
-						
-						// Updated edit distance
-						read.setAttribute("NM", SAMRecordUtils.getEditDistance(read, c2r, false));
-						
-						//TODO: Compute mapq intelligently???
-						read.setMappingQuality(Math.min(read.getMappingQuality()+10, this.maxMapq));
+					// Number of mismatches to contig
+					read.setAttribute("YM", alignment.numMismatches);
+	
+					// Original edit distance
+					read.setAttribute("YX",  origEditDist);
+					
+					// Updated edit distance
+					read.setAttribute("NM", SAMRecordUtils.getEditDistance(read, c2r, false));
+					
+					//TODO: Compute mapq intelligently???
+					read.setMappingQuality(Math.min(read.getMappingQuality()+10, this.maxMapq));
+					
+					// Check for realignments that are too noisy
+					int numMismatches = c2r.numHighQualityMismatches(read, 20, false); 
+					int numIndels = SAMRecordUtils.getNumIndels(read);
+					
+					int noise = numMismatches + (numIndels * 2);
+					
+					// TODO: Parameterize
+					int maxNoise = (int) (SAMRecordUtils.getUnclippedLength(read) * .10);
+					
+					if (noise > maxNoise) {
+						// Read is too noisy, revert
+						read.setAlignmentStart(orig.getAlignmentStart());
+						read.setCigar(orig.getCigar());
+						read.setReadNegativeStrandFlag(orig.getReadNegativeStrandFlag());
+						read.setAttribute("YA", null);
+						read.setAttribute("YO", null);
+						read.setAttribute("YM", null);
+						read.setAttribute("YX", null);
+						read.setAttribute("NM", orig.getAttribute("NM"));
+						read.setMappingQuality(orig.getMappingQuality());
 					}
 				}
 			}

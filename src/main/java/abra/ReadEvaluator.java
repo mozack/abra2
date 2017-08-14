@@ -79,64 +79,64 @@ public class ReadEvaluator {
 			}
 		}
 		
-		if (bestMismatches == origEditDist) {
-			result = Alignment.AMBIGUOUS;
-		} else {
+		// If multiple "best" hits, check to see if they agree.
+		Set<Alignment> alignments = new HashSet<Alignment>();
 		
-			// If multiple "best" hits, check to see if they agree.
-			Set<Alignment> alignments = new HashSet<Alignment>();
+		for (AlignmentHit alignmentHit : alignmentHits) {
+			ContigAlignerResult contigAlignment = mappedContigs.get(alignmentHit.region).get(alignmentHit.mapper); 
 			
-			for (AlignmentHit alignmentHit : alignmentHits) {
-				ContigAlignerResult contigAlignment = mappedContigs.get(alignmentHit.region).get(alignmentHit.mapper); 
+			int readRefPos = alignmentHit.mapResult.getPos();
+			String cigar = "";
+			
+			// Read position in the local reference
+			if (alignmentHit.mapResult.getPos() >= 0) {
+				StringBuffer cigarBuf = new StringBuffer();
+				int readPosInCigarRelativeToRef = CigarUtils.subsetCigarString(alignmentHit.mapResult.getPos(), read.length(), contigAlignment.getCigar(), cigarBuf);
+				readRefPos = contigAlignment.getGenomicPos() + readPosInCigarRelativeToRef;
+				cigar = cigarBuf.toString();
+			}
+			
+			Alignment readAlignment = new Alignment(contigAlignment.getChromosome(), readRefPos, cigar, alignmentHit.mapResult.getOrientation(), bestMismatches, 
+					contigAlignment.getGenomicPos(), contigAlignment.getCigar(), contigAlignment.isSecondary());
+			
+			if (alignments.size() == 1) {
+				Alignment alignment2 = alignments.iterator().next();
 				
-				int readRefPos = alignmentHit.mapResult.getPos();
-				String cigar = "";
+				int choice = CigarUtils.testEquivalenceAndSelectIntronPreferred(readAlignment, alignment2);
 				
-				// Read position in the local reference
-				if (alignmentHit.mapResult.getPos() >= 0) {
-					StringBuffer cigarBuf = new StringBuffer();
-					int readPosInCigarRelativeToRef = CigarUtils.subsetCigarString(alignmentHit.mapResult.getPos(), read.length(), contigAlignment.getCigar(), cigarBuf);
-					readRefPos = contigAlignment.getGenomicPos() + readPosInCigarRelativeToRef;
-					cigar = cigarBuf.toString();
-				}
-				
-				Alignment readAlignment = new Alignment(contigAlignment.getChromosome(), readRefPos, cigar, alignmentHit.mapResult.getOrientation(), bestMismatches, 
-						contigAlignment.getGenomicPos(), contigAlignment.getCigar(), contigAlignment.isSecondary());
-				
-				if (alignments.size() == 1) {
-					Alignment alignment2 = alignments.iterator().next();
-					
-					int choice = CigarUtils.testEquivalenceAndSelectIntronPreferred(readAlignment, alignment2);
-					
-					if (choice == 0) {
-						// Non-equivalent contigs means we have ambiguous alignments.  Break and return null;
-						alignments.clear();
-						break;
-					}
-					
-					// Choose the first alignment
-					if (choice == 1) {
-						alignments.clear();
-						alignments.add(readAlignment);
-					}
-					
-					// Second alignment is already in the Set.
-					
-				} else if (alignments.size() == 0) {
-					alignments.add(readAlignment);
-				} else {
+				if (choice == 0) {
+					// Non-equivalent contigs means we have ambiguous alignments.  Break and return null;
 					alignments.clear();
 					break;
 				}
-			}
-			
-			// If there is more than 1 distinct alignment, we have an ambiguous result which will not be used.
-			if (alignments.size() == 1) {
-				result = alignments.iterator().next();
-				// If the result was ambiguously mapped within a single contig, return null.
-				if (result.pos < 0) {
-					result = null;
+				
+				// Choose the first alignment
+				if (choice == 1) {
+					alignments.clear();
+					alignments.add(readAlignment);
 				}
+				
+				// Second alignment is already in the Set.
+				
+			} else if (alignments.size() == 0) {
+				alignments.add(readAlignment);
+			} else {
+				alignments.clear();
+				break;
+			}
+		}
+		
+		// If there is more than 1 distinct alignment, we have an ambiguous result which will not be used.
+		if (alignments.size() == 1) {
+			result = alignments.iterator().next();
+			// If the result was ambiguously mapped within a single contig, return null.
+			if (result.pos < 0) {
+				result = null;
+			}
+		} else if (alignments.size() > 1) {
+			// We have multiple possible alignments that are equal to the original alignment
+			if (bestMismatches == origEditDist) {
+				result = Alignment.AMBIGUOUS;
 			}
 		}
 		

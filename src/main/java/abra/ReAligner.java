@@ -565,14 +565,13 @@ public class ReAligner {
 		Alignment alignment = readEvaluator.getImprovedAlignment(origEditDist, read, c2r);
 		if (alignment != null) {
 			
-			if (Math.abs(read.getAlignmentStart() - alignment.pos) > maxRealignDist) {
-				Logger.trace("Not moving read: " + read.getReadName() + " from: " + read.getAlignmentStart() + " to: " + alignment.pos);
-			}
-			else if (alignment == Alignment.AMBIGUOUS) {
+			if (alignment == Alignment.AMBIGUOUS) {
 				// Read maps equally well to reference and multiple differing contigs.  Flag with mapq of 1.
 				// TODO: Parameterize
 				// TODO: Can cause normal depth to reach 0 due to mapq filter in some cases (possibly use more lenient mapq on normal?)
 				read.setMappingQuality(1);
+			} else if (Math.abs(read.getAlignmentStart() - alignment.pos) > maxRealignDist) {
+				Logger.trace("Not moving read: " + read.getReadName() + " from: " + read.getAlignmentStart() + " to: " + alignment.pos);
 			} else if (origEditDist == alignment.numMismatches && (read.getAlignmentStart() != alignment.pos || !read.getCigarString().equals(alignment.cigar))) {
 				// Read maps ambiguously.  Downgrade mapping quality
 				read.setMappingQuality(1);
@@ -669,6 +668,10 @@ public class ReAligner {
 			for (SAMRecordWrapper readWrapper : reads) {
 				totalReads += 1;
 				SAMRecord read = readWrapper.getSamRecord();
+				
+				if (read.getReadName().equals("HWI-D00360:7:H88WKADXX:1:2109:11533:87166")) {
+					System.out.println("bar");
+				}
 								
 				if (read.getMappingQuality() >= this.minMappingQuality || read.getReadUnmappedFlag()) {
 					

@@ -107,6 +107,10 @@ public class ReadEvaluator {
 				if (choice == 0) {
 					// Non-equivalent contigs means we have ambiguous alignments.  Break and return null;
 					alignments.clear();
+					if (bestMismatches == origEditDist) {
+						// Mark as ambiguous if this is same is original alignment.
+						return Alignment.AMBIGUOUS;
+					}
 					break;
 				}
 				

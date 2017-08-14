@@ -594,7 +594,7 @@ public class CadabraProcessor {
 	
 	private Pair<Integer, String> getRepeatPeriod(String chromosome, int position, Allele indel, AlleleCounts indelCounts) {
 		int chromosomeEnd = c2r.getReferenceLength(chromosome);
-		int length = Math.min(indel.getLength() * 20, chromosomeEnd-position-2);
+		int length = Math.min(indel.getLength() * 100, chromosomeEnd-position-2);
 		String sequence = c2r.getSequence(chromosome, position+1, length);
 		
 		String bases;

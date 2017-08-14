@@ -11,7 +11,6 @@ import java.util.Set;
 
 import org.apache.commons.lang.mutable.MutableFloat;
 
-import abra.ReAligner.Pair;
 import htsjdk.samtools.Cigar;
 import htsjdk.samtools.CigarElement;
 import htsjdk.samtools.CigarOperator;

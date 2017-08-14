@@ -9,6 +9,7 @@ import java.util.Map;
 import abra.CompareToReference2;
 import abra.Feature;
 import abra.Logger;
+import abra.Pair;
 import abra.SAMRecordUtils;
 import htsjdk.samtools.Cigar;
 import htsjdk.samtools.CigarElement;
@@ -306,7 +307,7 @@ public class CadabraProcessor {
 			AlleleCounts refCounts = alleleCounts.get(refAllele);
 			
 			double qual = isSomatic ? 0 : calcPhredScaledQuality(refCounts.getCount(), altCounts.getCount(), usableDepth);
-			int repeatPeriod = getRepeatPeriod(chromosome, position, alt, altCounts);
+			Pair<Integer, String> repeat = getRepeatPeriod(chromosome, position, alt, altCounts);
 
 			String refField = "";
 			String altField = "";
@@ -319,15 +320,16 @@ public class CadabraProcessor {
 			}
 			
 			call = new SampleCall(chromosome, position, refAllele, alt, alleleCounts, totalDepth, 
-					usableDepth, qual, repeatPeriod, tumorMapq0, refField, altField, mismatchExceededReads, refSeq, options);
+					usableDepth, qual, repeat.getFirst(), repeat.getSecond(), tumorMapq0, refField, altField, mismatchExceededReads, refSeq, options);
 		} else {
 			String refField = getInsRefField(chromosome, position);
 			String altField = ".";
 			double qual = 0;
 			int rp = 0;
+			String ru = "";
 			
 			call = new SampleCall(chromosome, position, refAllele, Allele.UNK, alleleCounts, totalDepth, 
-					usableDepth, qual, rp, tumorMapq0, refField, altField, mismatchExceededReads, refSeq, options);
+					usableDepth, qual, rp, ru, tumorMapq0, refField, altField, mismatchExceededReads, refSeq, options);
 		}
 		
 		return call;
@@ -360,6 +362,7 @@ public class CadabraProcessor {
 		int usableDepth;
 		double qual;
 		int repeatPeriod;
+		String repeatUnit;
 		int mapq0;
 		String refField;
 		String altField;
@@ -371,7 +374,7 @@ public class CadabraProcessor {
 		CadabraOptions options;
 		
 		SampleCall(String chromosome, int position, Allele ref, Allele alt, Map<Allele, AlleleCounts> alleleCounts, 
-				int totalReads, int usableDepth, double qual, int repeatPeriod, int mapq0, String refField, String altField,
+				int totalReads, int usableDepth, double qual, int repeatPeriod, String repeatUnit, int mapq0, String refField, String altField,
 				int mismatchExceededReads, String context, CadabraOptions options) {
 			this.chromosome = chromosome;
 			this.position = position;
@@ -382,6 +385,7 @@ public class CadabraProcessor {
 			this.usableDepth = usableDepth;
 			this.qual = qual;
 			this.repeatPeriod = repeatPeriod;
+			this.repeatUnit = repeatUnit;
 			this.mapq0 = mapq0;
 			this.refField = refField;
 			this.altField = altField;
@@ -452,7 +456,7 @@ public class CadabraProcessor {
 			char hrunBase = hrun != null ? hrun.getBase() : 'N';
 			int hrunPos = hrun != null ? hrun.getPos() : 0;
 			
-			String info = String.format("STRP=%d;HRUN=%d,%c,%d;REF=%s", repeatPeriod,
+			String info = String.format("STRP=%d;STRU=%s;HRUN=%d,%c,%d;REF=%s", repeatPeriod, repeatUnit,
 					hrunLen, hrunBase, hrunPos, context);
 			
 			String sampleInfo = getSampleInfo(ref, alt);
@@ -588,7 +592,7 @@ public class CadabraProcessor {
 		return -10 * Math.log10(BetaBinomial.betabinCDF(dp, altObs));
 	}
 	
-	private int getRepeatPeriod(String chromosome, int position, Allele indel, AlleleCounts indelCounts) {
+	private Pair<Integer, String> getRepeatPeriod(String chromosome, int position, Allele indel, AlleleCounts indelCounts) {
 		int chromosomeEnd = c2r.getReferenceLength(chromosome);
 		int length = Math.min(indel.getLength() * 20, chromosomeEnd-position-2);
 		String sequence = c2r.getSequence(chromosome, position+1, length);
@@ -603,7 +607,7 @@ public class CadabraProcessor {
 		String repeatUnit = RepeatUtils.getRepeatUnit(bases);
 		int period = RepeatUtils.getRepeatPeriod(repeatUnit, sequence);
 		
-		return period;
+		return new Pair<Integer, String>(period, repeatUnit);
 	}
 	
 	private String getDelRefField(String chromosome, int position, int length) {

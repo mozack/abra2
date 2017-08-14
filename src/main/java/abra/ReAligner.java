@@ -1375,23 +1375,6 @@ public class ReAligner {
 		}
 		Logger.info("Min contig length: " + assemblerSettings.getMinContigLength());
 	}
-			
-	static class Pair<T, Y> {
-		private T t;
-		private Y y;
-		public Pair(T t, Y y) {
-			this.t = t;
-			this.y = y;
-		}
-		
-		public T getFirst() {
-			return t;
-		}
-		
-		public Y getSecond() {
-			return y;
-		}
-	}
 	
 	static List<Feature> splitRegions(List<Feature> regions, 
 			int maxRegionLength, int minRegionRemainder, int regionOverlap) {

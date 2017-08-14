@@ -7,8 +7,6 @@ import htsjdk.samtools.SAMRecord;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
-import abra.ReAligner.Pair;
-
 public class SAMRecordUtilsTest {
 
 	@Test (groups = "unit" )

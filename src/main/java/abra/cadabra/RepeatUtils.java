@@ -39,7 +39,7 @@ public class RepeatUtils {
 	 * i.e. AT in ATATATGAT is a period of 3 
 	 */
 	public static int getRepeatPeriod(String bases, String ref) {
-		int maxLen = Math.min(ref.length(), bases.length()*20);
+		int maxLen = Math.min(ref.length(), bases.length()*100);
 		
 		int period = 0;
 		

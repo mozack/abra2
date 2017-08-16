@@ -145,6 +145,9 @@ public class ReAligner {
 	private boolean shouldCreateIndex;
 	private boolean shouldUseGkl;
 	
+	private int ambiguousMapq;
+	private double maxReadNoise;
+	
 	public void reAlign(String[] inputFiles, String[] outputFiles) throws Exception {
 		
 		this.inputSams = inputFiles;
@@ -567,14 +570,16 @@ public class ReAligner {
 			
 			if (alignment == Alignment.AMBIGUOUS) {
 				// Read maps equally well to reference and multiple differing contigs.  Flag with mapq of 1.
-				// TODO: Parameterize
-				// TODO: Can cause normal depth to reach 0 due to mapq filter in some cases (possibly use more lenient mapq on normal?)
-				read.setMappingQuality(1);
-			} else if (Math.abs(read.getAlignmentStart() - alignment.pos) > maxRealignDist) {
-				Logger.trace("Not moving read: " + read.getReadName() + " from: " + read.getAlignmentStart() + " to: " + alignment.pos);
+				if (ambiguousMapq >= 0 && read.getMappingQuality() > ambiguousMapq) {
+					read.setMappingQuality(ambiguousMapq);
+				}
 			} else if (origEditDist == alignment.numMismatches && (read.getAlignmentStart() != alignment.pos || !read.getCigarString().equals(alignment.cigar))) {
 				// Read maps ambiguously.  Downgrade mapping quality
-				read.setMappingQuality(1);
+				if (ambiguousMapq >= 0 && read.getMappingQuality() > ambiguousMapq) {
+					read.setMappingQuality(ambiguousMapq);
+				}
+			} else if (Math.abs(read.getAlignmentStart() - alignment.pos) > maxRealignDist) {
+				Logger.trace("Not moving read: " + read.getReadName() + " from: " + read.getAlignmentStart() + " to: " + alignment.pos);
 			} else if (origEditDist > alignment.numMismatches) {
 				
 				SAMRecord orig = read.deepCopy();
@@ -634,8 +639,7 @@ public class ReAligner {
 					
 					int noise = numMismatches + (numIndels * 2);
 					
-					// TODO: Parameterize
-					int maxNoise = (int) (SAMRecordUtils.getUnclippedLength(read) * .10);
+					int maxNoise = (int) (SAMRecordUtils.getUnclippedLength(read) * maxReadNoise);
 					
 					if (noise > maxNoise) {
 						// Read is too noisy, revert
@@ -668,10 +672,6 @@ public class ReAligner {
 			for (SAMRecordWrapper readWrapper : reads) {
 				totalReads += 1;
 				SAMRecord read = readWrapper.getSamRecord();
-				
-				if (read.getReadName().equals("HWI-D00360:7:H88WKADXX:1:2109:11533:87166")) {
-					System.out.println("bar");
-				}
 								
 				if (read.getMappingQuality() >= this.minMappingQuality || read.getReadUnmappedFlag()) {
 					
@@ -1684,6 +1684,8 @@ public class ReAligner {
 			realigner.inputVcf = options.getInputVcf();
 			realigner.shouldCreateIndex = options.shouldCreateIndex();
 			realigner.shouldUseGkl = options.shouldUseGkl();
+			realigner.ambiguousMapq = options.getAmbiguousMapq();
+			realigner.maxReadNoise = options.getMaxReadNoise();
 			MAX_REGION_LENGTH = options.getWindowSize();
 			MIN_REGION_REMAINDER = options.getWindowOverlap();
 			REGION_OVERLAP = options.getWindowOverlap();

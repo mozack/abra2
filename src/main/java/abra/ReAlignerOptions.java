@@ -53,6 +53,8 @@ public class ReAlignerOptions extends Options {
 	private static final String INPUT_VCF = "in-vcf";
 	private static final String INDEX = "index";
 	private static final String NO_GKL = "no-gkl";
+	private static final String AMBIGUOUS_MAPQ = "amq";
+	private static final String MAX_READ_NOISE = "mrn";
 	
 	private OptionParser parser;
 	private boolean isValid;
@@ -104,6 +106,8 @@ public class ReAlignerOptions extends Options {
             parser.accepts(INPUT_VCF, "VCF containing known (or suspected) variant sites.  Very large files should be avoided.").withRequiredArg().ofType(String.class);
             parser.accepts(INDEX, "Enable BAM index generation when outputting sorted alignments (may require additonal memory)");
             parser.accepts(NO_GKL, "Disable GKL Intel Deflater");
+            parser.accepts(AMBIGUOUS_MAPQ, "Set mapq for alignments that map equally well to reference and an ABRA generated contig.  default of -1 disables").withRequiredArg().ofType(Integer.class).defaultsTo(-1);
+            parser.accepts(MAX_READ_NOISE, "Reads with noise score exceeding this value are not remapped.  numMismatches+(numIndels*2) < readLength*mnr").withRequiredArg().ofType(Double.class).defaultsTo(.10);  
     	}
     	
     	return parser;
@@ -312,6 +316,14 @@ public class ReAlignerOptions extends Options {
 	
 	public int getMinimumMappingQuality() {
 		return (Integer) getOptions().valueOf(MIN_MAPQ);
+	}
+	
+	public int getAmbiguousMapq() {
+		return (Integer) getOptions().valueOf(AMBIGUOUS_MAPQ);
+	}
+	
+	public double getMaxReadNoise() {
+		return (Double) getOptions().valueOf(MAX_READ_NOISE);
 	}
 	
 	public boolean shouldSort() {

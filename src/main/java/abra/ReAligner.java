@@ -652,6 +652,7 @@ public class ReAligner {
 						read.setAttribute("YX", null);
 						read.setAttribute("NM", orig.getAttribute("NM"));
 						read.setMappingQuality(orig.getMappingQuality());
+						read.setReadUnmappedFlag(orig.getReadUnmappedFlag());
 					}
 				}
 			}

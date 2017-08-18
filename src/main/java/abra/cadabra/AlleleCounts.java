@@ -1,8 +1,10 @@
 package abra.cadabra;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -18,7 +20,10 @@ public class AlleleCounts {
 	private int maxReadIdx = Integer.MIN_VALUE;
 	private Map<String, Integer> insertBaseCounts = new HashMap<String, Integer>();
 	private Set<String> readIds = new HashSet<String>();
-	
+	private Map<Integer, List<String>> alignmentEnds = new HashMap<Integer, List<String>>();
+	private int spanEnd = -1;
+
+	private int spanningCount = -1;
 	
 	public static final AlleleCounts EMPTY_COUNTS;
 	
@@ -32,8 +37,30 @@ public class AlleleCounts {
 		EMPTY_COUNTS.totalCount = 0;
 	}
 	
+	public void setSpanEnd(int spanEnd) {
+		this.spanEnd = spanEnd;
+	}
+	
 	public int getCount() {
-		return count;
+		if (spanEnd <= 0) {
+			return count;
+		}
+		
+		if (spanningCount < 0) {
+			// Count number of distinct reads with an alignment end that reaches the spanEnd.
+			// Distinct read ids are used to not double count overlapping fragments
+			Set<String> readIds = new HashSet<String>();
+			
+			for (Integer alignmentEnd : alignmentEnds.keySet()) {
+				if (alignmentEnd > spanEnd) {
+					readIds.addAll(alignmentEnds.get(alignmentEnd));
+				}
+			}
+			
+			spanningCount = readIds.size();
+		}
+		
+		return spanningCount;
 	}
 	
 	public int getFwd() {
@@ -67,6 +94,11 @@ public class AlleleCounts {
 		}
 		
 		readIds.add(read.getReadName());
+		if (!alignmentEnds.containsKey(read.getAlignmentEnd())) {
+			alignmentEnds.put(read.getAlignmentEnd(), new ArrayList<String>());
+		}
+		
+		alignmentEnds.get(read.getAlignmentEnd()).add(read.getReadName());
 	}
 	
 	public int getTotalCount() {
@@ -127,6 +159,15 @@ public class AlleleCounts {
 		}
 		
 		return sum;
+	}
+	
+	public static void setSpanEnd(int spanEnd, Map<Allele, AlleleCounts> counts) {
+		for (Allele allele : counts.keySet()) {
+			if (allele.getType() != Allele.Type.DEL && allele.getType() != Allele.Type.INS) {
+				AlleleCounts ac = counts.get(allele);
+				ac.setSpanEnd(spanEnd);
+			}
+		}
 	}
 	
 	public String toString() {

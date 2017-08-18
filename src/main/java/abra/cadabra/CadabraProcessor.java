@@ -75,6 +75,15 @@ public class CadabraProcessor {
 				call.getVaf() >= options.getMinVaf() && call.qual >= options.getMinQual();
 	}
 	
+	private int getRepeatLength(int period, String unit, Allele.Type alleleType) {
+		if (alleleType == Allele.Type.DEL) {
+			// Subtract 1 from deletions as we are looking for reference context
+			period = Math.max(period-1, 0);
+		}
+		
+		return period * unit.length();
+	}
+	
 	private void processSomatic() {
 		Iterator<ReadsAtLocus> normalIter = normal.iterator();
 		Iterator<ReadsAtLocus> tumorIter = tumor.iterator();
@@ -93,10 +102,17 @@ public class CadabraProcessor {
 				} else if (compare > 0) {
 					tumorReads = tumorIter.next();
 				} else {
-					SampleCall normalCall = processLocus(normalReads, true);
 					SampleCall tumorCall = processLocus(tumorReads, true);
+					SampleCall normalCall = processLocus(normalReads, true);
 					
 					if (tumorCall.alt != null && tumorCall.alt != Allele.UNK && tumorCall.alleleCounts.get(tumorCall.alt).getCount() >= MIN_SUPPORTING_READS) {
+						
+						int spanEnd = tumorCall.position + getRepeatLength(tumorCall.repeatPeriod, tumorCall.repeatUnit, tumorCall.alt.getType());
+						AlleleCounts.setSpanEnd(spanEnd, tumorCall.alleleCounts);
+						AlleleCounts.setSpanEnd(spanEnd, normalCall.alleleCounts);
+						
+						tumorCall.usableDepth = AlleleCounts.sum(tumorCall.alleleCounts.values());
+						normalCall.usableDepth = AlleleCounts.sum(normalCall.alleleCounts.values());
 						
 						if (normalCall.getVaf()/tumorCall.getVaf() < .2) {
 							
@@ -291,7 +307,7 @@ public class CadabraProcessor {
 		
 		Allele alt = getAltIndelAllele(Allele.getAllele(refBase), alleleCounts);
 		
-		int usableDepth = AlleleCounts.sum(alleleCounts.values());
+		
 		
 		String refSeq = null;
 		if (!isSomatic) {
@@ -306,8 +322,16 @@ public class CadabraProcessor {
 			AlleleCounts altCounts = alleleCounts.get(alt);
 			AlleleCounts refCounts = alleleCounts.get(refAllele);
 			
-			double qual = isSomatic ? 0 : calcPhredScaledQuality(refCounts.getCount(), altCounts.getCount(), usableDepth);
 			Pair<Integer, String> repeat = getRepeatPeriod(chromosome, position, alt, altCounts);
+			
+			double qual = 0;
+			int usableDepth = 0;
+			if (!isSomatic) {
+				int repeatLength = getRepeatLength(repeat.getFirst(), repeat.getSecond(), alt.getType());
+				AlleleCounts.setSpanEnd(position+repeatLength, alleleCounts);
+				usableDepth = AlleleCounts.sum(alleleCounts.values());
+				qual = calcPhredScaledQuality(refCounts.getCount(), altCounts.getCount(), usableDepth);
+			}
 
 			String refField = "";
 			String altField = "";
@@ -329,7 +353,7 @@ public class CadabraProcessor {
 			String ru = "";
 			
 			call = new SampleCall(chromosome, position, refAllele, Allele.UNK, alleleCounts, totalDepth, 
-					usableDepth, qual, rp, ru, tumorMapq0, refField, altField, mismatchExceededReads, refSeq, options);
+					0, qual, rp, ru, tumorMapq0, refField, altField, mismatchExceededReads, refSeq, options);
 		}
 		
 		return call;
@@ -570,7 +594,7 @@ public class CadabraProcessor {
 			char hrunBase = hrun != null ? hrun.getBase() : 'N';
 			int hrunPos = hrun != null ? hrun.getPos() : 0;
 			
-			String info = String.format("STRP=%d;HRUN=%d,%c,%d;REF=%s", tumor.repeatPeriod,
+			String info = String.format("STRP=%d;STRU=%s;HRUN=%d,%c,%d;REF=%s", tumor.repeatPeriod, tumor.repeatUnit,
 					hrunLen, hrunBase, hrunPos, context);
 			
 			String normalInfo = normal.getSampleInfo(tumor.ref, tumor.alt);

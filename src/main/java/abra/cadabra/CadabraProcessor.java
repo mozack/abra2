@@ -354,6 +354,17 @@ public class CadabraProcessor {
 			
 			call = new SampleCall(chromosome, position, refAllele, Allele.UNK, alleleCounts, totalDepth, 
 					0, qual, rp, ru, tumorMapq0, refField, altField, mismatchExceededReads, refSeq, options);
+			
+			if (!isSomatic) {
+				// Adjust qual score for PCR slippage
+				if (options.getStrpThreshold() > 0 && call.repeatPeriod >= options.getStrpThreshold()) {
+					// Penalize short tandem repeat expansion / contraction
+					qual -= options.getPcrPenalty();
+				} else if (options.getHrunThreshold() > 0 && call.hrun != null && call.hrun.getLength() >= options.getHrunThreshold() && Math.abs(call.ref.getLength() - call.alt.getLength())<10) {
+					// Filter short indels near homopolymer runs
+					qual -= options.getPcrPenalty();
+				}
+			}
 		}
 		
 		return call;

@@ -304,9 +304,15 @@ public class NativeAssembler {
 							readBuffer.append(sampleId);
 							readBuffer.append(read.getReadNegativeStrandFlag() ? "1" : "0");
 							
+							String seq;
+							String qual;
+							
 							if (readWrapper.getReadLength() == maxReadLength) {
-								readBuffer.append(readWrapper.getSeq());
-								readBuffer.append(readWrapper.getQual());
+								seq = readWrapper.getSeq();
+								qual = readWrapper.getQual();
+								
+//								readBuffer.append(readWrapper.getSeq());
+//								readBuffer.append(readWrapper.getQual());
 							} else {
 								StringBuffer basePadding = new StringBuffer();
 								StringBuffer qualPadding = new StringBuffer();
@@ -315,10 +321,27 @@ public class NativeAssembler {
 									basePadding.append('N');
 									qualPadding.append('!');
 								}
-								
-								readBuffer.append(readWrapper.getSeq() + basePadding.toString());
-								readBuffer.append(readWrapper.getQual() + qualPadding.toString());							
+
+								seq = readWrapper.getSeq() + basePadding.toString();
+								qual = readWrapper.getQual() + qualPadding.toString();
+//								readBuffer.append(readWrapper.getSeq() + basePadding.toString());
+//								readBuffer.append(readWrapper.getQual() + qualPadding.toString());							
 							}
+							
+							if (seq.length() != maxReadLength) {
+								String msg = String.format("Invalid seq length [%d] for region [%s] read [%s] seq [%s]", seq.length(), regions.get(0), read.getReadName(), seq);
+								Logger.error(msg);
+								throw new RuntimeException(msg);
+							}
+							
+							if (qual.length() != maxReadLength) {
+								String msg = String.format("Invalid qual length [%d] for region [%s] read [%s] qual [%s]", qual.length(), regions.get(0), read.getReadName(), qual);
+								Logger.error(msg);
+								throw new RuntimeException(msg);
+							}
+							
+							readBuffer.append(seq);
+							readBuffer.append(qual);
 						}
 					}
 					

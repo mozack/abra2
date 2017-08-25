@@ -37,7 +37,7 @@ public class ScoredContigTest {
 				"contig12\n";
 		
 		int maxContigs = 3;
-		List<ScoredContig> contigs = ScoredContig.convertAndFilter(contigStrings, maxContigs);
+		List<ScoredContig> contigs = ScoredContig.convertAndFilter(contigStrings, maxContigs, new StringBuffer());
 		assertEquals(contigs.size(), 3);
 		assertEquals(contigs.get(0).getScore(), -2.357512);
 		assertEquals(contigs.get(0).getContig(), "contig7");

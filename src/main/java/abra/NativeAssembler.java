@@ -214,7 +214,7 @@ public class NativeAssembler {
 	
 	public String assembleContigs(List<String> inputFiles, List<Feature> regions, String prefix,
 			boolean checkForDupes, ReAligner realigner, CompareToReference2 c2r, List<List<SAMRecordWrapper>> readsList,
-			int mnf, int mbq, double mer) {
+			int mnf, int mbq, double mer, StringBuffer readBuffer) {
 		
 				
 		String contigs = "";
@@ -257,7 +257,7 @@ public class NativeAssembler {
 				sampleIdx += 1;
 			}
 			
-			StringBuffer readBuffer = new StringBuffer();
+//			StringBuffer readBuffer = new StringBuffer();
 			
 			if (isAssemblyCandidate) {
 				

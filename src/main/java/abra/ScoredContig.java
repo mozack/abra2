@@ -41,7 +41,7 @@ public class ScoredContig implements Comparable<ScoredContig> {
 //		return convertAndFilter(contigStrings, MAX_CONTIGS);
 //	}
 	
-	public static List<ScoredContig> convertAndFilter(String contigStrings, int maxContigs) {
+	public static List<ScoredContig> convertAndFilter(String contigStrings, int maxContigs, StringBuffer readBuffer) {
 		List<ScoredContig> contigs = new ArrayList<ScoredContig>();
 		
 		double score = Double.NEGATIVE_INFINITY;
@@ -53,6 +53,7 @@ public class ScoredContig implements Comparable<ScoredContig> {
 					score = Double.parseDouble(fields[4]);
 				} catch (ArrayIndexOutOfBoundsException e) {
 					Logger.error("Error parsing assembled contigs.  Line: [" + str + "]\n\nContigs: [\n" + contigStrings + "\n]");
+					Logger.error("Read buffer: [\n" + readBuffer.toString() + "\n]");
 					throw e;
 				}
 			} else {

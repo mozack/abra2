@@ -1019,7 +1019,8 @@ public class ReAligner {
 		NativeAssembler assem = (NativeAssembler) newAssembler(region);
 		List<Feature> regions = new ArrayList<Feature>();
 		regions.add(region); 
-		String contigs = assem.assembleContigs(bams, regions, region.getDescriptor(), true, this, c2r, readsList, mnf, mbq, mer);
+		StringBuffer readBuffer = new StringBuffer();
+		String contigs = assem.assembleContigs(bams, regions, region.getDescriptor(), true, this, c2r, readsList, mnf, mbq, mer, readBuffer);
 		
 		if (!contigs.equals("<ERROR>") && !contigs.equals("<REPEAT>") && !contigs.isEmpty()) {
 			
@@ -1027,7 +1028,7 @@ public class ReAligner {
 				appendContigs(contigs);
 			}
 			
-			List<ScoredContig> scoredContigs = ScoredContig.convertAndFilter(contigs, maxNumContigs);
+			List<ScoredContig> scoredContigs = ScoredContig.convertAndFilter(contigs, maxNumContigs, readBuffer);
 			
 			// Map contigs to reference
 			for (ScoredContig contig : scoredContigs) {

@@ -641,8 +641,9 @@ public class ReAligner {
 					
 					int maxNoise = (int) (SAMRecordUtils.getUnclippedLength(read) * maxReadNoise);
 					
-					if (noise > maxNoise) {
-						// Read is too noisy, revert
+					if (noise > maxNoise || 
+						read.getAlignmentEnd() >= c2r.getChromosomeLength(read.getReferenceName())-1) {
+						// Read is too noisy or read maps off end of chromosome, revert
 						read.setAlignmentStart(orig.getAlignmentStart());
 						read.setCigar(orig.getCigar());
 						read.setReadNegativeStrandFlag(orig.getReadNegativeStrandFlag());

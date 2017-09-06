@@ -52,7 +52,7 @@ public class ReAlignerOptions extends Options {
 	private static final String UNSET_DUPLICATES = "undup";
 	private static final String INPUT_VCF = "in-vcf";
 	private static final String INDEX = "index";
-	private static final String NO_GKL = "no-gkl";
+	private static final String GKL = "gkl";
 	private static final String AMBIGUOUS_MAPQ = "amq";
 	private static final String MAX_READ_NOISE = "mrn";
 	
@@ -105,7 +105,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(UNSET_DUPLICATES, "Unset duplicate flag");
             parser.accepts(INPUT_VCF, "VCF containing known (or suspected) variant sites.  Very large files should be avoided.").withRequiredArg().ofType(String.class);
             parser.accepts(INDEX, "Enable BAM index generation when outputting sorted alignments (may require additonal memory)");
-            parser.accepts(NO_GKL, "Disable GKL Intel Deflater");
+            parser.accepts(GKL, "If specified, use GKL Intel Deflater (experimental)");
             parser.accepts(AMBIGUOUS_MAPQ, "Set mapq for alignments that map equally well to reference and an ABRA generated contig.  default of -1 disables").withRequiredArg().ofType(Integer.class).defaultsTo(-1);
             parser.accepts(MAX_READ_NOISE, "Reads with noise score exceeding this value are not remapped.  numMismatches+(numIndels*2) < readLength*mnr").withRequiredArg().ofType(Double.class).defaultsTo(.10);  
     	}
@@ -335,7 +335,7 @@ public class ReAlignerOptions extends Options {
 	}
 	
 	public boolean shouldUseGkl() {
-		return !getOptions().has(NO_GKL);
+		return getOptions().has(GKL);
 	}
 	
 	public int[] getSmithWatermanScoring() {

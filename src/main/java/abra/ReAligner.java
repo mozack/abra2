@@ -148,6 +148,8 @@ public class ReAligner {
 	private int ambiguousMapq;
 	private double maxReadNoise;
 	
+	private int maxReadsInRamForSort;
+	
 	public void reAlign(String[] inputFiles, String[] outputFiles) throws Exception {
 		
 		this.inputSams = inputFiles;
@@ -187,7 +189,7 @@ public class ReAligner {
 		}
 		
 		writer = new SortedSAMWriter(outputFiles, tempDir.toString(), samHeaders, isKeepTmp, chromosomeChunker,
-				finalCompressionLevel, shouldSort, maxRealignDist, shouldUnsetDuplicates, shouldCreateIndex, shouldUseGkl);
+				finalCompressionLevel, shouldSort, maxRealignDist, shouldUnsetDuplicates, shouldCreateIndex, shouldUseGkl, maxReadsInRamForSort);
 
 		// Spawn thread for each chromosome
 		// TODO: Validate identical sequence dictionary for each input file
@@ -195,11 +197,6 @@ public class ReAligner {
 		for (int i=0; i<this.chromosomeChunker.getChunks().size(); i++) {
 			spawnChromosomeThread(i);
 		}
-		
-//		for (SAMSequenceRecord seqRecord : this.samHeaders[0].getSequenceDictionary().getSequences()) {
-//			String chromosome = seqRecord.getSequenceName();
-//			this.spawnChromosomeThread(chromosomeChunkIdx);
-//		}
 		
 		Logger.info("Waiting for processing threads to complete");
 		threadManager.waitForAllThreadsToComplete();
@@ -1689,6 +1686,7 @@ public class ReAligner {
 			realigner.shouldUseGkl = options.shouldUseGkl();
 			realigner.ambiguousMapq = options.getAmbiguousMapq();
 			realigner.maxReadNoise = options.getMaxReadNoise();
+			realigner.maxReadsInRamForSort = options.getMaxReadsInRamForSort();
 			MAX_REGION_LENGTH = options.getWindowSize();
 			MIN_REGION_REMAINDER = options.getWindowOverlap();
 			REGION_OVERLAP = options.getWindowOverlap();

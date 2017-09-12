@@ -42,14 +42,20 @@ public class SortedSAMWriter {
 	private boolean shouldUnsetDuplicates;
 	private boolean shouldCreateIndex;
 	
+	private int maxRecordsInRam;
+	
 	private Set<Integer> chunksReady = new HashSet<Integer>();
 	
 	private ReverseComplementor rc = new ReverseComplementor();
 	
+	// Internal data structures used by SortingCollection2
+	private SAMRecord[] readsByNameArray;
+	private SAMRecord[] readsByCoordArray;
+	
 	public SortedSAMWriter(String[] outputFiles, String tempDir, SAMFileHeader[] samHeaders,
 			boolean isKeepTmp, ChromosomeChunker chromosomeChunker, int finalCompressionLevel,
 			boolean shouldSort, int genomicRangeToCache, boolean shouldUnsetDuplicates,
-			boolean shouldCreateIndex, boolean shouldUseGkl) {
+			boolean shouldCreateIndex, boolean shouldUseGkl, int maxReadsInRam) {
 	
 		this.samHeaders = samHeaders;
 		this.outputFiles = outputFiles;
@@ -61,6 +67,11 @@ public class SortedSAMWriter {
 		this.genomicRangeToCache = genomicRangeToCache;
 		this.shouldUnsetDuplicates = shouldUnsetDuplicates;
 		this.shouldCreateIndex = shouldCreateIndex;
+
+		this.maxRecordsInRam = maxReadsInRam;
+		
+		this.readsByNameArray = new SAMRecord[maxRecordsInRam];
+		this.readsByCoordArray = new SAMRecord[maxRecordsInRam];
 
 		if (shouldUseGkl) {
 			writerFactory.setUseAsyncIo(false);
@@ -190,15 +201,70 @@ public class SortedSAMWriter {
 		}
 	}
 	
+	private SortingSAMRecordCollection updateReadMatesAndSortByCoordinate(SortingSAMRecordCollection readsByName, SAMFileHeader header) {
+		
+		SortingSAMRecordCollection readsByCoord = SortingSAMRecordCollection.newSortByCoordinateInstance(readsByNameArray, header, maxRecordsInRam, tempDir); 
+		
+		Iterator<SAMRecord> iter = readsByName.iterator();
+		
+		// Cache read by name and original position for pairing with mate
+		Map<MateKey, SAMRecord> mates = new HashMap<MateKey, SAMRecord>();
+		
+		String currReadName = "";
+		List<SAMRecord> currReads = new ArrayList<SAMRecord>();
+		
+		while (iter.hasNext()) {
+			SAMRecord read = iter.next();
+			
+			if (!read.getReadName().equals(currReadName) && !currReadName.isEmpty()) {
+				// Go through all reads with same read name and update mates
+				for (SAMRecord currRead : currReads) {
+					setMateInfo(currRead, mates);
+					
+					// Final set of output reads are sorted by coordinate
+					readsByCoord.add(currRead);
+				}
+				
+				mates.clear();
+				currReads.clear();
+			}
+			
+			// Cache reads with same read name
+			currReads.add(read);
+			
+			// Cache read by mate info
+			MateKey mateKey = getOriginalReadInfo(read);
+			SAMRecord existingMate = mates.get(mateKey);
+			if (existingMate == null || (existingMate.getFlags() & 0xA00) != 0) {
+				// Cache read info giving priority to primary alignments
+				mates.put(mateKey, read);
+			}
+		}
+		
+		// Update stragglers
+		for (SAMRecord currRead : currReads) {
+			setMateInfo(currRead, mates);
+			
+			// Final set of output reads are sorted by coordinate
+			readsByCoord.add(currRead);
+		}
+		
+		return readsByCoord;
+	}
+	
 	private void processChromosome(SAMFileWriter output, int sampleIdx, String chromosome) throws IOException {
 		
 		Logger.debug("Final processing for: %d, %s", sampleIdx, chromosome);
 		
-		List<SAMRecord> reads = new ArrayList<SAMRecord>();
+		SAMFileHeader sortByCoordHeader = output.getFileHeader();
+		sortByCoordHeader.setSortOrder(SortOrder.coordinate);
+		
+		SAMFileHeader sortByNameHeader = output.getFileHeader();
+		sortByNameHeader.setSortOrder(SortOrder.queryname);
+		
 		List<Integer> chunks = chromosomeChunker.getChunkGroups().get(chromosome);
 		
-		// Cache read by name and original position for pairing with mate
-		Map<MateKey, SAMRecord> mates = new HashMap<MateKey, SAMRecord>();
+		SortingSAMRecordCollection readsByName = SortingSAMRecordCollection.newSortByNameInstance(readsByNameArray, sortByNameHeader, maxRecordsInRam, tempDir);
 		
 		for (int chunk : chunks) {
 			Logger.debug("Outputting chunk: %d", chunk);
@@ -210,6 +276,8 @@ public class SortedSAMWriter {
 				deleteOnExit(file);
 				
 				SamReader reader = SAMRecordUtils.getSamReader(filename);
+
+				int firstReadPos = -1;
 		
 				for (SAMRecord read : reader) {
 					if (shouldUnsetDuplicates) {
@@ -217,43 +285,43 @@ public class SortedSAMWriter {
 					}
 					
 					if (shouldSort) {
-						reads.add(read);
-	
-						MateKey mateKey = getOriginalReadInfo(read);
-						SAMRecord existingMate = mates.get(mateKey);
-						if (existingMate == null || (existingMate.getFlags() & 0xA00) != 0) {
-							// Cache read info giving priority to primary alignments
-							mates.put(mateKey, read);
-						}
+						readsByName.add(read);
 						
-						if (read.getAlignmentStart() - reads.get(0).getAlignmentStart() > genomicRangeToCache*3) {
-							Collections.sort(reads, new SAMCoordinateComparator());
+						if (firstReadPos < 0) {
+							firstReadPos = read.getAlignmentStart();
+						}
 							
-							int start = reads.get(0).getAlignmentStart();
+						if (firstReadPos >= 0 && read.getAlignmentStart() - firstReadPos > genomicRangeToCache*3) {
+							
+							SortingSAMRecordCollection readsByCoord = updateReadMatesAndSortByCoordinate(readsByName, sortByCoordHeader);
+							
+							// Reset readsByName collection
+							readsByName.cleanup();
+							readsByName = SortingSAMRecordCollection.newSortByNameInstance(readsByCoordArray, sortByNameHeader, maxRecordsInRam, tempDir);
+							
+							int start = firstReadPos;
 							int i = 0;
 							int last = -1;
-							while (i < reads.size() && reads.get(i).getAlignmentStart() - start < genomicRangeToCache) {
-								SAMRecord currRead = reads.get(i);
-								setMateInfo(currRead, mates);
-								output.addAlignment(currRead);
-								last = currRead.getAlignmentStart();
-								i += 1;
-							}
+							firstReadPos = -1;
 							
-							// Clear out of scope mate keys
-							List<MateKey> toRemove = new ArrayList<MateKey>();
-							for (MateKey key : mates.keySet()) {
-								if (key.start - start < -genomicRangeToCache) {
-									toRemove.add(key);
+							Iterator<SAMRecord> iter = readsByCoord.iterator();
+							while (iter.hasNext()) {
+								SAMRecord sortedRead = iter.next();
+								if (sortedRead.getAlignmentStart() - start < genomicRangeToCache) {
+									output.addAlignment(sortedRead);
+									last = sortedRead.getAlignmentStart();
+									i += 1;
+								} else {
+									if (firstReadPos == -1) {
+										firstReadPos = sortedRead.getAlignmentStart();
+									}
+									readsByName.add(sortedRead);
 								}
 							}
 							
-							for (MateKey key : toRemove) {
-								mates.remove(key);
-							}
+							readsByCoord.cleanup();
 							
 							Logger.debug("%s - Reads output: %d @ %d - %d, curr: %d", chromosome, i, start, last, read.getAlignmentStart());
-							reads.subList(0, i).clear();
 						}
 					} else {
 						output.addAlignment(read);
@@ -265,16 +333,21 @@ public class SortedSAMWriter {
 		}
 		
 		// Output any remaining reads for the current chromosome
-		Collections.sort(reads, new SAMCoordinateComparator());
-		int i = 0;
-		for (SAMRecord read : reads) {
-			setMateInfo(read, mates);
-			output.addAlignment(read);
-			i += 1;
+		if (shouldSort) {
+			SortingSAMRecordCollection readsByCoord = updateReadMatesAndSortByCoordinate(readsByName, output.getFileHeader());
+			readsByName.cleanup();
+			
+			int i = 0;
+			Iterator<SAMRecord> iter = readsByCoord.iterator();
+			while (iter.hasNext()) {
+				SAMRecord sortedRead = iter.next();
+				output.addAlignment(sortedRead);
+				i += 0;
+			}
+			Logger.debug("Final reads output: %d", i);
 		}
-		Logger.debug("Final reads output: %d", i);
 	}
-	
+		
 	public MateKey getMateKey(SAMRecord read) {
 		
 		// If mate is mapped, use read flag.
@@ -448,7 +521,7 @@ public class SortedSAMWriter {
 	*/
 	
 	public static void main(String[] args) throws IOException {
-		Logger.LEVEL = Logger.Level.TRACE;
+//		Logger.LEVEL = Logger.Level.TRACE;
 		String ref = "/home/lmose/dev/reference/hg38/chr1.fa";
 		
 		CompareToReference2 c2r = new CompareToReference2();
@@ -458,19 +531,27 @@ public class SortedSAMWriter {
 		
 		cc.init();
 		
-		SamReader reader = SAMRecordUtils.getSamReader("/home/lmose/dev/abra2_dev/sort_issue3/0.5.bam");
+//		SamReader reader = SAMRecordUtils.getSamReader("/home/lmose/dev/abra2_dev/sort_issue3/0.5.bam");
+		SamReader reader = SAMRecordUtils.getSamReader("/home/lmose/dev/abra2_dev/sort_issue4/1.6.bam");
+
 		SAMFileHeader header = reader.getFileHeader();
 		header.setSortOrder(SortOrder.coordinate);
 		
 		SortedSAMWriter writer = new SortedSAMWriter(new String[] { "/home/lmose/dev/abra2_dev/sort_issue4/final.bam" }, "/home/lmose/dev/abra2_dev/sort_issue4", new SAMFileHeader[] { reader.getFileHeader() }, true, cc,
-				1,true,1000,false, false, false);
+				1,true,1000,false, false, false, 1000000);
 
 		SAMFileWriterFactory writerFactory = new SAMFileWriterFactory();
 		SAMFileWriter out = writerFactory.makeBAMWriter(reader.getFileHeader(), true, new File("/home/lmose/dev/abra2_dev/sort_issue4/test.bam"),1);
 		
+		long start = System.currentTimeMillis();
+		
 		writer.processChromosome(out, 1, "chr1");
 		
 		out.close();
+		
+		long stop = System.currentTimeMillis();
+		
+		System.out.println("Elapsed msecs: " + (stop-start));
 	}
 	
 //	public static void main(String[] args) throws IOException {

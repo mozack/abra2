@@ -55,6 +55,7 @@ public class ReAlignerOptions extends Options {
 	private static final String GKL = "gkl";
 	private static final String AMBIGUOUS_MAPQ = "amq";
 	private static final String MAX_READ_NOISE = "mrn";
+	private static final String MAX_SORT_READS = "msr";
 	
 	private OptionParser parser;
 	private boolean isValid;
@@ -107,7 +108,8 @@ public class ReAlignerOptions extends Options {
             parser.accepts(INDEX, "Enable BAM index generation when outputting sorted alignments (may require additonal memory)");
             parser.accepts(GKL, "If specified, use GKL Intel Deflater (experimental)");
             parser.accepts(AMBIGUOUS_MAPQ, "Set mapq for alignments that map equally well to reference and an ABRA generated contig.  default of -1 disables").withRequiredArg().ofType(Integer.class).defaultsTo(-1);
-            parser.accepts(MAX_READ_NOISE, "Reads with noise score exceeding this value are not remapped.  numMismatches+(numIndels*2) < readLength*mnr").withRequiredArg().ofType(Double.class).defaultsTo(.10);  
+            parser.accepts(MAX_READ_NOISE, "Reads with noise score exceeding this value are not remapped.  numMismatches+(numIndels*2) < readLength*mnr").withRequiredArg().ofType(Double.class).defaultsTo(.10);
+            parser.accepts(MAX_SORT_READS, "Max reads to keep in memory per sample during the sort phase.  When this value is exceeded, sort spills to disk").withRequiredArg().ofType(Integer.class).defaultsTo(1000000);
     	}
     	
     	return parser;
@@ -324,6 +326,10 @@ public class ReAlignerOptions extends Options {
 	
 	public double getMaxReadNoise() {
 		return (Double) getOptions().valueOf(MAX_READ_NOISE);
+	}
+	
+	public int getMaxReadsInRamForSort() {
+		return (Integer) getOptions().valueOf(MAX_SORT_READS);
 	}
 	
 	public boolean shouldSort() {

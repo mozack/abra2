@@ -3,7 +3,6 @@ package abra;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -48,10 +47,6 @@ public class SortedSAMWriter {
 	
 	private ReverseComplementor rc = new ReverseComplementor();
 	
-	// Internal data structures used by SortingCollection2
-	private SAMRecord[] readsByNameArray;
-	private SAMRecord[] readsByCoordArray;
-	
 	public SortedSAMWriter(String[] outputFiles, String tempDir, SAMFileHeader[] samHeaders,
 			boolean isKeepTmp, ChromosomeChunker chromosomeChunker, int finalCompressionLevel,
 			boolean shouldSort, int genomicRangeToCache, boolean shouldUnsetDuplicates,
@@ -69,9 +64,6 @@ public class SortedSAMWriter {
 		this.shouldCreateIndex = shouldCreateIndex;
 
 		this.maxRecordsInRam = maxReadsInRam;
-		
-		this.readsByNameArray = new SAMRecord[maxRecordsInRam];
-		this.readsByCoordArray = new SAMRecord[maxRecordsInRam];
 
 		if (shouldUseGkl) {
 			writerFactory.setUseAsyncIo(false);
@@ -149,8 +141,18 @@ public class SortedSAMWriter {
 	public void outputFinal(int sampleIdx, String inputBam) throws IOException {
 		
 		Logger.info("Finishing: " + outputFiles[sampleIdx]);
+		
+		SAMRecord[] readsByNameArray = null;
+		SAMRecord[] readsByCoordArray = null;
 
 		if (shouldSort) {
+			
+			// Initialize internal read buffers used by SortingCollection2
+			// These are initialized once per thread and re-used each time
+			// a SortingCollection2 is initialized.
+			readsByNameArray = new SAMRecord[maxRecordsInRam];
+			readsByCoordArray = new SAMRecord[maxRecordsInRam];
+			
 			// Only allow buffering if sorting
 			writerFactory.setUseAsyncIo(true);
 			writerFactory.setAsyncOutputBufferSize(ASYNC_READ_CACHE_SIZE);
@@ -168,7 +170,7 @@ public class SortedSAMWriter {
 		SAMFileWriter output = writerFactory.makeBAMWriter(samHeaders[sampleIdx], true, new File(outputFiles[sampleIdx]), finalCompressionLevel);
 		
 		for (String chromosome : chromosomeChunker.getChromosomes()) {
-			processChromosome(output, sampleIdx, chromosome);
+			processChromosome(output, sampleIdx, chromosome, readsByNameArray, readsByCoordArray);
 		}
 		
 		processUnmapped(output, inputBam);
@@ -201,9 +203,9 @@ public class SortedSAMWriter {
 		}
 	}
 	
-	private SortingSAMRecordCollection updateReadMatesAndSortByCoordinate(SortingSAMRecordCollection readsByName, SAMFileHeader header) {
+	private SortingSAMRecordCollection updateReadMatesAndSortByCoordinate(SortingSAMRecordCollection readsByName, SAMFileHeader header, SAMRecord[] readsByCoordArray) {
 		
-		SortingSAMRecordCollection readsByCoord = SortingSAMRecordCollection.newSortByCoordinateInstance(readsByNameArray, header, maxRecordsInRam, tempDir); 
+		SortingSAMRecordCollection readsByCoord = SortingSAMRecordCollection.newSortByCoordinateInstance(readsByCoordArray, header, maxRecordsInRam, tempDir); 
 		
 		Iterator<SAMRecord> iter = readsByName.iterator();
 		
@@ -252,7 +254,8 @@ public class SortedSAMWriter {
 		return readsByCoord;
 	}
 	
-	private void processChromosome(SAMFileWriter output, int sampleIdx, String chromosome) throws IOException {
+	private void processChromosome(SAMFileWriter output, int sampleIdx, String chromosome,
+			SAMRecord[] readsByNameArray, SAMRecord[] readsByCoordArray) throws IOException {
 		
 		Logger.debug("Final processing for: %d, %s", sampleIdx, chromosome);
 		
@@ -293,11 +296,11 @@ public class SortedSAMWriter {
 							
 						if (firstReadPos >= 0 && read.getAlignmentStart() - firstReadPos > genomicRangeToCache*3) {
 							
-							SortingSAMRecordCollection readsByCoord = updateReadMatesAndSortByCoordinate(readsByName, sortByCoordHeader);
+							SortingSAMRecordCollection readsByCoord = updateReadMatesAndSortByCoordinate(readsByName, sortByCoordHeader, readsByCoordArray);
 							
 							// Reset readsByName collection
 							readsByName.cleanup();
-							readsByName = SortingSAMRecordCollection.newSortByNameInstance(readsByCoordArray, sortByNameHeader, maxRecordsInRam, tempDir);
+							readsByName = SortingSAMRecordCollection.newSortByNameInstance(readsByNameArray, sortByNameHeader, maxRecordsInRam, tempDir);
 							
 							int start = firstReadPos;
 							int i = 0;
@@ -334,7 +337,7 @@ public class SortedSAMWriter {
 		
 		// Output any remaining reads for the current chromosome
 		if (shouldSort) {
-			SortingSAMRecordCollection readsByCoord = updateReadMatesAndSortByCoordinate(readsByName, output.getFileHeader());
+			SortingSAMRecordCollection readsByCoord = updateReadMatesAndSortByCoordinate(readsByName, output.getFileHeader(), readsByCoordArray);
 			readsByName.cleanup();
 			
 			int i = 0;
@@ -537,15 +540,19 @@ public class SortedSAMWriter {
 		SAMFileHeader header = reader.getFileHeader();
 		header.setSortOrder(SortOrder.coordinate);
 		
+		int maxRecordsInRam = 1000000;
+		SAMRecord[] readsByNameArray = new SAMRecord[maxRecordsInRam];
+		SAMRecord[] readsByCoordArray = new SAMRecord[maxRecordsInRam];
+		
 		SortedSAMWriter writer = new SortedSAMWriter(new String[] { "/home/lmose/dev/abra2_dev/sort_issue4/final.bam" }, "/home/lmose/dev/abra2_dev/sort_issue4", new SAMFileHeader[] { reader.getFileHeader() }, true, cc,
-				1,true,1000,false, false, false, 1000000);
+				1,true,1000,false, false, false, maxRecordsInRam);
 
 		SAMFileWriterFactory writerFactory = new SAMFileWriterFactory();
 		SAMFileWriter out = writerFactory.makeBAMWriter(reader.getFileHeader(), true, new File("/home/lmose/dev/abra2_dev/sort_issue4/test.bam"),1);
 		
 		long start = System.currentTimeMillis();
 		
-		writer.processChromosome(out, 1, "chr1");
+		writer.processChromosome(out, 1, "chr1", readsByNameArray, readsByCoordArray);
 		
 		out.close();
 		

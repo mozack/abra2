@@ -1155,7 +1155,7 @@ public class ReAligner {
 			
 			List<List<Feature>> junctionPermutations = new ArrayList<List<Feature>>();
 			try {
-				junctionPermutations = JunctionUtils.combineJunctions(region, junctions, Collections.emptySet(), MAX_REGION_LENGTH, this.readLength);
+				junctionPermutations = JunctionUtils.combineJunctions(region, junctions, new HashSet<Feature>(), MAX_REGION_LENGTH, this.readLength);
 			} catch (TooManyJunctionPermutationsException e) {
 				Logger.warn("TOO_MANY_POTENTIAL_JUNCTION_PERMUTATIONS: " + region.getDescriptor());
 			}

@@ -2,6 +2,7 @@ package abra;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -79,7 +80,7 @@ public class JunctionUtilsTest {
 		Feature j4 = new Feature("chr1", 10330, 10500);
 		
 		List<Feature> inputJunctions = Arrays.asList(j1, j2, j3, j4);
-		List<List<Feature>> junctionPerms = JunctionUtils.combineJunctions(new Feature("chr1", 10000, 10400), inputJunctions, Collections.emptySet(), readLength, readLength);
+		List<List<Feature>> junctionPerms = JunctionUtils.combineJunctions(new Feature("chr1", 10000, 10400), inputJunctions, new HashSet<Feature>(), readLength, readLength);
 		assertEquals(junctionPerms.size(), 8);
 		
 		// Expected permutations

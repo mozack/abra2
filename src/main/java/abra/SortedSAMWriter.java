@@ -229,17 +229,22 @@ public class SortedSAMWriter {
 				
 				mates.clear();
 				currReads.clear();
+				currReadName = read.getReadName();
 			}
 			
 			// Cache reads with same read name
 			currReads.add(read);
 			
 			// Cache read by mate info
-			MateKey mateKey = getOriginalReadInfo(read);
-			SAMRecord existingMate = mates.get(mateKey);
-			if (existingMate == null || (existingMate.getFlags() & 0xA00) != 0) {
-				// Cache read info giving priority to primary alignments
-				mates.put(mateKey, read);
+			if (read.getSupplementaryAlignmentFlag() != true && (read.getFlags() & 0x100) == 0) {
+				MateKey mateKey = getOriginalReadInfo(read);
+				SAMRecord existingMate = mates.get(mateKey);
+				
+	//			if (existingMate == null || existingMate.getSupplementaryAlignmentFlag() == true || (existingMate.getFlags() & 0x100) != 0) {
+				if (existingMate == null) {
+					// Cache read info giving priority to primary alignments
+					mates.put(mateKey, read);
+				}
 			}
 		}
 		

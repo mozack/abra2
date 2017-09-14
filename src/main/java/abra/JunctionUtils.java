@@ -164,7 +164,7 @@ public class JunctionUtils {
 		currJunctions.addAll(toAdd);
 	}
 	
-	public static List<List<Feature>> combineJunctions(Feature region, List<Feature> junctions, int maxJuncDist, int readLength) throws TooManyJunctionPermutationsException {
+	public static List<List<Feature>> combineJunctions(Feature region, List<Feature> junctions, Set<Feature> preferredJunctions, int maxJuncDist, int readLength) throws TooManyJunctionPermutationsException {
 		List<List<Feature>> combinedJunctions = new ArrayList<List<Feature>>();
 		
 		// Get all possible permutations of junctions regardless of validity
@@ -172,7 +172,7 @@ public class JunctionUtils {
 		
 		for (List<Feature> currJunctions : junctionLists) {
 			if (isJunctionCombinationValid(region, currJunctions, maxJuncDist, readLength) &&
-				containsInRegionJunction(region, currJunctions, readLength)) {
+				containsInRegionJunction(region, currJunctions, preferredJunctions, readLength)) {
 				combinedJunctions.add(currJunctions);
 			}
 		}
@@ -216,13 +216,17 @@ public class JunctionUtils {
 		return junctionLists;
 	}
 	
-	private static boolean containsInRegionJunction(Feature region, List<Feature> junctions, int readLength) {
+	private static boolean containsInRegionJunction(Feature region, List<Feature> junctions, Set<Feature> preferredJunctions, int readLength) {
 		
 		// Require at least one junction endpoint to be within the region.
 		long start = region.getStart() - readLength;
 		long end = region.getEnd() + readLength;
 
 		for (Feature junction : junctions) {
+			
+			if (preferredJunctions.contains(junction)) {
+				return true;
+			}
 		
 			if (junction.getStart() > start && junction.getStart() < end) {
 				return true;

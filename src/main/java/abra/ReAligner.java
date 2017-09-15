@@ -624,8 +624,13 @@ public class ReAligner {
 					// Original edit distance
 					read.setAttribute("YX",  origEditDist);
 					
+					String distTag = "NM";
+					if (orig.getAttribute("NM") == null && orig.getAttribute("nM") != null) {
+						distTag = "nM";
+					}
+					
 					// Updated edit distance
-					read.setAttribute("NM", SAMRecordUtils.getEditDistance(read, c2r, false));
+					read.setAttribute(distTag, SAMRecordUtils.getEditDistance(read, c2r, false));
 					
 					//TODO: Compute mapq intelligently???
 					read.setMappingQuality(Math.min(read.getMappingQuality()+10, this.maxMapq));
@@ -648,7 +653,7 @@ public class ReAligner {
 						read.setAttribute("YO", null);
 						read.setAttribute("YM", null);
 						read.setAttribute("YX", null);
-						read.setAttribute("NM", orig.getAttribute("NM"));
+						read.setAttribute(distTag, orig.getAttribute(distTag));
 						read.setMappingQuality(orig.getMappingQuality());
 						read.setReadUnmappedFlag(orig.getReadUnmappedFlag());
 					}

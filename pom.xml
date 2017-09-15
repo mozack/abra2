@@ -5,7 +5,7 @@
 
   <groupId>abra2</groupId>
   <artifactId>abra2</artifactId>
-  <version>2.08</version>
+  <version>2.09</version>
   <packaging>jar</packaging>
 
   <name>abra</name>
@@ -74,7 +74,7 @@
 	<dependency>
 	    <groupId>com.intel.gkl</groupId>
 	    <artifactId>gkl</artifactId>
-	    <version>0.3.2</version>
+	    <version>0.5.8</version>
 	</dependency>
 	
 	<!-- https://mvnrepository.com/artifact/org.apache.commons/commons-math3 -->

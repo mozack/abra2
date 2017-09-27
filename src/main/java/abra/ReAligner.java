@@ -719,10 +719,12 @@ public class ReAligner {
 				if (region.overlapsRead(read.getSamRecord())) {
 					subsetSample.add(read);
 					
-					if (read.getSamRecord().getFirstOfPairFlag() && SAMRecordUtils.isPrimary(read.getSamRecord())) {
-						firstReads.put(read.getSamRecord().getReadName() + "_" + read.getSamRecord().getAlignmentStart(), read);
-					} else if (read.getSamRecord().getSecondOfPairFlag() && SAMRecordUtils.isPrimary(read.getSamRecord())) {
-						secondReads.put(read.getSamRecord().getReadName() + "_" + read.getSamRecord().getAlignmentStart(), read);
+					if (read.getSamRecord().getReadPairedFlag()) {
+						if (read.getSamRecord().getFirstOfPairFlag() && SAMRecordUtils.isPrimary(read.getSamRecord())) {
+							firstReads.put(read.getSamRecord().getReadName() + "_" + read.getSamRecord().getAlignmentStart(), read);
+						} else if (read.getSamRecord().getSecondOfPairFlag() && SAMRecordUtils.isPrimary(read.getSamRecord())) {
+							secondReads.put(read.getSamRecord().getReadName() + "_" + read.getSamRecord().getAlignmentStart(), read);
+						}
 					}
 				}
 			}

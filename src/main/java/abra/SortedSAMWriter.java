@@ -236,7 +236,7 @@ public class SortedSAMWriter {
 			currReads.add(read);
 			
 			// Cache read by mate info
-			if (read.getSupplementaryAlignmentFlag() != true && (read.getFlags() & 0x100) == 0) {
+			if (read.getReadPairedFlag() && read.getSupplementaryAlignmentFlag() != true && (read.getFlags() & 0x100) == 0) {
 				MateKey mateKey = getOriginalReadInfo(read);
 				SAMRecord existingMate = mates.get(mateKey);
 				

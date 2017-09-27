@@ -179,26 +179,29 @@ public class SortedSAMWriter {
 	}
 	
 	private void setMateInfo(SAMRecord read, Map<MateKey, SAMRecord> mates) {
-		SAMRecord mate = mates.get(getMateKey(read));
-		if (mate != null) {
-			// Only update mate info if a read has been modified
-			if (read.getAttribute("YO") != null || mate.getAttribute("YO") != null) {
-				read.setMateAlignmentStart(mate.getAlignmentStart());
-				read.setMateUnmappedFlag(mate.getReadUnmappedFlag());
-				read.setMateNegativeStrandFlag(mate.getReadNegativeStrandFlag());
-				 
-				int start = read.getAlignmentStart() < mate.getAlignmentStart() ? read.getAlignmentStart() : mate.getAlignmentStart();
-				int stop  = read.getAlignmentEnd() > mate.getAlignmentEnd() ? read.getAlignmentEnd() : mate.getAlignmentEnd();
-				
-				int insert = stop-start+1;
-				
-				if (read.getAlignmentStart() > mate.getAlignmentStart()) {
-					insert *= -1;
-				} else if (read.getAlignmentStart() == mate.getAlignmentStart() && mate.getFirstOfPairFlag()) {
-					insert *= -1;
+		
+		if (read.getReadPairedFlag()) {
+			SAMRecord mate = mates.get(getMateKey(read));
+			if (mate != null) {
+				// Only update mate info if a read has been modified
+				if (read.getAttribute("YO") != null || mate.getAttribute("YO") != null) {
+					read.setMateAlignmentStart(mate.getAlignmentStart());
+					read.setMateUnmappedFlag(mate.getReadUnmappedFlag());
+					read.setMateNegativeStrandFlag(mate.getReadNegativeStrandFlag());
+					 
+					int start = read.getAlignmentStart() < mate.getAlignmentStart() ? read.getAlignmentStart() : mate.getAlignmentStart();
+					int stop  = read.getAlignmentEnd() > mate.getAlignmentEnd() ? read.getAlignmentEnd() : mate.getAlignmentEnd();
+					
+					int insert = stop-start+1;
+					
+					if (read.getAlignmentStart() > mate.getAlignmentStart()) {
+						insert *= -1;
+					} else if (read.getAlignmentStart() == mate.getAlignmentStart() && mate.getFirstOfPairFlag()) {
+						insert *= -1;
+					}
+					
+					read.setInferredInsertSize(insert);
 				}
-				
-				read.setInferredInsertSize(insert);
 			}
 		}
 	}

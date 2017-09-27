@@ -19,7 +19,7 @@ import java.util.TreeSet;
  */
 public class KmerSizeEvaluator {
 	
-	public static final int MIN_KMER = 5;
+	public static final int MIN_KMER = 9;
 
 	private int readLength;
 	private CompareToReference2 c2r;
@@ -95,7 +95,9 @@ public class KmerSizeEvaluator {
 		List<String> regionBases = new ArrayList<String>();
 		
 		for (Feature region : regions) {
-			regionBases.add(getBases(region, c2r));
+			if (region.getLength() > MIN_KMER) {
+				regionBases.add(getBases(region, c2r));
+			}
 		}
 		
 		boolean isEditDistanceOK = false;

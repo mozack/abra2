@@ -561,7 +561,11 @@ public class ReAligner {
 	}
 	
 	private void remapRead(ReadEvaluator readEvaluator, SAMRecord read, int origEditDist) {
-				
+		
+		if (read.getReadName().equals("UNC11-SN627:241:C0T7VACXX:1:1103:11158:68655:spike:chrLoc:6164126:readLoc:65:simid:4445")) {
+			System.out.println("foo");
+		}
+		
 		Alignment alignment = readEvaluator.getImprovedAlignment(origEditDist, read, c2r);
 		if (alignment != null) {
 			
@@ -679,8 +683,11 @@ public class ReAligner {
 								
 				if (read.getMappingQuality() >= this.minMappingQuality || read.getReadUnmappedFlag()) {
 					
-					if (Math.abs(read.getAlignmentStart() - read.getMateAlignmentStart()) < maxRealignDist &&
-						read.getReferenceName().equals(read.getMateReferenceName())) {
+					// Don't remap reads with distant mate
+					// Always allow single end to pass this check
+					if (!read.getReadPairedFlag() ||
+						(Math.abs(read.getAlignmentStart() - read.getMateAlignmentStart()) < maxRealignDist &&
+								read.getReferenceName().equals(read.getMateReferenceName()))) {
 					
 						// TODO: Use NM tag if available (need to handle soft clipping though!)
 						int origEditDist = SAMRecordUtils.getEditDistance(read, c2r, true);

@@ -97,9 +97,17 @@ public class SortedSAMWriter {
 		
 		SAMRecord read = samRecord.getSamRecord();
 		
-		// Only output reads with start pos within specified chromosomeChunk
+		// Only output reads with original start pos within specified chromosomeChunk
 		// Avoids reads being written in 2 different chunks
-		if (read.getAlignmentStart() >= chunk.getStart() && read.getAlignmentStart() <= chunk.getEnd()) {
+		
+		int origAlignmentStart = read.getAlignmentStart();
+		String yo = read.getStringAttribute("YO");
+		if (yo != null) {
+			String[] fields = yo.split(":");
+			origAlignmentStart = Integer.parseInt(fields[1]);
+		}
+		
+		if (origAlignmentStart >= chunk.getStart() && origAlignmentStart <= chunk.getEnd()) {
 			
 			if (samRecord.isUnalignedRc() && read.getReadUnmappedFlag()) {
 				// This read was reverse complemented, but not updated.

@@ -562,10 +562,6 @@ public class ReAligner {
 	
 	private void remapRead(ReadEvaluator readEvaluator, SAMRecord read, int origEditDist) {
 		
-		if (read.getReadName().equals("UNC11-SN627:241:C0T7VACXX:1:1103:11158:68655:spike:chrLoc:6164126:readLoc:65:simid:4445")) {
-			System.out.println("foo");
-		}
-		
 		Alignment alignment = readEvaluator.getImprovedAlignment(origEditDist, read, c2r);
 		if (alignment != null) {
 			

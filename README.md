@@ -29,7 +29,7 @@ Abra2 is capable of utilizing junction information to aid in assembly and realig
 
 Sample command for RNA:
 
-```java -Xmx16G -jar abra2.jar --in star.bam --out star.abra.bam --ref hg38.fa --junctions SJ.out.tab --threads 8 --gtf gencode.v26.annotation.gtf --dist 500000 --tmpdir /your/tmpdir  > abra2.log 2>&1```
+```java -Xmx16G -jar abra2.jar --in star.bam --out star.abra.bam --ref hg38.fa --junctions SJ.out.tab --threads 8 --gtf gencode.v26.annotation.gtf --dist 500000 --sua --tmpdir /your/tmpdir  > abra2.log 2>&1```
 
 Here, star.bam is the input bam file and star.abra.bam is the output bam file.
 

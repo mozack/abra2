@@ -393,7 +393,7 @@ public class SortedSAMWriter {
 		String yo = read.getStringAttribute("YO");
 		
 		if (yo != null) {
-			if (yo.equals("N/A")) {
+			if (yo.startsWith("N/A")) {
 				// Original alignment was unmapped
 				isUnmapped = true;
 //				isRc = false;

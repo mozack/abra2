@@ -597,13 +597,15 @@ public class ReAligner {
 					read.setAttribute("YA", ya);
 	
 					// Original alignment info
-					String yo = "N/A";
+					String yo;
 					if (!read.getReadUnmappedFlag()) {
 						String origOrientation = read.getReadNegativeStrandFlag() ? "-" : "+";
 						yo = read.getReferenceName() + ":" + read.getAlignmentStart() + ":" + origOrientation + ":" + read.getCigarString();
 					} else {
 						read.setReadUnmappedFlag(false);
 						read.setMappingQuality(this.maxMapq);
+						// Original alignment start info used in sort phase
+						yo = "N/A:" + read.getAlignmentStart();
 					}
 					read.setAttribute("YO", yo);
 	

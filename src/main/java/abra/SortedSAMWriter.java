@@ -221,7 +221,10 @@ public class SortedSAMWriter {
 		while (iter.hasNext()) {
 			SAMRecord read = iter.next();
 			
-			if (!read.getReadName().equals(currReadName) && !currReadName.isEmpty()) {
+			if (currReadName.isEmpty()) {
+				currReadName = read.getReadName();
+			}
+			else if (!read.getReadName().equals(currReadName)) {
 				// Go through all reads with same read name and update mates
 				for (SAMRecord currRead : currReads) {
 					setMateInfo(currRead, mates);
@@ -301,8 +304,9 @@ public class SortedSAMWriter {
 						if (firstReadPos < 0) {
 							firstReadPos = read.getAlignmentStart();
 						}
-							
-						if (firstReadPos >= 0 && read.getAlignmentStart() - firstReadPos > genomicRangeToCache*3) {
+						
+						// Require 4x maxDist reads to be cached before flushing the first 1x maxDist reads
+						if (firstReadPos >= 0 && read.getAlignmentStart() - firstReadPos > genomicRangeToCache*4) {
 							
 							SortingSAMRecordCollection readsByCoord = updateReadMatesAndSortByCoordinate(readsByName, sortByCoordHeader, readsByCoordArray);
 							
@@ -318,6 +322,7 @@ public class SortedSAMWriter {
 							Iterator<SAMRecord> iter = readsByCoord.iterator();
 							while (iter.hasNext()) {
 								SAMRecord sortedRead = iter.next();
+								
 								if (sortedRead.getAlignmentStart() - start < genomicRangeToCache) {
 									output.addAlignment(sortedRead);
 									last = sortedRead.getAlignmentStart();
@@ -533,7 +538,7 @@ public class SortedSAMWriter {
 	
 	public static void main(String[] args) throws IOException {
 //		Logger.LEVEL = Logger.Level.TRACE;
-		String ref = "/home/lmose/dev/reference/hg38/chr1.fa";
+		String ref = "/home/lmose/dev/reference/hg38b/hg38.fa";
 		
 		CompareToReference2 c2r = new CompareToReference2();
 		c2r.init(ref);
@@ -543,7 +548,8 @@ public class SortedSAMWriter {
 		cc.init();
 		
 //		SamReader reader = SAMRecordUtils.getSamReader("/home/lmose/dev/abra2_dev/sort_issue3/0.5.bam");
-		SamReader reader = SAMRecordUtils.getSamReader("/home/lmose/dev/abra2_dev/sort_issue4/1.6.bam");
+//		SamReader reader = SAMRecordUtils.getSamReader("/home/lmose/dev/abra2_dev/sort_issue4/1.6.bam");
+		SamReader reader = SAMRecordUtils.getSamReader("/home/lmose/dev/abra2_dev/mate_fix/0.87.bam");
 
 		SAMFileHeader header = reader.getFileHeader();
 		header.setSortOrder(SortOrder.coordinate);
@@ -552,15 +558,15 @@ public class SortedSAMWriter {
 		SAMRecord[] readsByNameArray = new SAMRecord[maxRecordsInRam];
 		SAMRecord[] readsByCoordArray = new SAMRecord[maxRecordsInRam];
 		
-		SortedSAMWriter writer = new SortedSAMWriter(new String[] { "/home/lmose/dev/abra2_dev/sort_issue4/final.bam" }, "/home/lmose/dev/abra2_dev/sort_issue4", new SAMFileHeader[] { reader.getFileHeader() }, true, cc,
+		SortedSAMWriter writer = new SortedSAMWriter(new String[] { "/home/lmose/dev/abra2_dev/mate_fix" }, "/home/lmose/dev/abra2_dev/mate_fix", new SAMFileHeader[] { reader.getFileHeader() }, true, cc,
 				1,true,1000,false, false, false, maxRecordsInRam);
 
 		SAMFileWriterFactory writerFactory = new SAMFileWriterFactory();
-		SAMFileWriter out = writerFactory.makeBAMWriter(reader.getFileHeader(), true, new File("/home/lmose/dev/abra2_dev/sort_issue4/test.bam"),1);
+		SAMFileWriter out = writerFactory.makeBAMWriter(reader.getFileHeader(), true, new File("/home/lmose/dev/abra2_dev/mate_fix/test.bam"),1);
 		
 		long start = System.currentTimeMillis();
 		
-		writer.processChromosome(out, 1, "chr1", readsByNameArray, readsByCoordArray);
+		writer.processChromosome(out, 0, "chr12", readsByNameArray, readsByCoordArray);
 		
 		out.close();
 		

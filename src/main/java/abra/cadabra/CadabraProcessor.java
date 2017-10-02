@@ -491,8 +491,8 @@ public class CadabraProcessor {
 			char hrunBase = hrun != null ? hrun.getBase() : 'N';
 			int hrunPos = hrun != null ? hrun.getPos() : 0;
 			
-			String info = String.format("STRP=%d;STRU=%s;HRUN=%d,%c,%d;REF=%s", repeatPeriod, repeatUnit,
-					hrunLen, hrunBase, hrunPos, context);
+			String info = String.format("RP=%d;RU=%s;HRUN=%d,%d;CTX=%s", repeatPeriod, repeatUnit,
+					hrunLen, hrunPos, context);
 			
 			String sampleInfo = getSampleInfo(ref, alt);
 			

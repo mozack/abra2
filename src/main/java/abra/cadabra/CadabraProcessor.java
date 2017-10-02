@@ -134,7 +134,7 @@ public class CadabraProcessor {
 				}
 				
 				if ((count % 1000000) == 0) {
-					System.err.println("Position: " + normalReads.getChromosome() + ":" + normalReads.getPosition());
+					Logger.info("Position: " + normalReads.getChromosome() + ":" + normalReads.getPosition());
 				}
 				
 				count += 1;
@@ -386,7 +386,7 @@ public class CadabraProcessor {
 	
 	public static class SampleCall {
 		
-		public static final String FORMAT = "DP:DP2:AD:AD2:SOR:MQ0:ISPAN:VAF:MER:FS:GT";
+		public static final String FORMAT = "GT:DP:DP2:AD:AD2:ROR:LMQ:ISPAN:VAF:MER:FROR";
 		
 		String chromosome;
 		int position;
@@ -473,7 +473,7 @@ public class CadabraProcessor {
 			// Use abs to get rid of -0
 			this.fs = Math.abs(-10 * Math.log10(fsP));
 			
-			String sampleInfo = String.format("%d:%d:%d,%d:%d,%d:%d,%d,%d,%d:%d:%d:%.2f:%d:%.2f:0/1", usableDepth, totalReads, 
+			String sampleInfo = String.format("0/1:%d:%d:%d,%d:%d,%d:%d,%d,%d,%d:%d:%d:%.2f:%d:%.2f", usableDepth, totalReads, 
 					refCounts.getCount(), altCounts.getCount(),
 					refCounts.getTotalCount(), altCounts.getTotalCount(),
 					refCounts.getFwd(), refCounts.getRev(), altCounts.getFwd(), altCounts.getRev(),
@@ -509,8 +509,6 @@ public class CadabraProcessor {
 		if (tumor.ispan < options.getIspanFilter()) {
 			filter += "ISPAN;";
 		}
-		
-
 		
 		// Too many low mapq reads
 		if ((float)tumor.mapq0 / (float)tumor.totalReads > options.getLowMQFilter()) {
@@ -605,8 +603,8 @@ public class CadabraProcessor {
 			char hrunBase = hrun != null ? hrun.getBase() : 'N';
 			int hrunPos = hrun != null ? hrun.getPos() : 0;
 			
-			String info = String.format("STRP=%d;STRU=%s;HRUN=%d,%c,%d;REF=%s", tumor.repeatPeriod, tumor.repeatUnit,
-					hrunLen, hrunBase, hrunPos, context);
+			String info = String.format("RP=%d;RU=%s;HRUN=%d,%d;CTX=%s", tumor.repeatPeriod, tumor.repeatUnit,
+					hrunLen, hrunPos, context);
 			
 			String normalInfo = normal.getSampleInfo(tumor.ref, tumor.alt);
 			String tumorInfo = tumor.getSampleInfo(tumor.ref, tumor.alt);

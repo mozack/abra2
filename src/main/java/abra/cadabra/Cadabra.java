@@ -8,10 +8,14 @@ import java.util.Map;
 import abra.CompareToReference2;
 import abra.Feature;
 import abra.Logger;
+import abra.SAMRecordUtils;
 import abra.ThreadManager;
 
 import abra.cadabra.CadabraProcessor.SampleCall;
 import abra.cadabra.CadabraProcessor.SomaticCall;
+import htsjdk.samtools.SAMFileHeader;
+import htsjdk.samtools.SAMSequenceRecord;
+import htsjdk.samtools.SamReader;
 
 public class Cadabra {
 
@@ -24,7 +28,7 @@ public class Cadabra {
 		c2r = new CompareToReference2();
 		c2r.init(options.getReference());
 		
-		outputHeader();
+		outputHeader(options);
 		
 		ThreadManager threadManager = new ThreadManager(options.getNumThreads());
 		
@@ -70,9 +74,52 @@ public class Cadabra {
 		}
 	}
 	
-	private void outputHeader() {
-		System.out.println("##fileformat=VCFv4.1");
-		System.out.println("#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	SAMPLE");
+	private void outputHeader(CadabraOptions options) throws IOException {
+		
+		if (options.getNormal() == null) {
+			
+		} else {
+			// Somatic
+			SamReader reader = SAMRecordUtils.getSamReader(options.getNormal());
+			SAMFileHeader normalHeader = reader.getFileHeader();
+			reader.close();
+			
+			reader = SAMRecordUtils.getSamReader(options.getTumor());
+			SAMFileHeader tumorHeader = reader.getFileHeader();
+			reader.close();
+			
+			//TODO: Double check against specified reference?
+			if (!normalHeader.getSequenceDictionary().equals(tumorHeader.getSequenceDictionary())) {
+				Logger.error("Reference Sequences for tumor and normal do not match.  Check the VCF headers.");
+			}
+			
+			System.out.println("##fileformat=VCFv4.2");
+			System.out.println("##reference=file://" + options.getReference());
+			
+			for (SAMSequenceRecord seq : normalHeader.getSequenceDictionary().getSequences()) {
+				System.out.println(String.format("##contig=<ID=%s,length=%d>", seq.getSequenceName(), seq.getSequenceLength()));
+			}
+			
+			System.out.println("##INFO=<ID=RP,Number=1,Type=Integer,Description=\"Number of times smallest repeating alternate sequence appears in the reference\">");
+			System.out.println("##INFO=<ID=RU,Number=1,Type=String,Description=\"Smallest repeat unit within alternate sequence.  Appears RP times in reference\">");
+			System.out.println("##INFO=<ID=HRUN,Number=2,Type=Integer,Description=\"Length,position of homopolymer run found in CTX\">");
+			System.out.println("##INFO=<ID=CTX,Number=1,Type=String,Description=\"Reference context sequence\">");
+			System.out.println("##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">");
+			System.out.println("##FORMAT=<ID=DP,Number=1,Type=Integer,Description=\"Depth (fragment)\">");
+			System.out.println("##FORMAT=<ID=DP2,Number=1,Type=Integer,Description=\"Depth 2 (read)\">");
+			System.out.println("##FORMAT=<ID=AD,Number=2,Type=Integer,Description=\"Allele Depth (fragment)\">");
+			System.out.println("##FORMAT=<ID=AD2,Number=2,Type=Integer,Description=\"Allele Depth (read)\">");
+			System.out.println("##FORMAT=<ID=ROR,Number=4,Type=Integer,Description=\"Read Orientation (ref_fwd, ref_rev, alt_fwd, alt_rev)\">");
+			System.out.println("##FORMAT=<ID=LMQ,Number=1,Type=Integer,Description=\"Number of reads filtered due to low mapping quality\">");
+			System.out.println("##FORMAT=<ID=ISPAN,Number=1,Type=Integer,Description=\"Max variant read pos minus min variant read pos\">");
+			System.out.println("##FORMAT=<ID=VAF,Number=1,Type=Float,Description=\"Variant allele frequency\">");
+			System.out.println("##FORMAT=<ID=MER,Number=1,Type=Integer,Description=\"Number of ref reads with num mismatches > read length * .05\">");
+			System.out.println("##FORMAT=<ID=FROR,Number=1,Type=Float,Description=\"Phred scaled Fisher's Exact Test for read orientation\">");
+			
+			System.out.println("#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NORMAL	TUMOR");
+		}
+		
+		
 	}
 		
 	public static void main(String[] args) throws Exception {

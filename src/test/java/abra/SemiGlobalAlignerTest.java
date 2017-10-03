@@ -27,7 +27,7 @@ public class SemiGlobalAlignerTest {
 		assertEquals(res.cigar, "4M5D3M");
 //		assertEquals(res.cigar, "5M5D2M");
 		assertEquals(res.score, 4);
-		System.out.println("score: " + res.score);
+		System.err.println("score: " + res.score);
 	}
 
 	@Test (groups = "unit")
@@ -96,6 +96,6 @@ public class SemiGlobalAlignerTest {
 		String seq = "CAGCCTGATGTGCAGCAGCCTCTGCAGGCTTCAGTTAGATTCATTTCGGTGCTGACACCA";
 		
 		SemiGlobalAligner.Result res = sg.align(seq, ref);
-		System.out.println(res);
+		System.err.println(res);
 	}
 }

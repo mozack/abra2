@@ -584,7 +584,7 @@ public class SortedSAMWriter {
 		
 		long stop = System.currentTimeMillis();
 		
-		System.err.println("Elapsed msecs: " + (stop-start));
+		System.out.println("Elapsed msecs: " + (stop-start));
 	}
 	
 //	public static void main(String[] args) throws IOException {

@@ -175,8 +175,12 @@ public class SortedSAMWriter {
 		} else {
 			samHeaders[sampleIdx].setSortOrder(SortOrder.unsorted);
 		}
-		SAMFileWriter output = writerFactory.makeBAMWriter(samHeaders[sampleIdx], true, new File(outputFiles[sampleIdx]), finalCompressionLevel);
-		
+		SAMFileWriter output;
+		if ("-".equals(outputFiles[sampleIdx])) {
+			output = writerFactory.makeBAMWriter(samHeaders[sampleIdx], true, System.out);
+		} else {
+			output = writerFactory.makeBAMWriter(samHeaders[sampleIdx], true, new File(outputFiles[sampleIdx]), finalCompressionLevel);
+		}
 		for (String chromosome : chromosomeChunker.getChromosomes()) {
 			processChromosome(output, sampleIdx, chromosome, readsByNameArray, readsByCoordArray);
 		}
@@ -580,7 +584,7 @@ public class SortedSAMWriter {
 		
 		long stop = System.currentTimeMillis();
 		
-		System.out.println("Elapsed msecs: " + (stop-start));
+		System.err.println("Elapsed msecs: " + (stop-start));
 	}
 	
 //	public static void main(String[] args) throws IOException {

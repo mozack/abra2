@@ -45,14 +45,14 @@ public class Cadabra {
 			// Simple calling
 			for (String chromosome : c2r.getChromosomes()) {
 				for (SampleCall call : chromosomeCalls.get(chromosome)) {
-					System.err.println(call);
+					System.out.println(call);
 				}
 			}
 		} else {
 			// Somatic calling
 			for (String chromosome : c2r.getChromosomes()) {
 				for (SomaticCall call : chromosomeSomaticCalls.get(chromosome)) {
-					System.err.println(call);
+					System.out.println(call);
 				}
 			}
 		}

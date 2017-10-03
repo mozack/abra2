@@ -96,6 +96,6 @@ public class SemiGlobalAlignerTest {
 		String seq = "CAGCCTGATGTGCAGCAGCCTCTGCAGGCTTCAGTTAGATTCATTTCGGTGCTGACACCA";
 		
 		SemiGlobalAligner.Result res = sg.align(seq, ref);
-		System.err.println(res);
+		System.out.println(res);
 	}
 }

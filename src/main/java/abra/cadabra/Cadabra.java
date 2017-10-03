@@ -124,7 +124,7 @@ public class Cadabra {
 		System.out.println("##FORMAT=<ID=LMQ,Number=1,Type=Integer,Description=\"Number of reads filtered due to low mapping quality\">");
 		System.out.println("##FORMAT=<ID=ISPAN,Number=1,Type=Integer,Description=\"Max variant read pos minus min variant read pos\">");
 		System.out.println("##FORMAT=<ID=VAF,Number=1,Type=Float,Description=\"Variant allele frequency\">");
-		System.out.println("##FORMAT=<ID=MER,Number=1,Type=Integer,Description=\"Number of ref reads with num mismatches greater than read length * .05\">");
+		System.out.println("##FORMAT=<ID=MER,Number=1,Type=Integer,Description=\"Number of ref reads with num mismatches greater than read length X .05\">");
 		System.out.println("##FORMAT=<ID=FROR,Number=1,Type=Float,Description=\"Phred scaled Fisher's Exact Test for read orientation\">");
 		System.out.println(vcfColumns);
 	}

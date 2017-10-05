@@ -39,7 +39,7 @@ public class RegionLoader {
 			int cnt = 0;
 			
 			while (line != null) {
-				if(line.startsWith("#") || line.trim().isEmpty() || line.startsWith("track ") || line.startsWith("browser ")) {
+				if(line.startsWith("#") || line.trim().isEmpty() || line.startsWith("track") || line.startsWith("browser")) {
 					line = reader.readLine();
 					continue;
 				}

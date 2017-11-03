@@ -1,5 +1,6 @@
 package abra.cadabra;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -42,15 +43,18 @@ public class CadabraProcessor {
 		this.normalBam = options.getNormal();
 	}
 	
-	void process(Feature region) {
+	void process(Feature region) throws IOException {
 		this.region = region;
-		this.tumor = new ReadLocusReader(tumorBam, region);
+		tumor = new ReadLocusReader(tumorBam, region);
 		if (normalBam != null) {
-			this.normal = new ReadLocusReader(normalBam, region);
+			normal = new ReadLocusReader(normalBam, region);
 			processSomatic();
+			normal.close();
 		} else {
 			processSimple();
 		}
+		
+		tumor.close();
 	}
 		
 	private void processSimple() {

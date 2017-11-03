@@ -167,11 +167,16 @@ public class AltContigGenerator {
 								}
 							}
 							
-							Indel indel = new Indel('C', read.getReferenceName(), indelComponents, firstIdx, SAMRecordUtils.sumBaseQuals(read));
-							if (indels.containsKey(indel)) {
-								indels.get(indel).addReadPosition(firstIdx, SAMRecordUtils.sumBaseQuals(read));
+							if (indelComponents.size() == 0) {
+								Logger.debug("Empty complex indel components for read: %s" , read.getSAMString());
+								
 							} else {
-								indels.put(indel, indel);
+								Indel indel = new Indel('C', read.getReferenceName(), indelComponents, firstIdx, SAMRecordUtils.sumBaseQuals(read));
+								if (indels.containsKey(indel)) {
+									indels.get(indel).addReadPosition(firstIdx, SAMRecordUtils.sumBaseQuals(read));
+								} else {
+									indels.put(indel, indel);
+								}
 							}
 						}
 					}

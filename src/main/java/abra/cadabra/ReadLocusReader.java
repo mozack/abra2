@@ -1,6 +1,7 @@
 package abra.cadabra;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -34,6 +35,10 @@ public class ReadLocusReader implements Iterable<ReadsAtLocus> {
 	
 	public SAMFileHeader getSamHeader() {
 		return samReader.getFileHeader(); 
+	}
+	
+	public void close() throws IOException {
+		samReader.close();
 	}
 
 	private static class ReadLocusIterator implements Iterator<ReadsAtLocus> {

@@ -679,7 +679,7 @@ public class ReAligner {
 				totalReads += 1;
 				SAMRecord read = readWrapper.getSamRecord();
 								
-				if (read.getMappingQuality() >= this.minMappingQuality || read.getReadUnmappedFlag()) {
+				if ((read.getMappingQuality() >= this.minMappingQuality || read.getReadUnmappedFlag()) && read.getReadLength() > 0) {
 					
 					// Don't remap reads with distant mate
 					// Always allow single end to pass this check

@@ -20,6 +20,7 @@ import htsjdk.samtools.TextCigarCodec;
 /**
  * Utility class for shifting Indels into leftmost position.
  * 
+ * @deprecated
  * @author Lisle E. Mose (lmose at unc dot edu)
  */
 public class IndelShifter {

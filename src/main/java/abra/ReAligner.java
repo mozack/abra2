@@ -150,6 +150,8 @@ public class ReAligner {
 	
 	private int maxReadsInRamForSort;
 	
+	private boolean shouldFilterNDM;
+	
 	public void reAlign(String[] inputFiles, String[] outputFiles) throws Exception {
 		
 		this.inputSams = inputFiles;
@@ -577,6 +579,8 @@ public class ReAligner {
 				}
 			} else if (Math.abs(read.getAlignmentStart() - alignment.pos) > maxRealignDist) {
 				Logger.trace("Not moving read: " + read.getReadName() + " from: " + read.getAlignmentStart() + " to: " + alignment.pos);
+			} else if (shouldFilterNDM && CigarUtils.hasNDM(alignment.cigar)) {
+				Logger.trace("Not remapping read: %s to NDM cigar: %s", read, alignment.cigar);
 			} else if (origEditDist > alignment.numMismatches) {
 				
 				SAMRecord orig = read.deepCopy();
@@ -1699,6 +1703,7 @@ public class ReAligner {
 			realigner.ambiguousMapq = options.getAmbiguousMapq();
 			realigner.maxReadNoise = options.getMaxReadNoise();
 			realigner.maxReadsInRamForSort = options.getMaxReadsInRamForSort();
+			realigner.shouldFilterNDM = options.isNoNDM();
 			MAX_REGION_LENGTH = options.getWindowSize();
 			MIN_REGION_REMAINDER = options.getWindowOverlap();
 			REGION_OVERLAP = options.getWindowOverlap();

@@ -56,6 +56,7 @@ public class ReAlignerOptions extends Options {
 	private static final String AMBIGUOUS_MAPQ = "amq";
 	private static final String MAX_READ_NOISE = "mrn";
 	private static final String MAX_SORT_READS = "msr";
+	private static final String NO_NDM = "no-ndm";
 	
 	private OptionParser parser;
 	private boolean isValid;
@@ -110,6 +111,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(AMBIGUOUS_MAPQ, "Set mapq for alignments that map equally well to reference and an ABRA generated contig.  default of -1 disables").withRequiredArg().ofType(Integer.class).defaultsTo(-1);
             parser.accepts(MAX_READ_NOISE, "Reads with noise score exceeding this value are not remapped.  numMismatches+(numIndels*2) < readLength*mnr").withRequiredArg().ofType(Double.class).defaultsTo(.10);
             parser.accepts(MAX_SORT_READS, "Max reads to keep in memory per sample during the sort phase.  When this value is exceeded, sort spills to disk").withRequiredArg().ofType(Integer.class).defaultsTo(1000000);
+            parser.accepts(NO_NDM, "If specified, do not allow adjacent N-D-M cigar elements");
     	}
     	
     	return parser;
@@ -274,6 +276,10 @@ public class ReAlignerOptions extends Options {
 	
 	public boolean isKeepTmp() {
 		return getOptions().has(KEEP_TMP);
+	}
+	
+	public boolean isNoNDM() {
+		return getOptions().has(NO_NDM);
 	}
 	
 	public String getTmpDir() {

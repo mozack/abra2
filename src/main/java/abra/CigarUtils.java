@@ -5,7 +5,6 @@ import java.util.List;
 
 import abra.ReadEvaluator.Alignment;
 
-
 public class CigarUtils {
 	
 	/**
@@ -156,6 +155,27 @@ public class CigarUtils {
 		
 		// Equivalent cigars.  Pick non-secondary or just the first.
 		return (selectPrimaryAlignment(alignment1, alignment2, 0));		
+	}
+	
+	/**
+	 * Returns true if cigar contains a deletion bracketed by introns
+	 */
+	public static boolean hasNDM(String cigar) {
+		boolean hasNDM = false;
+		
+		List<CigarBlock> blocks = getCigarBlocks(cigar);
+
+		for (int i=2; i<blocks.size(); i++) {
+			if ((blocks.get(i).type == 'N') &&
+				(blocks.get(i-1).type == 'D') &&
+				(blocks.get(i-2).type == 'N')) {
+				
+				hasNDM = true;
+				break;
+			}
+		}
+		
+		return hasNDM;
 	}
 	
 	private static List<CigarBlock> getCigarBlocks(String cigar) {

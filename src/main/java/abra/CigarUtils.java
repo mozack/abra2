@@ -160,7 +160,7 @@ public class CigarUtils {
 	/**
 	 * Returns true if cigar contains a deletion bracketed by introns
 	 */
-	public static boolean hasNDM(String cigar) {
+	public static boolean hasNDN(String cigar) {
 		boolean hasNDM = false;
 		
 		List<CigarBlock> blocks = getCigarBlocks(cigar);

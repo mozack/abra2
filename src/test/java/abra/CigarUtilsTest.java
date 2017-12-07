@@ -224,10 +224,10 @@ public class CigarUtilsTest {
 	
 	@Test (groups = "unit")
 	public void testHasNDM() {
-		assertEquals(true, CigarUtils.hasNDM("10M100N50D200N5M"));
-		assertEquals(false, CigarUtils.hasNDM("10M50D90M"));
-		assertEquals(false, CigarUtils.hasNDM("100M"));
-		assertEquals(false, CigarUtils.hasNDM("100I"));
-		assertEquals(false, CigarUtils.hasNDM("50M200N5M300N5M"));
+		assertEquals(true, CigarUtils.hasNDN("10M100N50D200N5M"));
+		assertEquals(false, CigarUtils.hasNDN("10M50D90M"));
+		assertEquals(false, CigarUtils.hasNDN("100M"));
+		assertEquals(false, CigarUtils.hasNDN("100I"));
+		assertEquals(false, CigarUtils.hasNDN("50M200N5M300N5M"));
 	}
 }

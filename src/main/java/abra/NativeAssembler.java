@@ -1,7 +1,15 @@
 /* Copyright 2013 University of North Carolina at Chapel Hill.  All rights reserved. */
 package abra;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileReader;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -9,6 +17,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
+import java.util.UUID;
 
 import htsjdk.samtools.Cigar;
 import htsjdk.samtools.CigarElement;
@@ -210,6 +219,59 @@ public class NativeAssembler {
 //		}
 
 		return false;
+	}
+	
+	public String standaloneAssembly(String[] fastqs) throws IOException {
+		StringBuffer readBuffer = new StringBuffer();
+		
+		// Assuming fixed read length
+		int readLength = 0;
+		
+		for (String fastq : fastqs) {
+			BufferedReader reader = new BufferedReader(new FileReader(new File(fastq)));
+			
+			String line = reader.readLine();
+			int lineNum = 1;
+			while (line != null) {
+				if (lineNum == 2) {
+					readBuffer.append((char) 1);
+					readBuffer.append("0");
+					readBuffer.append(line);
+					
+					readLength = line.length();
+				}
+				
+				if (lineNum == 4) {
+					readBuffer.append(line);
+					lineNum = 1;
+				} else {
+					lineNum += 1;
+				}
+				
+				line = reader.readLine();
+			}
+			
+			reader.close();
+		}
+		
+		int k = 15;
+		
+		String contigs = assemble(
+				readBuffer.toString(),
+				"foo", 
+				"bar", 
+				0,
+				1000,
+				10000,
+				readLength,
+				k,
+				2,
+				20,
+				.01,
+				1,
+				9000);
+
+		return contigs;
 	}
 	
 	public String assembleContigs(List<String> inputFiles, List<Feature> regions, String prefix,
@@ -515,6 +577,22 @@ public class NativeAssembler {
 	}
 	
 	public static void main(String[] args) throws Exception {
+		
+		Set<PosixFilePermission> perms = new HashSet<PosixFilePermission>();
+        perms.add(PosixFilePermission.OWNER_READ);
+        perms.add(PosixFilePermission.OWNER_WRITE);
+        perms.add(PosixFilePermission.OWNER_EXECUTE);
+        perms.add(PosixFilePermission.GROUP_READ);
+        perms.add(PosixFilePermission.GROUP_EXECUTE);
+		Path tempDir = Files.createTempDirectory("abra2_" + UUID.randomUUID(), PosixFilePermissions.asFileAttribute(perms));
+		
+		Logger.info("Using temp directory: " + tempDir.toString());
+		
+		new NativeLibraryLoader().load(tempDir.toString(), NativeLibraryLoader.ABRA, false);
+		
+		String contigs = new NativeAssembler().standaloneAssembly(args);
+		
+		System.out.println(contigs);
 		
 		/*
 		NativeLibraryLoader l = new NativeLibraryLoader();

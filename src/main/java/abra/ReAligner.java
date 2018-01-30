@@ -151,6 +151,7 @@ public class ReAligner {
 	private int maxReadsInRamForSort;
 	
 	private boolean shouldFilterNDN;
+	private boolean isGappedContigsOnly;
 	
 	public void reAlign(String[] inputFiles, String[] outputFiles) throws Exception {
 		
@@ -668,13 +669,34 @@ public class ReAligner {
 		}
 	}
 	
+	private boolean containsIndelOrSplice(Map<Feature, Map<SimpleMapper, ContigAlignerResult>> mappedContigs) {
+		boolean hasGap = false;
+		
+		for (Map<SimpleMapper, ContigAlignerResult> contigResults : mappedContigs.values()) {
+			for (ContigAlignerResult result : contigResults.values()) {
+				if (result.getCigar().contains("D") || result.getCigar().contains("I") || result.getCigar().contains("N")) {
+					hasGap = true;
+					break;
+				}
+			}
+		}
+		
+		return hasGap;
+	}
+	
 	private int remapReads(Map<Feature, Map<SimpleMapper, ContigAlignerResult>> mappedContigs,
 			List<List<SAMRecordWrapper>> readsList, int chromosomeChunkIdx) throws Exception {
+		
+		int totalReads = 0;
+		
+		// Skip remapping if no gap in the contigs
 		
 		ReadEvaluator readEvaluator = new ReadEvaluator(mappedContigs);
 		
 		int sampleIdx = 0;
-		int totalReads = 0;
+		
+		boolean shouldRemap = !isGappedContigsOnly || containsIndelOrSplice(mappedContigs);
+		
 		// For each sample.
 		for (List<SAMRecordWrapper> reads : readsList) {
 			
@@ -682,20 +704,23 @@ public class ReAligner {
 			for (SAMRecordWrapper readWrapper : reads) {
 				totalReads += 1;
 				SAMRecord read = readWrapper.getSamRecord();
+				 
+				if (shouldRemap) {
 								
-				if ((read.getMappingQuality() >= this.minMappingQuality || read.getReadUnmappedFlag()) && read.getReadLength() > 0) {
-					
-					// Don't remap reads with distant mate
-					// Always allow single end to pass this check
-					if (!read.getReadPairedFlag() ||
-						(Math.abs(read.getAlignmentStart() - read.getMateAlignmentStart()) < maxRealignDist &&
-								read.getReferenceName().equals(read.getMateReferenceName()))) {
-					
-						// TODO: Use NM tag if available (need to handle soft clipping though!)
-						int origEditDist = SAMRecordUtils.getEditDistance(read, c2r, true);
-		//				int origEditDist = c2r.numMismatches(read);
-											
-						remapRead(readEvaluator, read, origEditDist);
+					if ((read.getMappingQuality() >= this.minMappingQuality || read.getReadUnmappedFlag()) && read.getReadLength() > 0) {
+						
+						// Don't remap reads with distant mate
+						// Always allow single end to pass this check
+						if (!read.getReadPairedFlag() ||
+							(Math.abs(read.getAlignmentStart() - read.getMateAlignmentStart()) < maxRealignDist &&
+									read.getReferenceName().equals(read.getMateReferenceName()))) {
+						
+							// TODO: Use NM tag if available (need to handle soft clipping though!)
+							int origEditDist = SAMRecordUtils.getEditDistance(read, c2r, true);
+			//				int origEditDist = c2r.numMismatches(read);
+												
+							remapRead(readEvaluator, read, origEditDist);
+						}
 					}
 				}
 			}
@@ -1704,6 +1729,7 @@ public class ReAligner {
 			realigner.maxReadNoise = options.getMaxReadNoise();
 			realigner.maxReadsInRamForSort = options.getMaxReadsInRamForSort();
 			realigner.shouldFilterNDN = options.isNoNDN();
+			realigner.isGappedContigsOnly = options.isGappedContigsOnly();
 			MAX_REGION_LENGTH = options.getWindowSize();
 			MIN_REGION_REMAINDER = options.getWindowOverlap();
 			REGION_OVERLAP = options.getWindowOverlap();

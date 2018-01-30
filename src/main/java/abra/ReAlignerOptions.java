@@ -57,6 +57,7 @@ public class ReAlignerOptions extends Options {
 	private static final String MAX_READ_NOISE = "mrn";
 	private static final String MAX_SORT_READS = "msr";
 	private static final String NO_NDN = "no-ndn";
+	private static final String GAPPED_CONTIGS_ONLY = "gc";
 	
 	private OptionParser parser;
 	private boolean isValid;
@@ -112,6 +113,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(MAX_READ_NOISE, "Reads with noise score exceeding this value are not remapped.  numMismatches+(numIndels*2) < readLength*mnr").withRequiredArg().ofType(Double.class).defaultsTo(.10);
             parser.accepts(MAX_SORT_READS, "Max reads to keep in memory per sample during the sort phase.  When this value is exceeded, sort spills to disk").withRequiredArg().ofType(Integer.class).defaultsTo(1000000);
             parser.accepts(NO_NDN, "If specified, do not allow adjacent N-D-N cigar elements");
+            parser.accepts(GAPPED_CONTIGS_ONLY, "If specified, only reprocess regions that contain at least one contig containing an indel or splice (experimental)");
     	}
     	
     	return parser;
@@ -280,6 +282,10 @@ public class ReAlignerOptions extends Options {
 	
 	public boolean isNoNDN() {
 		return getOptions().has(NO_NDN);
+	}
+	
+	public boolean isGappedContigsOnly() {
+		return getOptions().has(GAPPED_CONTIGS_ONLY);
 	}
 	
 	public String getTmpDir() {

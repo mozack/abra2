@@ -140,7 +140,7 @@ public class ReAligner {
 	private boolean shouldUnsetDuplicates;
 	private String inputVcf;
 	
-	private Map<String, List<Variant>> knownVariants;;
+	private Map<String, List<Variant>> knownVariants;
 	
 	private boolean shouldCreateIndex;
 	private boolean shouldUseGkl;
@@ -1259,7 +1259,7 @@ public class ReAligner {
 					// Go through artificial contig generation using indels observed in the original reads
 					AltContigGenerator altContigGenerator = new AltContigGenerator(softClipParams[0], softClipParams[1], softClipParams[2], softClipParams[3],
 							useObservedIndels, useSoftClippedReads, useConsensusSeq, minMappingQuality);
-					Collection<String> altContigs = altContigGenerator.getAltContigs(readsList, c2r, readLength, junctionPermutations.size(), region, knownVariants);
+					Collection<String> altContigs = altContigGenerator.getAltContigs(readsList, c2r, readLength, junctionPermutations.size(), region, knownVariants, junctions);
 					
 					nonAssembledContigCount = altContigs.size();
 					
@@ -1360,6 +1360,7 @@ public class ReAligner {
 		if (this.junctionFile != null) {
 			RegionLoader loader = new RegionLoader();
 			List<Feature> observedJunctions = loader.load(junctionFile, false);
+			
 			Logger.info("Loaded " + observedJunctions.size() + " observed junctions");
 			junctions.addAll(observedJunctions);
 		}

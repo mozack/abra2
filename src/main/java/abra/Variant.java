@@ -161,7 +161,7 @@ public class Variant implements Comparable<Variant> {
 				String alt = fields[4];
 				String filt = fields[6];
 				
-				if (filt.equalsIgnoreCase("PASS")) {
+				if (filt.equalsIgnoreCase("PASS") && (ref.length() > 1 || alt.length() > 1)) {
 					Variant variant = new Variant(chr,pos,ref,alt);
 					
 					if (!variants.containsKey(chr)) {

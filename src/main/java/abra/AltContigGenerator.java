@@ -85,7 +85,7 @@ public class AltContigGenerator {
 	}
 	
 	public Collection<String> getAltContigs(List<List<SAMRecordWrapper>> readsList, CompareToReference2 c2r,
-			int readLength, int numJuncPerms, Feature region, List<Variant> knownVariants) {
+			int readLength, int numJuncPerms, Feature region, List<Variant> knownVariants, List<Feature> junctions) {
 		
 		List<ScoredContig> softClipContigs = new ArrayList<ScoredContig>();
 		
@@ -331,8 +331,69 @@ public class AltContigGenerator {
 					
 					String seq = leftSeq + varSeq + rightSeq;
 					contigs.add(seq.toString());
+					
+					contigs.addAll(combineVariantWithJunctions(variant, junctions, readLength, c2r));
 				}
 			}
+		}
+		
+		return contigs;
+	}
+	
+	private Collection<String> combineVariantWithJunctions(Variant variant, List<Feature> junctions, int readLength, CompareToReference2 c2r) {
+		Set<String> contigs = new HashSet<String>();
+		List<Feature> leadingJuncs = new ArrayList<Feature>();
+		List<Feature> trailingJuncs = new ArrayList<Feature>();
+		
+		int variantEnd = variant.getPosition() + variant.getRef().length();
+		
+		for (Feature junc : junctions) {
+			if (junc.getEnd() < variant.getPosition() && junc.getEnd() > variant.getPosition()-readLength) {
+				leadingJuncs.add(junc);
+			} else if (junc.getStart() >= variantEnd && junc.getStart() < variantEnd+readLength) {
+				if (junc.getEnd() + readLength < c2r.getReferenceLength(variant.getChr())) {
+					trailingJuncs.add(junc);
+				}
+			}
+		}
+		
+		// Combine variant with each leading junction
+		for (Feature junc : leadingJuncs) {
+			int refStart = Math.max((int) junc.getStart() - readLength, 1);
+			// Seq left of junction
+			String leftSeq = c2r.getSequence(junc.getSeqname(), refStart, (int) junc.getStart() - refStart);
+			// Seq between junction end and variant
+			String middleSeq = c2r.getSequence(junc.getSeqname(), (int) junc.getEnd()+1, variant.getPosition()-((int)junc.getEnd()+1));
+			// Seq trailing variant
+			String rightSeq = c2r.getSequence(junc.getSeqname(), variantEnd, readLength);
+			
+			// Add leadingJunc plus variant with no trailing junc
+			contigs.add(leftSeq + middleSeq + variant.getAlt() + rightSeq);
+			
+			// Now combine with trailing variants
+			for (Feature junc2 : trailingJuncs) {
+				rightSeq = c2r.getSequence(junc.getSeqname(), variantEnd, (int)junc2.getStart()-variantEnd);
+				String trailingSeq = c2r.getSequence(junc.getSeqname(), (int)junc2.getEnd()+1, readLength);
+				contigs.add(leftSeq + middleSeq + variant.getAlt() + rightSeq + trailingSeq);
+			}
+		}
+		
+		// Combine variant with each trailing junction (no leading junction here)
+		
+		for (Feature junc : trailingJuncs) {
+			// Seq left of variant
+			String leftSeq = c2r.getSequence(junc.getSeqname(), variant.getPosition()-readLength, readLength);
+			// Seq between variant and junction
+			String middleSeq = c2r.getSequence(junc.getSeqname(), variantEnd, (int) junc.getStart() - variantEnd);
+			// Seq right of junction
+			String rightSeq = c2r.getSequence(junc.getSeqname(), (int) junc.getEnd()+1, readLength);
+			
+			contigs.add(leftSeq + variant.getAlt() + middleSeq + rightSeq);
+		}
+		
+		// Don't allow too many permutations
+		if (contigs.size() > 64) {
+			contigs.clear();
 		}
 		
 		return contigs;

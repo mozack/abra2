@@ -30,6 +30,7 @@ import java.util.UUID;
 import abra.JunctionUtils.JunctionComparator;
 import abra.JunctionUtils.TooManyJunctionPermutationsException;
 import abra.ReadEvaluator.Alignment;
+import abra.SAMRecordUtils.ReadBlock;
 import abra.ContigAligner.ContigAlignerResult;
 import abra.SimpleMapper.Orientation;
 import htsjdk.samtools.Cigar;
@@ -115,6 +116,7 @@ public class ReAligner {
 	private String junctionFile;
 	private String gtfJunctionFile;
 	private Set<Feature> junctions = new HashSet<Feature>();
+	private Set<Feature> variantJunctions = new HashSet<Feature>();
 	
 	private ReverseComplementor rc = new ReverseComplementor();
 	
@@ -684,6 +686,25 @@ public class ReAligner {
 		return hasGap;
 	}
 	
+	
+	private boolean containsVariantJunction(SAMRecord read) {
+		boolean containsVariantJunction = false;
+		if (read.getCigarString().contains("N")) {
+			List<ReadBlock> blocks = SAMRecordUtils.getReadBlocks(read.getCigar(), read.getAlignmentStart());
+			for (ReadBlock block : blocks) {
+				if (block.getCigarElement().getOperator() == CigarOperator.N) {
+					Feature junction = new Feature(read.getReferenceName(), block.getRefPos(), block.getRefPos()+block.getLength()-1);
+					if (this.variantJunctions.contains(junction)) {
+						containsVariantJunction = true;
+						break;
+					}
+				}
+			}
+		}
+		
+		return containsVariantJunction;
+	}
+	
 	private int remapReads(Map<Feature, Map<SimpleMapper, ContigAlignerResult>> mappedContigs,
 			List<List<SAMRecordWrapper>> readsList, int chromosomeChunkIdx) throws Exception {
 		
@@ -717,6 +738,10 @@ public class ReAligner {
 						
 							// TODO: Use NM tag if available (need to handle soft clipping though!)
 							int origEditDist = SAMRecordUtils.getEditDistance(read, c2r, true);
+							if (containsVariantJunction(read)) {
+								// Allow reads containing potentially miscategorized splices to be realigned.
+								origEditDist += 1;
+							}
 			//				int origEditDist = c2r.numMismatches(read);
 												
 							remapRead(readEvaluator, read, origEditDist);
@@ -1366,6 +1391,38 @@ public class ReAligner {
 		}
 		
 		Logger.info("Total junctions input: " + junctions.size());
+		
+		// Using known deletions, identify miscategorized splice sites.  These may be converted
+		// to deletions during realignment.
+		this.variantJunctions = filterVariantJunctions(junctions);
+		
+		Logger.info("Final Junctions: %d, Variant Junctions: %d", junctions.size(), variantJunctions.size());
+	}
+	
+	private Set<Feature> filterVariantJunctions(Set<Feature> junctions) {
+		Set<Feature> variantJunctions = new HashSet<Feature>();
+		Map<String, Variant> posVariantMap = new HashMap<String, Variant>();
+		for (List<Variant> regionVariants : this.knownVariants.values()) {
+			for (Variant variant : regionVariants) {
+				posVariantMap.put(variant.getChr() + ":" + variant.getPosition(), variant);
+			}
+		}
+		
+		Iterator<Feature> iter = junctions.iterator();
+		while (iter.hasNext()) {
+			Feature junction = iter.next();
+						
+			for (int i=0; i<=5; i++) { // Allow junction to shift up to 5 bases
+				Variant variant = posVariantMap.get(junction.getSeqname() + ":" + ((junction.getStart()-1)-i));
+				if (variant != null && JunctionUtils.isIdentical(variant, junction, c2r)) {
+					variantJunctions.add(junction);
+					iter.remove();
+					break;
+				}
+			}
+		}
+		
+		return variantJunctions;
 	}
 
 	public void setRegionsBed(String bedFile) {

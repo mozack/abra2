@@ -240,6 +240,53 @@ public class JunctionUtils {
 		return false;
 	}
 	
+	/**
+	 *  Returns true if the input variant(deletion) is the same sequence as the input junction.
+	 *  The variant should be left aligned, but the junction may not be 
+	 */
+	public static boolean isIdentical(Variant variant, Feature junction, CompareToReference2 c2r) {
+		boolean isIdentical = false;
+		int seqPadding = 25;
+		int maxJuncMoveDist = 5;
+		
+		// Don't attempt to process junctions near chromosome boundaries
+		if (variant.getPosition() <= seqPadding || junction.getEnd() >= c2r.getChromosomeLength(variant.getChr()) - 25) {
+			return false;
+		}
+		
+		if (variant.getChr().equals(junction.getSeqname()) && Math.abs(variant.getPosition() - (junction.getStart()-1))<=maxJuncMoveDist) {
+			
+			int variantLen = variant.getRef().length() - variant.getAlt().length();
+			// Junctions are represented by intronic positions a la STAR, so need to add 1 here.
+			int junctionLen = (int) junction.getLength() + 1;
+			
+			// Variant and junction must be same length.  Add 1 
+			if (variantLen == junctionLen && variant.getAlt().length() == 1) {
+				if (variant.getPosition() == junction.getStart()-1) {
+					// Same gap length and start position
+					isIdentical = true;
+				} else {
+					// Check to see if junction moved to variant pos results in same sequence
+					int refStart = (int) junction.getStart() - seqPadding;
+					String leftSeq = c2r.getSequence(variant.getChr(), refStart, seqPadding);
+					String rightSeq = c2r.getSequence(variant.getChr(), (int) junction.getEnd()+1, seqPadding);
+					String juncSeq1 = leftSeq + rightSeq;
+					
+					int posDiff = ((int)junction.getStart()-1) - variant.getPosition();
+					leftSeq = c2r.getSequence(variant.getChr(), refStart, seqPadding-posDiff);
+					rightSeq = c2r.getSequence(variant.getChr(), (int) junction.getEnd()+1-posDiff, seqPadding+posDiff);
+					String juncSeq2 = leftSeq + rightSeq;
+					
+					if (juncSeq1.equals(juncSeq2)) {
+						isIdentical = true;
+					}
+				}
+			}
+		}
+		
+		return isIdentical;
+	}
+	
 	// Assuming all inputs on same chromosome
 	protected static boolean isJunctionCombinationValid(Feature region, List<Feature> junctions, int maxRegionSize, int readLength) {
 

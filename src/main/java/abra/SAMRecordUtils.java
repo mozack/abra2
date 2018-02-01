@@ -773,32 +773,32 @@ public class SAMRecordUtils {
         for (final CigarElement e : cigar.getCigarElements()) {
             switch (e.getOperator()) {
                 case H:
-                	alignmentBlocks.add(new ReadBlock(readBase, refBase, e.getLength()));
+                	alignmentBlocks.add(new ReadBlock(readBase, refBase, e.getLength(), e));
                     break; // ignore hard clips
                 case P:
-                	alignmentBlocks.add(new ReadBlock(readBase, refBase, e.getLength()));
+                	alignmentBlocks.add(new ReadBlock(readBase, refBase, e.getLength(), e));
                     break; // ignore pads
                 case S:
-                	alignmentBlocks.add(new ReadBlock(readBase, refBase, e.getLength()));
+                	alignmentBlocks.add(new ReadBlock(readBase, refBase, e.getLength(), e));
                     readBase += e.getLength();
                     break; // soft clip read bases
                 case N:
-                	alignmentBlocks.add(new ReadBlock(readBase, refBase, e.getLength()));
+                	alignmentBlocks.add(new ReadBlock(readBase, refBase, e.getLength(), e));
                     refBase += e.getLength();
                     break;  // reference skip
                 case D:
-                	alignmentBlocks.add(new ReadBlock(readBase, refBase, e.getLength()));
+                	alignmentBlocks.add(new ReadBlock(readBase, refBase, e.getLength(), e));
                     refBase += e.getLength();
                     break;
                 case I:
-                	alignmentBlocks.add(new ReadBlock(readBase, refBase, e.getLength()));
+                	alignmentBlocks.add(new ReadBlock(readBase, refBase, e.getLength(), e));
                     readBase += e.getLength();
                     break;
                 case M:
                 case EQ:
                 case X:
                     final int length = e.getLength();
-                    alignmentBlocks.add(new ReadBlock(readBase, refBase, length));
+                    alignmentBlocks.add(new ReadBlock(readBase, refBase, length, e));
                     readBase += length;
                     refBase += length;
                     break;
@@ -813,11 +813,13 @@ public class SAMRecordUtils {
 		private int readPos;
 		private int refPos;
 		private int length;
+		private CigarElement elem;
 		
-		public ReadBlock(int readPos, int refPos, int length) {
+		public ReadBlock(int readPos, int refPos, int length, CigarElement elem) {
 			this.readPos = readPos;
 			this.refPos = refPos;
 			this.length = length;
+			this.elem = elem;
 		}
 
 		public int getReadPos() {
@@ -830,6 +832,10 @@ public class SAMRecordUtils {
 
 		public int getLength() {
 			return length;
+		}
+		
+		public CigarElement getCigarElement() {
+			return elem;
 		}
 	}
 }

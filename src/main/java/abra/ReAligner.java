@@ -1380,6 +1380,7 @@ public class ReAligner {
 	private void loadJunctions() throws IOException {
 		if (this.gtfJunctionFile != null) {
 			this.junctions = JunctionUtils.loadJunctionsFromGtf(gtfJunctionFile);
+			Logger.info("Loaded %d annotated junctions", junctions.size());
 		}
 		
 		if (this.junctionFile != null) {
@@ -1387,19 +1388,20 @@ public class ReAligner {
 			List<Feature> observedJunctions = loader.load(junctionFile, false);
 			
 			Logger.info("Loaded " + observedJunctions.size() + " observed junctions");
+
+			// Using known deletions, identify miscategorized splice sites.  These may be converted
+			// to deletions during realignment.
+			variantJunctions = filterVariantJunctions(observedJunctions);
+			
 			junctions.addAll(observedJunctions);
 		}
 		
 		Logger.info("Total junctions input: " + junctions.size());
 		
-		// Using known deletions, identify miscategorized splice sites.  These may be converted
-		// to deletions during realignment.
-		this.variantJunctions = filterVariantJunctions(junctions);
-		
 		Logger.info("Final Junctions: %d, Variant Junctions: %d", junctions.size(), variantJunctions.size());
 	}
 	
-	private Set<Feature> filterVariantJunctions(Set<Feature> junctions) {
+	private Set<Feature> filterVariantJunctions(Collection<Feature> junctions) {
 		Set<Feature> variantJunctions = new HashSet<Feature>();
 		Map<String, Variant> posVariantMap = new HashMap<String, Variant>();
 		for (List<Variant> regionVariants : this.knownVariants.values()) {
@@ -1414,7 +1416,7 @@ public class ReAligner {
 						
 			for (int i=0; i<=5; i++) { // Allow junction to shift up to 5 bases
 				Variant variant = posVariantMap.get(junction.getSeqname() + ":" + ((junction.getStart()-1)-i));
-				if (variant != null && JunctionUtils.isIdentical(variant, junction, c2r)) {
+				if (variant != null && JunctionUtils.isSimilar(variant, junction)) {
 					variantJunctions.add(junction);
 					iter.remove();
 					break;

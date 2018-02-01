@@ -241,6 +241,22 @@ public class JunctionUtils {
 	}
 	
 	/**
+	 * Returns true if input variant(deletion) is same length and within 5 bases of input junction.
+	 */
+	public static boolean isSimilar(Variant variant, Feature junction) {
+		int maxJuncMoveDist = 5;
+		int variantLen = variant.getRef().length() - variant.getAlt().length();
+		// Junctions are represented by intronic positions a la STAR, so need to add 1 here.
+		int junctionLen = (int) junction.getLength() + 1;
+		
+		return variant.getAlt().length() == 1 &&
+			   variant.getRef().length() > 1 &&
+			   variant.getChr().equals(junction.getSeqname()) && 
+			   Math.abs(variant.getPosition() - (junction.getStart()-1)) < maxJuncMoveDist &&
+			   variantLen == junctionLen;
+	}
+	
+	/**
 	 *  Returns true if the input variant(deletion) is the same sequence as the input junction.
 	 *  The variant should be left aligned, but the junction may not be 
 	 */

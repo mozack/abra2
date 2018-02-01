@@ -4,9 +4,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
+import abra.Feature;
+import abra.JunctionUtils;
 import abra.SAMRecordUtils;
 import htsjdk.samtools.CigarElement;
 import htsjdk.samtools.SAMFileHeader;
@@ -18,7 +22,9 @@ public class SpliceJunctionCounter {
 	Map<SpliceJunction, Integer> uniqueReads   = new HashMap<SpliceJunction, Integer>();
 	Map<SpliceJunction, Integer> multiMapReads = new HashMap<SpliceJunction, Integer>();
 
-	public void countSplices(String input) {
+	public void countSplices(String input, Set<SpliceJunction> annotatedJunctions) {
+		
+		
 		SamReader reader = SAMRecordUtils.getSamReader(input);
 		
 		for (SAMRecord read : reader) {
@@ -33,8 +39,11 @@ public class SpliceJunctionCounter {
 		Collections.sort(junctions, new SpliceJunctionComparator(reader.getFileHeader()));
 		
 		for (SpliceJunction junction : junctions) {
-			String rec = String.format("%s\t%d\t%d\t.\t.\t.\t%d\t%d\t.", junction.chrom, junction.start, junction.stop,
-					uniqueReads.get(junction), multiMapReads.get(junction));
+			
+			int annotated = annotatedJunctions.contains(junction) ? 1 : 0;
+			
+			String rec = String.format("%s\t%d\t%d\t.\t.\t%d\t%d\t%d\t.", junction.chrom, junction.start, junction.stop,
+					annotated, uniqueReads.get(junction), multiMapReads.get(junction));
 			
 			System.out.println(rec);
 		}
@@ -155,10 +164,26 @@ public class SpliceJunctionCounter {
 		}
 	}
 	
-	public static void main(String[] args) {
+	public static void main(String[] args) throws Exception {
+		
+		if (args.length == 0) {
+			System.err.println("SpliceJunctionCounter <bam_file> <annotation_gtf>");
+			System.exit(-1);
+		}
+		
 		String input = args[0];
+		
+		Set<SpliceJunction> annotatedJunctions = new HashSet<SpliceJunction>();
+		
+		if (args.length > 1) {
+			String gtf = args[1];
+			Set<Feature> junctions = JunctionUtils.loadJunctionsFromGtf(gtf);
+			for (Feature junc : junctions) {
+				annotatedJunctions.add(new SpliceJunction(junc.getSeqname(), (int)junc.getStart(), (int)junc.getEnd()));
+			}
+		}
 
 		SpliceJunctionCounter counter = new SpliceJunctionCounter();
-		counter.countSplices(input);
+		counter.countSplices(input, annotatedJunctions);
 	}
 }

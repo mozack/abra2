@@ -1414,8 +1414,8 @@ public class ReAligner {
 		while (iter.hasNext()) {
 			Feature junction = iter.next();
 						
-			for (int i=0; i<=5; i++) { // Allow junction to shift up to 5 bases
-				Variant variant = posVariantMap.get(junction.getSeqname() + ":" + ((junction.getStart()-1)-i));
+			for (int i=-5; i<=5; i++) { // Allow junction to shift up to 5 bases
+				Variant variant = posVariantMap.get(junction.getSeqname() + ":" + ((junction.getStart()-1)+i));
 				if (variant != null && JunctionUtils.isSimilar(variant, junction)) {
 					variantJunctions.add(junction);
 					iter.remove();

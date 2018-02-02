@@ -1,5 +1,6 @@
 package abra.cadabra;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -22,21 +23,17 @@ public class SpliceJunctionCounter {
 	Map<SpliceJunction, Integer> uniqueReads   = new HashMap<SpliceJunction, Integer>();
 	Map<SpliceJunction, Integer> multiMapReads = new HashMap<SpliceJunction, Integer>();
 
-	public void countSplices(String input, Set<SpliceJunction> annotatedJunctions) {
+	public void countSplices(String input, Set<SpliceJunction> annotatedJunctions) throws IOException {
 		
 		
 		SamReader reader = SAMRecordUtils.getSamReader(input);
 		
-		for (SAMRecord read : reader) {
-			if (read.getCigarString().contains("N")) {
-				for (SpliceJunction junc : getJunctions(read)) {
-					incrementCount(junc, read);
-				}
-			}
-		}
+		updateCounts(reader);
 		
 		List<SpliceJunction> junctions = new ArrayList<SpliceJunction>(uniqueReads.keySet());
 		Collections.sort(junctions, new SpliceJunctionComparator(reader.getFileHeader()));
+
+		reader.close();
 		
 		for (SpliceJunction junction : junctions) {
 			
@@ -47,6 +44,39 @@ public class SpliceJunctionCounter {
 			
 			System.out.println(rec);
 		}
+	}
+	
+	public List<Feature> getJunctions(String[] inputs) {
+		SAMFileHeader header = null;
+		for (String input : inputs) {
+			SamReader reader = SAMRecordUtils.getSamReader(input);
+			updateCounts(reader);
+			
+			if (header == null) {
+				header = reader.getFileHeader();
+			}
+		}
+		
+		List<SpliceJunction> junctions = new ArrayList<SpliceJunction>(uniqueReads.keySet());
+		Collections.sort(junctions, new SpliceJunctionComparator(header));
+		
+		List<Feature> splices = new ArrayList<Feature>();
+		for (SpliceJunction junction : junctions) {
+			splices.add(new Feature(junction.chrom, junction.start, junction.stop));
+		}
+		
+		return splices;
+	}
+	
+	private void updateCounts(SamReader reader) {
+		for (SAMRecord read : reader) {
+			if (read.getCigarString().contains("N")) {
+				for (SpliceJunction junc : getJunctions(read)) {
+					incrementCount(junc, read);
+				}
+			}
+		}
+
 	}
 	
 	private void incrementCount(SpliceJunction junction, SAMRecord read) {

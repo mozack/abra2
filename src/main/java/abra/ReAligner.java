@@ -33,6 +33,7 @@ import abra.ReadEvaluator.Alignment;
 import abra.SAMRecordUtils.ReadBlock;
 import abra.ContigAligner.ContigAlignerResult;
 import abra.SimpleMapper.Orientation;
+import abra.cadabra.SpliceJunctionCounter;
 import htsjdk.samtools.Cigar;
 import htsjdk.samtools.CigarElement;
 import htsjdk.samtools.CigarOperator;
@@ -1377,6 +1378,12 @@ public class ReAligner {
 		}
 	}
 	
+	private List<Feature> loadJunctionsFromBam() {
+		SpliceJunctionCounter sjc = new SpliceJunctionCounter();
+		List<Feature> bamJunctions = sjc.getJunctions(this.inputSams);
+		return bamJunctions;
+	}
+	
 	private void loadJunctions() throws IOException {
 		if (this.gtfJunctionFile != null) {
 			this.junctions = JunctionUtils.loadJunctionsFromGtf(gtfJunctionFile);
@@ -1384,8 +1391,15 @@ public class ReAligner {
 		}
 		
 		if (this.junctionFile != null) {
-			RegionLoader loader = new RegionLoader();
-			List<Feature> observedJunctions = loader.load(junctionFile, false);
+			List<Feature> observedJunctions;
+			if (junctionFile.equals("bam")) {
+				Logger.info("Loading observed junctions from BAM file");
+				observedJunctions = loadJunctionsFromBam();
+			} else {
+				Logger.info("Loading observed junctions from %s", junctionFile);
+				RegionLoader loader = new RegionLoader();
+				observedJunctions = loader.load(junctionFile, false);
+			}
 			
 			Logger.info("Loaded " + observedJunctions.size() + " observed junctions");
 

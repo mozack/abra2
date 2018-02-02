@@ -209,6 +209,10 @@ public class SortedSAMWriter {
 					}
 					
 					read.setInferredInsertSize(insert);
+					
+					if (read.getStringAttribute("MC") != null) {
+						read.setAttribute("MC", mate.getCigarString());
+					}
 				}
 			}
 		}

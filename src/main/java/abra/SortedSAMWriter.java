@@ -213,6 +213,10 @@ public class SortedSAMWriter {
 					if (read.getStringAttribute("MC") != null) {
 						read.setAttribute("MC", mate.getCigarString());
 					}
+					
+					if (!mate.getReadUnmappedFlag()) {
+						read.setMateReferenceName(mate.getReferenceName());
+					}
 				}
 			}
 		}

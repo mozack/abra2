@@ -38,7 +38,7 @@ public class JunctionUtilsTest {
 		
 		Feature region = new Feature("chr4", 1803001, 1803401);
 		List<Feature> regions = Arrays.asList(region);
-		int readLength = 100;
+		int readLength = 50;
 		int maxRegionLength = 400;
 		Map<Feature, List<Feature>> regionJunctionMap = JunctionUtils.getRegionJunctions(regions, junctions, readLength, maxRegionLength);
 		
@@ -101,5 +101,9 @@ public class JunctionUtilsTest {
 		assertTrue(junctionPerms.contains(p6));
 		assertTrue(junctionPerms.contains(p7));
 		assertTrue(junctionPerms.contains(p8));
+	}
+	
+	public void testCombineVariantWithJunctions() {
+		
 	}
 }

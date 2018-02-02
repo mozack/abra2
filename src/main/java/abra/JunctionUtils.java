@@ -104,7 +104,7 @@ public class JunctionUtils {
 			// Junctions for current region
 			Set<Feature> localJunctions = new HashSet<Feature>();;
 			
-			int regionOverlap = readLength;
+			int regionOverlap = readLength*2;
 //			for (int pos=(int) region.getStart()-maxRegionLength; pos<region.getEnd()+maxRegionLength; pos++) {
 //			for (int pos=(int) region.getStart()-readLength; pos<region.getEnd()+readLength; pos++) {
 			for (int pos=(int) region.getStart()-regionOverlap; pos<region.getEnd()+regionOverlap; pos++) {
@@ -118,8 +118,8 @@ public class JunctionUtils {
 			}
 			
 			// Add neighboring junctions (up to 2 additional splices)
-			addNeighboringJunctions(localJunctions, chromosomeJunctionsByStart, chromosomeJunctionsByEnd, readLength);			
-			addNeighboringJunctions(localJunctions, chromosomeJunctionsByStart, chromosomeJunctionsByEnd, readLength);
+			addNeighboringJunctions(localJunctions, chromosomeJunctionsByStart, chromosomeJunctionsByEnd, readLength*2);			
+			addNeighboringJunctions(localJunctions, chromosomeJunctionsByStart, chromosomeJunctionsByEnd, readLength*2);
 			
 			List<Feature> localJunctionList = new ArrayList<Feature>(localJunctions);
 			Collections.sort(localJunctionList, new JunctionComparator());
@@ -330,7 +330,7 @@ public class JunctionUtils {
 
 				// TODO: Should this be the window overlap size?
 //				maxDist = maxRegionSize / 2;
-				maxDist = readLength;
+				maxDist = readLength*2;
 			}
 			
 			// Distance between junctions must be less than maxDist

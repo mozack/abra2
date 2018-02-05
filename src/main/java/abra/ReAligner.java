@@ -1405,7 +1405,7 @@ public class ReAligner {
 
 			// Using known deletions, identify miscategorized splice sites.  These may be converted
 			// to deletions during realignment.
-			variantJunctions = filterVariantJunctions(observedJunctions);
+			variantJunctions = filterVariantJunctions(observedJunctions, junctions);
 			
 			junctions.addAll(observedJunctions);
 		}
@@ -1415,7 +1415,7 @@ public class ReAligner {
 		Logger.info("Final Junctions: %d, Variant Junctions: %d", junctions.size(), variantJunctions.size());
 	}
 	
-	private Set<Feature> filterVariantJunctions(Collection<Feature> junctions) {
+	private Set<Feature> filterVariantJunctions(Collection<Feature> junctions, Set<Feature> annotatedJunctions) {
 		Set<Feature> variantJunctions = new HashSet<Feature>();
 		Map<String, Variant> posVariantMap = new HashMap<String, Variant>();
 		for (List<Variant> regionVariants : this.knownVariants.values()) {
@@ -1427,13 +1427,16 @@ public class ReAligner {
 		Iterator<Feature> iter = junctions.iterator();
 		while (iter.hasNext()) {
 			Feature junction = iter.next();
+			
+			if (!annotatedJunctions.contains(junction)) {
 						
-			for (int i=-5; i<=5; i++) { // Allow junction to shift up to 5 bases
-				Variant variant = posVariantMap.get(junction.getSeqname() + ":" + ((junction.getStart()-1)+i));
-				if (variant != null && JunctionUtils.isSimilar(variant, junction)) {
-					variantJunctions.add(junction);
-					iter.remove();
-					break;
+				for (int i=-5; i<=5; i++) { // Allow junction to shift up to 5 bases
+					Variant variant = posVariantMap.get(junction.getSeqname() + ":" + ((junction.getStart()-1)+i));
+					if (variant != null && JunctionUtils.isSimilar(variant, junction)) {
+						variantJunctions.add(junction);
+						iter.remove();
+						break;
+					}
 				}
 			}
 		}

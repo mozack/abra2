@@ -143,7 +143,7 @@ public class ReAligner {
 	private boolean shouldUnsetDuplicates;
 	private String inputVcf;
 	
-	private Map<String, List<Variant>> knownVariants;
+	private Map<String, List<Variant>> knownVariants = new HashMap<String, List<Variant>>();
 	
 	private boolean shouldCreateIndex;
 	private boolean shouldUseGkl;

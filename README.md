@@ -29,14 +29,16 @@ Abra2 is capable of utilizing junction information to aid in assembly and realig
 
 Sample command for RNA:
 
-```java -Xmx16G -jar abra2.jar --in star.bam --out star.abra.bam --ref hg38.fa --junctions SJ.out.tab --threads 8 --gtf gencode.v26.annotation.gtf --dist 500000 --sua --tmpdir /your/tmpdir  > abra2.log 2>&1```
+```java -Xmx16G -jar abra2.jar --in star.bam --out star.abra.bam --ref hg38.fa --junctions bam --threads 8 --gtf gencode.v26.annotation.gtf --dist 500000 --sua --tmpdir /your/tmpdir  > abra2.log 2>&1```
 
 Here, star.bam is the input bam file and star.abra.bam is the output bam file.
 
-Junctions observed during alignment can be passed in using the ```--junctions``` param.  This corresponds to the SJ.out.tab file output by STAR.
+Junctions observed during alignment can be passed in using the ```--junctions``` param.  The input file format is similar to the SJ.out.tab file output by STAR.  If ```bam``` is specified, ABRA2 will dynamically identify splice junctions from the BAM file on the fly.  Note that the SJ.out.tab file contains only junctions deemed "high quality" by STAR.  The complete set of all splice junctions can be identified using the program ```abra.cadabra.SpliceJunctionCounter```
 
 Annotated junctions can be passed in using the ```--gtf``` param.  See: https://www.gencodegenes.org/releases/current.html  
 It is beneficial to use both of the junction related options.
+
+Known indels can be passed in using the --in-vcf argument.  Unannotated junctions originally identified as splices by the aligner may be converted to deletions if a known deletion is matched.  Consider this option if you have indels detected from DNA for the same sample / subject.  It is not recommended to use large dataset when using this option (i.e. don't pass in dbSNP).
 
 The software is currently considered beta quality.
 

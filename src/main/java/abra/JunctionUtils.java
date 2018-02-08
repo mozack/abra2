@@ -183,7 +183,7 @@ public class JunctionUtils {
 	// Produce all possible junction permutations from the input list.
 	private static List<List<Feature>> combineAllJunctions(Feature region, List<Feature> junctions, int maxJuncDist, int readLength) throws TooManyJunctionPermutationsException {
 		
-		if (junctions.size() > MAX_POTENTIAL_PERMUTATIONS) {
+		if (junctions.size() > MAX_JUNCTION_PERMUTATIONS) {
 			throw new TooManyJunctionPermutationsException();
 		}
 		

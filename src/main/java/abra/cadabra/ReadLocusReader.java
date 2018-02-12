@@ -7,6 +7,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import abra.Feature;
+import abra.Logger;
 import abra.SAMRecordUtils;
 import htsjdk.samtools.CigarOperator;
 import htsjdk.samtools.SAMFileHeader;
@@ -123,7 +124,13 @@ public class ReadLocusReader implements Iterable<ReadsAtLocus> {
 						shouldReadFromFile = false;
 					}
 				}
-			}			
+			}
+			
+			// Skip huge pileups!
+			if (readCache.size() > 1000000) {
+				Logger.warn("Depth too high, clearing read cache " + currentChr + ":" + currentPos);
+				readCache.clear();
+			}
 		}
 		
 		private int getAlignmentStart(SAMRecord read) {

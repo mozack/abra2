@@ -127,9 +127,11 @@ public class ReadLocusReader implements Iterable<ReadsAtLocus> {
 			}
 			
 			// Skip huge pileups!
-			if (readCache.size() > 1000000) {
+			if (readCache.size() > 100000) {
 				Logger.warn("Depth too high, clearing read cache " + currentChr + ":" + currentPos);
-				readCache.clear();
+				for (int i=readCache.size()-2; i>=0; i--) {
+					readCache.remove(i);
+				}
 			}
 		}
 		

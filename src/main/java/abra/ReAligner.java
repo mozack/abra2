@@ -155,6 +155,7 @@ public class ReAligner {
 	
 	private boolean shouldFilterNDN;
 	private boolean isGappedContigsOnly;
+	private boolean shouldIgnoreBadAssembly;
 	
 	public void reAlign(String[] inputFiles, String[] outputFiles) throws Exception {
 		
@@ -1089,11 +1090,23 @@ public class ReAligner {
 		
 		if (!contigs.equals("<ERROR>") && !contigs.equals("<REPEAT>") && !contigs.isEmpty()) {
 			
+			List<ScoredContig> scoredContigs;
+			
+			try {
+				scoredContigs = ScoredContig.convertAndFilter(contigs, maxNumContigs, readBuffer);
+			} catch (ArrayIndexOutOfBoundsException e) {
+				Logger.error("Error parsing contigs for region: " + region);
+				
+				if (shouldIgnoreBadAssembly) {
+					scoredContigs = new ArrayList<ScoredContig>();
+				} else {
+					throw e;
+				}
+			}
+			
 			if (contigWriter != null) {
 				appendContigs(contigs);
 			}
-			
-			List<ScoredContig> scoredContigs = ScoredContig.convertAndFilter(contigs, maxNumContigs, readBuffer);
 			
 			// Map contigs to reference
 			for (ScoredContig contig : scoredContigs) {
@@ -1807,6 +1820,7 @@ public class ReAligner {
 			realigner.maxReadsInRamForSort = options.getMaxReadsInRamForSort();
 			realigner.shouldFilterNDN = options.isNoNDN();
 			realigner.isGappedContigsOnly = options.isGappedContigsOnly();
+			realigner.shouldIgnoreBadAssembly = options.shouldIgnoreBadAssembly();
 			MAX_REGION_LENGTH = options.getWindowSize();
 			MIN_REGION_REMAINDER = options.getWindowOverlap();
 			REGION_OVERLAP = options.getWindowOverlap();

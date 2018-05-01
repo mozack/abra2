@@ -58,6 +58,7 @@ public class ReAlignerOptions extends Options {
 	private static final String MAX_SORT_READS = "msr";
 	private static final String NO_NDN = "no-ndn";
 	private static final String GAPPED_CONTIGS_ONLY = "gc";
+	private static final String IGNORE_BAD_ASSEMBLY = "ignore-bad-assembly";
 	
 	private OptionParser parser;
 	private boolean isValid;
@@ -114,6 +115,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(MAX_SORT_READS, "Max reads to keep in memory per sample during the sort phase.  When this value is exceeded, sort spills to disk").withRequiredArg().ofType(Integer.class).defaultsTo(1000000);
             parser.accepts(NO_NDN, "If specified, do not allow adjacent N-D-N cigar elements");
             parser.accepts(GAPPED_CONTIGS_ONLY, "If specified, only reprocess regions that contain at least one contig containing an indel or splice (experimental)");
+            parser.accepts(IGNORE_BAD_ASSEMBLY, "Use this option to avoid parsing errors for corrupted assemblies");
     	}
     	
     	return parser;
@@ -449,5 +451,9 @@ public class ReAlignerOptions extends Options {
 	
 	public int getCompressionLevel() {
 		return (Integer) getOptions().valueOf(COMPRESSION_LEVEL);
+	}
+	
+	public boolean shouldIgnoreBadAssembly() {
+		return (Boolean) getOptions().has(IGNORE_BAD_ASSEMBLY);
 	}
 }

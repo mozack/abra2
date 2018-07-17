@@ -10,6 +10,7 @@ RUN apk -U add \
 
 ARG ABRA2_VERSION=2.15
 ENV ABRA2_VERSION ${ABRA2_VERSION}
+ENV JAVA_OPTS="-Xmx16G"
 
 RUN git clone https://github.com/mozack/abra2.git && \
        cd abra2 && \
@@ -18,5 +19,5 @@ RUN git clone https://github.com/mozack/abra2.git && \
        ln -s /abra2/target/abra2-${ABRA2_VERSION}-jar-with-dependencies.jar /abra2.jar
 
 
-ENTRYPOINT [ "/usr/bin/java", "-Xmx16G","-jar","/abra2.jar"]
+ENTRYPOINT [ "/usr/bin/java", "-jar", "/abra2.jar" ]
 

@@ -239,12 +239,19 @@ public class SimpleAlleleCounter {
 				} else {
 					// Pair in format <base, quality>
 					Pair<Character, Character> base = getBaseAtPosition(read, position);
-					Pair<Character, Character> nextBase = getBaseAtPosition(read, position+1);
-					IndelInfo readIndel = checkForIndelAtLocus(read.getAlignmentStart(),
-							read.getCigar(), position);
 					
-					if (readIndel == null && base != null && nextBase != null && base.getSecond()-'!' >= MIN_BASEQ) {
-						allele = Allele.getAllele(base.getFirst());
+					if (variant.getAllele().getType() == Allele.Type.DEL || variant.getAllele().getType() == Allele.Type.INS) {
+						Pair<Character, Character> nextBase = getBaseAtPosition(read, position+1);
+						IndelInfo readIndel = checkForIndelAtLocus(read.getAlignmentStart(),
+								read.getCigar(), position);
+
+						if (readIndel == null && base != null && nextBase != null && base.getSecond()-'!' >= MIN_BASEQ) {
+							allele = Allele.getAllele(base.getFirst());
+						}						
+					} else {
+						if (base != null && base.getSecond()-'!' >= MIN_BASEQ) {
+							allele = Allele.getAllele(base.getFirst());
+						}
 					}
 				}
 				
@@ -690,11 +697,16 @@ public class SimpleAlleleCounter {
 	}
 	
 	public static void main(String[] args) throws Exception {
-		String bam = "/home/lmose/dev/mc3/allele_counter/TCGA-D1-A163/TCGA-D1-A163.star.abra2.mc3.bam";
+		String ref = args[0];
+		String bam = args[1];
+		String vcf = args[2];
+		
+//		String bam = "/home/lmose/dev/mc3/allele_counter/TCGA-D1-A163/TCGA-D1-A163.star.abra2.mc3.bam";
 //		String vcf = "/home/lmose/dev/mc3/allele_counter/TCGA-D1-A163/TCGA-D1-A163.maf.mc3.vcf";
+//		String ref = "/home/lmose/dev/reference/hg19/19.fa";
+		
 //		String vcf = "/home/lmose/dev/mc3/allele_counter/TCGA-D1-A163/TCGA-D1-A163.maf.mc3.chr1.vcf";
-		String vcf = "t5.vcf";
-		String ref = "/home/lmose/dev/reference/hg19/1.fa";
+//		String vcf = "t5.vcf";
 		
 		CompareToReference2 c2r = new CompareToReference2();
 		c2r.init(ref);

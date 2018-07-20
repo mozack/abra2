@@ -40,6 +40,7 @@ public class SimpleAlleleCounter {
 	
 	void run() throws IOException {
 		loadInputVariants();
+		Cadabra.outputHeader(null);
 		for (InputVariant variant : inputVariants) {
 			process(variant);
 		}
@@ -153,23 +154,6 @@ public class SimpleAlleleCounter {
 		return c2r.getSequence(chr, pos, 1).charAt(0);
 	}
 	
-	private Allele getAltIndelAllele(Allele ref, Map<Allele, AlleleCounts> alleleCounts) {
-		int maxAlt = 0;
-		Allele alt = null;
-		
-		for (Allele allele : alleleCounts.keySet()) {
-			if (allele != ref) {
-				AlleleCounts ac = alleleCounts.get(allele);
-				if (ac.getCount() > maxAlt && (allele.getType() == Allele.Type.DEL || allele.getType() == Allele.Type.INS)) {
-					maxAlt = ac.getCount();
-					alt = allele;
-				}
-			}
-		}
-		
-		return alt;
-	}
-	
 	private SampleCall processLocus(ReadsAtLocus reads, InputVariant variant) {
 		// Always false here
 		boolean isSomatic = false;
@@ -209,8 +193,9 @@ public class SimpleAlleleCounter {
 					tumorMapq0 += 1;
 					continue;
 				}
-				
-				if (read.getStringAttribute("YA") == null) {
+	
+				// This causes SNPs in HLA regions to drop out, so only run for Indels.
+				if ((variant.getAllele().getType() == Allele.Type.DEL || variant.getAllele().getType() == Allele.Type.INS) && read.getStringAttribute("YA") == null) {
 					// Cap # mismatches in read that can be counted as reference
 					// This is done because realigner caps # of mismatches for remapped indel reads.
 					// This is needed to remove ref bias
@@ -249,7 +234,7 @@ public class SimpleAlleleCounter {
 							allele = Allele.getAllele(base.getFirst());
 						}						
 					} else {
-						if (base != null && base.getSecond()-'!' >= MIN_BASEQ) {
+						if (base != null && base.getSecond()-'!' >= MIN_BASEQ) {							
 							allele = Allele.getAllele(base.getFirst());
 						}
 					}
@@ -706,7 +691,7 @@ public class SimpleAlleleCounter {
 //		String ref = "/home/lmose/dev/reference/hg19/19.fa";
 		
 //		String vcf = "/home/lmose/dev/mc3/allele_counter/TCGA-D1-A163/TCGA-D1-A163.maf.mc3.chr1.vcf";
-//		String vcf = "t5.vcf";
+//		String vcf = "t6.vcf";
 		
 		CompareToReference2 c2r = new CompareToReference2();
 		c2r.init(ref);

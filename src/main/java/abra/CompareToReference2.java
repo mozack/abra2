@@ -52,6 +52,10 @@ public class CompareToReference2 {
 		loadRefMap();
 	}
 	
+	public String getRefFileName() {
+		return this.refFileName;
+	}
+	
 	public void initLocal(String chrom, String sequence) {
 //		is2Bit = false;
 		this.refMap = new HashMap<String, byte[]>();

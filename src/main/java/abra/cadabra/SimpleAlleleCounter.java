@@ -11,12 +11,16 @@ import java.util.Map;
 
 import abra.CompareToReference2;
 import abra.Feature;
+import abra.Logger;
 import abra.Pair;
 import abra.SAMRecordUtils;
 import htsjdk.samtools.Cigar;
 import htsjdk.samtools.CigarElement;
 import htsjdk.samtools.CigarOperator;
+import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.SAMRecord;
+import htsjdk.samtools.SAMSequenceRecord;
+import htsjdk.samtools.SamReader;
 import htsjdk.samtools.TextCigarCodec;
 
 public class SimpleAlleleCounter {
@@ -40,7 +44,7 @@ public class SimpleAlleleCounter {
 	
 	void run() throws IOException {
 		loadInputVariants();
-		Cadabra.outputHeader(null);
+		outputHeader();
 		for (InputVariant variant : inputVariants) {
 			process(variant);
 		}
@@ -616,6 +620,42 @@ public class SimpleAlleleCounter {
 		return ret;
 	}
 	
+	private void outputHeader() throws IOException {
+		
+		SAMFileHeader header;
+		String vcfColumns;
+		
+		SamReader reader = SAMRecordUtils.getSamReader(bam);
+		header = reader.getFileHeader();
+		reader.close();
+		vcfColumns = "#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	SAMPLE";
+		
+		System.out.println("##fileformat=VCFv4.2");
+		System.out.println("##reference=file://" + c2r.getRefFileName());
+		
+		for (SAMSequenceRecord seq : header.getSequenceDictionary().getSequences()) {
+			System.out.println(String.format("##contig=<ID=%s,length=%d>", seq.getSequenceName(), seq.getSequenceLength()));
+		}
+		
+		System.out.println("##INFO=<ID=RP,Number=1,Type=Integer,Description=\"Number of times smallest repeating alternate sequence appears in the reference\">");
+		System.out.println("##INFO=<ID=RU,Number=1,Type=String,Description=\"Smallest repeat unit within alternate sequence.  Appears RP times in reference\">");
+		System.out.println("##INFO=<ID=HRUN,Number=2,Type=Integer,Description=\"Length,position of homopolymer run found in CTX\">");
+		System.out.println("##INFO=<ID=CTX,Number=1,Type=String,Description=\"Reference context sequence\">");
+		System.out.println("##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">");
+		System.out.println("##FORMAT=<ID=DP,Number=1,Type=Integer,Description=\"Depth (fragment)\">");
+		System.out.println("##FORMAT=<ID=DP2,Number=1,Type=Integer,Description=\"Depth 2 (read)\">");
+		System.out.println("##FORMAT=<ID=AD,Number=2,Type=Integer,Description=\"Allele Depth (fragment)\">");
+		System.out.println("##FORMAT=<ID=AD2,Number=2,Type=Integer,Description=\"Allele Depth (read)\">");
+		System.out.println("##FORMAT=<ID=ROR,Number=4,Type=Integer,Description=\"Read Orientation (ref_fwd, ref_rev, alt_fwd, alt_rev)\">");
+		System.out.println("##FORMAT=<ID=LMQ,Number=1,Type=Integer,Description=\"Number of reads filtered due to low mapping quality\">");
+		System.out.println("##FORMAT=<ID=ISPAN,Number=1,Type=Integer,Description=\"Max variant read pos minus min variant read pos\">");
+		System.out.println("##FORMAT=<ID=VAF,Number=1,Type=Float,Description=\"Variant allele frequency\">");
+		System.out.println("##FORMAT=<ID=MER,Number=1,Type=Integer,Description=\"Number of ref reads with num mismatches greater than read length * .05\">");
+		System.out.println("##FORMAT=<ID=FROR,Number=1,Type=Float,Description=\"Phred scaled Fisher's Exact Test for read orientation\">");
+		System.out.println(vcfColumns);
+	}
+
+	
 	static class InputVariant {
 		
 		private String chrom;
@@ -682,13 +722,15 @@ public class SimpleAlleleCounter {
 	}
 	
 	public static void main(String[] args) throws Exception {
-		String ref = args[0];
-		String bam = args[1];
-		String vcf = args[2];
+//		String ref = args[0];
+//		String bam = args[1];
+//		String vcf = args[2];
 		
 //		String bam = "/home/lmose/dev/mc3/allele_counter/TCGA-D1-A163/TCGA-D1-A163.star.abra2.mc3.bam";
+		String bam = "/home/lmose/dev/mc3/allele_counter/TCGA-3N-A9WC/TCGA-3N-A9WC.mc3.callable.bam";
 //		String vcf = "/home/lmose/dev/mc3/allele_counter/TCGA-D1-A163/TCGA-D1-A163.maf.mc3.vcf";
-//		String ref = "/home/lmose/dev/reference/hg19/19.fa";
+		String vcf = "/home/lmose/dev/mc3/allele_counter/TCGA-3N-A9WC/TCGA-3N-A9WC.mc3.dna.vcf";
+		String ref = "/home/lmose/dev/reference/hg19/19.fa";
 		
 //		String vcf = "/home/lmose/dev/mc3/allele_counter/TCGA-D1-A163/TCGA-D1-A163.maf.mc3.chr1.vcf";
 //		String vcf = "t6.vcf";

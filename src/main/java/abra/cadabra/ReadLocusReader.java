@@ -19,6 +19,7 @@ public class ReadLocusReader implements Iterable<ReadsAtLocus> {
 
 	private SamReader samReader;
 	private Feature region;
+	private int maxDepth = 100000;
 	
 	public ReadLocusReader(String samFile) {
 		this(samFile, null);
@@ -29,9 +30,14 @@ public class ReadLocusReader implements Iterable<ReadsAtLocus> {
         this.region = region;
 	}
 	
+	public ReadLocusReader(String samFile, Feature region, int maxDepth) {
+		this(samFile, region);
+        this.maxDepth = maxDepth;
+	}
+	
 	@Override
 	public Iterator<ReadsAtLocus> iterator() {
-		return new ReadLocusIterator(samReader, region);
+		return new ReadLocusIterator(samReader, region, maxDepth);
 	}
 	
 	public SAMFileHeader getSamHeader() {
@@ -49,9 +55,12 @@ public class ReadLocusReader implements Iterable<ReadsAtLocus> {
 		private int currentPos = -1;
 		private List<SAMRecord> readCache = new ArrayList<SAMRecord>();
 		private ReadsAtLocus nextCache;
+		private int maxDepth;
 		
-		public ReadLocusIterator(SamReader samReader, Feature region) {
-	        	  
+		public ReadLocusIterator(SamReader samReader, Feature region, int maxDepth) {
+	        
+			this.maxDepth = maxDepth;
+			
 			if (region != null) {
 				samIter = new ForwardShiftInsertIterator(samReader.queryOverlapping(region.getSeqname(), (int) region.getStart(), (int) region.getEnd()));
 			} else {
@@ -127,7 +136,7 @@ public class ReadLocusReader implements Iterable<ReadsAtLocus> {
 			}
 			
 			// Skip huge pileups!
-			if (readCache.size() > 100000) {
+			if (readCache.size() > maxDepth) {
 				Logger.warn("Depth too high, clearing read cache " + currentChr + ":" + currentPos);
 				for (int i=readCache.size()-2; i>=0; i--) {
 					readCache.remove(i);

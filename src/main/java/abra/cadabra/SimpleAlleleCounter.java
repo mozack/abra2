@@ -27,6 +27,7 @@ public class SimpleAlleleCounter {
 
 	private static final int MIN_MAPQ = 20;
 	private static final int MIN_BASEQ = 20;
+	private static final int MAX_READS = 500000;
 	
 	private String bam;
 	private ReadLocusReader sample;
@@ -52,7 +53,7 @@ public class SimpleAlleleCounter {
 	
 	void process(InputVariant variant) throws IOException {
 		Feature region = new Feature(variant.getChrom(), variant.getPos(), variant.getPos());
-		sample = new ReadLocusReader(bam, region);
+		sample = new ReadLocusReader(bam, region, MAX_READS);
 		processSimple(variant);
 		sample.close();
 	}
@@ -722,15 +723,15 @@ public class SimpleAlleleCounter {
 	}
 	
 	public static void main(String[] args) throws Exception {
-//		String ref = args[0];
-//		String bam = args[1];
-//		String vcf = args[2];
+		String ref = args[0];
+		String bam = args[1];
+		String vcf = args[2];
 		
 //		String bam = "/home/lmose/dev/mc3/allele_counter/TCGA-D1-A163/TCGA-D1-A163.star.abra2.mc3.bam";
-		String bam = "/home/lmose/dev/mc3/allele_counter/TCGA-3N-A9WC/TCGA-3N-A9WC.mc3.callable.bam";
+//		String bam = "/home/lmose/dev/mc3/allele_counter/TCGA-3N-A9WC/TCGA-3N-A9WC.mc3.callable.bam";
 //		String vcf = "/home/lmose/dev/mc3/allele_counter/TCGA-D1-A163/TCGA-D1-A163.maf.mc3.vcf";
-		String vcf = "/home/lmose/dev/mc3/allele_counter/TCGA-3N-A9WC/TCGA-3N-A9WC.mc3.dna.vcf";
-		String ref = "/home/lmose/dev/reference/hg19/19.fa";
+//		String vcf = "/home/lmose/dev/mc3/allele_counter/TCGA-3N-A9WC/TCGA-3N-A9WC.mc3.dna.vcf";
+//		String ref = "/home/lmose/dev/reference/hg19/19.fa";
 		
 //		String vcf = "/home/lmose/dev/mc3/allele_counter/TCGA-D1-A163/TCGA-D1-A163.maf.mc3.chr1.vcf";
 //		String vcf = "t6.vcf";

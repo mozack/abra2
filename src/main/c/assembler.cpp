@@ -944,6 +944,8 @@ void append_to_contig(struct contig* contig, vector<char*>& all_contig_fragments
 		} else {
 			char* fragment = (char*) calloc(kmer_size+1, sizeof(char));
 			strncpy(fragment, contig->curr_node->kmer, kmer_size);
+//			fprintf(stderr, "Appending fragment [%s]\n", fragment);
+			contig->fragments->push_back(fragment);
 			contig->real_size += kmer_size;
 			all_contig_fragments.push_back(fragment);
 		}
@@ -1196,7 +1198,7 @@ char* get_condensed_seq_buf() {
 		condensed_seq_page_cnt += 1;
 
 		if (condensed_seq_page_cnt >= CONDENSED_SEQ_MAX_PAGES) {
-			fprintf(stderr, "ERROR\tToo many consdensed seq pages generated. Giving up...");
+			fprintf(stderr, "WARNING\tToo many consdensed seq pages generated. Giving up...");
 			return NULL;
 		}
 	}

@@ -475,10 +475,10 @@ struct linked_node* remove_node_from_list(struct node* node, struct linked_node*
 			// Free linked_node
 			free(node_ptr);
 			is_found = true;
+		} else {
+			prev_ptr = node_ptr;
+			node_ptr = node_ptr->next;
 		}
-
-		prev_ptr = node_ptr;
-		node_ptr = node_ptr->next;
 	}
 
 	return list;
@@ -1177,24 +1177,31 @@ char prev_has_multiple_outgoing_edges(struct node* node) {
 	return prev_bifurcates;
 }
 
+#define CONDENSED_SEQ_MAX_PAGES 1000
 #define CONDENSED_SEQ_SIZE 100000
 __thread int condensed_seq_idx = 0;
-__thread int condensed_seq_cnt = 0;
-__thread char* condensed_seq;
+__thread int condensed_seq_page_cnt = 0;
+__thread char* condensed_seq_pages[CONDENSED_SEQ_MAX_PAGES];
 
 char* get_condensed_seq_buf() {
 
-	if (condensed_seq_cnt == 0) {
-		condensed_seq_cnt  = 1;
-		condensed_seq = (char*) malloc(CONDENSED_SEQ_SIZE * sizeof(char));
+	char* condensed_seq;
+
+	if (condensed_seq_page_cnt == 0 || (condensed_seq_idx + MAX_CONTIG_SIZE+1 >= CONDENSED_SEQ_SIZE)) {
+		condensed_seq_pages[condensed_seq_page_cnt] = (char*) calloc(CONDENSED_SEQ_SIZE, sizeof(char));
+		condensed_seq_idx = 0;
+		if (debug) {
+			fprintf(stderr, "DEBUG\tAllocating condensed seq page [%d]\n", condensed_seq_page_cnt);
+		}
+		condensed_seq_page_cnt += 1;
+
+		if (condensed_seq_page_cnt >= CONDENSED_SEQ_MAX_PAGES) {
+			fprintf(stderr, "ERROR\tToo many consdensed seq pages generated. Giving up...");
+			return NULL;
+		}
 	}
 
-	if (condensed_seq_idx + MAX_CONTIG_SIZE+1 >= CONDENSED_SEQ_SIZE*condensed_seq_cnt) {
-		condensed_seq_cnt += 1;
-		condensed_seq = (char*) realloc(condensed_seq, CONDENSED_SEQ_SIZE*condensed_seq_cnt * sizeof(char));
-	}
-
-	return condensed_seq + condensed_seq_idx;
+	return condensed_seq_pages[condensed_seq_page_cnt-1] + condensed_seq_idx;
 }
 
 // NOTE: From nodes are invalid after this step!!!
@@ -1212,6 +1219,9 @@ void condense_graph(dense_hash_map<const char*, struct node*, my_hash, eqstr>* n
 
 				int idx = 0;
 				char* seq = get_condensed_seq_buf();
+				if (seq == NULL) {
+					return;
+				}
 				seq[idx++] = node->kmer[0];
 
 				int nodes_condensed = 1;
@@ -1354,6 +1364,14 @@ char* assemble(const char* input,
 			  int input_read_length,
 			  int input_kmer_size) {
 
+
+	// output input params to file here.
+//	FILE *fp = fopen(prefix, "w+");
+//
+//	fprintf(fp, "%s\n%d\n%d", input, input_read_length, input_kmer_size);
+//
+//	fclose(fp);
+
 	read_length = input_read_length;
 
 	min_contig_length = read_length + 1;
@@ -1386,6 +1404,7 @@ char* assemble(const char* input,
 
 	if (nodes->size() >= max_nodes) {
 		status = TOO_MANY_NODES;
+
 		if (debug) {
 			fprintf(stderr,"Graph too complex for region: %s\n", prefix);
 		}
@@ -1459,11 +1478,12 @@ char* assemble(const char* input,
 	free(deleted_key);
 
 	// Cleanup condensed seq buffer
-	if (condensed_seq_cnt > 0) {
-		free(condensed_seq);
+	for (int i=0; i<condensed_seq_page_cnt; i++) {
+		free(condensed_seq_pages[i]);
 	}
+
 	condensed_seq_idx = 0;
-	condensed_seq_cnt = 0;
+	condensed_seq_page_cnt = 0;
 
 	long stopTime = time(NULL);
 
@@ -1481,6 +1501,7 @@ char* assemble(const char* input,
 		strcpy(contig_str, "<REPEAT>");
 		return contig_str;
 	} else {
+		fprintf(stderr, "status: %d\n", status);
 		strcpy(contig_str, "<ERROR>");
 		return contig_str;
 	}
@@ -1541,28 +1562,92 @@ extern "C"
     return ret;
  }
 
+void profile(const char* filename) {
+	FILE* fp = fopen(filename, "r");
+
+	size_t n = 0;
+
+//	char** line1 = calloc(1, sizeof(char*));
+//	char** line2 = calloc(1, sizeof(char*));
+//	char** line3 = calloc(1, sizeof(char*));
+
+	char* line1 = NULL;
+	char* line2 = NULL;
+	char* line3 = NULL;
+
+	getline(&line1, &n, fp);
+	getline(&line2, &n, fp);
+	getline(&line3, &n, fp);
+
+	line1[strlen(line1)-1] = 0;
+	line2[strlen(line2)-1] = 0;
+	line3[strlen(line3)] = 0;
+
+	int read_length = atoi(line2);
+	int kmer = atoi(line3);
+
+//	printf("line1: %s\n", line1);
+	printf("read_length: %d\n", read_length);
+	printf("kmer: %d\n", kmer);
+
+	char* prefix = basename((char*) filename);
+
+	min_node_freq = 1;
+	min_base_quality = 20;
+	min_edge_ratio = .01;
+	debug = 1;
+	max_nodes = 150000;
+
+
+	char* contigs = assemble(line1,
+			 "",
+			 prefix,
+			 1,
+			 5000,
+			 100000,
+			 atoi(line2),
+			 atoi(line3));
+
+	printf("\n%s\n", contigs);
+
+	free(contigs);
+
+	free(line3);
+	free(line2);
+	free(line1);
+
+	printf("Done.\n");
+}
+
 int main(int argc, char* argv[]) {
 
+	char* filename = argv[1];
 
-        min_node_freq = 2;
-        min_base_quality = 5;
-        min_edge_ratio = .05;
+//	profile("/home/lmose/dev/abra2_dev/crash/chr14_105864201_105864601");
 
-        assemble(
-//                "/datastore/nextgenout4/seqware-analysis/lmose/platinum/test/mtest.reads",
-//                "/datastore/nextgenout4/seqware-analysis/lmose/platinum/test/mtest.fa",
-//                "/datastore/nextgenout4/seqware-analysis/lmose/platinum/test/ftest.reads",
-//                "/datastore/nextgenout4/seqware-analysis/lmose/platinum/test/ftest.fa",
-		"/datastore/nextgenout4/seqware-analysis/lmose/platinum/long_d/test1.reads",
-		"/datastore/nextgenout4/seqware-analysis/lmose/platinum/long_d/test1.fa",
-                "foo",
-                false,
-                500000,
-                5000,
-                101,
-                53);
+	profile(filename);
 
-
+//
+//
+//        min_node_freq = 2;
+//        min_base_quality = 5;
+//        min_edge_ratio = .05;
+//
+//        assemble(
+////                "/datastore/nextgenout4/seqware-analysis/lmose/platinum/test/mtest.reads",
+////                "/datastore/nextgenout4/seqware-analysis/lmose/platinum/test/mtest.fa",
+////                "/datastore/nextgenout4/seqware-analysis/lmose/platinum/test/ftest.reads",
+////                "/datastore/nextgenout4/seqware-analysis/lmose/platinum/test/ftest.fa",
+//		"/datastore/nextgenout4/seqware-analysis/lmose/platinum/long_d/test1.reads",
+//		"/datastore/nextgenout4/seqware-analysis/lmose/platinum/long_d/test1.fa",
+//                "foo",
+//                false,
+//                500000,
+//                5000,
+//                101,
+//                53);
+//
+//
 /*
 	assemble(
 		"/home/lmose/code/abra/src/main/c/sim83/unaligned.bam.reads",

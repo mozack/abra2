@@ -1127,7 +1127,7 @@ int build_contigs(
 	return status;
 }
 
-void cleanup(dense_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, struct struct_pool* pool) {
+void cleanup(dense_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, struct struct_pool* pool, struct linked_node* root_nodes) {
 
 	// Free linked lists
 	for (dense_hash_map<const char*, struct node*, my_hash, eqstr>::const_iterator it = nodes->begin();
@@ -1157,6 +1157,8 @@ void cleanup(dense_hash_map<const char*, struct node*, my_hash, eqstr>* nodes, s
 	free(pool->read_pool);
 
 	free(pool);
+
+	cleanup(root_nodes);
 }
 
 char has_one_incoming_edge(struct node* node) {
@@ -1437,6 +1439,7 @@ char* assemble(const char* input,
 	std::priority_queue<double, std::vector<double>, std::greater<double> > contig_scores;
 	vector<char*> all_contig_fragments;
 
+	struct linked_node* orig_root_nodes = root_nodes;
 
 	while (root_nodes != NULL) {
 
@@ -1473,7 +1476,7 @@ char* assemble(const char* input,
 		root_nodes = root_nodes->next;
 	}
 
-	cleanup(nodes, pool);
+	cleanup(nodes, pool, orig_root_nodes);
 
 	delete nodes;
 

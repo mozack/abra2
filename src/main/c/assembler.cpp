@@ -44,7 +44,7 @@ using google::dense_hash_set;
 #define MAX_KMER_LEN 201
 
 // TODO: Allocate dynamically
-#define MAX_SAMPLES 8
+#define MAX_SAMPLES 16
 
 // Kmers containing bases below this threshold are excluded from assembly.
 #define MIN_BASE_QUALITY 8

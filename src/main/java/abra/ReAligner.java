@@ -188,11 +188,29 @@ public class ReAligner {
 		}
 				
 		for (int i=0; i<inputSams.length; i++) {
+			SAMProgramRecord pg = samHeaders[i].getProgramRecord("ABRA2");
+			if (pg == null) {
+				pg = new SAMProgramRecord("ABRA2");
+				pg.setProgramVersion(this.version);
+				pg.setCommandLine(cl);
 			
-			SAMProgramRecord pg = new SAMProgramRecord("ABRA2");
-			pg.setProgramVersion(this.version);
-			pg.setCommandLine(cl);
-			samHeaders[i].addProgramRecord(pg);			
+				samHeaders[i].addProgramRecord(pg);
+			} else {
+				// Append counter to allow multiple ABRA2 PG entries
+				int cnt = 2;
+				String pgId = null;
+				
+				while (pg != null) {
+					pgId = "ABRA2-" + cnt;
+					pg = samHeaders[i].getProgramRecord(pgId);
+					cnt += 1;
+				}
+				
+				pg = new SAMProgramRecord(pgId);
+				pg.setProgramVersion(this.version);
+				pg.setCommandLine(cl);
+				samHeaders[i].addProgramRecord(pg);
+			}
 		}
 		
 		writer = new SortedSAMWriter(outputFiles, tempDir.toString(), samHeaders, isKeepTmp, chromosomeChunker,

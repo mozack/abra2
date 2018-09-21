@@ -77,6 +77,10 @@ public class ContigAligner {
 			
 			CigarElement first = cigar.getFirstCigarElement();
 			CigarElement last = cigar.getLastCigarElement();
+		
+			if (first.getOperator() == CigarOperator.I) {
+				Logger.trace("Contig with leading insert: [%s] - [%s]", sgResult, seq);
+			}
 			
 			// Do not allow indels at the edges of contigs.
 			if (minAnchorLength > 0 && 

@@ -39,6 +39,12 @@ void populate(const char* seq1, const char* seq2, int seq1_len, int seq2_len) {
 		matrix[0][c][D] = gap_open + (c*gap_extend);
 	}
 
+	for (int r=2; r<=seq1_len; r++) {
+		bt[r][0][I] = DIR_UP;
+		bt[r][0][D] = DIR_UP;
+		bt[r][0][M] = DIR_UP;
+	}
+
 	for (int r=1; r<=seq1_len; r++) {
 		for (int c=1; c<=seq2_len; c++) {
 
@@ -128,7 +134,7 @@ void backtrack(const char* seq1, const char* seq2, int seq1_len, int seq2_len, c
 
 	int level = M;
 
-	while (r > 0 && c > 0) {
+	while (r > 0) {
 		char curr_bt = bt[r][c][level];
 
 		if (curr_bt == DIR_DIAG) {

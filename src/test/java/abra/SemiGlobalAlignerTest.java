@@ -98,4 +98,26 @@ public class SemiGlobalAlignerTest {
 		SemiGlobalAligner.Result res = sg.align(seq, ref);
 		System.out.println(res);
 	}
+	
+	@Test (groups = "unit")
+	public void testLeadingInsert() {
+		String ref = "CATGCATGCATGCATGGGGGGGGGGGG";
+		String seq = "TTTTTTTCATGCATGCATGCATG";
+		
+		SemiGlobalAligner.Result res = sg.align(seq, ref);
+		System.out.println(res);
+		assertEquals(res.cigar, "7I16M");
+		assertEquals(res.position, 0);
+	}
+	
+	@Test (groups = "unit")
+	public void testTrailingInsert() {
+		String ref = "CATGCATGCATGCATGGGGGGGGGGGG";
+		String seq = "CATGCATGCATGCATGTTTTTTT";
+		
+		SemiGlobalAligner.Result res = sg.align(seq, ref);
+		System.out.println(res);
+		assertEquals(res.cigar, "16M7I");
+		assertEquals(res.position, 0);
+	}
 }

@@ -3,17 +3,13 @@ package abra;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
@@ -23,7 +19,6 @@ import htsjdk.samtools.Cigar;
 import htsjdk.samtools.CigarElement;
 import htsjdk.samtools.CigarOperator;
 import htsjdk.samtools.SAMRecord;
-import htsjdk.samtools.ValidationStringency;
 
 /**
  * Handles regional assembly by invoking the native assembler.
@@ -38,7 +33,9 @@ public class NativeAssembler {
 	public static final int CYCLE_KMER_LENGTH_THRESHOLD = 43;
 	
 	private static final int MIN_CANDIDATE_BASE_QUALITY = 10;
-	
+
+	private static boolean useCCode = true;
+
 	private boolean truncateOnRepeat;
 	private int maxContigs = 5000;
 	private int maxPathsFromRoot;
@@ -419,21 +416,37 @@ public class NativeAssembler {
 					String outputFile = prefix + "_k" + kmer;
 					
 //					System.out.println(readBuffer.toString());
-					
-					contigs = assemble(
-							readBuffer.toString(),
-							outputFile, 
-							prefix, 
-							truncateOnRepeat ? 1 : 0,
-							maxContigs,
-							maxPathsFromRoot,
-							maxReadLength,
-							kmer,
-							Math.max(mnf, 1),
-							Math.max(mbq, 2),
-							Math.max(mer, .0001),
-							Logger.LEVEL == Logger.Level.DEBUG || Logger.LEVEL == Logger.Level.TRACE ? 1 : 0,
-							maxNodes);
+
+					if (useCCode) {
+						contigs = assemble(
+								readBuffer.toString(),
+								outputFile,
+								prefix,
+								truncateOnRepeat ? 1 : 0,
+								maxContigs,
+								maxPathsFromRoot,
+								maxReadLength,
+								kmer,
+								Math.max(mnf, 1),
+								Math.max(mbq, 2),
+								Math.max(mer, .0001),
+								Logger.LEVEL == Logger.Level.DEBUG || Logger.LEVEL == Logger.Level.TRACE ? 1 : 0,
+								maxNodes);
+					} else {
+						contigs = Assembler.assemble(readBuffer.toString(),
+								outputFile,
+								prefix,
+								truncateOnRepeat,
+								maxContigs,
+								maxPathsFromRoot,
+								maxReadLength,
+								kmer,
+								Math.max(mnf, 1),
+								Math.max(mbq, 2),
+								Math.max(mer, .0001),
+								Logger.LEVEL == Logger.Level.DEBUG || Logger.LEVEL == Logger.Level.TRACE ? true : false,
+								maxNodes);
+					}
 					
 					if (!contigs.equals("<REPEAT>")) {
 						break;

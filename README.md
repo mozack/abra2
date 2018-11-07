@@ -1,5 +1,7 @@
 # ABRA2
 
+This fork is to explore and compare the native assembler with an all Java implementation.
+
 ABRA2 is an updated implementation of [ABRA](https://github.com/mozack/abra) featuring:
 * RNA support
 * Improved scalability (Human whole genomes now supported)

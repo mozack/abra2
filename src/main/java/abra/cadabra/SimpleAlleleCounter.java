@@ -231,6 +231,7 @@ public class SimpleAlleleCounter {
 					Pair<Character, Character> base = getBaseAtPosition(read, position);
 					
 					if (variant.getAllele().getType() == Allele.Type.DEL || variant.getAllele().getType() == Allele.Type.INS) {
+						// Indel
 						Pair<Character, Character> nextBase = getBaseAtPosition(read, position+1);
 						IndelInfo readIndel = checkForIndelAtLocus(read.getAlignmentStart(),
 								read.getCigar(), position);
@@ -238,7 +239,34 @@ public class SimpleAlleleCounter {
 						if (readIndel == null && base != null && nextBase != null && base.getSecond()-'!' >= MIN_BASEQ) {
 							allele = Allele.getAllele(base.getFirst());
 						}						
+					} else if (base != null && variant.getAllele().getType() == Allele.Type.MNP) {
+						// MNP
+						if (base.getFirst() == variant.getAlt().charAt(0) && base.getSecond()-'!' >= MIN_BASEQ) {
+							// Look ahead to remaining bases for comparison
+							StringBuffer bases = new StringBuffer();
+							bases.append(base.getFirst());
+							int i = 1;
+							while (i < variant.getAlt().length()) {
+								Pair<Character, Character> nextBase = getBaseAtPosition(read, position+i);
+								if (nextBase != null && nextBase.getSecond()-'!' >= MIN_BASEQ) {
+									bases.append(nextBase.getFirst());
+								} else {
+									break;
+								}
+								
+								i += 1;
+							}
+							
+							if (bases.toString().equals(variant.getAlt())) {
+								allele = variant.getAllele();
+							} else {
+								allele = Allele.getAllele(base.getFirst());
+							}
+						} else {
+							allele = Allele.getAllele(base.getFirst());
+						}
 					} else {
+						// SNP
 						if (base != null && base.getSecond()-'!' >= MIN_BASEQ) {							
 							allele = Allele.getAllele(base.getFirst());
 						}
@@ -673,9 +701,9 @@ public class SimpleAlleleCounter {
 			String alt = fields[4];
 			int length = 1;
 			
-			if (ref.length() != 1 && alt.length() != 1) {
-				// Only supporting simple variant representations for now.
-				throw new UnsupportedOperationException("At least one of the REF and ALT fields must be of length 1.");
+			if (ref.length() != 1 && alt.length() != 1 && ref.length() != alt.length()) {
+				// Only supporting simple indel representations for now.
+				throw new UnsupportedOperationException("At least one of the REF and ALT fields must be of length 1 for indels");
 			}
 			
 			Allele allele = Allele.UNK;
@@ -686,6 +714,9 @@ public class SimpleAlleleCounter {
 			} else if (alt.length() > ref.length()) {
 				length = alt.length() - ref.length();
 				allele = new Allele(Allele.Type.INS, length);
+			} else if (alt.length() > 1 && alt.length() == ref.length()) {
+				length = alt.length();
+				allele = Allele.getMnpAllele(alt);
 			} else {
 				allele = Allele.getAllele(alt.charAt(0));
 			}

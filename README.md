@@ -25,7 +25,7 @@ The above accepts normal.bam and tumor.bam as input and outputs sorted realigned
 
 ### RNA
 
-Abra2 is capable of utilizing junction information to aid in assembly and realignment.  It has been tested only on STAR output to date.
+ABRA2 is capable of utilizing junction information to aid in assembly and realignment.  It has been tested only on STAR output to date.
 
 Sample command for RNA:
 

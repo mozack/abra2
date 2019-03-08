@@ -15,5 +15,6 @@ ADD https://github.com/mozack/abra2/releases/download/v${ABRA2_VERSION}/abra2-${
 RUN chmod 755 /abra2-${ABRA2_VERSION}.jar && \
     ln -s /abra2-${ABRA2_VERSION}.jar /abra2.jar 
 
-ENTRYPOINT [ "java", "-jar", "/abra2.jar" ]
+# use "docker run --env JAVA_OPTS=..." to override default java options
+ENTRYPOINT java $JAVA_OPTS -jar /abra2.jar
 # CMD [ --help ]

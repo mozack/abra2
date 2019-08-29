@@ -513,7 +513,7 @@ public class AltContigGenerator {
 			int compare(long l1, long l2) {
 				if (l1 < l2) {
 					return 1;
-				} else if (l2 > l1) {
+				} else if (l1 > l2) {
 					return -1;
 				} else {
 					return 0;

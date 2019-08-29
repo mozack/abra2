@@ -33,7 +33,7 @@ public class ScoredContig implements Comparable<ScoredContig> {
 		} else if (this.score > o.score) {
 			return -1;
 		} else {
-			return 0;
+			return this.contig.compareTo(o.contig);
 		}
 	}
 	

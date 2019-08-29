@@ -405,7 +405,7 @@ public class AltContigGenerator {
 		int pos;
 		int length;
 		String insert;
-		List<Indel> components;
+		List<Indel> components = Collections.emptyList();
 		Set<Integer> readPositions = new HashSet<Integer>();
 		int count;
 		long baseQualSum;
@@ -509,6 +509,16 @@ public class AltContigGenerator {
 		}
 
 		static class IndelFreqComparator implements Comparator<Indel> {
+			
+			int compare(long l1, long l2) {
+				if (l1 < l2) {
+					return 1;
+				} else if (l2 > l1) {
+					return -1;
+				} else {
+					return 0;
+				}
+			}
 
 			@Override
 			public int compare(Indel i1, Indel i2) {
@@ -522,8 +532,50 @@ public class AltContigGenerator {
 					} else if (i1.baseQualSum > i2.baseQualSum) {
 						return -1;
 					} else {
-						return 0;
+						int cmp = compare(i1.type, i2.type);
+						if (cmp != 0) {
+							return cmp;
+						}
+						
+						if (i1.chr != null && i2.chr != null) {
+							cmp = i1.chr.compareTo(i2.chr);
+							if (cmp != 0) {
+								return cmp;
+							}
+						}
+						
+						cmp = compare(i1.pos, i2.pos);
+						if (cmp != 0) {
+							return cmp;
+						}
+						
+						cmp = compare(i1.length, i2.length);
+						if (cmp != 0) {
+							return cmp;
+						}
+						
+						if (i1.insert != null && i2.insert != null) {
+							cmp = i1.insert.compareTo(i2.insert);
+							if (cmp != 0) {
+								return cmp;
+							}
+						}
+						
+						cmp = compare(i1.components.size(), i2.components.size());
+
+						if (cmp != 0 || (i1.components.size() == 0 && i2.components.size() == 0)) {
+							return cmp;
+						}
+						
+						for (int i=0; i<i1.components.size(); i++) {
+							cmp = compare(i1.components.get(i), i2.components.get(i));
+							if (cmp != 0) {
+								return cmp;
+							}
+						}
 					}
+					
+					return 0;
 				}
 			}
 		}

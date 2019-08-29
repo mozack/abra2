@@ -127,12 +127,12 @@ public class ReAlignerOptions extends Options {
 		
 		if (!getOptions().hasArgument(INPUT_SAM)) {
 			isValid = false;
-			System.err.println("Missing required input SAM/BAM file");
+			System.err.println("Missing required input SAM/BAM file(s)");
 		}
 
 		if (!getOptions().hasArgument(OUTPUT_SAM)) {
 			isValid = false;
-			System.err.println("Missing required input SAM/BAM file");
+			System.err.println("Missing required output SAM/BAM filename(s)");
 		}
 		
 		if (getInputFiles().length != getOutputFiles().length) {

@@ -6,7 +6,7 @@ RUN apk -U add \
      libc6-compat \ 
      openjdk8
 
-ARG ABRA2_VERSION=2.19
+ARG ABRA2_VERSION=2.20
 ENV ABRA2_VERSION ${ABRA2_VERSION}
 ENV JAVA_OPTS "-Xmx16G"
 

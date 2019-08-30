@@ -40,5 +40,4 @@ It is beneficial to use both of the junction related options.
 
 Known indels can be passed in using the --in-vcf argument.  Unannotated junctions originally identified as splices by the aligner may be converted to deletions if a known deletion is matched.  Consider this option if you have indels detected from DNA for the same sample / subject.  It is not recommended to use large datasets when using this option (i.e. don't pass in dbSNP).
 
-The software is currently considered beta quality.
 

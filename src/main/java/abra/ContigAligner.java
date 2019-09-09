@@ -166,6 +166,18 @@ public class ContigAligner {
 		}
 	}
 	
+	public int getRefContextStart() {
+		return refContextStart;
+	}
+
+	public List<Integer> getJunctionPositions() {
+		return junctionPositions;
+	}
+
+	public List<Integer> getJunctionLengths() {
+		return junctionLengths;
+	}
+
 	public static class ContigAlignerResult {
 		
 		// Used for testing

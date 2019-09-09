@@ -1190,8 +1190,6 @@ public class ReAligner {
 			}
 		}
 		
-
-		
 		int assembledContigCount = 0;
 		int nonAssembledContigCount = 0;
 		int juncPermCount = 0;
@@ -1232,6 +1230,14 @@ public class ReAligner {
 					if (aligner != null) {
 						Logger.debug("JUNC_REF_SEQ:\t%s\t%d", region.getDescriptor(), aligner.ref.length());
 						junctionAligners.add(aligner);
+						
+						// Add putative transcript sequence as baseline to mapped contigs
+						String cigar = String.valueOf(aligner.ref.length()) + "M";
+						cigar = CigarUtils.injectSplices(cigar, aligner.getJunctionPositions(), aligner.getJunctionLengths());
+						ContigAlignerResult junctionAlignment = new ContigAlignerResult(aligner.getRefContextStart(), 
+								cigar, region.getSeqname(), 0, aligner.ref, Integer.MAX_VALUE);
+						
+						mappedContigs.put(new SimpleMapper(junctionAlignment.getSequence(), maxMismatchRate), junctionAlignment);
 					}
 				}
 							

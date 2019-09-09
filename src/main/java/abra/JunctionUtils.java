@@ -18,6 +18,7 @@ public class JunctionUtils {
 
 	public static final int MAX_JUNCTION_PERMUTATIONS = 1024;
 	public static final int MAX_POTENTIAL_PERMUTATIONS = 65536;
+	
 	/**
 	 * Load junctions from GTF using exons grouped by transcript_id
 	 * Sort order is unspecified 
@@ -345,6 +346,89 @@ public class JunctionUtils {
 		}
 		
 		return junctions.size() > 0;
+	}
+	
+	public static JunctionSequence getSequenceForJunctions(List<Feature> junctions, CompareToReference2 c2r, int basesToPad, long regionLength) {
+		
+		JunctionSequence junctionSequence = null;
+		
+		String chromosome = junctions.get(0).getSeqname();
+		
+		// List of junction positions within localized reference
+		List<Integer> junctionPos = new ArrayList<Integer>();
+		// List of junction lengths within localized reference
+		List<Integer> junctionLengths = new ArrayList<Integer>();
+		
+		StringBuffer juncSeq = new StringBuffer();
+		
+		int refStart = Math.max((int) junctions.get(0).getStart() - basesToPad, 1);
+		String leftSeq = c2r.getSequence(chromosome, refStart, (int) junctions.get(0).getStart() - refStart);
+		juncSeq.append(leftSeq);
+		junctionPos.add(leftSeq.length());
+		junctionLengths.add((int) junctions.get(0).getLength()+1);
+		
+		boolean isJunctionGapTooBig = false;
+		
+		for (int i=1; i<junctions.size(); i++) {
+			int midStart = (int) junctions.get(i-1).getEnd()+1;
+			String middleSeq = c2r.getSequence(chromosome, midStart, (int) junctions.get(i).getStart() - midStart);
+			
+			//TODO: Why do this???
+			if (middleSeq.length() > regionLength*2) {
+				isJunctionGapTooBig = true;
+				break;
+			}
+			
+			juncSeq.append(middleSeq);
+			junctionPos.add(juncSeq.length());
+			junctionLengths.add((int) junctions.get(i).getLength()+1);
+		}
+		
+		// TODO: Tighten this up...
+		if (!isJunctionGapTooBig && juncSeq.length() < regionLength*10) {
+			
+			// Sequence on right of last junction
+			// Junction stop is exclusive, so add 1 to starting position (junction end + 1)
+			Feature lastJunction = junctions.get(junctions.size()-1);
+			int rightStart = (int) lastJunction.getEnd()+1;
+			int rightStop = Math.min((int) lastJunction.getEnd() + basesToPad, c2r.getChromosomeLength(chromosome)-1);
+			
+			if (rightStop-rightStart > 0) {
+				String rightSeq = c2r.getSequence(chromosome, rightStart, rightStop-rightStart);
+				juncSeq.append(rightSeq);
+				// Junction pos and length should already be added
+				if (juncSeq.length() > ReAligner.MAX_REF_REGION_LEN) {
+					// Make sure we don't blow up the hardcoded size C matrix
+					Logger.warn("Junction Ref Seq to long: " + juncSeq.toString());
+					
+				} else {
+					junctionSequence = new JunctionSequence(juncSeq.toString(), junctionPos, junctionLengths, refStart);
+				}
+			}
+		}
+
+		return junctionSequence;
+	}
+	
+	static class JunctionSequence {
+		// Junction sequence
+		String seq;
+		
+		// List of junction positions within localized reference
+		List<Integer> junctionPos = new ArrayList<Integer>();
+
+		// List of junction lengths within localized reference
+		List<Integer> junctionLengths = new ArrayList<Integer>();
+		
+		// Genomic location of this sequence in the chromosome
+		int refStart;
+		
+		JunctionSequence(String seq, List<Integer> junctionPos, List<Integer> junctionLengths, int refStart) {
+			this.seq = seq;
+			this.junctionPos = junctionPos;
+			this.junctionLengths = junctionLengths;
+			this.refStart = refStart;
+		}
 	}
 
 	// Sort strictly based upon start and end pos.  Chromosome ignored.

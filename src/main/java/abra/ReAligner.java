@@ -28,6 +28,7 @@ import java.util.TreeSet;
 import java.util.UUID;
 
 import abra.JunctionUtils.JunctionComparator;
+import abra.JunctionUtils.JunctionSequence;
 import abra.JunctionUtils.TooManyJunctionPermutationsException;
 import abra.ReadEvaluator.Alignment;
 import abra.SAMRecordUtils.ReadBlock;
@@ -62,8 +63,8 @@ public class ReAligner {
 	private static final int MAX_KMER_SIZE = 199;
 	
 	// These must match constants in C code (Aligner matrix dimensions)
-	private static final int MAX_CONTIG_LEN = 2000-1;
-	private static final int MAX_REF_REGION_LEN = 5000-1;
+	static final int MAX_CONTIG_LEN = 2000-1;
+	static final int MAX_REF_REGION_LEN = 5000-1;
 	
 	private SAMFileHeader[] samHeaders;
 	
@@ -1148,56 +1149,16 @@ public class ReAligner {
 	
 	private ContigAligner getContigAlignerForJunctionPermutation(List<Feature> junctionPerm, Feature region, int chromosomeLength) {
 		
+		int basesToPad = (int) region.getLength() + this.readLength*2;
+		
+		JunctionSequence juncSeq = JunctionUtils.getSequenceForJunctions(junctionPerm, c2r, basesToPad, region.getLength());
+		
 		ContigAligner contigAligner = null;
 		
-		// List of junction positions within localized reference
-		List<Integer> junctionPos = new ArrayList<Integer>();
-		// List of junction lengths within localized reference
-		List<Integer> junctionLengths = new ArrayList<Integer>();
-		
-		StringBuffer juncSeq = new StringBuffer();
-		
-		int refStart = Math.max((int) junctionPerm.get(0).getStart() - (int) region.getLength() - this.readLength*2, 1);
-		String leftSeq = c2r.getSequence(region.getSeqname(), refStart, (int) junctionPerm.get(0).getStart() - refStart);
-		juncSeq.append(leftSeq);
-		junctionPos.add(leftSeq.length());
-		junctionLengths.add((int) junctionPerm.get(0).getLength()+1);
-		
-		boolean isJunctionGapTooBig = false;
-		
-		for (int i=1; i<junctionPerm.size(); i++) {
-			int midStart = (int) junctionPerm.get(i-1).getEnd()+1;
-			String middleSeq = c2r.getSequence(region.getSeqname(), midStart, (int) junctionPerm.get(i).getStart() - midStart);
-			if (middleSeq.length() > region.getLength()*2) {
-				isJunctionGapTooBig = true;
-				break;
-			}
-			juncSeq.append(middleSeq);
-			junctionPos.add(juncSeq.length());
-			junctionLengths.add((int) junctionPerm.get(i).getLength()+1);
-		}
-		
-		// TODO: Tighten this up...
-		if (!isJunctionGapTooBig && juncSeq.length() < region.getLength()*10) {
+		if (juncSeq != null) {
 			
-			// Sequence on right of last junction
-			// Junction stop is exclusive, so add 1 to starting position (junction end + 1)
-			Feature lastJunction = junctionPerm.get(junctionPerm.size()-1);
-			int rightStart = (int) lastJunction.getEnd()+1;
-			int rightStop = Math.min((int) lastJunction.getEnd() + (int) region.getLength() + this.readLength*2, chromosomeLength-1);
-			
-			if (rightStop-rightStart > 0) {
-				String rightSeq = c2r.getSequence(region.getSeqname(), rightStart, rightStop-rightStart);
-				juncSeq.append(rightSeq);
-				// Junction pos and length should already be added
-				if (juncSeq.length() > MAX_REF_REGION_LEN) {
-					// Make sure we don't blow up the hardcoded size C matrix
-					Logger.warn("Junction Ref Seq to long: " + juncSeq.toString());
-					
-				} else {
-					contigAligner = new ContigAligner(juncSeq.toString(), region.getSeqname(), refStart, this.readLength, minAnchorLen, maxAnchorMismatches, junctionPos, junctionLengths);
-				}
-			}
+			int refStart = Math.max((int) junctionPerm.get(0).getStart() - (int) region.getLength() - this.readLength*2, 1);
+			contigAligner = new ContigAligner(juncSeq.seq, region.getSeqname(), refStart, this.readLength, minAnchorLen, maxAnchorMismatches, juncSeq.junctionPos, juncSeq.junctionLengths);
 		}
 
 		return contigAligner;

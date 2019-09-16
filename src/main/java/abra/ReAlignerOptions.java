@@ -52,13 +52,12 @@ public class ReAlignerOptions extends Options {
 	private static final String UNSET_DUPLICATES = "undup";
 	private static final String INPUT_VCF = "in-vcf";
 	private static final String INDEX = "index";
-	private static final String GKL = "gkl";
+	private static final String NO_GKL = "no-gkl";
 	private static final String AMBIGUOUS_MAPQ = "amq";
 	private static final String MAX_READ_NOISE = "mrn";
 	private static final String MAX_SORT_READS = "msr";
 	private static final String NO_NDN = "no-ndn";
 	private static final String GAPPED_CONTIGS_ONLY = "gc";
-	private static final String IGNORE_BAD_ASSEMBLY = "ignore-bad-assembly";
 	private static final String USE_JUNCTIONS_AS_CONTIGS = "ujac";
 	
 	private OptionParser parser;
@@ -110,13 +109,12 @@ public class ReAlignerOptions extends Options {
             parser.accepts(UNSET_DUPLICATES, "Unset duplicate flag");
             parser.accepts(INPUT_VCF, "VCF containing known (or suspected) variant sites.  Very large files should be avoided.").withRequiredArg().ofType(String.class);
             parser.accepts(INDEX, "Enable BAM index generation when outputting sorted alignments (may require additonal memory)");
-            parser.accepts(GKL, "If specified, use GKL Intel Deflater (experimental)");
+            parser.accepts(NO_GKL, "If specified, do not use GKL Intel Deflater.");
             parser.accepts(AMBIGUOUS_MAPQ, "Set mapq for alignments that map equally well to reference and an ABRA generated contig.  default of -1 disables").withRequiredArg().ofType(Integer.class).defaultsTo(-1);
             parser.accepts(MAX_READ_NOISE, "Reads with noise score exceeding this value are not remapped.  numMismatches+(numIndels*2) < readLength*mnr").withRequiredArg().ofType(Double.class).defaultsTo(.10);
             parser.accepts(MAX_SORT_READS, "Max reads to keep in memory per sample during the sort phase.  When this value is exceeded, sort spills to disk").withRequiredArg().ofType(Integer.class).defaultsTo(1000000);
             parser.accepts(NO_NDN, "If specified, do not allow adjacent N-D-N cigar elements");
             parser.accepts(GAPPED_CONTIGS_ONLY, "If specified, only reprocess regions that contain at least one contig containing an indel or splice (experimental)");
-            parser.accepts(IGNORE_BAD_ASSEMBLY, "Use this option to avoid parsing errors for corrupted assemblies");
             parser.accepts(USE_JUNCTIONS_AS_CONTIGS, "If specified, use junction permuations as contigs (Experimental - may use excessive memory and compute times)");
     	}
     	
@@ -357,7 +355,7 @@ public class ReAlignerOptions extends Options {
 	}
 	
 	public boolean shouldUseGkl() {
-		return getOptions().has(GKL);
+		return !getOptions().has(NO_GKL);
 	}
 	
 	public int[] getSmithWatermanScoring() {
@@ -453,10 +451,6 @@ public class ReAlignerOptions extends Options {
 	
 	public int getCompressionLevel() {
 		return (Integer) getOptions().valueOf(COMPRESSION_LEVEL);
-	}
-	
-	public boolean shouldIgnoreBadAssembly() {
-		return (Boolean) getOptions().has(IGNORE_BAD_ASSEMBLY);
 	}
 	
 	public boolean shouldUseJunctionsAsContigs() {

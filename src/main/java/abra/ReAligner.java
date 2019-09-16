@@ -156,7 +156,6 @@ public class ReAligner {
 	
 	private boolean shouldFilterNDN;
 	private boolean isGappedContigsOnly;
-	private boolean shouldIgnoreBadAssembly;
 	private boolean shouldUseJunctionsAsContigs;
 	
 	public void reAlign(String[] inputFiles, String[] outputFiles) throws Exception {
@@ -1112,17 +1111,7 @@ public class ReAligner {
 			
 			List<ScoredContig> scoredContigs;
 			
-			try {
-				scoredContigs = ScoredContig.convertAndFilter(contigs, maxNumContigs, readBuffer);
-			} catch (ArrayIndexOutOfBoundsException e) {
-				Logger.error("Error parsing contigs for region: " + region);
-				
-				if (shouldIgnoreBadAssembly) {
-					scoredContigs = new ArrayList<ScoredContig>();
-				} else {
-					throw e;
-				}
-			}
+			scoredContigs = ScoredContig.convertAndFilter(contigs, maxNumContigs, readBuffer);
 			
 			if (contigWriter != null) {
 				appendContigs(contigs);
@@ -1808,7 +1797,6 @@ public class ReAligner {
 			realigner.maxReadsInRamForSort = options.getMaxReadsInRamForSort();
 			realigner.shouldFilterNDN = options.isNoNDN();
 			realigner.isGappedContigsOnly = options.isGappedContigsOnly();
-			realigner.shouldIgnoreBadAssembly = options.shouldIgnoreBadAssembly();
 			realigner.shouldUseJunctionsAsContigs = options.shouldUseJunctionsAsContigs();
 			
 			MAX_REGION_LENGTH = options.getWindowSize();

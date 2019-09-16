@@ -157,6 +157,7 @@ public class ReAligner {
 	private boolean shouldFilterNDN;
 	private boolean isGappedContigsOnly;
 	private boolean shouldIgnoreBadAssembly;
+	private boolean shouldUseJunctionsAsContigs;
 	
 	public void reAlign(String[] inputFiles, String[] outputFiles) throws Exception {
 		
@@ -1231,13 +1232,15 @@ public class ReAligner {
 						Logger.debug("JUNC_REF_SEQ:\t%s\t%d", region.getDescriptor(), aligner.ref.length());
 						junctionAligners.add(aligner);
 						
-						// Add putative transcript sequence as baseline to mapped contigs
-						String cigar = String.valueOf(aligner.ref.length()) + "M";
-						cigar = CigarUtils.injectSplices(cigar, aligner.getJunctionPositions(), aligner.getJunctionLengths());
-						ContigAlignerResult junctionAlignment = new ContigAlignerResult(aligner.getRefContextStart(), 
-								cigar, region.getSeqname(), 0, aligner.ref, Integer.MAX_VALUE);
-						
-						mappedContigs.put(new SimpleMapper(junctionAlignment.getSequence(), maxMismatchRate), junctionAlignment);
+						if (shouldUseJunctionsAsContigs) {
+							// Add putative transcript sequence as baseline to mapped contigs
+							String cigar = String.valueOf(aligner.ref.length()) + "M";
+							cigar = CigarUtils.injectSplices(cigar, aligner.getJunctionPositions(), aligner.getJunctionLengths());
+							ContigAlignerResult junctionAlignment = new ContigAlignerResult(aligner.getRefContextStart(), 
+									cigar, region.getSeqname(), 0, aligner.ref, Integer.MAX_VALUE);
+							
+							mappedContigs.put(new SimpleMapper(junctionAlignment.getSequence(), maxMismatchRate), junctionAlignment);
+						}
 					}
 				}
 							
@@ -1806,6 +1809,8 @@ public class ReAligner {
 			realigner.shouldFilterNDN = options.isNoNDN();
 			realigner.isGappedContigsOnly = options.isGappedContigsOnly();
 			realigner.shouldIgnoreBadAssembly = options.shouldIgnoreBadAssembly();
+			realigner.shouldUseJunctionsAsContigs = options.shouldUseJunctionsAsContigs();
+			
 			MAX_REGION_LENGTH = options.getWindowSize();
 			MIN_REGION_REMAINDER = options.getWindowOverlap();
 			REGION_OVERLAP = options.getWindowOverlap();

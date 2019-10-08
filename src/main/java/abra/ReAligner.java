@@ -157,6 +157,7 @@ public class ReAligner {
 	private boolean shouldFilterNDN;
 	private boolean isGappedContigsOnly;
 	private boolean shouldUseJunctionsAsContigs;
+	private boolean disallowComplexIndelsAtReadEdge;
 	
 	public void reAlign(String[] inputFiles, String[] outputFiles) throws Exception {
 		
@@ -323,7 +324,7 @@ public class ReAligner {
 					read1.setBaseQualityString(rc.reverse(read1.getBaseQualityString()));
 					read1.setReadNegativeStrandFlag(false);
 					record.setUnalignedRc(true);
-				}				
+				}
 			}
 			
 			List<Integer> overlappingRegions = new ArrayList<Integer>();
@@ -605,6 +606,8 @@ public class ReAligner {
 				Logger.trace("Not moving read: " + read.getReadName() + " from: " + read.getAlignmentStart() + " to: " + alignment.pos);
 			} else if (shouldFilterNDN && CigarUtils.hasNDN(alignment.cigar)) {
 				Logger.trace("Not remapping read: %s to NDM cigar: %s", read, alignment.cigar);
+			} else if (disallowComplexIndelsAtReadEdge && CigarUtils.startsOrEndsWithComplexIndel(alignment.cigar)) {
+				Logger.trace("Not remapping read: %s to edge complex indel cigar: %s", read, alignment.cigar);
 			} else if (origEditDist > alignment.numMismatches) {
 				
 				SAMRecord orig = read.deepCopy();
@@ -1798,6 +1801,7 @@ public class ReAligner {
 			realigner.shouldFilterNDN = options.isNoNDN();
 			realigner.isGappedContigsOnly = options.isGappedContigsOnly();
 			realigner.shouldUseJunctionsAsContigs = options.shouldUseJunctionsAsContigs();
+			realigner.disallowComplexIndelsAtReadEdge = options.disallowComplexIndelsAtReadEdge();
 			
 			MAX_REGION_LENGTH = options.getWindowSize();
 			MIN_REGION_REMAINDER = options.getWindowOverlap();

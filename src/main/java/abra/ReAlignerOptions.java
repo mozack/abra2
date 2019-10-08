@@ -59,6 +59,7 @@ public class ReAlignerOptions extends Options {
 	private static final String NO_NDN = "no-ndn";
 	private static final String GAPPED_CONTIGS_ONLY = "gc";
 	private static final String USE_JUNCTIONS_AS_CONTIGS = "ujac";
+	private static final String NO_COMPLEX_INDELS_AT_READ_EDGE = "no-edge-ci";
 	
 	private OptionParser parser;
 	private boolean isValid;
@@ -116,6 +117,7 @@ public class ReAlignerOptions extends Options {
             parser.accepts(NO_NDN, "If specified, do not allow adjacent N-D-N cigar elements");
             parser.accepts(GAPPED_CONTIGS_ONLY, "If specified, only reprocess regions that contain at least one contig containing an indel or splice (experimental)");
             parser.accepts(USE_JUNCTIONS_AS_CONTIGS, "If specified, use junction permuations as contigs (Experimental - may use excessive memory and compute times)");
+            parser.accepts(NO_COMPLEX_INDELS_AT_READ_EDGE, "If specified, do not update alignments for reads that have a complex indel at the read edge.  i.e. Do not allow alignments like: 90M10D10I");
     	}
     	
     	return parser;
@@ -455,5 +457,9 @@ public class ReAlignerOptions extends Options {
 	
 	public boolean shouldUseJunctionsAsContigs() {
 		return (Boolean) getOptions().has(USE_JUNCTIONS_AS_CONTIGS);
+	}
+
+	public boolean disallowComplexIndelsAtReadEdge() {
+		return (Boolean) getOptions().has(NO_COMPLEX_INDELS_AT_READ_EDGE);
 	}
 }

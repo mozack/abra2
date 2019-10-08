@@ -2,7 +2,6 @@ package abra;
 
 import static org.testng.Assert.assertEquals;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -230,4 +229,35 @@ public class CigarUtilsTest {
 		assertEquals(false, CigarUtils.hasNDN("100I"));
 		assertEquals(false, CigarUtils.hasNDN("50M200N5M300N5M"));
 	}
+	
+	@Test (groups = "unit")
+	public void testStartsOrEndsWithComplexIndel() {
+		assertEquals(false, CigarUtils.startsOrEndsWithComplexIndel("100M"));
+		assertEquals(false, CigarUtils.startsOrEndsWithComplexIndel("50M10D50M"));
+		assertEquals(false, CigarUtils.startsOrEndsWithComplexIndel("50M10I50M"));
+		assertEquals(false, CigarUtils.startsOrEndsWithComplexIndel("50M10I50M5S"));
+		assertEquals(false, CigarUtils.startsOrEndsWithComplexIndel("10S100M10S"));
+		assertEquals(false, CigarUtils.startsOrEndsWithComplexIndel("10H100M10H"));
+		assertEquals(false, CigarUtils.startsOrEndsWithComplexIndel("10H100M1D1M1I"));
+		assertEquals(false, CigarUtils.startsOrEndsWithComplexIndel("50M10D10I50M"));
+		assertEquals(false, CigarUtils.startsOrEndsWithComplexIndel("50M10I10D50M"));
+		
+		assertEquals(true, CigarUtils.startsOrEndsWithComplexIndel("50M10I10D"));
+		assertEquals(true, CigarUtils.startsOrEndsWithComplexIndel("50M10D10I"));
+		assertEquals(true, CigarUtils.startsOrEndsWithComplexIndel("50M10D10I5S"));
+		assertEquals(true, CigarUtils.startsOrEndsWithComplexIndel("50M10D10I5S5H"));
+		assertEquals(true, CigarUtils.startsOrEndsWithComplexIndel("10D10I50M"));
+		assertEquals(true, CigarUtils.startsOrEndsWithComplexIndel("5S10D10I50M"));
+		assertEquals(true, CigarUtils.startsOrEndsWithComplexIndel("5H10I10D50M"));
+		
+		
+	}
+
+	/*
+	public static void main(String[] args) {
+		TestNG testSuite = new TestNG();
+		testSuite.setTestClasses(new Class[] { CigarUtilsTest.class });
+		testSuite.run();
+	}
+	 */	
 }

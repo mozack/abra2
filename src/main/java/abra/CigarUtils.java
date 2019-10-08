@@ -178,6 +178,50 @@ public class CigarUtils {
 		return hasNDM;
 	}
 	
+	/**
+	 * Returns true if the input cigar string begins or ends with 2 adjacent indels.
+	 * Clipping is ignored.
+	 */
+	public static boolean startsOrEndsWithComplexIndel(String cigar) {
+		boolean ret = false;
+		
+		List<CigarBlock> blocks = getUnclippedCigarBlocks(cigar);
+		
+		if (blocks.size() > 1) {
+			if (blocks.get(0).isIndel() && blocks.get(1).isIndel()) {
+				ret = true;
+			} else if (blocks.get(blocks.size()-1).isIndel() && blocks.get(blocks.size()-2).isIndel()) {
+				ret = true;
+			}
+		}
+		
+		return ret;
+	}
+	
+	private static List<CigarBlock> getUnclippedCigarBlocks(String cigar) {
+		
+		List<CigarBlock> cigarBlocks = new ArrayList<CigarBlock>();
+		try {
+			StringBuffer len = new StringBuffer();
+			for (int i=0; i<cigar.length(); i++) {
+				char ch = cigar.charAt(i);
+				if (Character.isDigit(ch)) {
+					len.append(ch);
+				} else {
+					if (ch != 'H' && ch != 'S') {
+						cigarBlocks.add(new CigarBlock(Integer.valueOf(len.toString()), ch));
+					}
+					len.setLength(0);
+				}
+			}
+		} catch (NumberFormatException e) {
+			Logger.error("NumberFormatException: " + cigar);
+			throw e;
+		}
+		
+		return cigarBlocks;
+	}
+	
 	private static List<CigarBlock> getCigarBlocks(String cigar) {
 		
 		List<CigarBlock> cigarBlocks = new ArrayList<CigarBlock>();
@@ -271,6 +315,10 @@ public class CigarUtils {
 		
 		boolean isGap() {
 			return type == 'D' || type == 'N';
+		}
+		
+		boolean isIndel() {
+			return type == 'D' || type == 'I';
 		}
 	}
 

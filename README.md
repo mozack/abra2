@@ -6,6 +6,8 @@ ABRA2 is an updated implementation of [ABRA](https://github.com/mozack/abra) fea
 * Improved accuracy
 * Improved stability and usability (BWA is no longer required to run ABRA although we do recommend BWA as the initial aligner for DNA)
 
+Manuscript: https://doi.org/10.1093/bioinformatics/btz033
+
 ## Running
 
 ABRA2 requires Java 8.

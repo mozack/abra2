@@ -11,6 +11,7 @@ Manuscript: https://doi.org/10.1093/bioinformatics/btz033
 ## Running
 
 ABRA2 requires Java 8.
+
 We recommend running from a pre-compiled release.
 Go to the Releases tab to download a recent version.
 

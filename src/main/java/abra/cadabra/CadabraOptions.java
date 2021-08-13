@@ -23,7 +23,8 @@ public class CadabraOptions extends Options {
 	private static final String MIN_MAPQ = "mapq";
 	private static final String MIN_VAF = "mf";
 	private static final String PCR_PENALTY = "pen";
-	
+	private static final String ODDS_RATIO = "oddsr";
+
 
 	private OptionParser parser;
 	private boolean isValid;
@@ -42,6 +43,7 @@ public class CadabraOptions extends Options {
 	private float minQual;
 	private float minMapq;
 	private float minVaf;
+	private float oddsr;
 	
 	@Override
 	protected OptionParser getOptionParser() {
@@ -61,7 +63,8 @@ public class CadabraOptions extends Options {
             parser.accepts(LOW_MQ_FILTER, "Filter variants with fraction of low quality reads greater than specified value").withRequiredArg().ofType(Float.class).defaultsTo(.5f);
             parser.accepts(MIN_QUAL, "Variants with quality below specified threshold are not output").withRequiredArg().ofType(Float.class).defaultsTo(5.0f);
             parser.accepts(MIN_MAPQ, "Reads with mapping quality below specified value are excluded from processing (except unmapped reads)").withRequiredArg().ofType(Integer.class).defaultsTo(20);
-            parser.accepts(MIN_VAF, "Do not output variants with frequency below specified value").withRequiredArg().ofType(Float.class).defaultsTo(0.0f);            
+            parser.accepts(MIN_VAF, "Do not output variants with frequency below specified value").withRequiredArg().ofType(Float.class).defaultsTo(0.0f);
+			parser.accepts(ODDS_RATIO, "Filter variants with odds ratio below specified value").withRequiredArg().ofType(Float.class).defaultsTo(5.0f);
     	}
     	
     	return parser;
@@ -85,6 +88,7 @@ public class CadabraOptions extends Options {
 		this.minMapq = (Integer) getOptions().valueOf(MIN_MAPQ);
 		this.minVaf = (Float) getOptions().valueOf(MIN_VAF);
 		this.pcrPenalty = (Integer) getOptions().valueOf(PCR_PENALTY);
+		this.oddsr = (Float) getOptions().valueOf(ODDS_RATIO);
 	}
 
 	@Override
@@ -162,4 +166,6 @@ public class CadabraOptions extends Options {
 	public float getMinVaf() {
 		return minVaf;
 	}
+
+	public float getOddsRatio() { return oddsr; }
 }

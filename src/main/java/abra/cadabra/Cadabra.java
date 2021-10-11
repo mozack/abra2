@@ -126,6 +126,7 @@ public class Cadabra {
 		System.out.println("##FORMAT=<ID=VAF,Number=1,Type=Float,Description=\"Variant allele frequency\">");
 		System.out.println("##FORMAT=<ID=MER,Number=1,Type=Integer,Description=\"Number of ref reads with num mismatches greater than read length * .05\">");
 		System.out.println("##FORMAT=<ID=FROR,Number=1,Type=Float,Description=\"Phred scaled Fisher's Exact Test for read orientation\">");
+		System.out.println("##FORMAT=<ID=ODDSR,Number=1,Type=Float,Description=\"Odds ratio of tumor / normal ref / alt observations\">");
 		System.out.println(vcfColumns);
 	}
 		

@@ -397,7 +397,7 @@ public class JunctionUtils {
 				String rightSeq = c2r.getSequence(chromosome, rightStart, rightStop-rightStart);
 				juncSeq.append(rightSeq);
 				// Junction pos and length should already be added
-				if (juncSeq.length() > ReAligner.MAX_REF_REGION_LEN) {
+				if (juncSeq.length() > NativeSemiGlobalAligner.MAX_REF_LEN) {
 					// Make sure we don't blow up the hardcoded size C matrix
 					Logger.warn("Junction Ref Seq to long: " + juncSeq.toString());
 					

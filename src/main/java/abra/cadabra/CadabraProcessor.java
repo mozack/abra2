@@ -329,6 +329,7 @@ public class CadabraProcessor {
 			Pair<Integer, String> repeat = getRepeatPeriod(chromosome, position, alt, altCounts);
 			
 			double qual = 0;
+			double oddsRatio = 0;
 			int usableDepth = 0;
 			if (!isSomatic) {
 				int repeatLength = getRepeatLength(repeat.getFirst(), repeat.getSecond(), alt.getType());
@@ -348,16 +349,17 @@ public class CadabraProcessor {
 			}
 			
 			call = new SampleCall(chromosome, position, refAllele, alt, alleleCounts, totalDepth, 
-					usableDepth, qual, repeat.getFirst(), repeat.getSecond(), tumorMapq0, refField, altField, mismatchExceededReads, refSeq, options);
+					usableDepth, qual, oddsRatio, repeat.getFirst(), repeat.getSecond(), tumorMapq0, refField, altField, mismatchExceededReads, refSeq, options);
 		} else {
 			String refField = getInsRefField(chromosome, position);
 			String altField = ".";
 			double qual = 0;
+			double oddsRatio = 0;
 			int rp = 0;
 			String ru = "";
 			
 			call = new SampleCall(chromosome, position, refAllele, Allele.UNK, alleleCounts, totalDepth, 
-					0, qual, rp, ru, tumorMapq0, refField, altField, mismatchExceededReads, refSeq, options);
+					0, qual, oddsRatio, rp, ru, tumorMapq0, refField, altField, mismatchExceededReads, refSeq, options);
 			
 			if (!isSomatic) {
 				// Adjust qual score for PCR slippage
@@ -400,6 +402,7 @@ public class CadabraProcessor {
 		int totalReads;
 		int usableDepth;
 		double qual;
+		double oddsRatio;
 		int repeatPeriod;
 		String repeatUnit;
 		int mapq0;
@@ -413,7 +416,7 @@ public class CadabraProcessor {
 		CadabraOptions options;
 		
 		SampleCall(String chromosome, int position, Allele ref, Allele alt, Map<Allele, AlleleCounts> alleleCounts, 
-				int totalReads, int usableDepth, double qual, int repeatPeriod, String repeatUnit, int mapq0, String refField, String altField,
+				int totalReads, int usableDepth, double qual, double oddsRatio, int repeatPeriod, String repeatUnit, int mapq0, String refField, String altField,
 				int mismatchExceededReads, String context, CadabraOptions options) {
 			this.chromosome = chromosome;
 			this.position = position;
@@ -423,6 +426,7 @@ public class CadabraProcessor {
 			this.totalReads = totalReads;
 			this.usableDepth = usableDepth;
 			this.qual = qual;
+			this.oddsRatio = oddsRatio;
 			this.repeatPeriod = repeatPeriod;
 			this.repeatUnit = repeatUnit;
 			this.mapq0 = mapq0;
@@ -500,13 +504,13 @@ public class CadabraProcessor {
 			
 			String sampleInfo = getSampleInfo(ref, alt);
 			
-			String filter = CadabraProcessor.applyFilters(this, null, options, hrunLen, qual);
+			String filter = CadabraProcessor.applyFilters(this, null, options, hrunLen, qual, oddsRatio);
 						
 			return String.join("\t", chromosome, pos, ".", refField, altField, qualStr, filter, info, SampleCall.FORMAT, sampleInfo);
 		}
 	}
 	
-	static String applyFilters(SampleCall tumor, SampleCall normal, CadabraOptions options, int hrunLen, double qual) {
+	static String applyFilters(SampleCall tumor, SampleCall normal, CadabraOptions options, int hrunLen, double qual, double oddsRatio) {
 		String filter = "";
 		
 		// Filter variants that do not appear in sufficiently varying read positions
@@ -527,6 +531,10 @@ public class CadabraProcessor {
 		
 		if (qual < options.getQualFilter()) {
 			filter += "LOW_QUAL;";
+		}
+
+		if (oddsRatio < options.getOddsRatio()) {
+			filter += "ODDS_R";
 		}
 		
 		if (filter.equals("")) {
@@ -571,6 +579,7 @@ public class CadabraProcessor {
 		HomopolymerRun hrun;
 		String context;
 		CadabraOptions options;
+		double oddsRatio;
 		
 		public SomaticCall(SampleCall normal, SampleCall tumor, String context, CadabraOptions options) {
 			this.normal = normal;
@@ -583,6 +592,8 @@ public class CadabraProcessor {
 			int tumorAlt = tumor.alleleCounts.get(tumor.alt).getCount();
 			
 			this.qual = calcFisherExactPhredScaledQuality(normalRef, normalAlt, tumorRef, tumorAlt);
+
+			this.oddsRatio = ((float) tumorAlt / ((float) normalAlt + .0000001)) / ((float) tumorRef / ((float) normalRef + .0000001));
 						
 			this.hrun = HomopolymerRun.find(context);
 			
@@ -607,13 +618,13 @@ public class CadabraProcessor {
 			char hrunBase = hrun != null ? hrun.getBase() : 'N';
 			int hrunPos = hrun != null ? hrun.getPos() : 0;
 			
-			String info = String.format("RP=%d;RU=%s;HRUN=%d,%d;CTX=%s", tumor.repeatPeriod, tumor.repeatUnit,
-					hrunLen, hrunPos, context);
+			String info = String.format("RP=%d;RU=%s;HRUN=%d,%d;CTX=%s,ODDSR=%.2f", tumor.repeatPeriod, tumor.repeatUnit,
+					hrunLen, hrunPos, context, oddsRatio);
 			
 			String normalInfo = normal.getSampleInfo(tumor.ref, tumor.alt);
 			String tumorInfo = tumor.getSampleInfo(tumor.ref, tumor.alt);
 			
-			String filter = CadabraProcessor.applyFilters(tumor, normal, options, hrunLen, qual);
+			String filter = CadabraProcessor.applyFilters(tumor, normal, options, hrunLen, qual, oddsRatio);
 			
 			return String.join("\t", tumor.chromosome, pos, ".", tumor.refField, tumor.altField, qualStr, filter, info, SampleCall.FORMAT, normalInfo, tumorInfo);
 		}

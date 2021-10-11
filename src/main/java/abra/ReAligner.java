@@ -61,11 +61,6 @@ public class ReAligner {
 	
 	// Cannot be larger than buffer in assembler.c
 	private static final int MAX_KMER_SIZE = 199;
-	
-	// These must match constants in C code (Aligner matrix dimensions)
-	static final int MAX_CONTIG_LEN = 2000-1;
-	static final int MAX_REF_REGION_LEN = 5000-1;
-	
 	private SAMFileHeader[] samHeaders;
 	
 	private List<Feature> regions;
@@ -981,7 +976,7 @@ public class ReAligner {
 		
 		ContigAlignerResult bestResult = null;
 		
-		if (contig.length() > MAX_CONTIG_LEN) {
+		if (contig.length() > NativeSemiGlobalAligner.MAX_CONTIG_LEN) {
 			Logger.warn(String.format("In Region: %s, contig too long: [%s]", region, contig));
 		} else {
 

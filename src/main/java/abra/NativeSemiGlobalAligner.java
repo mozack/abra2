@@ -11,8 +11,8 @@ public class NativeSemiGlobalAligner {
 	private int gapOpen = -48;
 	private int gapExtend = -1;
 	
-	private static final int MAX_CONTIG_LEN = 1998;
-	private static final int MAX_REF_LEN = 4998;
+	public static final int MAX_CONTIG_LEN = 1998;
+	public static final int MAX_REF_LEN = 4998;
 	
 	public NativeSemiGlobalAligner(int match, int mismatch, int gapOpen, int gapExtend) {
 		this.match = match;

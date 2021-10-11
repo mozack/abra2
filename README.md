@@ -13,7 +13,7 @@ Manuscript: https://doi.org/10.1093/bioinformatics/btz033
 ABRA2 requires Java 8.
 
 We recommend running from a pre-compiled release.
-Go to the [Releases tab](releases) to download a recent version.
+Go to the [Releases tab](https://github.com/mozack/abra2/releases) to download a recent version.
 
 ### DNA
 
